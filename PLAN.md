@@ -18,11 +18,8 @@
 Цель: монорепо, CI, общие контракты, заглушки сервисов.
 
 ### Tasks
-- [ ] `git init` + monorepo structure (см. README §12).
-- [ ] `proto/` — первая версия Protobuf-схемы:
-  - `Event` (ts, user_id, device_id, app_bundle, category, source, ai_provider, duration_ms, …).
-  - `IngestRequest` (batch of events).
-  - `Report` (id, period, body_md, …).
+- [x] `git init` + monorepo structure (см. README §12).
+- [x] `proto/event.proto` — первая версия Protobuf-схемы (Event, IngestRequest, Report).
 - [x] Code generation pipeline: `buf` config готов в `proto/buf.gen.yaml`. Реальная codegen — отложена, типы пишем вручную (быстрее на skeleton-стадии).
 - [x] `ui/` — package с shadcn/ui Button + Card, Tailwind preset. Используется в agent/dashboard/browser-extension.
 - [x] `backend/` — Go module + Fiber + zap, `/healthz`, конфиг через env (FromEnv).
