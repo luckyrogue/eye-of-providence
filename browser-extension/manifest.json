@@ -3,7 +3,7 @@
   "name": "Eye of Providence",
   "version": "0.0.1",
   "description": "Track time on AI sites and copy events from AI assistants. Privacy-first: only metadata leaves your machine.",
-  "permissions": ["tabs", "activeTab", "storage", "clipboardRead"],
+  "permissions": ["tabs", "activeTab", "storage", "alarms", "idle"],
   "host_permissions": [
     "https://chat.openai.com/*",
     "https://chatgpt.com/*",
@@ -17,7 +17,9 @@
     "https://www.phind.com/*",
     "https://bolt.new/*",
     "https://v0.dev/*",
-    "https://lovable.dev/*"
+    "https://lovable.dev/*",
+    "http://localhost:8080/*",
+    "http://127.0.0.1:8080/*"
   ],
   "background": {
     "service_worker": "src/background.ts",
@@ -30,7 +32,8 @@
         "https://chat.openai.com/*",
         "https://claude.ai/*",
         "https://gemini.google.com/*",
-        "https://copilot.microsoft.com/*"
+        "https://copilot.microsoft.com/*",
+        "https://www.perplexity.ai/*"
       ],
       "js": ["src/content.ts"],
       "run_at": "document_idle"

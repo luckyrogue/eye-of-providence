@@ -74,16 +74,19 @@
 ## Phase 2 — Browser extension + AI detection (неделя 2–3)
 
 ### Browser extension
-- [ ] MV3 manifest, Vite + CRX, TypeScript + React.
-- [ ] Background service worker: `chrome.tabs`, `chrome.windows.onFocusChanged`, visibility tracking.
-- [ ] Content scripts для AI-сайтов (chatgpt.com, claude.ai, gemini.google.com, copilot.microsoft.com, perplexity.ai).
-- [ ] Copy event detection: listener на сообщения ассистента, sha256 содержимого + размер.
-- [ ] Native messaging host (через локальный `127.0.0.1` + одноразовый pairing-код) для связи с desktop agent.
-- [ ] Popup на shadcn (статус, pause, last 24h summary).
+- [x] MV3 manifest, Vite + CRX, TypeScript + React, Tailwind + shadcn popup.
+- [x] Background service worker: `chrome.tabs.onActivated`, `chrome.windows.onFocusChanged`, `chrome.idle`, alarms-based flush каждые 30с.
+- [x] Content scripts для AI-сайтов (chatgpt, claude, gemini, copilot, perplexity).
+- [x] Copy event detection: heuristic-селекторы `data-message-author-role="assistant"` и т.д., шлём только `host` + `size` (не контент).
+- [x] AI domain → provider/channel mapping.
+- [x] API client → backend через JWT в `chrome.storage.local`.
+- [x] Popup на shadcn: dev login + flush-now + logout.
+- [ ] Native messaging host для связи с desktop agent. **V1+** — для Phase 2 работает напрямую с backend.
 
 ### Готово, когда:
-- Время на ChatGPT.com засчитывается отдельной категорией `ai/browser-chat`.
-- Copy из Claude → событие `clipboard_ai_source` ушло в backend.
+- [x] Extension собирается (`pnpm -F @eop/browser-extension build`), валидный MV3 dist/.
+- [x] Privacy gate: размеры copy событий, не контент.
+- [ ] Реальный chrome загрузил unpacked extension и события появляются в dashboard. **Требует ручную загрузку в browser**.
 
 ---
 
