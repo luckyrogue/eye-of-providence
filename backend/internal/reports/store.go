@@ -16,7 +16,14 @@ type Report struct {
 	PromptVersion string    `json:"prompt_version"`
 }
 
-// Store — in-memory. Phase 4 заменяется на Postgres reports table.
+// ReportStore — общий интерфейс для in-memory и Postgres реализаций.
+type ReportStore interface {
+	Save(r Report)
+	ListForUser(userID string, limit int) []Report
+	Get(id, userID string) (Report, bool)
+}
+
+// Store — in-memory реализация ReportStore.
 type Store struct {
 	mu      sync.RWMutex
 	reports []Report

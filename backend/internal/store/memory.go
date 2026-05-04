@@ -53,4 +53,27 @@ func (s *MemoryStore) AggregateByCategory(_ context.Context, userID string, sinc
 	return agg, nil
 }
 
+func (s *MemoryStore) Heatmap(_ context.Context, userID string, since time.Time) ([]HeatmapCell, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	type key struct {
+		dow, hour int
+		category  string
+	}
+	agg := map[key]uint64{}
+	for _, e := range s.events {
+		if e.UserID != userID || e.TS.Before(since) {
+			continue
+		}
+		k := key{int(e.TS.UTC().Weekday()), e.TS.UTC().Hour(), e.Category}
+		agg[k] += uint64(e.DurationMS)
+	}
+	out := make([]HeatmapCell, 0, len(agg))
+	for k, ms := range agg {
+		out = append(out, HeatmapCell{DayOfWeek: k.dow, Hour: k.hour, Category: k.category, MS: ms})
+	}
+	return out, nil
+}
+
 func (s *MemoryStore) Close() error { return nil }

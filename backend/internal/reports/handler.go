@@ -15,11 +15,11 @@ import (
 const promptVersion = "v0.1"
 
 type Service struct {
-	Store     *Store
+	Store      ReportStore
 	EventStore store.EventStore
-	Gemini    *GeminiClient
-	Logger    *zap.Logger
-	JWTSecret string
+	Gemini     *GeminiClient
+	Logger     *zap.Logger
+	JWTSecret  string
 }
 
 func RegisterRoutes(app *fiber.App, s Service) {

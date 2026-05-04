@@ -3,6 +3,7 @@ package auth
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -16,6 +17,7 @@ type Service struct {
 	JWTSecret string
 	GitHub    *GitHubOAuth
 	Logger    *zap.Logger
+	Users     *UsersPG
 }
 
 func RegisterRoutes(app *fiber.App, s Service) {
@@ -24,15 +26,26 @@ func RegisterRoutes(app *fiber.App, s Service) {
 	// Dev-only: выдаём токен без OAuth для локальной разработки.
 	// В production отключается, если EOP_ENV=production.
 	g.Post("/dev-token", func(c *fiber.Ctx) error {
-		userID := c.Query("user_id")
-		if userID == "" {
-			userID = uuid.NewString()
+		userIDStr := c.Query("user_id")
+		var userID uuid.UUID
+		if userIDStr == "" {
+			userID = uuid.New()
+		} else {
+			parsed, err := uuid.Parse(userIDStr)
+			if err != nil {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "user_id must be uuid"})
+			}
+			userID = parsed
 		}
-		tok, err := IssueJWT(s.JWTSecret, userID, "dev@local", "dev", tokenTTL)
+		email := fmt.Sprintf("dev-%s@local.eop", userID.String()[:8])
+		if err := s.Users.Upsert(c.Context(), userID, email, ""); err != nil {
+			s.Logger.Warn("user upsert failed (continuing with token)", zap.Error(err))
+		}
+		tok, err := IssueJWT(s.JWTSecret, userID.String(), email, "dev", tokenTTL)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
-		return c.JSON(fiber.Map{"token": tok, "user_id": userID})
+		return c.JSON(fiber.Map{"token": tok, "user_id": userID.String()})
 	})
 
 	g.Get("/github/login", func(c *fiber.Ctx) error {
@@ -62,14 +75,21 @@ func RegisterRoutes(app *fiber.App, s Service) {
 			s.Logger.Warn("github exchange failed", zap.Error(err))
 			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "oauth exchange failed"})
 		}
-		// Phase 2: upsert в Postgres users и связать device.
-		// Phase 1: сразу выдаём JWT с github_login как сабом.
-		userID := "gh:" + user.Login
-		tok, err := IssueJWT(s.JWTSecret, userID, user.Email, "github", tokenTTL)
+		// Детерминированный UUID на основе github user.id — позволяет
+		// ClickHouse user_id оставаться UUID-типизированным.
+		userUUID := uuid.NewSHA1(uuid.NameSpaceURL, []byte(fmt.Sprintf("github:%d", user.ID)))
+		email := user.Email
+		if email == "" {
+			email = fmt.Sprintf("github-%s@local.eop", user.Login)
+		}
+		if err := s.Users.Upsert(c.Context(), userUUID, email, user.Login); err != nil {
+			s.Logger.Warn("github user upsert failed", zap.Error(err))
+		}
+		tok, err := IssueJWT(s.JWTSecret, userUUID.String(), email, "github", tokenTTL)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
-		return c.JSON(fiber.Map{"token": tok, "user_id": userID, "github_login": user.Login})
+		return c.JSON(fiber.Map{"token": tok, "user_id": userUUID.String(), "github_login": user.Login})
 	})
 }
 

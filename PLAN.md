@@ -168,6 +168,33 @@
 
 ---
 
+## Phase 6 — Real persistence (ClickHouse + Postgres) + heatmap
+
+### EventStore: ClickHouse
+- [x] `internal/store/clickhouse.go`: `OpenClickHouse(dsn)`, batch INSERT, `ListRecent`, `AggregateByCategory`, `Heatmap`.
+- [x] DSN `clickhouse://user:pass@host:port/db` parsing.
+- [x] UUID-aware: user/device/session/project columns — UUID, остальное LowCardinality(String).
+
+### ReportStore: Postgres
+- [x] `internal/reports/postgres_store.go`: `OpenPostgres`, `NewPostgresStore(pool)`, `Save/ListForUser/Get`.
+- [x] FK constraint `reports.user_id → users.id` enforced.
+- [x] Auto-upsert user в `users` через `auth/users_pg.go` для dev-token и github-callback.
+
+### Analytics
+- [x] `GET /v1/heatmap?days=N` — DOW × hour × category, агрегаты часов в ms.
+- [x] ClickHouse: `toDayOfWeek(ts) → 1..7 → 0..6`, `toHour(ts)`.
+- [x] In-memory equivalent: тот же контракт, для dev без Docker.
+
+### Fallback strategy
+- [x] Backend поднимается без Docker (in-memory сторы), переключается автоматически если `EOP_POSTGRES_DSN` / `EOP_CLICKHOUSE_DSN` указывают на доступную базу.
+- [x] Логи показывают какой store выбран.
+
+### Готово, когда:
+- [x] **E2E PASSED**: user upsert в Postgres → 2 события через ingest → ClickHouse 2 строки → POST /reports/generate → Postgres reports row с body_md (456 chars).
+- [x] `GET /v1/heatmap?days=7` возвращает корректные cells.
+
+---
+
 ## После MVP — что не делаем сейчас
 
 Сознательно вне scope MVP:
