@@ -1,10 +1,7 @@
-// Heatmap 7 (DOW) × 24 (hour). Цвет — суммарная активность за всё категории.
-// Tooltip показывает breakdown по категориям.
-
 import { useMemo, useState } from "react";
 import type { HeatmapCell } from "./api";
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAYS = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 
 export function Heatmap({ cells }: { cells: HeatmapCell[] }) {
   const [hover, setHover] = useState<{ dow: number; hour: number } | null>(null);
@@ -15,7 +12,7 @@ export function Heatmap({ cells }: { cells: HeatmapCell[] }) {
   const hovered = hover ? grid[hover.dow][hover.hour] : null;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="overflow-x-auto">
         <div className="inline-block">
           <div className="grid" style={{ gridTemplateColumns: "auto repeat(24, 1.25rem)" }}>
@@ -38,27 +35,33 @@ export function Heatmap({ cells }: { cells: HeatmapCell[] }) {
           </div>
         </div>
       </div>
-      <div className="min-h-[2.5rem] rounded-md border bg-card p-2 text-xs">
+      <div className="min-h-[2.5rem] rounded-lg border bg-card/50 p-2.5 text-xs">
         {hovered && hovered.total > 0 ? (
-          <div className="flex items-center gap-3">
-            <span className="font-mono">
-              {DAYS[hover!.dow]} {String(hover!.hour).padStart(2, "0")}:00
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="font-medium tabular-nums">
+              {DAYS[hover!.dow]}, {String(hover!.hour).padStart(2, "0")}:00
             </span>
-            <span>
-              total: <strong>{Math.round(hovered.total / 60)}m</strong>
-            </span>
+            <span>всего: <strong>{Math.round(hovered.total / 60)} мин</strong></span>
             {hovered.byCat.map(({ cat, ms }) => (
               <span key={cat} className="text-muted-foreground">
-                {cat}: {Math.round(ms / 60)}m
+                {translateCategory(cat)}: {Math.round(ms / 60)} мин
               </span>
             ))}
           </div>
         ) : (
-          <span className="text-muted-foreground">Hover over a cell to see breakdown.</span>
+          <span className="text-muted-foreground">Наведи на ячейку, чтобы увидеть детали.</span>
         )}
       </div>
     </div>
   );
+}
+
+function translateCategory(c: string): string {
+  const map: Record<string, string> = {
+    manual: "вручную", ai: "AI", refactor: "рефакторинг",
+    idle: "простой", reading: "чтение", other: "прочее",
+  };
+  return map[c] ?? c;
 }
 
 type GridCell = { total: number; byCat: { cat: string; ms: number }[] };
@@ -78,11 +81,7 @@ function buildGrid(cells: HeatmapCell[]): GridCell[][] {
 }
 
 function DayRow({
-  day,
-  row,
-  max,
-  onHover,
-  onLeave,
+  day, row, max, onHover, onLeave,
 }: {
   day: string;
   row: GridCell[];
@@ -98,11 +97,11 @@ function DayRow({
         const bg =
           cell.total === 0
             ? "hsl(var(--secondary))"
-            : `hsla(220, 80%, 50%, ${0.15 + intensity * 0.8})`;
+            : `hsla(260, 80%, 55%, ${0.15 + intensity * 0.8})`;
         return (
           <div
             key={hour}
-            className="h-5 w-5 rounded-sm border border-border/40"
+            className="h-5 w-5 rounded-sm border border-border/40 transition-transform hover:scale-110"
             style={{ background: bg }}
             onMouseEnter={() => onHover(hour)}
             onMouseLeave={onLeave}

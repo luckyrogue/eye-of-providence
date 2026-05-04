@@ -77,10 +77,10 @@
 │  └──────────────────────────┬───────────────────────────────┘  │
 │                             │                                  │
 │  ┌──────────────────────────▼──────────────────────────────┐   │
-│  │   Postgres (users/teams/devices)                         │  │
-│  │   ClickHouse (events, sessions, attribution)             │  │
-│  │   Redis (rate limit, session cache)                      │  │
-│  │   S3 (raw event archive)                                 │  │
+│  │   Postgres (users/teams/devices)                        │   │
+│  │   ClickHouse (events, sessions, attribution)            │   │
+│  │   Redis (rate limit, session cache)                     │   │
+│  │   S3 (raw event archive)                                │   │
 │  └──────────────────────────┬──────────────────────────────┘   │
 │                             │                                  │
 │                  ┌──────────▼─────────┐                        │

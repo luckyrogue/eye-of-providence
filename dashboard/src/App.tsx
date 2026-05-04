@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from "@eop/ui";
+import { Activity, Brain, Eye, FileText, LogOut, Settings as SettingsIcon, Sparkles } from "lucide-react";
 import {
   devLogin,
   fetchRecent,
@@ -21,6 +22,25 @@ import { Heatmap } from "./Heatmap";
 import { Languages } from "./Languages";
 import { Settings } from "./Settings";
 import { Trend } from "./Trend";
+import { formatDate, formatTime, getTz } from "./tz";
+
+type Tab = "dashboard" | "settings";
+
+const CATEGORY_LABELS: Record<string, string> = {
+  manual: "вручную",
+  ai: "AI",
+  refactor: "рефакторинг",
+  idle: "простой",
+  reading: "чтение",
+  other: "прочее",
+};
+
+const SOURCE_LABELS: Record<string, string> = {
+  os: "ОС",
+  browser: "браузер",
+  ide: "IDE",
+  cli: "CLI",
+};
 
 export default function App() {
   const [userId, setUserId] = useState<string | null>(localStorage.getItem("eop_user_id"));
@@ -33,7 +53,8 @@ export default function App() {
   const [active, setActive] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [tab, setTab] = useState<"dashboard" | "settings">("dashboard");
+  const [tab, setTab] = useState<Tab>("dashboard");
+  const [tz, setTz] = useState(getTz());
 
   function logout() {
     localStorage.removeItem("eop_token");
@@ -121,89 +142,80 @@ export default function App() {
   const aiRatio = totalMs ? Math.round((aiMs / totalMs) * 100) : 0;
 
   return (
-    <main className="min-h-screen bg-background p-8">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <header className="flex items-end justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Eye of Providence</h1>
-            <p className="text-muted-foreground">AI vs manual coding tracker</p>
+    <main className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+              <Eye className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold tracking-tight">Eye of Providence</h1>
+              <p className="text-xs text-muted-foreground">Сколько ты пишешь сам, а сколько — с AI</p>
+            </div>
           </div>
           {userId && (
-            <div className="flex items-center gap-2 text-sm">
+            <nav className="flex items-center gap-1 text-sm">
               <button
                 onClick={() => setTab("dashboard")}
-                className={`rounded-md px-3 py-1 ${tab === "dashboard" ? "bg-secondary" : "text-muted-foreground"}`}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors ${tab === "dashboard" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`}
               >
-                Dashboard
+                <Activity className="h-4 w-4" /> Дашборд
               </button>
               <button
                 onClick={() => setTab("settings")}
-                className={`rounded-md px-3 py-1 ${tab === "settings" ? "bg-secondary" : "text-muted-foreground"}`}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors ${tab === "settings" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`}
               >
-                Settings
+                <SettingsIcon className="h-4 w-4" /> Настройки
               </button>
-              <span className="text-muted-foreground mx-1">·</span>
-              <button onClick={logout} className="text-muted-foreground hover:text-foreground">
-                Logout
+              <span className="mx-2 h-5 w-px bg-border" />
+              <button
+                onClick={logout}
+                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-muted-foreground hover:bg-secondary"
+              >
+                <LogOut className="h-4 w-4" /> Выход
               </button>
-            </div>
+            </nav>
           )}
-        </header>
+        </div>
+      </div>
 
+      <div className="mx-auto max-w-6xl px-6 py-8 space-y-6">
         {error && (
           <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
         )}
 
         {!userId ? (
-          <Card>
+          <Card className="max-w-md mx-auto mt-12">
             <CardHeader>
-              <CardTitle>Get started</CardTitle>
-              <CardDescription>Phase 1 — dev login (без OAuth)</CardDescription>
+              <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                <Sparkles className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <CardTitle className="text-center">Добро пожаловать</CardTitle>
+              <CardDescription className="text-center">
+                Войди, чтобы увидеть свою статистику. На MVP — без OAuth, выдаём dev-токен.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={login} disabled={busy !== null}>
-                {busy === "login" ? "..." : "Get dev token"}
+              <Button onClick={login} disabled={busy !== null} className="w-full">
+                {busy === "login" ? "..." : "Получить dev-токен"}
               </Button>
             </CardContent>
           </Card>
         ) : tab === "settings" ? (
-          <Settings onWiped={logout} />
+          <Settings onWiped={logout} onTzChange={setTz} />
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium text-muted-foreground">AI ratio</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold">{aiRatio}%</div>
-                  <p className="text-xs text-muted-foreground mt-1">last 7 days</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Active time</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold">{Math.round(totalMs / 60000)}<span className="text-base font-normal"> min</span></div>
-                  <p className="text-xs text-muted-foreground mt-1">events: {events.length}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Reports</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold">{reports.length}</div>
-                  <p className="text-xs text-muted-foreground mt-1">generated</p>
-                </CardContent>
-              </Card>
+              <StatCard label="Доля AI" value={`${aiRatio}%`} hint="за 7 дней" icon={<Brain className="h-4 w-4 text-purple-500" />} accent="purple" />
+              <StatCard label="Активное время" value={Math.round(totalMs / 60000)} unit="мин" hint={`${events.length} событий за период`} icon={<Activity className="h-4 w-4 text-blue-500" />} accent="blue" />
+              <StatCard label="Отчёты" value={reports.length} hint="сгенерировано" icon={<FileText className="h-4 w-4 text-amber-500" />} accent="amber" />
             </div>
 
             <Card>
               <CardHeader>
-                <CardTitle>Trend (last 30 days)</CardTitle>
-                <CardDescription>manual vs AI per day</CardDescription>
+                <CardTitle>Динамика за 30 дней</CardTitle>
+                <CardDescription>Время вручную vs с AI по дням</CardDescription>
               </CardHeader>
               <CardContent>
                 <Trend points={trend} />
@@ -213,8 +225,8 @@ export default function App() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Activity heatmap</CardTitle>
-                  <CardDescription>last 30 days, day of week × hour (UTC)</CardDescription>
+                  <CardTitle>Тепловая карта</CardTitle>
+                  <CardDescription>За 30 дней, день недели × час (UTC)</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Heatmap cells={heatmap} />
@@ -222,8 +234,8 @@ export default function App() {
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle>By language</CardTitle>
-                  <CardDescription>chars typed/AI per language, last 30 days</CardDescription>
+                  <CardTitle>По языкам</CardTitle>
+                  <CardDescription>Доля AI и ручного кода по языкам</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Languages cells={languages} top={6} />
@@ -234,17 +246,20 @@ export default function App() {
             <Card>
               <CardHeader className="flex-row items-center justify-between">
                 <div>
-                  <CardTitle>AI report</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-purple-500" />
+                    AI-отчёт
+                  </CardTitle>
                   <CardDescription>
-                    Сгенерировано через Gemini (или mock, если нет API key).
+                    Сгенерирован через Gemini (или mock-режим, если ключ не задан).
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={() => genReport("weekly")} disabled={busy !== null}>
-                    {busy === "report" ? "..." : "Generate weekly"}
+                    {busy === "report" ? "..." : "Создать недельный"}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => genReport("monthly")} disabled={busy !== null}>
-                    Monthly
+                    Месячный
                   </Button>
                 </div>
               </CardHeader>
@@ -255,9 +270,7 @@ export default function App() {
                       <button
                         key={r.id}
                         onClick={() => setActive(r)}
-                        className={`rounded-md px-3 py-1 text-xs ${
-                          active?.id === r.id ? "bg-primary text-primary-foreground" : "bg-secondary"
-                        }`}
+                        className={`rounded-md px-3 py-1 text-xs transition-colors ${active?.id === r.id ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/80"}`}
                       >
                         {r.period}
                       </button>
@@ -265,59 +278,59 @@ export default function App() {
                   </div>
                 )}
                 {active ? (
-                  <div className="rounded-md border bg-card p-4">
+                  <div className="rounded-lg border bg-card/50 p-5">
                     <Markdown source={active.body_md} />
-                    <div className="mt-4 text-xs text-muted-foreground">
-                      {active.model} · {new Date(active.generated_at).toLocaleString()}
+                    <div className="mt-4 pt-4 border-t text-xs text-muted-foreground">
+                      <span className="font-mono">{active.model}</span> · {formatDate(active.generated_at, tz)}
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Нажми "Generate weekly", чтобы создать первый отчёт.</p>
+                  <p className="text-sm text-muted-foreground">Нажми «Создать недельный», чтобы получить первый отчёт.</p>
                 )}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Recent events</CardTitle>
-                <CardDescription>Live из in-memory store</CardDescription>
+                <CardTitle>Последние события</CardTitle>
+                <CardDescription>Из event store. Время в часовом поясе из настроек.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2 mb-4">
                   <Button onClick={sendDemo} disabled={busy !== null} size="sm">
-                    Send demo events
+                    Отправить демо-события
                   </Button>
                   <Button onClick={refresh} disabled={busy !== null} size="sm" variant="outline">
-                    Refresh
+                    Обновить
                   </Button>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-md border">
                   <table className="w-full text-sm">
-                    <thead className="text-left text-muted-foreground">
+                    <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
                       <tr>
-                        <th className="py-2 pr-4">time</th>
-                        <th className="py-2 pr-4">app</th>
-                        <th className="py-2 pr-4">category</th>
-                        <th className="py-2 pr-4">source</th>
-                        <th className="py-2 pr-4">provider</th>
-                        <th className="py-2 pr-4 text-right">duration</th>
+                        <th className="py-2.5 px-3">Время</th>
+                        <th className="py-2.5 px-3">Приложение</th>
+                        <th className="py-2.5 px-3">Категория</th>
+                        <th className="py-2.5 px-3">Источник</th>
+                        <th className="py-2.5 px-3">Провайдер</th>
+                        <th className="py-2.5 px-3 text-right">Длительность</th>
                       </tr>
                     </thead>
                     <tbody>
                       {events.map((e, i) => (
-                        <tr key={i} className="border-t border-border">
-                          <td className="py-2 pr-4 font-mono text-xs">{new Date(e.ts).toLocaleTimeString()}</td>
-                          <td className="py-2 pr-4">{e.app_bundle}</td>
-                          <td className="py-2 pr-4">{e.category}</td>
-                          <td className="py-2 pr-4">{e.source}</td>
-                          <td className="py-2 pr-4">{e.ai_provider ?? "—"}</td>
-                          <td className="py-2 pr-4 text-right">{(e.duration_ms / 1000).toFixed(1)}s</td>
+                        <tr key={i} className="border-t hover:bg-muted/30 transition-colors">
+                          <td className="py-2 px-3 font-mono text-xs">{formatTime(e.ts, tz)}</td>
+                          <td className="py-2 px-3">{e.app_bundle}</td>
+                          <td className="py-2 px-3"><CategoryBadge cat={e.category} /></td>
+                          <td className="py-2 px-3 text-muted-foreground">{SOURCE_LABELS[e.source] ?? e.source}</td>
+                          <td className="py-2 px-3 text-muted-foreground">{e.ai_provider ?? "—"}</td>
+                          <td className="py-2 px-3 text-right tabular-nums">{(e.duration_ms / 1000).toFixed(1)} с</td>
                         </tr>
                       ))}
                       {events.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="py-6 text-center text-muted-foreground">
-                            нет событий — нажми "Send demo events"
+                          <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                            Нет событий — нажми «Отправить демо-события»
                           </td>
                         </tr>
                       )}
@@ -330,5 +343,49 @@ export default function App() {
         )}
       </div>
     </main>
+  );
+}
+
+function StatCard({ label, value, unit, hint, icon, accent }: {
+  label: string; value: string | number; unit?: string; hint: string;
+  icon: React.ReactNode; accent: "purple" | "blue" | "amber";
+}) {
+  const accents = {
+    purple: "from-purple-500/20",
+    blue: "from-blue-500/20",
+    amber: "from-amber-500/20",
+  };
+  return (
+    <Card className="overflow-hidden relative">
+      <div className={`absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl ${accents[accent]} to-transparent`} />
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">{label}</CardTitle>
+          {icon}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-4xl font-bold tabular-nums">
+          {value}{unit && <span className="text-base font-normal"> {unit}</span>}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">{hint}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  manual: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
+  ai: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30",
+  refactor: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  idle: "bg-neutral-500/10 text-neutral-600 dark:text-neutral-400 border-neutral-500/30",
+  other: "bg-neutral-500/10 text-neutral-600 dark:text-neutral-400 border-neutral-500/30",
+};
+
+function CategoryBadge({ cat }: { cat: string }) {
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${CATEGORY_COLORS[cat] ?? CATEGORY_COLORS.other}`}>
+      {CATEGORY_LABELS[cat] ?? cat}
+    </span>
   );
 }
