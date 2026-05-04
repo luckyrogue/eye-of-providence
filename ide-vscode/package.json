@@ -20,6 +20,40 @@
   },
   "activationEvents": ["onStartupFinished"],
   "contributes": {
-    "commands": []
+    "commands": [
+      {
+        "command": "eop.devLogin",
+        "title": "Eye of Providence: Get dev token"
+      },
+      {
+        "command": "eop.flush",
+        "title": "Eye of Providence: Flush attribution events"
+      }
+    ],
+    "configuration": {
+      "title": "Eye of Providence",
+      "properties": {
+        "eop.backendUrl": {
+          "type": "string",
+          "default": "http://localhost:8080",
+          "description": "Backend URL"
+        },
+        "eop.token": {
+          "type": "string",
+          "default": "",
+          "description": "Bearer token (use 'eop.devLogin' command to fetch one in dev mode)"
+        },
+        "eop.flushIntervalSec": {
+          "type": "number",
+          "default": 30,
+          "description": "How often to flush attribution events to backend"
+        },
+        "eop.pasteThresholdChars": {
+          "type": "number",
+          "default": 80,
+          "description": "Inserts >= N chars (in single edit) считаются вставкой/AI suggestion, не typed"
+        }
+      }
+    }
   }
 }

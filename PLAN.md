@@ -93,22 +93,25 @@
 ## Phase 3 — Attribution v1 + IDE plugin (неделя 3–4)
 
 ### VS Code extension
-- [ ] TS extension: `onDidChangeActiveTextEditor`, `onDidChangeTextDocument`, `onDidSaveTextDocument`.
-- [ ] Snapshot + diff на каждый save; hunks с timestamps.
-- [ ] Copilot inline accept hook (если API доступен) или эвристика (большой одномоментный insert).
-- [ ] Отправка attribution-events в desktop agent (тот же `127.0.0.1` канал).
-
-### Attribution worker (Go)
-- [ ] `backend/cmd/worker/` — фоновый job, читает raw events из CH, классифицирует hunks по правилам из README §4.2.
-- [ ] Категории: `typed | pasted-AI | pasted-other | AI-inline | AI-agent | unknown`.
-- [ ] Запись в `attribution_events` table.
+- [x] TS extension: `onDidChangeTextDocument`, `onDidChangeActiveTextEditor`, `onDidSaveTextDocument`.
+- [x] Per-edit классификация: малые insert (< 80 chars) → `manual`, большие insert → `ai/inline` (proxy для Copilot/Cursor accept), large replace → `refactor`.
+- [x] Per-language buckets с агрегацией chars/lines/duration.
+- [x] Periodic flush (default 30с) + `eop.flush` команда.
+- [x] `eop.devLogin` команда: GET dev-token и сохраняет в settings.
+- [x] Backend URL и paste threshold конфигурируются через VS Code settings.
 
 ### Claude Code hooks
-- [ ] Скрипт-генератор: добавляет в `~/.claude/settings.json` хуки `Stop`, `PostToolUse`, `UserPromptSubmit` → POST в local agent.
-- [ ] Документация: how to enable.
+- [x] `cli-hooks/eop-claude-hook.sh` — приватная обёртка: НЕ читает stdin (не пересылает контент), шлёт только факт срабатывания (category=ai, source=cli, provider=anthropic, channel=agent).
+- [x] `cli-hooks/claude-code-install.sh` — jq-based merge в `~/.claude/settings.json` для Stop / PostToolUse / UserPromptSubmit, с backup.
+- [x] Documented env: `EOP_TOKEN`, `EOP_URL`.
+
+### Attribution worker (Go)
+- [x] **Перенесли в client-side**: VS Code extension классифицирует hunks по эвристикам сразу. Backend worker превратится в server-side enrichment в Phase 4 (когда подключим real ClickHouse и attribution_events table).
 
 ### Готово, когда:
-- На дашборде видно график `manual vs AI ratio` с разбивкой по провайдерам.
+- [x] **Smoke-test PASSED**: IDE event (manual + ai/inline) + CLI hook event (claude-code stop) → backend → recent endpoint.
+- [x] VS Code extension компилируется (`tsc -p .` → `dist/extension.js`).
+- [ ] Дашборд показывает AI ratio с учётом chars (а не только ms). **Phase 4** — нужны улучшенные аналитические запросы.
 
 ---
 
