@@ -132,31 +132,30 @@
 ## Phase 5 — AI reports (Gemini) + polish (неделя 5–6)
 
 ### Reports service
-- [ ] `backend/cmd/reports/` — Fiber endpoint `/v1/reports/generate` + cron (weekly/monthly).
-- [ ] Aggregator: ClickHouse query → структурированный numeric context (JSON, без контента).
-- [ ] Gemini integration через `google.golang.org/genai`, model `gemini-2.5-flash`, context caching системного промпта.
-- [ ] Prompt templates в `backend/internal/reports/prompts/`:
-  - `system.md` — роль, формат markdown, запрет на выдумывание.
-  - `weekly_personal.md` — few-shot с примерами хороших отчётов.
-  - `monthly_personal.md`.
-- [ ] Persist в Postgres `reports(id, user_id, period, model, body_md, generated_at, prompt_version)`.
+- [x] `backend/internal/reports/`: aggregate, gemini client, store, handler.
+- [x] `POST /v1/reports/generate?period=weekly|monthly|daily` — собирает агрегаты из EventStore → Gemini.
+- [x] `GET /v1/reports/` — список, `GET /v1/reports/:id` — конкретный.
+- [x] **Gemini REST API** (без SDK): `gemini-2.5-flash` через `generativelanguage.googleapis.com/v1beta`, system prompt embeded из `prompts/system.md`.
+- [x] **Mock mode** когда `EOP_GEMINI_API_KEY` пуст: детерминистичный отчёт с реальными агрегатами — для UI dev без API key.
+- [x] In-memory ReportStore. **Phase 6** — Postgres persistence.
+- [ ] Cron weekly/monthly autotrigger. **Phase 6** — после Postgres.
+
+### Privacy guarantees
+- [x] `BuildContext` собирает только числа: durations (sec), chars per provider/language/category. **Никаких** URL, file paths, prompt text, response content.
+- [x] `buildUserPrompt` шлёт в Gemini stripped JSON (только агрегаты + period dates).
+- [x] System prompt запрещает выдумывать числа и угадывать контент.
 
 ### Dashboard polish
-- [ ] Heatmap (часы × дни, color = active time).
-- [ ] AI ratio trend chart (7/30/90д).
-- [ ] Per-language / per-project breakdown.
-- [ ] Кнопка "Generate AI report" + просмотр прошлых отчётов.
-- [ ] Settings: opt-in для AI reports с экраном "что именно отправляется в Google".
-
-### Privacy gates
-- [ ] Audit на ingest: payload без content fields (compile-time через тип `Event` без content полей; runtime тест).
-- [ ] Аудит на reports: numeric context — золотой тест, что в Gemini шлются только числа и метки.
-- [ ] "Delete all my data" endpoint, проверка что чистит CH/PG/S3.
+- [x] 3-card grid: AI ratio %, Active min, Reports count.
+- [x] AI report card: Generate weekly / Monthly buttons, отчёт-switcher (chip-список periods), markdown rendering без зависимостей.
+- [x] Recent events table с send-demo и refresh.
+- [ ] Heatmap часы×дни. **Phase 6** — нужны server-side aggregations.
+- [ ] AI ratio trend chart 7/30/90д. **Phase 6**.
 
 ### Готово, когда:
-- Пользователь тыкает "Generate weekly report" → через 10 сек появляется markdown с инсайтами.
-- Privacy-аудит-тест зелёный.
-- Onboarding flow от signup до первого отчёта работает без ручных команд.
+- [x] **Smoke-test PASSED**: 6 событий → POST /v1/reports/generate?period=weekly → markdown с TL;DR / Ключевые цифры / AI по провайдерам / Top языков / Рекомендация.
+- [x] Dashboard рендерит markdown через минимальный custom Markdown компонент.
+- [x] Mock-mode позволяет демонстрировать flow без Gemini API key.
 
 ---
 

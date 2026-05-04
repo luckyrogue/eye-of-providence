@@ -14,6 +14,7 @@ import (
 	"github.com/eye-of-providence/backend/internal/config"
 	"github.com/eye-of-providence/backend/internal/ingest"
 	eoplog "github.com/eye-of-providence/backend/internal/log"
+	"github.com/eye-of-providence/backend/internal/reports"
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
@@ -49,8 +50,15 @@ func main() {
 	})
 	ingest.RegisterRoutes(app, st, log, cfg.JWTSecret)
 	analytics.RegisterRoutes(app, st, log, cfg.JWTSecret)
+	reports.RegisterRoutes(app, reports.Service{
+		Store:      reports.NewStore(),
+		EventStore: st,
+		Gemini:     reports.NewGeminiClient(cfg.GeminiAPIKey, "gemini-2.5-flash"),
+		Logger:     log,
+		JWTSecret:  cfg.JWTSecret,
+	})
 
-	log.Info("api starting", zap.String("addr", cfg.HTTPAddr), zap.String("env", cfg.Env))
+	log.Info("api starting", zap.String("addr", cfg.HTTPAddr), zap.String("env", cfg.Env), zap.Int("routes", len(app.GetRoutes())))
 	if err := app.Listen(cfg.HTTPAddr); err != nil {
 		log.Fatal("api exited", zap.Error(err))
 	}

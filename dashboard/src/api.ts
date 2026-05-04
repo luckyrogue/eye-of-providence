@@ -57,6 +57,28 @@ export async function fetchSummary(days = 7): Promise<Record<string, number>> {
   return data.categories ?? {};
 }
 
+export type Report = {
+  id: string;
+  period: string;
+  model: string;
+  body_md: string;
+  generated_at: string;
+  prompt_version: string;
+};
+
+export async function generateReport(period: "weekly" | "monthly" | "daily" = "weekly"): Promise<Report> {
+  const res = await authed(`/v1/reports/generate?period=${period}`, { method: "POST" });
+  if (!res.ok) throw new Error(`generate failed: ${res.status}`);
+  return res.json();
+}
+
+export async function listReports(): Promise<Report[]> {
+  const res = await authed("/v1/reports/");
+  if (!res.ok) throw new Error(`list failed: ${res.status}`);
+  const data = await res.json();
+  return data.reports ?? [];
+}
+
 // Для smoke-теста: посылаем симулированные события с дашборда.
 export async function ingestDemoEvent(): Promise<{ accepted: number; rejected: number }> {
   const res = await authed("/v1/ingest", {
