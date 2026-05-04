@@ -1,7 +1,11 @@
-.PHONY: help infra-up infra-down backend-ingest backend-auth backend-reports proto-gen agent-dev dashboard-dev clean
+.PHONY: help doctor infra-up infra-down backend-ingest backend-auth backend-reports proto-gen agent-dev dashboard-dev clean
+
+doctor:
+	@./scripts/doctor.sh
 
 help:
 	@echo "Eye of Providence — dev targets"
+	@echo "  make doctor           — проверить установленные зависимости"
 	@echo "  make infra-up         — поднять postgres/clickhouse/redis"
 	@echo "  make infra-down       — погасить infra"
 	@echo "  make backend-ingest   — запустить ingest service"

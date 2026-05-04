@@ -11,11 +11,14 @@ use tracing_subscriber::EnvFilter;
 
 use crate::core::ingest::{Ingest, IngestConfig};
 use crate::core::local_api;
+use crate::core::preflight::{self, CheckResult, PreflightInput};
 use crate::core::store::LocalStore;
 use crate::core::watcher;
 
 struct AgentState {
     store: Arc<LocalStore>,
+    data_dir: std::path::PathBuf,
+    local_api_port: u16,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -29,6 +32,7 @@ pub fn run() {
             status,
             pending_count,
             check_accessibility,
+            preflight_run,
         ])
         .setup(|app| {
             // Tray
@@ -60,7 +64,35 @@ pub fn run() {
             tracing::info!(path = %db_path.display(), "opening local store");
 
             let store = Arc::new(LocalStore::open(&db_path)?);
-            app.manage(AgentState { store: store.clone() });
+            let local_api_port: u16 = std::env::var("EOP_LOCAL_API_PORT")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(7373);
+            app.manage(AgentState {
+                store: store.clone(),
+                data_dir: data_dir.clone(),
+                local_api_port,
+            });
+
+            // Preflight на старте — пишем в лог, дальше UI запросит сам через команду.
+            let pf_dir = data_dir.clone();
+            tauri::async_runtime::spawn(async move {
+                let backend = std::env::var("EOP_BACKEND_URL").ok();
+                let token = std::env::var("EOP_BEARER_TOKEN").ok();
+                let results = preflight::run(PreflightInput {
+                    data_dir: &pf_dir,
+                    local_api_port,
+                    backend_url: backend.as_deref(),
+                    bearer_token: token.as_deref(),
+                }).await;
+                for r in &results {
+                    match r.status {
+                        preflight::CheckStatus::Ok => tracing::info!(check = %r.id, "{}", r.message),
+                        preflight::CheckStatus::Warn => tracing::warn!(check = %r.id, "{}", r.message),
+                        preflight::CheckStatus::Error => tracing::error!(check = %r.id, "{}", r.message),
+                    }
+                }
+            });
 
             // Local API для browser extension и IDE plugin.
             // Token живёт в data_dir, browser-extension читает его через user-paste.
@@ -136,6 +168,19 @@ fn check_accessibility() -> bool {
     {
         true
     }
+}
+
+/// Запустить preflight по требованию UI (Onboarding screen).
+#[tauri::command]
+async fn preflight_run(state: tauri::State<'_, AgentState>) -> Result<Vec<CheckResult>, String> {
+    let backend = std::env::var("EOP_BACKEND_URL").ok();
+    let token = std::env::var("EOP_BEARER_TOKEN").ok();
+    Ok(preflight::run(PreflightInput {
+        data_dir: &state.data_dir,
+        local_api_port: state.local_api_port,
+        backend_url: backend.as_deref(),
+        bearer_token: token.as_deref(),
+    }).await)
 }
 
 // Простейший источник «псевдослучайных» байт для local-token (не cryptographic;
