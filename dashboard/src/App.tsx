@@ -22,7 +22,7 @@ import { Heatmap } from "./Heatmap";
 import { Languages } from "./Languages";
 import { Settings } from "./Settings";
 import { Trend } from "./Trend";
-import { formatDate, formatTime, getTz } from "./tz";
+import { formatDate, formatTime, formatTzShort, getTz } from "./tz";
 
 type Tab = "dashboard" | "settings";
 
@@ -155,25 +155,31 @@ export default function App() {
             </div>
           </div>
           {userId && (
-            <nav className="flex items-center gap-1 text-sm">
+            <nav className="flex items-center gap-1">
               <button
                 onClick={() => setTab("dashboard")}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors ${tab === "dashboard" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`}
+                aria-label="Дашборд"
+                title="Дашборд"
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors ${tab === "dashboard" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`}
               >
-                <Activity className="h-4 w-4" /> Дашборд
+                <Activity className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setTab("settings")}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors ${tab === "settings" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`}
+                aria-label="Настройки"
+                title="Настройки"
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors ${tab === "settings" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`}
               >
-                <SettingsIcon className="h-4 w-4" /> Настройки
+                <SettingsIcon className="h-4 w-4" />
               </button>
               <span className="mx-2 h-5 w-px bg-border" />
               <button
                 onClick={logout}
-                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-muted-foreground hover:bg-secondary"
+                aria-label="Выход"
+                title="Выход"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary"
               >
-                <LogOut className="h-4 w-4" /> Выход
+                <LogOut className="h-4 w-4" />
               </button>
             </nav>
           )}
@@ -226,7 +232,7 @@ export default function App() {
               <Card>
                 <CardHeader>
                   <CardTitle>Тепловая карта</CardTitle>
-                  <CardDescription>За 30 дней, день недели × час · {tz}</CardDescription>
+                  <CardDescription>За 30 дней, день недели × час · {formatTzShort(tz)}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Heatmap cells={heatmap} />
@@ -251,7 +257,7 @@ export default function App() {
                     AI-отчёт
                   </CardTitle>
                   <CardDescription>
-                    Сгенерирован через Gemini (или mock-режим, если ключ не задан).
+                    Сгенерирован AI-отчёт за неделю или месяц.
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">

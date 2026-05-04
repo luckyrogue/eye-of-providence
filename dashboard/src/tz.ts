@@ -32,6 +32,21 @@ export const UNIQUE_TIMEZONES = Array.from(
   new Map(TIMEZONES.map((t) => [t.value, t])).values(),
 );
 
+function stripUtcSuffix(label: string): string {
+  // "Алматы (UTC+5)" -> "Алматы"
+  return label.replace(/\s*\(UTC[+-]\d+\)\s*$/, "");
+}
+
+export function formatTzLabel(tz: string): string {
+  const found = TIMEZONES.find((t) => t.value === tz);
+  if (!found) return tz;
+  return found.label;
+}
+
+export function formatTzShort(tz: string): string {
+  return stripUtcSuffix(formatTzLabel(tz));
+}
+
 export function formatDate(iso: string, tz: string): string {
   return new Date(iso).toLocaleString("ru-RU", {
     timeZone: tz,
