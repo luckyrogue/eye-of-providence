@@ -43,27 +43,31 @@
 Цель: один event ходит от macOS агента до дашборда.
 
 ### Agent (macOS only пока)
-- [ ] Rust core: trait `PlatformWatcher` (методы `current_app()`, `idle_seconds()`, `keystrokes_since()`), макет реализации.
-- [ ] `platform/macos/`: `NSWorkspace.frontmostApplication` (через `objc2`), `CGEventSourceSecondsSinceLastEventType` для idle.
-- [ ] Локальный SQLite буфер событий (`rusqlite`).
-- [ ] HTTP client → backend `/v1/ingest` (auth dev-токеном).
-- [ ] Onboarding flow: запрос Accessibility permission, проверка статуса, fallback экран.
-- [ ] Tauri tray icon с пунктами Pause / Quit / Settings.
+- [x] Rust core: trait `PlatformWatcher`, watcher loop, в Phase 1 без keystrokes (Phase 1.5).
+- [x] `platform/macos/`: `NSWorkspace.frontmostApplication` (objc2), `CGEventSourceSecondsSinceLastEventType` для idle (FFI).
+- [x] Локальный SQLite буфер событий (`rusqlite` WAL mode), lease-based queue.
+- [x] HTTP client → backend `/v1/ingest` (`reqwest`, bearer token).
+- [ ] Onboarding flow: Accessibility permission. **Phase 1.5** — нужно для keystrokes.
+- [ ] Tauri tray icon. **Phase 1.5**.
 
 ### Backend
-- [ ] `backend/cmd/auth/`: GitHub OAuth, JWT issue, sessions в Postgres.
-- [ ] `backend/cmd/ingest/`: Fiber endpoint `/v1/ingest`, валидация JWT, запись в ClickHouse через batch insert.
-- [ ] Postgres миграции: `users`, `devices`, `consent`.
-- [ ] ClickHouse схема: `events` table (см. README §5.2).
-- [ ] zap-логгер, OTel базовая инструментация.
+- [x] `backend/internal/auth/`: dev-token (mock JWT), GitHub OAuth callback.
+- [x] `backend/internal/ingest/`: Fiber `/v1/ingest`, JWT auth, privacy-валидация event'ов.
+- [x] `backend/internal/analytics/`: `/v1/events/recent`, `/v1/summary/categories`.
+- [x] `backend/cmd/api/`: единый dev-сервер (auth + ingest + analytics).
+- [x] Postgres миграции: `users`, `devices`, `consent`, `reports` (готовы из Phase 0).
+- [x] In-memory store как dev fallback. ClickHouse adapter — Phase 2.
+- [x] zap-логгер, CORS для dashboard.
 
 ### Dashboard
-- [ ] Vite + React SPA, GitHub OAuth login flow.
-- [ ] Один экран: список последних событий пользователя (таблица из shadcn).
-- [ ] API client (TS) с типами из proto.
+- [x] Vite + React SPA, dev-token login flow.
+- [x] Экран: AI ratio + последние события (table) + send-demo кнопка.
+- [x] API client (TS) с типами событий.
 
 ### Готово, когда:
-- На macOS агент пишет событие "VS Code в фокусе 30 сек" → событие в ClickHouse → видно в дашборде.
+- [x] **Smoke-test PASSED**: dev-token → POST /v1/ingest → GET /v1/events/recent → GET /v1/summary/categories.
+- [x] Dashboard собирается, поднимается на `:5174`, фетчит события из backend.
+- [ ] Real macOS agent пишет реальное focus-event в backend. **Требует cargo/rust toolchain — пока не верифицировано на этой машине; код готов**.
 
 ---
 

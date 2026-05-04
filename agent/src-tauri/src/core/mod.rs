@@ -1,4 +1,6 @@
-// Cross-platform core: event schema, SQLite буфер, батчинг, шифрование, redaction.
-// Заполняется в Phase 1.
+// Cross-platform core: event schema, SQLite буфер, ingest pump, watcher loop.
 
 pub mod event;
+pub mod ingest;
+pub mod store;
+pub mod watcher;

@@ -20,6 +20,7 @@ build/
 .turbo/
 *.log
 pnpm-debug.log*
+*.tsbuildinfo
 
 # Rust / Tauri
 agent/src-tauri/target/
