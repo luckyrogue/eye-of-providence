@@ -50,7 +50,8 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 			days = 30
 		}
 		since := time.Now().UTC().Add(-time.Duration(days) * 24 * time.Hour).Truncate(24 * time.Hour)
-		points, err := st.DailyTrend(c.Context(), claims.UserID, since)
+		tz := c.Query("tz", "UTC")
+		points, err := st.DailyTrend(c.Context(), claims.UserID, since, tz)
 		if err != nil {
 			logger.Error("trend failed", zap.Error(err))
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "query failed"})
@@ -65,7 +66,8 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 			days = 30
 		}
 		since := time.Now().UTC().Add(-time.Duration(days) * 24 * time.Hour)
-		cells, err := st.Heatmap(c.Context(), claims.UserID, since)
+		tz := c.Query("tz", "UTC")
+		cells, err := st.Heatmap(c.Context(), claims.UserID, since, tz)
 		if err != nil {
 			logger.Error("heatmap failed", zap.Error(err))
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "query failed"})

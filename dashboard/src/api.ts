@@ -68,8 +68,9 @@ export async function fetchLanguages(days = 30): Promise<LangCell[]> {
 
 export type HeatmapCell = { dow: number; hour: number; category: string; ms: number };
 
-export async function fetchHeatmap(days = 30): Promise<HeatmapCell[]> {
-  const res = await authed(`/v1/heatmap?days=${days}`);
+export async function fetchHeatmap(days = 30, tz?: string): Promise<HeatmapCell[]> {
+  const q = tz ? `&tz=${encodeURIComponent(tz)}` : "";
+  const res = await authed(`/v1/heatmap?days=${days}${q}`);
   if (!res.ok) throw new Error(`heatmap failed: ${res.status}`);
   const data = await res.json();
   return data.cells ?? [];
@@ -77,8 +78,9 @@ export async function fetchHeatmap(days = 30): Promise<HeatmapCell[]> {
 
 export type TrendPoint = { date: string; category: string; chars: number; ms: number };
 
-export async function fetchTrend(days = 30): Promise<TrendPoint[]> {
-  const res = await authed(`/v1/trend?days=${days}`);
+export async function fetchTrend(days = 30, tz?: string): Promise<TrendPoint[]> {
+  const q = tz ? `&tz=${encodeURIComponent(tz)}` : "";
+  const res = await authed(`/v1/trend?days=${days}${q}`);
   if (!res.ok) throw new Error(`trend failed: ${res.status}`);
   const data = await res.json();
   return data.points ?? [];

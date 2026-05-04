@@ -77,8 +77,8 @@ export default function App() {
         fetchRecent(20),
         fetchSummary(7),
         fetchLanguages(30),
-        fetchHeatmap(30),
-        fetchTrend(30),
+        fetchHeatmap(30, tz),
+        fetchTrend(30, tz),
         listReports(),
       ]);
       setEvents(r);
@@ -135,7 +135,7 @@ export default function App() {
 
   useEffect(() => {
     if (userId) refresh();
-  }, [userId]);
+  }, [userId, tz]);
 
   const totalMs = Object.values(summary).reduce((a, b) => a + b, 0);
   const aiMs = summary["ai"] ?? 0;
@@ -226,7 +226,7 @@ export default function App() {
               <Card>
                 <CardHeader>
                   <CardTitle>Тепловая карта</CardTitle>
-                  <CardDescription>За 30 дней, день недели × час (UTC)</CardDescription>
+                  <CardDescription>За 30 дней, день недели × час · {tz}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Heatmap cells={heatmap} />

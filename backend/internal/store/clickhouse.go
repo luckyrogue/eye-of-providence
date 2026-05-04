@@ -153,20 +153,23 @@ func (s *ClickHouseStore) AggregateByCategory(ctx context.Context, userID string
 	return out, rows.Err()
 }
 
-func (s *ClickHouseStore) Heatmap(ctx context.Context, userID string, since time.Time) ([]HeatmapCell, error) {
+func (s *ClickHouseStore) Heatmap(ctx context.Context, userID string, since time.Time, tz string) ([]HeatmapCell, error) {
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, err
 	}
+	if tz == "" {
+		tz = "UTC"
+	}
 	rows, err := s.conn.Query(ctx, `
-		SELECT toDayOfWeek(ts) AS dow,
-		       toHour(ts) AS hour,
+		SELECT toDayOfWeek(toTimeZone(ts, ?)) AS dow,
+		       toHour(toTimeZone(ts, ?)) AS hour,
 		       category,
 		       sum(duration_ms) AS ms
 		FROM events
 		WHERE user_id = ? AND ts >= ?
 		GROUP BY dow, hour, category
-	`, uid, since)
+	`, tz, tz, uid, since)
 	if err != nil {
 		return nil, err
 	}
@@ -234,18 +237,21 @@ func (s *ClickHouseStore) ActiveUserIDs(ctx context.Context, since time.Time) ([
 	return out, rows.Err()
 }
 
-func (s *ClickHouseStore) DailyTrend(ctx context.Context, userID string, since time.Time) ([]TrendPoint, error) {
+func (s *ClickHouseStore) DailyTrend(ctx context.Context, userID string, since time.Time, tz string) ([]TrendPoint, error) {
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, err
 	}
+	if tz == "" {
+		tz = "UTC"
+	}
 	rows, err := s.conn.Query(ctx, `
-		SELECT toDate(ts) AS d, category, sum(chars_in), sum(duration_ms)
+		SELECT toDate(toTimeZone(ts, ?)) AS d, category, sum(chars_in), sum(duration_ms)
 		FROM events
 		WHERE user_id = ? AND ts >= ?
 		GROUP BY d, category
 		ORDER BY d, category
-	`, uid, since)
+	`, tz, uid, since)
 	if err != nil {
 		return nil, err
 	}

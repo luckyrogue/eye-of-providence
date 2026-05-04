@@ -53,10 +53,11 @@ func (s *MemoryStore) AggregateByCategory(_ context.Context, userID string, sinc
 	return agg, nil
 }
 
-func (s *MemoryStore) Heatmap(_ context.Context, userID string, since time.Time) ([]HeatmapCell, error) {
+func (s *MemoryStore) Heatmap(_ context.Context, userID string, since time.Time, tz string) ([]HeatmapCell, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	loc := loadLocation(tz)
 	type key struct {
 		dow, hour int
 		category  string
@@ -66,7 +67,8 @@ func (s *MemoryStore) Heatmap(_ context.Context, userID string, since time.Time)
 		if e.UserID != userID || e.TS.Before(since) {
 			continue
 		}
-		k := key{int(e.TS.UTC().Weekday()), e.TS.UTC().Hour(), e.Category}
+		t := e.TS.In(loc)
+		k := key{int(t.Weekday()), t.Hour(), e.Category}
 		agg[k] += uint64(e.DurationMS)
 	}
 	out := make([]HeatmapCell, 0, len(agg))
@@ -117,16 +119,17 @@ func (s *MemoryStore) ActiveUserIDs(_ context.Context, since time.Time) ([]strin
 	return out, nil
 }
 
-func (s *MemoryStore) DailyTrend(_ context.Context, userID string, since time.Time) ([]TrendPoint, error) {
+func (s *MemoryStore) DailyTrend(_ context.Context, userID string, since time.Time, tz string) ([]TrendPoint, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	loc := loadLocation(tz)
 	type key struct{ date, category string }
 	agg := map[key]TrendPoint{}
 	for _, e := range s.events {
 		if e.UserID != userID || e.TS.Before(since) {
 			continue
 		}
-		date := e.TS.UTC().Format("2006-01-02")
+		date := e.TS.In(loc).Format("2006-01-02")
 		k := key{date, e.Category}
 		v := agg[k]
 		v.Date = date
@@ -140,6 +143,16 @@ func (s *MemoryStore) DailyTrend(_ context.Context, userID string, since time.Ti
 		out = append(out, v)
 	}
 	return out, nil
+}
+
+func loadLocation(tz string) *time.Location {
+	if tz == "" {
+		return time.UTC
+	}
+	if loc, err := time.LoadLocation(tz); err == nil {
+		return loc
+	}
+	return time.UTC
 }
 
 func (s *MemoryStore) Close() error { return nil }
