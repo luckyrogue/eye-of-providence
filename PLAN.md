@@ -195,6 +195,26 @@
 
 ---
 
+## Phase 6.5 — heatmap UI + per-language card + cron
+
+### Backend
+- [x] `GET /v1/summary/languages?days=N` — `[{lang, category, chars, ms}]` через ClickHouse `GROUP BY file_lang, category` (для in-memory тот же контракт).
+- [x] `EventStore.ActiveUserIDs(since)` — `SELECT DISTINCT user_id` для cron.
+- [x] `internal/reports/cron.go` — фоновый `Cron.Run(ctx)`: тикает `EOP_REPORTS_CRON_SEC` секунд, для каждого активного user проверяет если weekly отчёт за текущую ISO week уже есть, иначе генерирует.
+- [x] Конфиг `EOP_REPORTS_CRON_SEC` (0 = выключено по умолчанию).
+
+### Dashboard
+- [x] `Heatmap.tsx` — 7×24 grid, color intensity = total ms, hover показывает breakdown per category.
+- [x] `Languages.tsx` — top-N languages, bar manual/ai/refactor/other, % AI.
+- [x] App.tsx: новые карточки "Activity heatmap" (lg:grid-cols-2) и "By language", `fetchLanguages(30)` + `fetchHeatmap(30)` в refresh.
+
+### Готово, когда:
+- [x] **E2E PASSED**: 3 события (TS manual + TS AI inline + Go manual) → `/v1/summary/languages` возвращает 3 cells (typescript manual+ai, go manual), heatmap → 2 cells (dow=1 hour=16 ai/manual).
+- [x] Cron logged: `cron: generated user=… period=weekly_2026_W19` после старта.
+- [x] Dashboard собирается, preview на :5174.
+
+---
+
 ## После MVP — что не делаем сейчас
 
 Сознательно вне scope MVP:

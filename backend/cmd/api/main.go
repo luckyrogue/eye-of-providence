@@ -62,13 +62,26 @@ func main() {
 	})
 	ingest.RegisterRoutes(app, eventStore, log, cfg.JWTSecret)
 	analytics.RegisterRoutes(app, eventStore, log, cfg.JWTSecret)
+	gemini := reports.NewGeminiClient(cfg.GeminiAPIKey, "gemini-2.5-flash")
 	reports.RegisterRoutes(app, reports.Service{
 		Store:      reportStore,
 		EventStore: eventStore,
-		Gemini:     reports.NewGeminiClient(cfg.GeminiAPIKey, "gemini-2.5-flash"),
+		Gemini:     gemini,
 		Logger:     log,
 		JWTSecret:  cfg.JWTSecret,
 	})
+
+	if cfg.ReportsCronSec > 0 {
+		cron := &reports.Cron{
+			Interval:   time.Duration(cfg.ReportsCronSec) * time.Second,
+			Store:      reportStore,
+			EventStore: eventStore,
+			Gemini:     gemini,
+			Logger:     log,
+		}
+		go cron.Run(context.Background())
+		log.Info("reports cron started", zap.Int("interval_sec", cfg.ReportsCronSec))
+	}
 
 	log.Info("api starting", zap.String("addr", cfg.HTTPAddr), zap.String("env", cfg.Env), zap.Int("routes", len(app.GetRoutes())))
 	if err := app.Listen(cfg.HTTPAddr); err != nil {

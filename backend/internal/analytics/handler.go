@@ -28,6 +28,21 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 		return c.JSON(fiber.Map{"events": events, "count": len(events)})
 	})
 
+	g.Get("/summary/languages", func(c *fiber.Ctx) error {
+		claims := auth.ClaimsFromCtx(c)
+		days, _ := strconv.Atoi(c.Query("days", "30"))
+		if days <= 0 || days > 365 {
+			days = 30
+		}
+		since := time.Now().UTC().Add(-time.Duration(days) * 24 * time.Hour)
+		cells, err := st.LanguageBreakdown(c.Context(), claims.UserID, since)
+		if err != nil {
+			logger.Error("language breakdown failed", zap.Error(err))
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "query failed"})
+		}
+		return c.JSON(fiber.Map{"days": days, "cells": cells})
+	})
+
 	g.Get("/heatmap", func(c *fiber.Ctx) error {
 		claims := auth.ClaimsFromCtx(c)
 		days, _ := strconv.Atoi(c.Query("days", "30"))

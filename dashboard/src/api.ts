@@ -57,6 +57,24 @@ export async function fetchSummary(days = 7): Promise<Record<string, number>> {
   return data.categories ?? {};
 }
 
+export type LangCell = { lang: string; category: string; chars: number; ms: number };
+
+export async function fetchLanguages(days = 30): Promise<LangCell[]> {
+  const res = await authed(`/v1/summary/languages?days=${days}`);
+  if (!res.ok) throw new Error(`languages failed: ${res.status}`);
+  const data = await res.json();
+  return data.cells ?? [];
+}
+
+export type HeatmapCell = { dow: number; hour: number; category: string; ms: number };
+
+export async function fetchHeatmap(days = 30): Promise<HeatmapCell[]> {
+  const res = await authed(`/v1/heatmap?days=${days}`);
+  if (!res.ok) throw new Error(`heatmap failed: ${res.status}`);
+  const data = await res.json();
+  return data.cells ?? [];
+}
+
 export type Report = {
   id: string;
   period: string;

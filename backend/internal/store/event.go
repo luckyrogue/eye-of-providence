@@ -31,6 +31,8 @@ type EventStore interface {
 	ListRecent(ctx context.Context, userID string, limit int) ([]Event, error)
 	AggregateByCategory(ctx context.Context, userID string, since time.Time) (map[string]uint64, error)
 	Heatmap(ctx context.Context, userID string, since time.Time) ([]HeatmapCell, error)
+	LanguageBreakdown(ctx context.Context, userID string, since time.Time) ([]LangCell, error)
+	ActiveUserIDs(ctx context.Context, since time.Time) ([]string, error)
 	Close() error
 }
 
@@ -40,4 +42,12 @@ type HeatmapCell struct {
 	Hour      int    `json:"hour"` // 0-23
 	Category  string `json:"category"`
 	MS        uint64 `json:"ms"`
+}
+
+// LangCell — агрегат по языку × категории.
+type LangCell struct {
+	Lang     string `json:"lang"`
+	Category string `json:"category"`
+	Chars    uint64 `json:"chars"`
+	MS       uint64 `json:"ms"`
 }

@@ -187,6 +187,53 @@ func (s *ClickHouseStore) Heatmap(ctx context.Context, userID string, since time
 	return out, rows.Err()
 }
 
+func (s *ClickHouseStore) LanguageBreakdown(ctx context.Context, userID string, since time.Time) ([]LangCell, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.conn.Query(ctx, `
+		SELECT file_lang, category, sum(chars_in), sum(duration_ms)
+		FROM events
+		WHERE user_id = ? AND ts >= ? AND file_lang != ''
+		GROUP BY file_lang, category
+	`, uid, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []LangCell{}
+	for rows.Next() {
+		var c LangCell
+		if err := rows.Scan(&c.Lang, &c.Category, &c.Chars, &c.MS); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+func (s *ClickHouseStore) ActiveUserIDs(ctx context.Context, since time.Time) ([]string, error) {
+	rows, err := s.conn.Query(ctx, `
+		SELECT DISTINCT user_id FROM events WHERE ts >= ?
+	`, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []string{}
+	for rows.Next() {
+		var u uuid.UUID
+		if err := rows.Scan(&u); err != nil {
+			return nil, err
+		}
+		out = append(out, u.String())
+	}
+	return out, rows.Err()
+}
+
 func (s *ClickHouseStore) Close() error {
 	return s.conn.Close()
 }

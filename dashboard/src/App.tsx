@@ -4,18 +4,26 @@ import {
   devLogin,
   fetchRecent,
   fetchSummary,
+  fetchLanguages,
+  fetchHeatmap,
   ingestDemoEvent,
   generateReport,
   listReports,
   type EventRow,
+  type LangCell,
+  type HeatmapCell,
   type Report,
 } from "./api";
 import { Markdown } from "./Markdown";
+import { Heatmap } from "./Heatmap";
+import { Languages } from "./Languages";
 
 export default function App() {
   const [userId, setUserId] = useState<string | null>(localStorage.getItem("eop_user_id"));
   const [events, setEvents] = useState<EventRow[]>([]);
   const [summary, setSummary] = useState<Record<string, number>>({});
+  const [languages, setLanguages] = useState<LangCell[]>([]);
+  const [heatmap, setHeatmap] = useState<HeatmapCell[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [active, setActive] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,9 +32,17 @@ export default function App() {
   async function refresh() {
     setError(null);
     try {
-      const [r, s, rs] = await Promise.all([fetchRecent(20), fetchSummary(7), listReports()]);
+      const [r, s, langs, hm, rs] = await Promise.all([
+        fetchRecent(20),
+        fetchSummary(7),
+        fetchLanguages(30),
+        fetchHeatmap(30),
+        listReports(),
+      ]);
       setEvents(r);
       setSummary(s);
+      setLanguages(langs);
+      setHeatmap(hm);
       setReports(rs);
       if (rs.length && !active) setActive(rs[0]);
     } catch (e) {
@@ -137,6 +153,27 @@ export default function App() {
                 <CardContent>
                   <div className="text-4xl font-bold">{reports.length}</div>
                   <p className="text-xs text-muted-foreground mt-1">generated</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Activity heatmap</CardTitle>
+                  <CardDescription>last 30 days, day of week × hour (UTC)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Heatmap cells={heatmap} />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>By language</CardTitle>
+                  <CardDescription>chars typed/AI per language, last 30 days</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Languages cells={languages} top={6} />
                 </CardContent>
               </Card>
             </div>

@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
 
 type Config struct {
 	Env             string
@@ -12,6 +15,7 @@ type Config struct {
 	GitHubClientID  string
 	GitHubClientSec string
 	JWTSecret       string
+	ReportsCronSec  int // 0 = выключено
 }
 
 func FromEnv() Config {
@@ -25,7 +29,19 @@ func FromEnv() Config {
 		GitHubClientID:  os.Getenv("EOP_GITHUB_CLIENT_ID"),
 		GitHubClientSec: os.Getenv("EOP_GITHUB_CLIENT_SECRET"),
 		JWTSecret:       getenv("EOP_JWT_SECRET", "dev-only-secret-change-me"),
+		ReportsCronSec:  atoi(os.Getenv("EOP_REPORTS_CRON_SEC")),
 	}
+}
+
+func atoi(s string) int {
+	if s == "" {
+		return 0
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
+	}
+	return n
 }
 
 func getenv(key, fallback string) string {
