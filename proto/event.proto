@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package eop.v1;
+
+option go_package = "github.com/eye-of-providence/backend/gen/proto/eop/v1;eopv1";
+
+import "google/protobuf/timestamp.proto";
+
+// Source — где было зафиксировано событие.
+enum Source {
+  SOURCE_UNSPECIFIED = 0;
+  SOURCE_OS          = 1;  // нативный agent (macOS/Windows)
+  SOURCE_BROWSER     = 2;  // browser extension
+  SOURCE_IDE         = 3;  // VS Code / JetBrains plugin
+  SOURCE_CLI         = 4;  // claude code hooks, aider, и т.д.
+}
+
+// Category — как классифицировано время.
+enum Category {
+  CATEGORY_UNSPECIFIED = 0;
+  CATEGORY_IDLE        = 1;
+  CATEGORY_MANUAL      = 2;
+  CATEGORY_AI          = 3;
+  CATEGORY_READING     = 4;
+  CATEGORY_REFACTOR    = 5;
+  CATEGORY_OTHER       = 6;
+}
+
+// AI-канал (если category == AI).
+enum AiChannel {
+  AI_CHANNEL_UNSPECIFIED = 0;
+  AI_CHANNEL_CHAT        = 1;  // браузерный чат
+  AI_CHANNEL_INLINE      = 2;  // Copilot / Cursor inline
+  AI_CHANNEL_AGENT       = 3;  // Claude Code / Cursor agent / Aider
+  AI_CHANNEL_CLI         = 4;
+}
+
+// Event — атомарный факт о тратах времени или о действии.
+// ВАЖНО: не содержит и НЕ ДОЛЖНО содержать контент (текст файлов,
+// промпты, ответы AI, заголовки приватных окон, содержимое clipboard).
+message Event {
+  google.protobuf.Timestamp ts        = 1;
+  string                    user_id   = 2;
+  string                    device_id = 3;
+  string                    session_id = 4;
+
+  string    app_bundle    = 10;  // напр. com.microsoft.VSCode
+  Category  category      = 11;
+  Source    source        = 12;
+  string    ai_provider   = 13;  // openai | anthropic | google | github | ...
+  AiChannel ai_channel    = 14;
+  string    project_id    = 15;
+  string    file_lang     = 16;  // ts | rs | go | ...
+
+  uint32 duration_ms   = 20;
+  uint32 chars_in      = 21;  // набрано / вставлено
+  uint32 lines_added   = 22;
+  uint32 lines_removed = 23;
+
+  // Гибкое расширение для безопасных полей (без контента).
+  map<string, string> meta = 30;
+}
+
+message IngestRequest {
+  repeated Event events = 1;
+}
+
+message IngestResponse {
+  uint32 accepted = 1;
+  uint32 rejected = 2;
+}
+
+// Report — AI-сгенерированный отчёт (тело в markdown).
+message Report {
+  string                    id            = 1;
+  string                    user_id       = 2;
+  string                    period        = 3;  // weekly_2026_W18 | monthly_2026_05
+  string                    model         = 4;  // gemini-2.5-flash | ...
+  string                    body_md       = 5;
+  google.protobuf.Timestamp generated_at  = 6;
+  string                    prompt_version = 7;
+}

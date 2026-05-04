@@ -1,0 +1,6 @@
+packages:
+  - "agent"
+  - "browser-extension"
+  - "dashboard"
+  - "ide-vscode"
+  - "ui"

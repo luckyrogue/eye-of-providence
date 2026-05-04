@@ -1,0 +1,25 @@
+{
+  "name": "eop-vscode",
+  "displayName": "Eye of Providence",
+  "description": "Track AI vs manual coding time in VS Code.",
+  "version": "0.0.1",
+  "private": true,
+  "publisher": "eyeofprovidence",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "main": "./dist/extension.js",
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -w -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.10",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.6.3"
+  },
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": []
+  }
+}

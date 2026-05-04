@@ -1,0 +1,40 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+*.log
+pnpm-debug.log*
+
+# Rust / Tauri
+agent/src-tauri/target/
+agent/src-tauri/Cargo.lock
+target/
+
+# Go
+backend/bin/
+*.test
+*.out
+coverage.txt
+
+# Proto generated
+proto/gen/
+
+# Local data
+*.sqlite
+*.db

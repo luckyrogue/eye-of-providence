@@ -1,0 +1,21 @@
+{
+  "name": "eye-of-providence",
+  "private": true,
+  "version": "0.0.1",
+  "packageManager": "pnpm@9.12.3",
+  "scripts": {
+    "agent:dev": "pnpm -F @eop/agent tauri dev",
+    "agent:build": "pnpm -F @eop/agent tauri build",
+    "dashboard:dev": "pnpm -F @eop/dashboard dev",
+    "dashboard:build": "pnpm -F @eop/dashboard build",
+    "extension:dev": "pnpm -F @eop/browser-extension dev",
+    "extension:build": "pnpm -F @eop/browser-extension build",
+    "lint": "pnpm -r --parallel lint || true",
+    "infra:up": "docker compose -f infra/docker-compose.yml up -d",
+    "infra:down": "docker compose -f infra/docker-compose.yml down",
+    "backend:ingest": "cd backend && go run ./cmd/ingest",
+    "backend:auth": "cd backend && go run ./cmd/auth",
+    "backend:reports": "cd backend && go run ./cmd/reports",
+    "proto:gen": "cd proto && buf generate"
+  }
+}
