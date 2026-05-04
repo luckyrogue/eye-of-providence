@@ -15,7 +15,8 @@ type Config struct {
 	GitHubClientID  string
 	GitHubClientSec string
 	JWTSecret       string
-	ReportsCronSec  int // 0 = выключено
+	AllowedOrigins  string // CORS, comma-separated, "*" разрешено
+	ReportsCronSec  int    // 0 = выключено
 }
 
 func FromEnv() Config {
@@ -29,6 +30,7 @@ func FromEnv() Config {
 		GitHubClientID:  os.Getenv("EOP_GITHUB_CLIENT_ID"),
 		GitHubClientSec: os.Getenv("EOP_GITHUB_CLIENT_SECRET"),
 		JWTSecret:       getenv("EOP_JWT_SECRET", "dev-only-secret-change-me"),
+		AllowedOrigins:  getenv("EOP_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5174"),
 		ReportsCronSec:  atoi(os.Getenv("EOP_REPORTS_CRON_SEC")),
 	}
 }

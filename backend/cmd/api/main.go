@@ -44,8 +44,8 @@ func main() {
 		DisableStartupMessage: cfg.Env == "production",
 	})
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:5173,http://localhost:5174",
-		AllowMethods:     "GET,POST,OPTIONS",
+		AllowOrigins:     cfg.AllowedOrigins,
+		AllowMethods:     "GET,POST,DELETE,OPTIONS",
 		AllowHeaders:     "Authorization,Content-Type",
 		AllowCredentials: true,
 	}))
