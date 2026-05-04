@@ -17,6 +17,7 @@ import {
 import { Markdown } from "./Markdown";
 import { Heatmap } from "./Heatmap";
 import { Languages } from "./Languages";
+import { Settings } from "./Settings";
 
 export default function App() {
   const [userId, setUserId] = useState<string | null>(localStorage.getItem("eop_user_id"));
@@ -28,6 +29,20 @@ export default function App() {
   const [active, setActive] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [tab, setTab] = useState<"dashboard" | "settings">("dashboard");
+
+  function logout() {
+    localStorage.removeItem("eop_token");
+    localStorage.removeItem("eop_user_id");
+    setUserId(null);
+    setEvents([]);
+    setSummary({});
+    setLanguages([]);
+    setHeatmap([]);
+    setReports([]);
+    setActive(null);
+    setTab("dashboard");
+  }
 
   async function refresh() {
     setError(null);
@@ -104,9 +119,28 @@ export default function App() {
         <header className="flex items-end justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Eye of Providence</h1>
-            <p className="text-muted-foreground">Phase 5 — Gemini reports + dashboard polish</p>
+            <p className="text-muted-foreground">AI vs manual coding tracker</p>
           </div>
-          <div className="text-sm text-muted-foreground">{userId ? `user: ${userId.slice(0, 8)}…` : "not logged in"}</div>
+          {userId && (
+            <div className="flex items-center gap-2 text-sm">
+              <button
+                onClick={() => setTab("dashboard")}
+                className={`rounded-md px-3 py-1 ${tab === "dashboard" ? "bg-secondary" : "text-muted-foreground"}`}
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => setTab("settings")}
+                className={`rounded-md px-3 py-1 ${tab === "settings" ? "bg-secondary" : "text-muted-foreground"}`}
+              >
+                Settings
+              </button>
+              <span className="text-muted-foreground mx-1">·</span>
+              <button onClick={logout} className="text-muted-foreground hover:text-foreground">
+                Logout
+              </button>
+            </div>
+          )}
         </header>
 
         {error && (
@@ -125,6 +159,8 @@ export default function App() {
               </Button>
             </CardContent>
           </Card>
+        ) : tab === "settings" ? (
+          <Settings onWiped={logout} />
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

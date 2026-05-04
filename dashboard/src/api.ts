@@ -97,6 +97,26 @@ export async function listReports(): Promise<Report[]> {
   return data.reports ?? [];
 }
 
+export type Profile = {
+  user_id: string;
+  email?: string;
+  provider?: string;
+  github_login?: string;
+};
+
+export async function fetchProfile(): Promise<Profile> {
+  const res = await authed("/v1/me/");
+  if (!res.ok) throw new Error(`profile failed: ${res.status}`);
+  return res.json();
+}
+
+export async function deleteMyData(): Promise<void> {
+  const res = await authed("/v1/me/data", { method: "DELETE" });
+  if (!res.ok) throw new Error(`delete failed: ${res.status}`);
+  localStorage.removeItem("eop_token");
+  localStorage.removeItem("eop_user_id");
+}
+
 // Для smoke-теста: посылаем симулированные события с дашборда.
 export async function ingestDemoEvent(): Promise<{ accepted: number; rejected: number }> {
   const res = await authed("/v1/ingest", {

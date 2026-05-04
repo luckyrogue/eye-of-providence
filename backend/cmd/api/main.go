@@ -60,6 +60,12 @@ func main() {
 		Logger:    log,
 		Users:     auth.NewUsersPG(pgPool),
 	})
+	auth.RegisterMeRoutes(app, auth.MeService{
+		JWTSecret:  cfg.JWTSecret,
+		Pool:       pgPool,
+		EventStore: eventStore,
+		Logger:     log,
+	})
 	ingest.RegisterRoutes(app, eventStore, log, cfg.JWTSecret)
 	analytics.RegisterRoutes(app, eventStore, log, cfg.JWTSecret)
 	gemini := reports.NewGeminiClient(cfg.GeminiAPIKey, "gemini-2.5-flash")

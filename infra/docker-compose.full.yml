@@ -1,0 +1,74 @@
+# Полный self-host стек: api + postgres + clickhouse + redis.
+# Использовать: docker compose -f infra/docker-compose.full.yml up -d
+#
+# Миграции: применяются вручную (см. docs/self-hosting.md), либо API падает
+# при старте если таблиц нет.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: eop
+      POSTGRES_PASSWORD: eop_dev
+      POSTGRES_DB: eop
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../backend/migrations:/migrations:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eop"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.10-alpine
+    environment:
+      CLICKHOUSE_DB: eop
+      CLICKHOUSE_USER: eop
+      CLICKHOUSE_PASSWORD: eop_dev
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ../backend/migrations:/migrations:ro
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      EOP_ENV: production
+      EOP_HTTP_ADDR: ":8080"
+      EOP_POSTGRES_DSN: "postgres://eop:eop_dev@postgres:5432/eop?sslmode=disable"
+      EOP_CLICKHOUSE_DSN: "clickhouse://eop:eop_dev@clickhouse:9000/eop"
+      EOP_REDIS_ADDR: "redis:6379"
+      EOP_JWT_SECRET: "${EOP_JWT_SECRET:-change-me-please}"
+      EOP_GEMINI_API_KEY: "${EOP_GEMINI_API_KEY:-}"
+      EOP_GITHUB_CLIENT_ID: "${EOP_GITHUB_CLIENT_ID:-}"
+      EOP_GITHUB_CLIENT_SECRET: "${EOP_GITHUB_CLIENT_SECRET:-}"
+      EOP_REPORTS_CRON_SEC: "${EOP_REPORTS_CRON_SEC:-21600}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+  redis_data:
