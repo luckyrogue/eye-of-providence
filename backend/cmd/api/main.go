@@ -43,11 +43,13 @@ func main() {
 		AppName:               "eop-api",
 		DisableStartupMessage: cfg.Env == "production",
 	})
+	// Если AllowedOrigins=="*" — браузеры запрещают AllowCredentials=true с wildcard.
+	allowCreds := cfg.AllowedOrigins != "*"
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.AllowedOrigins,
 		AllowMethods:     "GET,POST,DELETE,OPTIONS",
 		AllowHeaders:     "Authorization,Content-Type",
-		AllowCredentials: true,
+		AllowCredentials: allowCreds,
 	}))
 	app.Use(logger.New(logger.Config{Format: "[${time}] ${status} ${method} ${path} ${latency}\n"}))
 
