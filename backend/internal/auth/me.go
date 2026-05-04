@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
+	"github.com/eye-of-providence/backend/internal/metrics"
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
@@ -65,6 +66,7 @@ func RegisterMeRoutes(app *fiber.App, s MeService) {
 			}
 		}
 
+		metrics.UsersDeleted.Inc()
 		s.Logger.Info("user data deleted", zap.String("user", claims.UserID))
 		return c.JSON(fiber.Map{"status": "ok", "deleted_user": claims.UserID})
 	})

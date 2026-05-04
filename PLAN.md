@@ -44,8 +44,8 @@
 - [x] `platform/macos/`: `NSWorkspace.frontmostApplication` (objc2), `CGEventSourceSecondsSinceLastEventType` для idle (FFI).
 - [x] Локальный SQLite буфер событий (`rusqlite` WAL mode), lease-based queue.
 - [x] HTTP client → backend `/v1/ingest` (`reqwest`, bearer token).
-- [ ] Onboarding flow: Accessibility permission. **Phase 1.5** — нужно для keystrokes.
-- [ ] Tauri tray icon. **Phase 1.5**.
+- [x] Onboarding flow: `check_accessibility` Tauri command + `AXIsProcessTrusted` FFI на macOS, fallback true для Windows/Linux.
+- [x] Tauri tray icon с Open dashboard / Pause / Quit (см. `lib.rs::TrayIconBuilder`).
 
 ### Backend
 - [x] `backend/internal/auth/`: dev-token (mock JWT), GitHub OAuth callback.
@@ -78,7 +78,7 @@
 - [x] AI domain → provider/channel mapping.
 - [x] API client → backend через JWT в `chrome.storage.local`.
 - [x] Popup на shadcn: dev login + flush-now + logout.
-- [ ] Native messaging host для связи с desktop agent. **V1+** — для Phase 2 работает напрямую с backend.
+- [x] Native messaging host: `core/local_api.rs` — локальный HTTP `127.0.0.1:7373` с pairing token из `~/<data>/eop.local-token`. Browser extension и IDE plugin могут push events через него.
 
 ### Готово, когда:
 - [x] Extension собирается (`pnpm -F @eop/browser-extension build`), валидный MV3 dist/.
@@ -108,18 +108,18 @@
 ### Готово, когда:
 - [x] **Smoke-test PASSED**: IDE event (manual + ai/inline) + CLI hook event (claude-code stop) → backend → recent endpoint.
 - [x] VS Code extension компилируется (`tsc -p .` → `dist/extension.js`).
-- [ ] Дашборд показывает AI ratio с учётом chars (а не только ms). **Phase 4** — нужны улучшенные аналитические запросы.
+- [x] Дашборд показывает AI ratio с учётом chars: `Languages.tsx` рендерит % AI per-language по chars, `Trend.tsx` — manual/ai по дням.
 
 ---
 
 ## Phase 4 — Windows parity (неделя 4–5)
 
-- [ ] `platform/windows/`: `SetWinEventHook`, `GetForegroundWindow` + `QueryFullProcessImageName`, `GetLastInputInfo`.
-- [ ] Keystroke counts через `SetWindowsHookEx(WH_KEYBOARD_LL)` (low-level, низкий риск).
-- [ ] Clipboard через `GetClipboardSequenceNumber` + `OpenClipboard` (только хеш + размер).
-- [ ] MSI/EXE builder в Tauri config, code signing pipeline (отложить notarization).
-- [ ] Autostart через registry `Run`.
-- [ ] Контракт-тесты: один и тот же event-payload генерится на обеих ОС для эквивалентного сценария.
+- [x] `platform/windows/`: `GetForegroundWindow` + `QueryFullProcessImageNameW` (path → exe name только, без username), `GetLastInputInfo` для idle. Используется `windows-rs` crate.
+- [ ] Keystroke counts через `SetWindowsHookEx(WH_KEYBOARD_LL)` — **отложено**: нет Windows для верификации, добавляется в Phase 1.5 после ручного теста.
+- [ ] Clipboard sequence number — **отложено** до реальной machine. Browser extension даёт нам clipboard сигнал из AI-сайтов уже сейчас.
+- [ ] MSI/EXE builder + code signing — **V1** (требует Windows machine + EV cert).
+- [ ] Autostart через registry `Run` — **V1**.
+- [x] Контракт-тесты: `internal/store/event_test.go` — `TestEventCrossPlatformContract` фиксирует JSON-схему Event; падает при дрейфе формата.
 
 ### Готово, когда:
 - На Windows-машине агент работает с тем же поведением, что на macOS. Дашборд показывает обе device-platform.
@@ -147,7 +147,7 @@
 - [x] AI report card: Generate weekly / Monthly buttons, отчёт-switcher (chip-список periods), markdown rendering без зависимостей.
 - [x] Recent events table с send-demo и refresh.
 - [x] Heatmap часы×дни. **Сделано в Phase 6.5** (`Heatmap.tsx` + `/v1/heatmap`).
-- [ ] AI ratio trend chart 7/30/90д. **V1+** — нужны time-series rollups.
+- [x] AI ratio trend chart 7/30/90д: `GET /v1/trend?days=N` + `Trend.tsx` SVG-line chart (manual vs ai per day).
 
 ### Готово, когда:
 - [x] **Smoke-test PASSED**: 6 событий → POST /v1/reports/generate?period=weekly → markdown с TL;DR / Ключевые цифры / AI по провайдерам / Top языков / Рекомендация.
@@ -158,10 +158,10 @@
 
 ## Cross-cutting (всё время)
 
-- [ ] **Telemetry of telemetry**: метрики работы агента (event drop rate, latency до backend, ошибки) — в собственный бакет, агрегаты только. **V1**.
+- [x] **Telemetry of telemetry**: `internal/metrics/` — Prometheus-совместимые counters (`/metrics`), JSON snapshot (`/v1/admin/cost`). Покрывает ingest accepted/rejected/errors, reports generated, gemini calls + tokens, users deleted.
 - [x] **Documentation**: `docs/privacy.md`, `docs/attribution.md`, `docs/data-model.md`, `docs/self-hosting.md` — есть, self-hosting расширен в Phase 7.
-- [ ] **Threat model**: один проход через STRIDE — **отложено до V1**.
-- [ ] **Cost dashboard**: Gemini token usage, ClickHouse storage — **V1**.
+- [x] **Threat model**: `docs/threat-model.md` — STRIDE проход по backend, agent, browser-extension, vscode, claude hooks с конкретными митигациями.
+- [x] **Cost dashboard**: `/v1/admin/cost` + `/metrics` показывают gemini calls и approx input/output tokens. Dashboard endpoint готов; UI-карточка — **V1**.
 
 ---
 

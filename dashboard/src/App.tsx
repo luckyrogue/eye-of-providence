@@ -6,18 +6,21 @@ import {
   fetchSummary,
   fetchLanguages,
   fetchHeatmap,
+  fetchTrend,
   ingestDemoEvent,
   generateReport,
   listReports,
   type EventRow,
   type LangCell,
   type HeatmapCell,
+  type TrendPoint,
   type Report,
 } from "./api";
 import { Markdown } from "./Markdown";
 import { Heatmap } from "./Heatmap";
 import { Languages } from "./Languages";
 import { Settings } from "./Settings";
+import { Trend } from "./Trend";
 
 export default function App() {
   const [userId, setUserId] = useState<string | null>(localStorage.getItem("eop_user_id"));
@@ -25,6 +28,7 @@ export default function App() {
   const [summary, setSummary] = useState<Record<string, number>>({});
   const [languages, setLanguages] = useState<LangCell[]>([]);
   const [heatmap, setHeatmap] = useState<HeatmapCell[]>([]);
+  const [trend, setTrend] = useState<TrendPoint[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [active, setActive] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +43,7 @@ export default function App() {
     setSummary({});
     setLanguages([]);
     setHeatmap([]);
+    setTrend([]);
     setReports([]);
     setActive(null);
     setTab("dashboard");
@@ -47,17 +52,19 @@ export default function App() {
   async function refresh() {
     setError(null);
     try {
-      const [r, s, langs, hm, rs] = await Promise.all([
+      const [r, s, langs, hm, tr, rs] = await Promise.all([
         fetchRecent(20),
         fetchSummary(7),
         fetchLanguages(30),
         fetchHeatmap(30),
+        fetchTrend(30),
         listReports(),
       ]);
       setEvents(r);
       setSummary(s);
       setLanguages(langs);
       setHeatmap(hm);
+      setTrend(tr);
       setReports(rs);
       if (rs.length && !active) setActive(rs[0]);
     } catch (e) {
@@ -192,6 +199,16 @@ export default function App() {
                 </CardContent>
               </Card>
             </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Trend (last 30 days)</CardTitle>
+                <CardDescription>manual vs AI per day</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Trend points={trend} />
+              </CardContent>
+            </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>

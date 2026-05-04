@@ -234,6 +234,36 @@ func (s *ClickHouseStore) ActiveUserIDs(ctx context.Context, since time.Time) ([
 	return out, rows.Err()
 }
 
+func (s *ClickHouseStore) DailyTrend(ctx context.Context, userID string, since time.Time) ([]TrendPoint, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.conn.Query(ctx, `
+		SELECT toDate(ts) AS d, category, sum(chars_in), sum(duration_ms)
+		FROM events
+		WHERE user_id = ? AND ts >= ?
+		GROUP BY d, category
+		ORDER BY d, category
+	`, uid, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []TrendPoint{}
+	for rows.Next() {
+		var day time.Time
+		var p TrendPoint
+		if err := rows.Scan(&day, &p.Category, &p.Chars, &p.MS); err != nil {
+			return nil, err
+		}
+		p.Date = day.Format("2006-01-02")
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
 func (s *ClickHouseStore) Close() error {
 	return s.conn.Close()
 }

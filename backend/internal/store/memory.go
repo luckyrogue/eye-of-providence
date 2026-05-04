@@ -117,4 +117,29 @@ func (s *MemoryStore) ActiveUserIDs(_ context.Context, since time.Time) ([]strin
 	return out, nil
 }
 
+func (s *MemoryStore) DailyTrend(_ context.Context, userID string, since time.Time) ([]TrendPoint, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	type key struct{ date, category string }
+	agg := map[key]TrendPoint{}
+	for _, e := range s.events {
+		if e.UserID != userID || e.TS.Before(since) {
+			continue
+		}
+		date := e.TS.UTC().Format("2006-01-02")
+		k := key{date, e.Category}
+		v := agg[k]
+		v.Date = date
+		v.Category = e.Category
+		v.Chars += uint64(e.CharsIn)
+		v.MS += uint64(e.DurationMS)
+		agg[k] = v
+	}
+	out := make([]TrendPoint, 0, len(agg))
+	for _, v := range agg {
+		out = append(out, v)
+	}
+	return out, nil
+}
+
 func (s *MemoryStore) Close() error { return nil }

@@ -75,6 +75,21 @@ export async function fetchHeatmap(days = 30): Promise<HeatmapCell[]> {
   return data.cells ?? [];
 }
 
+export type TrendPoint = { date: string; category: string; chars: number; ms: number };
+
+export async function fetchTrend(days = 30): Promise<TrendPoint[]> {
+  const res = await authed(`/v1/trend?days=${days}`);
+  if (!res.ok) throw new Error(`trend failed: ${res.status}`);
+  const data = await res.json();
+  return data.points ?? [];
+}
+
+export async function fetchCost(): Promise<Record<string, number>> {
+  const res = await authed("/v1/admin/cost");
+  if (!res.ok) throw new Error(`cost failed: ${res.status}`);
+  return res.json();
+}
+
 export type Report = {
   id: string;
   period: string;

@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/eye-of-providence/backend/internal/metrics"
 )
 
 //go:embed prompts/system.md
@@ -62,6 +64,7 @@ type geminiResponse struct {
 // Если API key пуст — возвращает мок-отчёт (dev-mode).
 func (g *GeminiClient) Generate(ctx context.Context, nc *NumericContext) (string, error) {
 	if g.APIKey == "" {
+		metrics.ReportsGenerated.Inc()
 		return mockReport(nc), nil
 	}
 
@@ -103,7 +106,14 @@ func (g *GeminiClient) Generate(ctx context.Context, nc *NumericContext) (string
 	if len(parsed.Candidates) == 0 || len(parsed.Candidates[0].Content.Parts) == 0 {
 		return "", errors.New("gemini returned no content")
 	}
-	return parsed.Candidates[0].Content.Parts[0].Text, nil
+	out := parsed.Candidates[0].Content.Parts[0].Text
+	metrics.GeminiCallsTotal.Inc()
+	metrics.ReportsGenerated.Inc()
+	// Грубая оценка токенов: ~4 chars/token (для большинства языков). Реальные числа
+	// будут когда подключим usage_metadata из ответа Gemini (Phase 8).
+	metrics.GeminiInputTokens.Add(uint64(len(userText) / 4))
+	metrics.GeminiOutputTokens.Add(uint64(len(out) / 4))
+	return out, nil
 }
 
 // buildUserPrompt — собирает компактный JSON + русский preamble.

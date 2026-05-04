@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/metrics"
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
@@ -48,11 +49,14 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 
 		if len(valid) > 0 {
 			if err := st.Insert(c.Context(), valid); err != nil {
+				metrics.IngestErrors.Inc()
 				logger.Error("store insert failed", zap.Error(err), zap.Int("count", len(valid)))
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "insert failed"})
 			}
 		}
 
+		metrics.IngestEventsAccepted.Add(uint64(accepted))
+		metrics.IngestEventsRejected.Add(uint64(rejected))
 		logger.Debug("ingest batch", zap.String("user", claims.UserID), zap.Int("accepted", accepted), zap.Int("rejected", rejected))
 		return c.JSON(response{Accepted: accepted, Rejected: rejected})
 	})

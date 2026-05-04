@@ -40,6 +40,22 @@ fn frontmost_bundle_id() -> Option<String> {
     None
 }
 
+/// Проверяет, есть ли у процесса Accessibility permission.
+/// На macOS использует AXIsProcessTrustedWithOptions из ApplicationServices.
+#[cfg(target_os = "macos")]
+pub fn has_accessibility() -> bool {
+    #[link(name = "ApplicationServices", kind = "framework")]
+    unsafe extern "C" {
+        fn AXIsProcessTrusted() -> u8;
+    }
+    unsafe { AXIsProcessTrusted() != 0 }
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn has_accessibility() -> bool {
+    true
+}
+
 #[cfg(target_os = "macos")]
 fn cg_idle_seconds() -> u32 {
     // CGEventSourceSecondsSinceLastEventType — публичный API CoreGraphics.

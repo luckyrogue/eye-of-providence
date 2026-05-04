@@ -33,7 +33,16 @@ type EventStore interface {
 	Heatmap(ctx context.Context, userID string, since time.Time) ([]HeatmapCell, error)
 	LanguageBreakdown(ctx context.Context, userID string, since time.Time) ([]LangCell, error)
 	ActiveUserIDs(ctx context.Context, since time.Time) ([]string, error)
+	DailyTrend(ctx context.Context, userID string, since time.Time) ([]TrendPoint, error)
 	Close() error
+}
+
+// TrendPoint — день × категория (для line chart).
+type TrendPoint struct {
+	Date     string `json:"date"` // YYYY-MM-DD UTC
+	Category string `json:"category"`
+	Chars    uint64 `json:"chars"`
+	MS       uint64 `json:"ms"`
 }
 
 // HeatmapCell — один час одного дня недели (UTC).

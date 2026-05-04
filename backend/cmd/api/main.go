@@ -17,6 +17,7 @@ import (
 	"github.com/eye-of-providence/backend/internal/config"
 	"github.com/eye-of-providence/backend/internal/ingest"
 	eoplog "github.com/eye-of-providence/backend/internal/log"
+	"github.com/eye-of-providence/backend/internal/metrics"
 	"github.com/eye-of-providence/backend/internal/reports"
 	"github.com/eye-of-providence/backend/internal/store"
 )
@@ -52,6 +53,13 @@ func main() {
 
 	app.Get("/healthz", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok", "service": "api"})
+	})
+	app.Get("/metrics", func(c *fiber.Ctx) error {
+		c.Set("Content-Type", "text/plain; version=0.0.4")
+		return c.SendString(metrics.Render())
+	})
+	app.Get("/v1/admin/cost", auth.Middleware(cfg.JWTSecret), func(c *fiber.Ctx) error {
+		return c.JSON(metrics.Snapshot())
 	})
 
 	auth.RegisterRoutes(app, auth.Service{
