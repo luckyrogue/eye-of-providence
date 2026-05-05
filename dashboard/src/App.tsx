@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from "@eop/ui";
-import { Activity, Brain, Eye, FileText, LogOut, Settings as SettingsIcon, Sparkles } from "lucide-react";
+import { Activity, Brain, Eye, FileText, LogOut, Settings as SettingsIcon, Sparkles, Users } from "lucide-react";
 import {
-  devLogin,
   fetchRecent,
   fetchSummary,
   fetchLanguages,
@@ -22,9 +21,11 @@ import { Heatmap } from "./Heatmap";
 import { Languages } from "./Languages";
 import { Settings } from "./Settings";
 import { Trend } from "./Trend";
+import { Auth } from "./Auth";
+import { Teams } from "./Teams";
 import { formatDate, formatTime, getTz } from "./tz";
 
-type Tab = "dashboard" | "settings";
+type Tab = "dashboard" | "team" | "settings";
 
 const CATEGORY_LABELS: Record<string, string> = {
   manual: "вручную",
@@ -93,18 +94,10 @@ export default function App() {
     }
   }
 
-  async function login() {
-    setBusy("login");
-    try {
-      const uid = await devLogin();
-      localStorage.setItem("eop_user_id", uid);
-      setUserId(uid);
-      await refresh();
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setBusy(null);
-    }
+  function onAuth(r: { user_id: string; display_name?: string }) {
+    localStorage.setItem("eop_user_id", r.user_id);
+    if (r.display_name) localStorage.setItem("eop_display_name", r.display_name);
+    setUserId(r.user_id);
   }
 
   async function sendDemo() {
@@ -163,6 +156,12 @@ export default function App() {
                 <Activity className="h-4 w-4" /> Дашборд
               </button>
               <button
+                onClick={() => setTab("team")}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors ${tab === "team" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`}
+              >
+                <Users className="h-4 w-4" /> Команда
+              </button>
+              <button
                 onClick={() => setTab("settings")}
                 className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors ${tab === "settings" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`}
               >
@@ -186,24 +185,11 @@ export default function App() {
         )}
 
         {!userId ? (
-          <Card className="max-w-md mx-auto mt-12">
-            <CardHeader>
-              <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                <Sparkles className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <CardTitle className="text-center">Добро пожаловать</CardTitle>
-              <CardDescription className="text-center">
-                Войди, чтобы увидеть свою статистику. На MVP — без OAuth, выдаём dev-токен.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={login} disabled={busy !== null} className="w-full">
-                {busy === "login" ? "..." : "Получить dev-токен"}
-              </Button>
-            </CardContent>
-          </Card>
+          <Auth onAuth={onAuth} />
         ) : tab === "settings" ? (
           <Settings onWiped={logout} onTzChange={setTz} />
+        ) : tab === "team" ? (
+          <Teams tz={tz} />
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

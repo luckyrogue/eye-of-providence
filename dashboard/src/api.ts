@@ -30,6 +30,153 @@ export async function devLogin(): Promise<string> {
   return data.user_id;
 }
 
+export type AuthResponse = {
+  token: string;
+  user_id: string;
+  display_name?: string;
+  team_id?: string | null;
+};
+
+export async function register(email: string, password: string, displayName: string, inviteCode?: string): Promise<AuthResponse> {
+  const res = await fetch(`${BASE}/v1/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, display_name: displayName, invite_code: inviteCode }),
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error || `register failed: ${res.status}`);
+  }
+  const data: AuthResponse = await res.json();
+  setToken(data.token);
+  return data;
+}
+
+export async function login(email: string, password: string): Promise<AuthResponse> {
+  const res = await fetch(`${BASE}/v1/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error || `login failed: ${res.status}`);
+  }
+  const data: AuthResponse = await res.json();
+  setToken(data.token);
+  return data;
+}
+
+export type Team = { id: string; name: string; role: string };
+
+export async function listMyTeams(): Promise<Team[]> {
+  const res = await authed("/v1/teams");
+  if (!res.ok) throw new Error(`teams failed: ${res.status}`);
+  const data = await res.json();
+  return data.teams ?? [];
+}
+
+export async function createTeam(name: string): Promise<{ id: string; name: string; role: string }> {
+  const res = await authed("/v1/teams", { method: "POST", body: JSON.stringify({ name }) });
+  if (!res.ok) throw new Error(`createTeam failed: ${res.status}`);
+  return res.json();
+}
+
+export type Project = { id: string; name: string; repo_url: string | null; lang_primary: string | null; created_at: string };
+
+export async function listProjects(teamID: string): Promise<Project[]> {
+  const res = await authed(`/v1/teams/${teamID}/projects`);
+  if (!res.ok) throw new Error(`projects failed: ${res.status}`);
+  const data = await res.json();
+  return data.projects ?? [];
+}
+
+export async function createProject(teamID: string, name: string, repoURL: string): Promise<Project> {
+  const res = await authed(`/v1/teams/${teamID}/projects`, {
+    method: "POST", body: JSON.stringify({ name, repo_url: repoURL }),
+  });
+  if (!res.ok) throw new Error(`createProject failed: ${res.status}`);
+  return res.json();
+}
+
+export type Commit = {
+  id: string;
+  project_id: string | null;
+  user_id: string;
+  author: string;
+  sha: string;
+  message: string;
+  branch: string;
+  files_changed: number;
+  lines_added: number;
+  lines_removed: number;
+  ai_lines_pct: number | null;
+  authored_at: string;
+};
+
+export async function listTeamCommits(teamID: string): Promise<Commit[]> {
+  const res = await authed(`/v1/teams/${teamID}/commits`);
+  if (!res.ok) throw new Error(`commits failed: ${res.status}`);
+  const data = await res.json();
+  return data.commits ?? [];
+}
+
+export type TeamMember = {
+  id: string;
+  email: string;
+  display_name: string;
+  role: string;
+  created_at: string;
+};
+
+export async function listMembers(teamID: string): Promise<TeamMember[]> {
+  const res = await authed(`/v1/teams/${teamID}/members`);
+  if (!res.ok) throw new Error(`members failed: ${res.status}`);
+  const data = await res.json();
+  return data.members ?? [];
+}
+
+export type MemberStat = {
+  id: string;
+  display_name: string;
+  ai_ms: number;
+  manual_ms: number;
+  total_ms: number;
+  ai_ratio: number;
+};
+
+export async function teamSummary(teamID: string): Promise<MemberStat[]> {
+  const res = await authed(`/v1/teams/${teamID}/summary`);
+  if (!res.ok) throw new Error(`summary failed: ${res.status}`);
+  const data = await res.json();
+  return data.members ?? [];
+}
+
+export async function createInvite(teamID: string): Promise<{ code: string; expires_at: string }> {
+  const res = await authed(`/v1/teams/${teamID}/invites`, { method: "POST" });
+  if (!res.ok) throw new Error(`invite failed: ${res.status}`);
+  return res.json();
+}
+
+export type InvitePreview = {
+  valid: boolean;
+  team_id: string;
+  team_name: string;
+  uses_left: number;
+  expires_at: string | null;
+};
+
+export async function previewInvite(code: string): Promise<InvitePreview> {
+  const res = await fetch(`${BASE}/v1/invites/${code}`);
+  if (!res.ok) throw new Error(`invalid invite`);
+  return res.json();
+}
+
+export async function acceptInvite(code: string): Promise<void> {
+  const res = await authed(`/v1/invites/${code}/accept`, { method: "POST" });
+  if (!res.ok) throw new Error(`accept failed: ${res.status}`);
+}
+
 async function authed(path: string, init: RequestInit = {}): Promise<Response> {
   const token = getToken();
   if (!token) throw new Error("not authenticated");

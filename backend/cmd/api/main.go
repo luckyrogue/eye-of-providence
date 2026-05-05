@@ -20,6 +20,7 @@ import (
 	"github.com/eye-of-providence/backend/internal/metrics"
 	"github.com/eye-of-providence/backend/internal/reports"
 	"github.com/eye-of-providence/backend/internal/store"
+	"github.com/eye-of-providence/backend/internal/teams"
 )
 
 func main() {
@@ -78,6 +79,15 @@ func main() {
 	})
 	ingest.RegisterRoutes(app, eventStore, log, cfg.JWTSecret)
 	analytics.RegisterRoutes(app, eventStore, log, cfg.JWTSecret)
+
+	// Teams + email/password auth + invites
+	teams.EventStore = eventStore
+	teams.RegisterRoutes(app, teams.Service{
+		Pool:      pgPool,
+		JWTSecret: cfg.JWTSecret,
+		Logger:    log,
+	})
+
 	gemini := reports.NewGeminiClient(cfg.GeminiAPIKey, "gemini-2.5-flash")
 	reports.RegisterRoutes(app, reports.Service{
 		Store:      reportStore,
