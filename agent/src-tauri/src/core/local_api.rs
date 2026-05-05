@@ -58,7 +58,10 @@ async fn handle(mut stream: TcpStream, store: Arc<LocalStore>, expected_token: S
     // Читаем request line
     let mut line = String::new();
     reader.read_line(&mut line).await?;
-    let (method, path) = parse_request_line(&line);
+    let (method, path) = {
+        let (m, p) = parse_request_line(&line);
+        (m.to_string(), p.to_string())
+    };
 
     // Читаем headers
     let mut content_length = 0usize;
