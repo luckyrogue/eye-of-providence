@@ -4,6 +4,8 @@ package main
 
 import (
 	"context"
+	"net/http"
+	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,6 +26,11 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "--healthcheck" {
+		runHealthcheck()
+		return
+	}
+
 	cfg := config.FromEnv()
 	log := eoplog.New(cfg.Env)
 	defer func() { _ = log.Sync() }()
@@ -156,4 +163,24 @@ func chooseReportStore(log *zap.Logger, pool *pgxpool.Pool) reports.ReportStore 
 	}
 	log.Info("postgres report store ready")
 	return reports.NewPostgresStore(pool)
+}
+
+// runHealthcheck — отдельный mode для Docker HEALTHCHECK.
+// Distroless image не имеет shell/curl, поэтому используем сам binary.
+func runHealthcheck() {
+	addr := os.Getenv("EOP_HTTP_ADDR")
+	if addr == "" {
+		addr = ":8080"
+	}
+	url := "http://localhost" + addr + "/healthz"
+	c := &http.Client{Timeout: 3 * time.Second}
+	resp, err := c.Get(url)
+	if err != nil {
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		os.Exit(1)
+	}
+	os.Exit(0)
 }

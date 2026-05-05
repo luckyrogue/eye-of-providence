@@ -1,0 +1,36 @@
+# Используется когда build context = корень репо (для dashboard).
+
+.git
+.github
+.claude
+
+# Node
+node_modules
+**/node_modules
+**/dist
+**/.vite
+*.log
+*.tsbuildinfo
+
+# Rust / Tauri
+agent/src-tauri/target
+agent/src-tauri/gen
+
+# Go
+backend/bin
+backend/tmp
+*.test
+*.out
+
+# Editors
+.vscode
+.idea
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Local data
+*.sqlite
+*.db

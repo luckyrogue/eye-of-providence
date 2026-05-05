@@ -48,7 +48,6 @@ check "cargo"                  "cargo --version"                                
 
 echo
 echo "${BOLD}Optional — for deploy:${RST}"
-check "fly (flyctl)"           "fly version"                                     "brew install flyctl, или https://fly.io/docs/hands-on/install-flyctl/" "optional"
 check "git"                    "git --version"                                   "brew install git"
 
 echo

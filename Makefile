@@ -1,4 +1,4 @@
-.PHONY: help doctor dev dev-up dev-down dev-logs deploy deploy-api deploy-dashboard infra-up infra-down backend-ingest backend-auth backend-reports proto-gen agent-dev dashboard-dev clean
+.PHONY: help doctor dev dev-up dev-down dev-logs docker-build docker-build-api docker-build-dashboard infra-up infra-down backend-ingest backend-auth backend-reports proto-gen agent-dev dashboard-dev clean
 
 doctor:
 	@./scripts/doctor.sh
@@ -15,25 +15,29 @@ dev-down:
 dev-logs:
 	docker compose -f infra/docker-compose.dev.yml logs -f api dashboard
 
-deploy: deploy-api deploy-dashboard
+# Production Docker images (для деплоя через Dokploy/Coolify/Portainer/любой Docker host)
+docker-build: docker-build-api docker-build-dashboard
 
-deploy-api:
-	@./infra/fly/deploy-api.sh
+docker-build-api:
+	docker build -t eop-api:latest -f backend/Dockerfile backend/
 
-deploy-dashboard:
-	@./infra/fly/deploy-dashboard.sh
+docker-build-dashboard:
+	docker build -t eop-dashboard:latest \
+		-f dashboard/Dockerfile \
+		--build-arg VITE_BACKEND_URL=$${VITE_BACKEND_URL:-http://localhost:8080} \
+		.
 
 help:
 	@echo "Eye of Providence — dev targets"
-	@echo "  make doctor             — проверить установленные зависимости"
-	@echo "  make dev                — поднять весь стек локально (api + dashboard + db, hot-reload)"
-	@echo "  make dev-down           — погасить dev-стек"
-	@echo "  make dev-logs           — следить за логами api + dashboard"
-	@echo "  make deploy             — задеплоить backend и dashboard на Fly"
-	@echo "  make deploy-api         — задеплоить только backend"
-	@echo "  make deploy-dashboard   — задеплоить только dashboard"
-	@echo "  make infra-up           — поднять только postgres/clickhouse/redis (без api)"
-	@echo "  make infra-down         — погасить infra"
+	@echo "  make doctor                   — проверить установленные зависимости"
+	@echo "  make dev                      — поднять весь стек локально (api + dashboard + db, hot-reload)"
+	@echo "  make dev-down                 — погасить dev-стек"
+	@echo "  make dev-logs                 — следить за логами api + dashboard"
+	@echo "  make docker-build             — собрать prod Docker images (api + dashboard)"
+	@echo "  make docker-build-api         — только api"
+	@echo "  make docker-build-dashboard   — только dashboard (VITE_BACKEND_URL env)"
+	@echo "  make infra-up                 — поднять только postgres/clickhouse/redis (без api)"
+	@echo "  make infra-down               — погасить infra"
 	@echo "  make backend-ingest     — запустить ingest service"
 	@echo "  make backend-auth       — запустить auth service"
 	@echo "  make backend-reports    — запустить reports (Gemini) service"

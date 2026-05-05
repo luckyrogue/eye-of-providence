@@ -1,0 +1,14 @@
+.git
+.gitignore
+*.md
+Dockerfile*
+.dockerignore
+.air.toml
+tmp/
+bin/
+*.test
+*.out
+coverage.txt
+.env
+.env.*
+fly.toml
