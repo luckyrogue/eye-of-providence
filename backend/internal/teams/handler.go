@@ -24,9 +24,10 @@ import (
 const tokenTTL = 90 * 24 * time.Hour
 
 type Service struct {
-	Pool      *pgxpool.Pool
-	JWTSecret string
-	Logger    *zap.Logger
+	Pool       *pgxpool.Pool
+	JWTSecret  string
+	Logger     *zap.Logger
+	InviteOnly bool // регистрация только по invite (первый user всегда может — bootstrap)
 }
 
 func RegisterRoutes(app *fiber.App, s Service) {
@@ -34,6 +35,7 @@ func RegisterRoutes(app *fiber.App, s Service) {
 	a := app.Group("/v1/auth")
 	a.Post("/register", s.handleRegister)
 	a.Post("/login", s.handleLogin)
+	a.Get("/config", s.handleAuthConfig)
 	app.Get("/v1/invites/:code", s.handleInvitePreview)
 
 	// Authed
@@ -62,6 +64,19 @@ func RegisterRoutes(app *fiber.App, s Service) {
 	g.Get("/admin/users", s.handleAdminListAllUsers)
 }
 
+// --- Public auth config (для UI) ---
+
+func (s Service) handleAuthConfig(c *fiber.Ctx) error {
+	var userCount int
+	if s.Pool != nil {
+		_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM users").Scan(&userCount)
+	}
+	return c.JSON(fiber.Map{
+		"invite_only":   s.InviteOnly,
+		"is_first_user": userCount == 0,
+	})
+}
+
 // --- Auth: register / login ---
 
 type registerReq struct {
@@ -86,9 +101,32 @@ func (s Service) handleRegister(c *fiber.Ctx) error {
 		req.DisplayName = req.Email
 	}
 
+	// Подсчёт пользователей в системе.
+	// Первый user может зарегаться без invite (bootstrap), он же станет super_admin.
+	var userCount int
+	_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM users").Scan(&userCount)
+	isFirstUser := userCount == 0
+
+	if s.InviteOnly && !isFirstUser {
+		if req.InviteCode == nil || *req.InviteCode == "" {
+			return c.Status(403).JSON(fiber.Map{"error": "регистрация только по приглашению"})
+		}
+		// Проверяем валидность ДО создания юзера
+		if _, err := s.findInvite(c.Context(), *req.InviteCode); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "приглашение невалидно или устарело"})
+		}
+	}
+
 	user, err := auth.CreateUser(c.Context(), s.Pool, req.Email, req.DisplayName, req.Password, nil)
 	if err != nil {
 		return c.Status(409).JSON(fiber.Map{"error": "email уже занят (или ошибка БД)"})
+	}
+
+	// Первый user становится super_admin
+	if isFirstUser {
+		_, _ = s.Pool.Exec(c.Context(),
+			"UPDATE users SET global_role='super_admin' WHERE id=$1", user.ID)
+		s.Logger.Info("first user promoted to super_admin", zap.String("email", user.Email))
 	}
 
 	var joinedTeam *uuid.UUID

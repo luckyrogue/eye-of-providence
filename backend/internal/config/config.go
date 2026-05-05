@@ -17,6 +17,7 @@ type Config struct {
 	JWTSecret       string
 	AllowedOrigins  string // CORS, comma-separated, "*" разрешено
 	ReportsCronSec  int    // 0 = выключено
+	InviteOnly      bool   // true = регистрация только по invite (первый user всегда может)
 }
 
 func FromEnv() Config {
@@ -32,6 +33,7 @@ func FromEnv() Config {
 		JWTSecret:       getenv("EOP_JWT_SECRET", "dev-only-secret-change-me"),
 		AllowedOrigins:  getenv("EOP_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174"),
 		ReportsCronSec:  atoi(os.Getenv("EOP_REPORTS_CRON_SEC")),
+		InviteOnly:      getenv("EOP_INVITE_ONLY", "true") != "false",
 	}
 }
 

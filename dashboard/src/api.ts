@@ -177,6 +177,14 @@ export async function acceptInvite(code: string): Promise<void> {
   if (!res.ok) throw new Error(`accept failed: ${res.status}`);
 }
 
+export type AuthConfig = { invite_only: boolean; is_first_user: boolean };
+
+export async function fetchAuthConfig(): Promise<AuthConfig> {
+  const res = await fetch(`${BASE}/v1/auth/config`);
+  if (!res.ok) return { invite_only: false, is_first_user: false };
+  return res.json();
+}
+
 async function authed(path: string, init: RequestInit = {}): Promise<Response> {
   const token = getToken();
   if (!token) throw new Error("not authenticated");

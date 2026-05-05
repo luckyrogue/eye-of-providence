@@ -90,9 +90,10 @@ func main() {
 	// Teams + email/password auth + invites
 	teams.EventStore = eventStore
 	teams.RegisterRoutes(app, teams.Service{
-		Pool:      pgPool,
-		JWTSecret: cfg.JWTSecret,
-		Logger:    log,
+		Pool:       pgPool,
+		JWTSecret:  cfg.JWTSecret,
+		Logger:     log,
+		InviteOnly: cfg.InviteOnly,
 	})
 
 	gemini := reports.NewGeminiClient(cfg.GeminiAPIKey, "gemini-2.5-flash")
