@@ -19,11 +19,11 @@ dev-logs:
 docker-build: docker-build-api docker-build-dashboard
 
 docker-build-api:
-	docker build -t eop-api:latest -f backend/Dockerfile backend/
+	docker build -t eop-api:latest -f api.Dockerfile .
 
 docker-build-dashboard:
 	docker build -t eop-dashboard:latest \
-		-f dashboard/Dockerfile \
+		-f dashboard.Dockerfile \
 		--build-arg VITE_BACKEND_URL=$${VITE_BACKEND_URL:-http://localhost:8080} \
 		.
 

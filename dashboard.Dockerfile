@@ -1,14 +1,15 @@
 # syntax=docker/dockerfile:1.6
 # Production image для dashboard (Vite SPA → Caddy).
-# Build context должен быть КОРНЕМ репозитория, чтобы Dockerfile видел ui/ workspace.
+# Лежит в корне репо чтобы Dokploy / любой Docker host работал без path-tricks:
+# default context = "." (корень), Dockerfile = "dashboard.Dockerfile".
 #
 # Dokploy:
-#   - Build Path: . (корень репо)
-#   - Dockerfile Path: dashboard/Dockerfile
-#   - Build Arg: VITE_BACKEND_URL=https://api.твой-домен.com
+#   Docker File:         dashboard.Dockerfile
+#   Docker Context Path: .  (или оставь пустым — это default)
+#   Build Arg:           VITE_BACKEND_URL=https://api.твой-домен.com
 #
 # Локально:
-#   docker build -t eop-dashboard -f dashboard/Dockerfile \
+#   docker build -t eop-dashboard -f dashboard.Dockerfile \
 #     --build-arg VITE_BACKEND_URL=http://localhost:8080 .
 
 FROM node:20-alpine AS builder
