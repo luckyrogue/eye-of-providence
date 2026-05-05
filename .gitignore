@@ -39,3 +39,4 @@ proto/gen/
 # Local data
 *.sqlite
 *.db
+.claude/
