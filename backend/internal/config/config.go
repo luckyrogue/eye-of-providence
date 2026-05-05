@@ -30,7 +30,7 @@ func FromEnv() Config {
 		GitHubClientID:  os.Getenv("EOP_GITHUB_CLIENT_ID"),
 		GitHubClientSec: os.Getenv("EOP_GITHUB_CLIENT_SECRET"),
 		JWTSecret:       getenv("EOP_JWT_SECRET", "dev-only-secret-change-me"),
-		AllowedOrigins:  getenv("EOP_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5174"),
+		AllowedOrigins:  getenv("EOP_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174"),
 		ReportsCronSec:  atoi(os.Getenv("EOP_REPORTS_CRON_SEC")),
 	}
 }
