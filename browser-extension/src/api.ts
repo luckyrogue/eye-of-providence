@@ -1,6 +1,6 @@
 // Backend client. Token и backend URL живут в chrome.storage.local.
 
-const DEFAULT_BACKEND = "http://localhost:8080";
+const DEFAULT_BACKEND = "https://eop-api.rysdavletov.org";
 
 export type EventPayload = {
   app_bundle: string;

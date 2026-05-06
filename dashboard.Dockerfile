@@ -6,7 +6,7 @@
 # Dokploy:
 #   Docker File:         dashboard.Dockerfile
 #   Docker Context Path: .  (или оставь пустым — это default)
-#   Build Arg:           VITE_BACKEND_URL=https://api.твой-домен.com
+#   Build Arg:           VITE_BACKEND_URL=https://eop-api.rysdavletov.org
 #
 # Локально:
 #   docker build -t eop-dashboard -f dashboard.Dockerfile \

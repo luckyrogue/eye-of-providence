@@ -113,7 +113,7 @@ pub fn run() {
                 std::fs::write(&token_path, &new_tok)?;
                 new_tok
             };
-            local_api::spawn(store.clone(), token, 7373);
+            local_api::spawn(store.clone(), token, local_api_port);
 
             // Watcher loop — каждые 5с опрашивает PlatformWatcher.
             let platform = platform::build();

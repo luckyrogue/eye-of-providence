@@ -18,7 +18,7 @@ Eye of Providence деплоится через Dokploy как 4 сервиса:
 ## 0. Prerequisites
 
 - Сервер с установленным Dokploy (https://docs.dokploy.com/docs/core/installation).
-- Домены, направленные на сервер (например `api.eop.dev`, `app.eop.dev`).
+- Домены, направленные на сервер (например `eop-api.rysdavletov.org`, `eop-dash.rysdavletov.org`).
 - Этот репозиторий, форкнутый или клонированный к тебе на GitHub.
 
 ## 1. Postgres (Database)
@@ -76,7 +76,7 @@ volumes:
 - **Build Path**: `backend`
 - **Dockerfile**: `Dockerfile`
 - **Port**: `8080`
-- **Domain**: `api.твой-домен.com` (Dokploy auto-привяжет Let's Encrypt).
+- **Domain**: `eop-api.rysdavletov.org` (Dokploy auto-привяжет Let's Encrypt).
 
 **Environment Variables:**
 
@@ -87,7 +87,7 @@ EOP_POSTGRES_DSN=postgres://eop:PASSWORD@eop-postgres-db-1:5432/eop?sslmode=disa
 EOP_CLICKHOUSE_DSN=clickhouse://eop:CH_PASSWORD@eop-clickhouse-clickhouse-1:9000/eop
 EOP_REDIS_ADDR=eop-redis-db-1:6379
 EOP_JWT_SECRET=<openssl rand -hex 32>
-EOP_ALLOWED_ORIGINS=https://app.твой-домен.com
+EOP_ALLOWED_ORIGINS=https://eop-dash.rysdavletov.org
 EOP_GEMINI_API_KEY=<https://aistudio.google.com/apikey>
 EOP_GITHUB_CLIENT_ID=<опц., GitHub OAuth>
 EOP_GITHUB_CLIENT_SECRET=<опц.>
@@ -127,11 +127,11 @@ clickhouse-client --host <host> --user eop --password <CH_PASSWORD> --database e
 - **Build Path**: `.` (КОРЕНЬ репо — нужно для ui/ workspace).
 - **Dockerfile**: `dashboard/Dockerfile`
 - **Port**: `8080` (Caddy внутри слушает 8080).
-- **Domain**: `app.твой-домен.com`
+- **Domain**: `eop-dash.rysdavletov.org`
 
 **Build Arguments** (важно!):
 ```
-VITE_BACKEND_URL=https://api.твой-домен.com
+VITE_BACKEND_URL=https://eop-api.rysdavletov.org
 ```
 
 (это compile-time, иначе dashboard будет ходить в localhost).
@@ -143,16 +143,16 @@ Deploy.
 ## 7. Проверка
 
 ```bash
-curl https://api.твой-домен.com/healthz
+curl https://eop-api.rysdavletov.org/healthz
 # {"service":"api","status":"ok"}
 
-curl -X POST https://api.твой-домен.com/v1/auth/register \
+curl -X POST https://eop-api.rysdavletov.org/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","password":"hunter2hunter2","display_name":"Test"}'
 # {"token":"...", "user_id":"..."}
 ```
 
-Открой `https://app.твой-домен.com` → Регистрация → Создание команды.
+Открой `https://eop-dash.rysdavletov.org` → Регистрация → Создание команды.
 
 ## 8. Создать super_admin
 

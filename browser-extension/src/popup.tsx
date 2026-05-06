@@ -51,7 +51,7 @@ function Popup() {
           {error && <div className="text-xs text-destructive">{error}</div>}
           {token ? (
             <>
-              <div className="text-xs text-muted-foreground">Подключено к локальному backend.</div>
+              <div className="text-xs text-muted-foreground">Подключено к eop-api.rysdavletov.org.</div>
               <div className="flex gap-2">
                 <Button size="sm" className="flex-1" onClick={flushNow} disabled={busy}>
                   Flush now
@@ -64,7 +64,7 @@ function Popup() {
           ) : (
             <>
               <div className="text-xs text-muted-foreground">
-                Phase 2 — dev login (без OAuth). Backend должен слушать на <code>localhost:8080</code>.
+                Dev login (без OAuth). Backend по умолчанию: <code>eop-api.rysdavletov.org</code>.
               </div>
               <Button size="sm" className="w-full" onClick={login} disabled={busy}>
                 {busy ? "..." : "Get dev token"}

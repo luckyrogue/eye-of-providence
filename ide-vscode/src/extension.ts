@@ -167,7 +167,7 @@ async function flushAll(verbose: boolean) {
   buckets = new Map();
 
   const cfg = vscode.workspace.getConfiguration("eop");
-  const url = (cfg.get<string>("backendUrl") ?? "http://localhost:8080").replace(/\/$/, "");
+  const url = (cfg.get<string>("backendUrl") ?? "https://eop-api.rysdavletov.org").replace(/\/$/, "");
   const token = cfg.get<string>("token") ?? "";
   if (!token) {
     if (verbose) vscode.window.showWarningMessage("Eye of Providence: no token (run 'eop.devLogin')");
@@ -194,7 +194,7 @@ async function flushAll(verbose: boolean) {
 
 async function devLoginCmd() {
   const cfg = vscode.workspace.getConfiguration("eop");
-  const url = (cfg.get<string>("backendUrl") ?? "http://localhost:8080").replace(/\/$/, "");
+  const url = (cfg.get<string>("backendUrl") ?? "https://eop-api.rysdavletov.org").replace(/\/$/, "");
   try {
     const res = await fetch(`${url}/v1/auth/dev-token`, { method: "POST" });
     if (!res.ok) {

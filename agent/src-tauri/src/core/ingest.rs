@@ -40,8 +40,8 @@ impl Ingest {
     }
 
     /// Запускает фоновый цикл: каждые flush_interval вытаскивает batch и шлёт.
-    pub fn spawn(self) -> tokio::task::JoinHandle<()> {
-        tokio::spawn(async move {
+    pub fn spawn(self) -> tauri::async_runtime::JoinHandle<()> {
+        tauri::async_runtime::spawn(async move {
             loop {
                 if let Err(err) = self.tick().await {
                     tracing::warn!(error = %err, "ingest tick failed");

@@ -12,8 +12,8 @@ pub fn spawn(
     watcher: Arc<dyn PlatformWatcher>,
     poll_interval: Duration,
     idle_threshold_secs: u32,
-) -> tokio::task::JoinHandle<()> {
-    tokio::spawn(async move {
+) -> tauri::async_runtime::JoinHandle<()> {
+    tauri::async_runtime::spawn(async move {
         let mut last_app: Option<String> = None;
         let mut accumulated_ms: u32 = 0;
 

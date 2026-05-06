@@ -20,8 +20,8 @@ struct IngestBody {
     events: Vec<Event>,
 }
 
-pub fn spawn(store: Arc<LocalStore>, token: String, port: u16) -> tokio::task::JoinHandle<()> {
-    tokio::spawn(async move {
+pub fn spawn(store: Arc<LocalStore>, token: String, port: u16) -> tauri::async_runtime::JoinHandle<()> {
+    tauri::async_runtime::spawn(async move {
         let addr = format!("127.0.0.1:{}", port);
         let listener = match TcpListener::bind(&addr).await {
             Ok(l) => l,
@@ -42,7 +42,7 @@ pub fn spawn(store: Arc<LocalStore>, token: String, port: u16) -> tokio::task::J
             };
             let store = store.clone();
             let token = token.clone();
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 if let Err(err) = handle(stream, store, token).await {
                     tracing::debug!(error = %err, "local conn ended");
                 }
