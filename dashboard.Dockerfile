@@ -41,9 +41,11 @@ ENV CSP_CONNECT_SRC=${CSP_CONNECT_SRC}
 # Статика
 COPY --from=builder /repo/dashboard/dist /srv
 
-# Inline Caddyfile (heredoc). Заголовки безопасности применяются к всем ответам.
-# Caddy подставляет ${CSP_CONNECT_SRC} из ENV.
-COPY <<'CADDYFILE' /etc/caddy/Caddyfile
+# Inline Caddyfile (через shell heredoc — работает в любом docker, не требует BuildKit).
+# Caddy сам подставляет {$CSP_CONNECT_SRC} из ENV при загрузке конфига.
+RUN cat > /etc/caddy/Caddyfile <<'CADDYFILE' \
+    && mkdir -p /data/caddy /config/caddy \
+    && chown -R nobody:nobody /srv /data/caddy /config/caddy /etc/caddy
 :8080 {
     root * /srv
     encode gzip zstd
@@ -61,14 +63,11 @@ COPY <<'CADDYFILE' /etc/caddy/Caddyfile
 }
 CADDYFILE
 
-# Caddy alpine image создаёт writable temp/cache directories под root по умолчанию.
-# Перевыставляем ownership чтобы запускаться без привилегий.
-RUN mkdir -p /data/caddy /config/caddy \
-    && chown -R nobody:nobody /srv /data/caddy /config/caddy /etc/caddy
-
 USER nobody:nobody
 
+# Healthcheck бьётся в локальный Caddy — НЕ во внешний API
+# (внешний URL мог быть недоступен и контейнер считался бы unhealthy).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget -q --spider https://eop-api.rysdavletov.org/ || exit 1
+    CMD wget -q --spider http://localhost:8080/ || exit 1
 
 EXPOSE 8080
