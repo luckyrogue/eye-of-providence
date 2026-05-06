@@ -1,18 +1,51 @@
 # syntax=docker/dockerfile:1.6
-# Production image для dashboard (Vite SPA → Nginx).
-# Лежит в корне репо чтобы Dokploy / любой Docker host работал без path-tricks:
-# default context = "." (корень), Dockerfile = "dashboard.Dockerfile".
 #
-# Dokploy:
-#   Docker File:         dashboard.Dockerfile
-#   Docker Context Path: .  (или оставь пустым — это default)
-#   Build Arg:           VITE_BACKEND_URL=https://eop-api.rysdavletov.org
+# Monorepo Dockerfile with multiple build targets.
 #
-# Локально:
-#   docker build -t eop-dashboard -f dashboard.Dockerfile \
-#     --build-arg VITE_BACKEND_URL=http://localhost:8080 .
+# Usage:
+#   API:
+#     docker build -t eop-api:latest --target api .
+#
+#   Dashboard (Vite SPA served by Nginx):
+#     docker build -t eop-dashboard:latest --target dashboard \
+#       --build-arg VITE_BACKEND_URL=https://eop-api.example.com \
+#       --build-arg CSP_CONNECT_SRC=https://eop-api.example.com \
+#       .
+#
 
-FROM node:20-alpine AS builder
+############################
+# API
+############################
+
+FROM golang:1.25-alpine AS api-builder
+WORKDIR /src
+
+# Cache layer для зависимостей
+COPY backend/go.mod backend/go.sum ./
+RUN go mod download
+
+COPY backend ./
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath -ldflags='-s -w' \
+    -o /out/api ./cmd/api
+
+FROM gcr.io/distroless/static-debian12:nonroot AS api
+WORKDIR /
+COPY --from=api-builder /out/api /api
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["/api", "--healthcheck"] || exit 1
+
+EXPOSE 8080
+USER nonroot:nonroot
+ENTRYPOINT ["/api"]
+
+
+############################
+# Dashboard
+############################
+
+FROM node:20-alpine AS dashboard-builder
 WORKDIR /repo
 
 RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
@@ -27,23 +60,20 @@ RUN pnpm install --frozen-lockfile=false
 COPY ui ui
 COPY dashboard dashboard
 
+# Vite build-time args
 ARG VITE_BACKEND_URL=https://eop-api.rysdavletov.org
 ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
 RUN pnpm -F @eop/dashboard build
 
-# Финальный образ — Nginx раздаёт статику + SPA fallback.
-FROM nginx:1.27-alpine
+FROM nginx:1.27-alpine AS dashboard
 
 # CSP connect-src должен включать API origin, чтобы fetch() работал.
 ARG CSP_CONNECT_SRC="https://eop-api.rysdavletov.org"
 ENV CSP_CONNECT_SRC=${CSP_CONNECT_SRC}
 
-# Статика
-COPY --from=builder /repo/dashboard/dist /usr/share/nginx/html
+COPY --from=dashboard-builder /repo/dashboard/dist /usr/share/nginx/html
 
-# Nginx image умеет рендерить templates через envsubst:
-# - кладём template в /etc/nginx/templates/*.template
-# - при старте docker-entrypoint.sh создаёт /etc/nginx/conf.d/default.conf
+# Nginx envsubst templates: docker-entrypoint.sh generates conf.d/*.conf
 RUN rm -f /etc/nginx/conf.d/default.conf \
     && mkdir -p /etc/nginx/templates \
     && cat > /etc/nginx/templates/default.conf.template <<'NGINXCONF'
@@ -64,16 +94,14 @@ server {
   add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()" always;
   add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ${CSP_CONNECT_SRC}; object-src 'none'; frame-ancestors 'none'; base-uri 'self';" always;
 
-  # SPA fallback
   location / {
     try_files $uri $uri/ /index.html;
   }
 }
 NGINXCONF
 
-# Healthcheck бьётся в локальный Nginx — НЕ во внешний API
-# (внешний URL мог быть недоступен и контейнер считался бы unhealthy).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD wget -q --spider http://localhost:8080/ || exit 1
 
 EXPOSE 8080
+
