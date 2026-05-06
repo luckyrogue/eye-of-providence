@@ -19,11 +19,11 @@ dev-logs:
 docker-build: docker-build-api docker-build-dashboard
 
 docker-build-api:
-	docker build -t eop-api:latest --target api .
+	docker build -t eop-api:latest -f api.Dockerfile .
 
 docker-build-dashboard:
 	docker build -t eop-dashboard:latest \
-		--target dashboard \
+		-f dashboard.Dockerfile \
 		--build-arg VITE_BACKEND_URL=$${VITE_BACKEND_URL:-http://localhost:8080} \
 		--build-arg CSP_CONNECT_SRC=$${CSP_CONNECT_SRC:-$${VITE_BACKEND_URL:-http://localhost:8080}} \
 		.
