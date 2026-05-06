@@ -1,6 +1,6 @@
 // Минимальный API-клиент. Token берём из localStorage; в Phase 2 заменим на OAuth flow.
 
-const BASE = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8080";
+const BASE = import.meta.env.VITE_BACKEND_URL ?? "https://eop-api.rysdavletov.org";
 
 // Кастомное событие, которое App.tsx слушает чтобы корректно разлогинить
 // пользователя при 401 от authed эндпоинта (просрочка токена / отозванный).
