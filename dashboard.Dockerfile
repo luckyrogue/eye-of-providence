@@ -27,7 +27,7 @@ RUN pnpm install --frozen-lockfile=false
 COPY ui ui
 COPY dashboard dashboard
 
-ARG VITE_BACKEND_URL=http://localhost:8080
+ARG VITE_BACKEND_URL=https://eop-api.rysdavletov.org
 ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
 RUN pnpm -F @eop/dashboard build
 
