@@ -14,39 +14,19 @@ import (
 const tokenTTL = 90 * 24 * time.Hour
 
 type Service struct {
-	JWTSecret string
-	GitHub    *GitHubOAuth
-	Logger    *zap.Logger
-	Users     *UsersPG
+	JWTSecret      string
+	GitHub         *GitHubOAuth
+	Logger         *zap.Logger
+	Users          *UsersPG
+	EnableDevToken bool // false в production — роут /dev-token не регистрируется
 }
 
 func RegisterRoutes(app *fiber.App, s Service) {
 	g := app.Group("/v1/auth")
 
-	// Dev-only: выдаём токен без OAuth для локальной разработки.
-	// В production отключается, если EOP_ENV=production.
-	g.Post("/dev-token", func(c *fiber.Ctx) error {
-		userIDStr := c.Query("user_id")
-		var userID uuid.UUID
-		if userIDStr == "" {
-			userID = uuid.New()
-		} else {
-			parsed, err := uuid.Parse(userIDStr)
-			if err != nil {
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "user_id must be uuid"})
-			}
-			userID = parsed
-		}
-		email := fmt.Sprintf("dev-%s@local.eop", userID.String()[:8])
-		if err := s.Users.Upsert(c.Context(), userID, email, ""); err != nil {
-			s.Logger.Warn("user upsert failed (continuing with token)", zap.Error(err))
-		}
-		tok, err := IssueJWT(s.JWTSecret, userID.String(), email, "dev", tokenTTL)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-		}
-		return c.JSON(fiber.Map{"token": tok, "user_id": userID.String()})
-	})
+	if s.EnableDevToken {
+		registerDevToken(g, s)
+	}
 
 	g.Get("/github/login", func(c *fiber.Ctx) error {
 		state := randomState()
@@ -87,9 +67,38 @@ func RegisterRoutes(app *fiber.App, s Service) {
 		}
 		tok, err := IssueJWT(s.JWTSecret, userUUID.String(), email, "github", tokenTTL)
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+			s.Logger.Error("issue jwt failed", zap.Error(err))
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "auth failed"})
 		}
 		return c.JSON(fiber.Map{"token": tok, "user_id": userUUID.String(), "github_login": user.Login})
+	})
+}
+
+// registerDevToken — выдаёт JWT без OAuth (для локальной разработки).
+// Регистрируется только когда EnableDevToken=true (по умолчанию выключен в production).
+func registerDevToken(g fiber.Router, s Service) {
+	g.Post("/dev-token", func(c *fiber.Ctx) error {
+		userIDStr := c.Query("user_id")
+		var userID uuid.UUID
+		if userIDStr == "" {
+			userID = uuid.New()
+		} else {
+			parsed, err := uuid.Parse(userIDStr)
+			if err != nil {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "user_id must be uuid"})
+			}
+			userID = parsed
+		}
+		email := fmt.Sprintf("dev-%s@local.eop", userID.String()[:8])
+		if err := s.Users.Upsert(c.Context(), userID, email, ""); err != nil {
+			s.Logger.Warn("user upsert failed (continuing with token)", zap.Error(err))
+		}
+		tok, err := IssueJWT(s.JWTSecret, userID.String(), email, "dev", tokenTTL)
+		if err != nil {
+			s.Logger.Error("issue jwt failed", zap.Error(err))
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "auth failed"})
+		}
+		return c.JSON(fiber.Map{"token": tok, "user_id": userID.String()})
 	})
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from "@eop/ui";
 import { Activity, Brain, Eye, FileText, LogOut, Settings as SettingsIcon, Sparkles, Users } from "lucide-react";
 import {
+  AUTH_FAILED_EVENT,
   fetchRecent,
   fetchSummary,
   fetchLanguages,
@@ -129,6 +130,17 @@ export default function App() {
   useEffect(() => {
     if (userId) refresh();
   }, [userId, tz]);
+
+  // Глобальный слушатель: api.ts эмитит это событие, когда любой authed запрос
+  // получил 401. Чистим локальный state и возвращаем пользователя на форму логина.
+  useEffect(() => {
+    function onAuthFailed() {
+      logout();
+      setError("Сессия истекла — войди снова.");
+    }
+    window.addEventListener(AUTH_FAILED_EVENT, onAuthFailed);
+    return () => window.removeEventListener(AUTH_FAILED_EVENT, onAuthFailed);
+  }, []);
 
   const totalMs = Object.values(summary).reduce((a, b) => a + b, 0);
   const aiMs = summary["ai"] ?? 0;

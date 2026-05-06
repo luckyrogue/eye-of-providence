@@ -274,6 +274,11 @@ func (s *ClickHouseStore) Close() error {
 	return s.conn.Close()
 }
 
+// Ping — для /healthz. Дешёвая проверка что коннект жив.
+func (s *ClickHouseStore) Ping(ctx context.Context) error {
+	return s.conn.Ping(ctx)
+}
+
 func safeUUID(s string) (uuid.UUID, error) {
 	if s == "" {
 		return uuid.Nil, nil
