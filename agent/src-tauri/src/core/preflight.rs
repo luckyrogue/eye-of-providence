@@ -30,6 +30,7 @@ pub struct CheckResult {
 pub struct PreflightInput<'a> {
     pub data_dir: &'a Path,
     pub local_api_port: u16,
+    pub check_local_api_port: bool,
     pub backend_url: Option<&'a str>,
     pub bearer_token: Option<&'a str>,
 }
@@ -38,8 +39,19 @@ pub async fn run(input: PreflightInput<'_>) -> Vec<CheckResult> {
     let mut out = vec![
         check_accessibility(),
         check_data_dir(input.data_dir),
-        check_local_api_port(input.local_api_port),
     ];
+    out.push(if input.check_local_api_port {
+        check_local_api_port(input.local_api_port)
+    } else {
+        CheckResult {
+            id: "local_api_port".to_string(),
+            label: format!("Local API port {} available", input.local_api_port),
+            status: CheckStatus::Ok,
+            message: "Skipped port availability check (local API may already be running).".into(),
+            action_url: None,
+            action_label: None,
+        }
+    });
     out.push(check_backend(input.backend_url, input.bearer_token).await);
     out
 }

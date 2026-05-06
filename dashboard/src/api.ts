@@ -2,6 +2,21 @@
 
 const BASE = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8080";
 
+// Кастомное событие, которое App.tsx слушает чтобы корректно разлогинить
+// пользователя при 401 от authed эндпоинта (просрочка токена / отозванный).
+export const AUTH_FAILED_EVENT = "eop:auth-failed";
+
+function emitAuthFailed() {
+  try {
+    localStorage.removeItem("eop_token");
+    localStorage.removeItem("eop_user_id");
+    localStorage.removeItem("eop_display_name");
+  } catch {
+    // ignore — приватный режим / disabled storage
+  }
+  window.dispatchEvent(new CustomEvent(AUTH_FAILED_EVENT));
+}
+
 export type EventRow = {
   ts: string;
   user_id: string;
@@ -187,8 +202,11 @@ export async function fetchAuthConfig(): Promise<AuthConfig> {
 
 async function authed(path: string, init: RequestInit = {}): Promise<Response> {
   const token = getToken();
-  if (!token) throw new Error("not authenticated");
-  return fetch(`${BASE}${path}`, {
+  if (!token) {
+    emitAuthFailed();
+    throw new Error("not authenticated");
+  }
+  const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: {
       ...(init.headers ?? {}),
@@ -196,6 +214,10 @@ async function authed(path: string, init: RequestInit = {}): Promise<Response> {
       "Content-Type": "application/json",
     },
   });
+  if (res.status === 401) {
+    emitAuthFailed();
+  }
+  return res;
 }
 
 export async function fetchRecent(limit = 50): Promise<EventRow[]> {

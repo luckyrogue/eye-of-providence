@@ -31,22 +31,42 @@ ARG VITE_BACKEND_URL=http://localhost:8080
 ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
 RUN pnpm -F @eop/dashboard build
 
-# Финальный образ — Caddy раздаёт статику + SPA fallback
+# Финальный образ — Caddy раздаёт статику + SPA fallback.
 FROM caddy:2-alpine
+
+# CSP connect-src должен включать API origin, чтобы fetch() работал.
+ARG CSP_CONNECT_SRC="http://localhost:8080"
+ENV CSP_CONNECT_SRC=${CSP_CONNECT_SRC}
+
+# Статика
 COPY --from=builder /repo/dashboard/dist /srv
 
-# Inline Caddyfile (без отдельного файла — проще для Dokploy / любого деплоя)
-RUN printf ':8080 {\n\
-    root * /srv\n\
-    encode gzip zstd\n\
-    try_files {path} /index.html\n\
-    file_server\n\
-    header {\n\
-        X-Frame-Options DENY\n\
-        X-Content-Type-Options nosniff\n\
-        Referrer-Policy strict-origin-when-cross-origin\n\
-    }\n\
-}\n' > /etc/caddy/Caddyfile
+# Inline Caddyfile (heredoc). Заголовки безопасности применяются к всем ответам.
+# Caddy подставляет ${CSP_CONNECT_SRC} из ENV.
+COPY <<'CADDYFILE' /etc/caddy/Caddyfile
+:8080 {
+    root * /srv
+    encode gzip zstd
+    try_files {path} /index.html
+    file_server
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' {$CSP_CONNECT_SRC}; object-src 'none'; frame-ancestors 'none'; base-uri 'self';"
+        -Server
+    }
+}
+CADDYFILE
+
+# Caddy alpine image создаёт writable temp/cache directories под root по умолчанию.
+# Перевыставляем ownership чтобы запускаться без привилегий.
+RUN mkdir -p /data/caddy /config/caddy \
+    && chown -R nobody:nobody /srv /data/caddy /config/caddy /etc/caddy
+
+USER nobody:nobody
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD wget -q --spider http://localhost:8080/ || exit 1

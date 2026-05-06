@@ -82,6 +82,7 @@ pub fn run() {
                 let results = preflight::run(PreflightInput {
                     data_dir: &pf_dir,
                     local_api_port,
+                    check_local_api_port: false,
                     backend_url: backend.as_deref(),
                     bearer_token: token.as_deref(),
                 }).await;
@@ -178,6 +179,7 @@ async fn preflight_run(state: tauri::State<'_, AgentState>) -> Result<Vec<CheckR
     Ok(preflight::run(PreflightInput {
         data_dir: &state.data_dir,
         local_api_port: state.local_api_port,
+        check_local_api_port: true,
         backend_url: backend.as_deref(),
         bearer_token: token.as_deref(),
     }).await)

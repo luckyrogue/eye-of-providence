@@ -73,8 +73,8 @@ volumes:
 → **Applications** → **+ Create Application** → **Dockerfile**.
 
 - **Source**: Git → твой репо, branch `main`.
-- **Build Path**: `backend`
-- **Dockerfile**: `Dockerfile`
+- **Build Path**: `.`  (корень репо — там лежит `api.Dockerfile`)
+- **Dockerfile**: `api.Dockerfile`
 - **Port**: `8080`
 - **Domain**: `eop-api.rysdavletov.org` (Dokploy auto-привяжет Let's Encrypt).
 
@@ -86,38 +86,40 @@ EOP_HTTP_ADDR=:8080
 EOP_POSTGRES_DSN=postgres://eop:PASSWORD@eop-postgres-db-1:5432/eop?sslmode=disable
 EOP_CLICKHOUSE_DSN=clickhouse://eop:CH_PASSWORD@eop-clickhouse-clickhouse-1:9000/eop
 EOP_REDIS_ADDR=eop-redis-db-1:6379
-EOP_JWT_SECRET=<openssl rand -hex 32>
+EOP_JWT_SECRET=<openssl rand -hex 32>      # ≥32 chars, иначе API не стартует в production
 EOP_ALLOWED_ORIGINS=https://eop-dash.rysdavletov.org
+EOP_AUTO_MIGRATE=true                       # API сам прогонит SQL-миграции на старте
+EOP_INVITE_ONLY=true                        # регистрация только по invite (первый user — bootstrap)
+EOP_ENABLE_DEV_TOKEN=false                  # никогда не включать в production
 EOP_GEMINI_API_KEY=<https://aistudio.google.com/apikey>
 EOP_GITHUB_CLIENT_ID=<опц., GitHub OAuth>
 EOP_GITHUB_CLIENT_SECRET=<опц.>
+EOP_GITHUB_CALLBACK_URL=https://eop-api.rysdavletov.org/v1/auth/github/callback
 EOP_REPORTS_CRON_SEC=21600
 ```
+
+> 🔒 **Production guard rails:** API падает на старте, если `EOP_JWT_SECRET` пуст / равен default / короче 32 символов, или `EOP_ALLOWED_ORIGINS=*`, или DSN'ы пустые. Это защита от случайного дефолтного secret в проде.
 
 > ⚠️ Точные имена hostname'ов postgres/clickhouse/redis смотри в Dokploy → Container → внутренней сетке. Dokploy создаёт DNS вида `<app-name>-<service>-<index>`.
 
 Deploy.
 
-## 5. Применить миграции
+## 5. Миграции
 
-Только при первом деплое (потом Dokploy сохранит volume).
+API **сам прогонит** все SQL-миграции при старте, если `EOP_AUTO_MIGRATE=true` (default). Они embed'нуты в бинарь, идемпотентны (`CREATE … IF NOT EXISTS`).
 
-→ Dokploy → **eop-postgres** → **Console** (или через psql снаружи):
+Если хочешь применять вручную — выставь `EOP_AUTO_MIGRATE=false`:
 
 ```bash
-# Postgres миграции (применить по порядку):
+# Postgres
 psql -h <host> -U eop -d eop -f backend/migrations/001_init.up.sql
 psql -h <host> -U eop -d eop -f backend/migrations/002_teams_auth.up.sql
 psql -h <host> -U eop -d eop -f backend/migrations/003_multi_team_projects.up.sql
-```
 
-ClickHouse:
-```bash
+# ClickHouse
 clickhouse-client --host <host> --user eop --password <CH_PASSWORD> --database eop \
   --multiquery < backend/migrations/clickhouse_001_init.sql
 ```
-
-(Dokploy → eop-clickhouse → Terminal внутри контейнера это сделает быстрее).
 
 ## 6. Dashboard (Application)
 
@@ -125,16 +127,18 @@ clickhouse-client --host <host> --user eop --password <CH_PASSWORD> --database e
 
 - **Source**: тот же git repo.
 - **Build Path**: `.` (КОРЕНЬ репо — нужно для ui/ workspace).
-- **Dockerfile**: `dashboard/Dockerfile`
+- **Dockerfile**: `dashboard.Dockerfile`
 - **Port**: `8080` (Caddy внутри слушает 8080).
 - **Domain**: `eop-dash.rysdavletov.org`
 
 **Build Arguments** (важно!):
 ```
 VITE_BACKEND_URL=https://eop-api.rysdavletov.org
+CSP_CONNECT_SRC=https://eop-api.rysdavletov.org
 ```
 
-(это compile-time, иначе dashboard будет ходить в localhost).
+`VITE_BACKEND_URL` — это compile-time (иначе dashboard будет ходить в localhost).
+`CSP_CONNECT_SRC` — добавляется в Content-Security-Policy header'ы Caddy, чтобы fetch() из дашборда был разрешён к API origin.
 
 **Environment Variables**: пустой, статике ничего не нужно.
 

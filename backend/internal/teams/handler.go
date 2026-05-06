@@ -10,6 +10,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"net/mail"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -20,6 +22,57 @@ import (
 
 	"github.com/eye-of-providence/backend/internal/auth"
 )
+
+const (
+	minPasswordLen    = 8
+	maxPasswordLen    = 256
+	maxDisplayNameLen = 64
+	maxTeamNameLen    = 100
+	maxProjectNameLen = 200
+)
+
+func validateEmail(s string) (string, bool) {
+	s = strings.TrimSpace(strings.ToLower(s))
+	if s == "" || len(s) > 254 {
+		return "", false
+	}
+	addr, err := mail.ParseAddress(s)
+	if err != nil {
+		return "", false
+	}
+	return addr.Address, true
+}
+
+func validatePassword(s string) bool {
+	return len(s) >= minPasswordLen && len(s) <= maxPasswordLen
+}
+
+// internalErr — единая точка для 500-ответов. Логируем полный текст,
+// клиенту отдаём generic message + request_id для корреляции.
+func (s Service) internalErr(c *fiber.Ctx, err error) error {
+	rid, _ := c.Locals("requestid").(string)
+	s.Logger.Error("internal error",
+		zap.String("path", c.Path()),
+		zap.String("method", c.Method()),
+		zap.String("rid", rid),
+		zap.Error(err),
+	)
+	return c.Status(500).JSON(fiber.Map{"error": "internal error", "request_id": rid})
+}
+
+func validateDisplayName(s string) (string, bool) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", false
+	}
+	if len(s) > maxDisplayNameLen {
+		return "", false
+	}
+	if strings.ContainsAny(s, "\r\n\t") {
+		return "", false
+	}
+	return s, true
+}
 
 const tokenTTL = 90 * 24 * time.Hour
 
@@ -91,15 +144,25 @@ func (s Service) handleRegister(c *fiber.Ctx) error {
 		return c.Status(503).JSON(fiber.Map{"error": "auth requires postgres"})
 	}
 	var req registerReq
-	if err := c.BodyParser(&req); err != nil || req.Email == "" || req.Password == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "email and password required"})
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
 	}
-	if len(req.Password) < 8 {
-		return c.Status(400).JSON(fiber.Map{"error": "password ≥ 8 chars"})
+	email, ok := validateEmail(req.Email)
+	if !ok {
+		return c.Status(400).JSON(fiber.Map{"error": "valid email required"})
+	}
+	req.Email = email
+	if !validatePassword(req.Password) {
+		return c.Status(400).JSON(fiber.Map{"error": "password 8..256 chars"})
 	}
 	if req.DisplayName == "" {
 		req.DisplayName = req.Email
 	}
+	dn, ok := validateDisplayName(req.DisplayName)
+	if !ok {
+		return c.Status(400).JSON(fiber.Map{"error": "display_name 1..64 chars, no newlines"})
+	}
+	req.DisplayName = dn
 
 	// Подсчёт пользователей в системе.
 	// Первый user может зарегаться без invite (bootstrap), он же станет super_admin.
@@ -142,7 +205,7 @@ func (s Service) handleRegister(c *fiber.Ctx) error {
 
 	tok, err := auth.IssueJWT(s.JWTSecret, user.ID.String(), user.Email, "password", tokenTTL)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	return c.JSON(fiber.Map{
 		"token":        tok,
@@ -163,15 +226,21 @@ func (s Service) handleLogin(c *fiber.Ctx) error {
 	}
 	var req loginReq
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "email, password required"})
+		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
 	}
+	email, ok := validateEmail(req.Email)
+	if !ok || !validatePassword(req.Password) {
+		// Не подсказываем, что именно не так — это login surface.
+		return c.Status(401).JSON(fiber.Map{"error": "invalid email or password"})
+	}
+	req.Email = email
 	user, err := auth.FindUserByEmail(c.Context(), s.Pool, req.Email)
 	if err != nil || !auth.VerifyPassword(user.PasswordHash, req.Password) {
 		return c.Status(401).JSON(fiber.Map{"error": "invalid email or password"})
 	}
 	tok, err := auth.IssueJWT(s.JWTSecret, user.ID.String(), user.Email, "password", tokenTTL)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	return c.JSON(fiber.Map{
 		"token":        tok,
@@ -195,14 +264,14 @@ func (s Service) handleListMyTeams(c *fiber.Ctx) error {
 		FROM team_members tm JOIN teams t ON t.id = tm.team_id
 		WHERE tm.user_id = $1 ORDER BY t.created_at`, uid)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	defer rows.Close()
 	out := []teamRow{}
 	for rows.Next() {
 		var t teamRow
 		if err := rows.Scan(&t.ID, &t.Name, &t.Role); err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			return s.internalErr(c, err)
 		}
 		out = append(out, t)
 	}
@@ -216,27 +285,31 @@ type createTeamReq struct {
 func (s Service) handleCreateTeam(c *fiber.Ctx) error {
 	uid := userID(c)
 	var req createTeamReq
-	if err := c.BodyParser(&req); err != nil || req.Name == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "name required"})
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+	}
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" || len(req.Name) > maxTeamNameLen {
+		return c.Status(400).JSON(fiber.Map{"error": "name 1..100 chars"})
 	}
 	tx, err := s.Pool.Begin(c.Context())
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	defer tx.Rollback(c.Context())
 	teamID := uuid.New()
 	if _, err := tx.Exec(c.Context(),
 		"INSERT INTO teams (id, name, plan, created_by) VALUES ($1, $2, 'free', $3)",
 		teamID, req.Name, uid); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	if _, err := tx.Exec(c.Context(),
 		"INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, 'owner')",
 		teamID, uid); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	if err := tx.Commit(c.Context()); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	return c.JSON(fiber.Map{"id": teamID, "name": req.Name, "role": "owner"})
 }
@@ -273,7 +346,7 @@ func (s Service) handleListMembers(c *fiber.Ctx) error {
 		FROM team_members tm JOIN users u ON u.id = tm.user_id
 		WHERE tm.team_id = $1 ORDER BY tm.joined_at`, teamID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	defer rows.Close()
 	type member struct {
@@ -287,7 +360,7 @@ func (s Service) handleListMembers(c *fiber.Ctx) error {
 	for rows.Next() {
 		var m member
 		if err := rows.Scan(&m.ID, &m.Email, &m.DisplayName, &m.Role, &m.JoinedAt); err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			return s.internalErr(c, err)
 		}
 		out = append(out, m)
 	}
@@ -316,7 +389,7 @@ func (s Service) handleTeamSummary(c *fiber.Ctx) error {
 		FROM team_members tm JOIN users u ON u.id = tm.user_id
 		WHERE tm.team_id = $1 ORDER BY tm.joined_at`, teamID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	defer rows.Close()
 	type memberStat struct {
@@ -332,7 +405,7 @@ func (s Service) handleTeamSummary(c *fiber.Ctx) error {
 	for rows.Next() {
 		var m memberStat
 		if err := rows.Scan(&m.ID, &m.DisplayName); err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			return s.internalErr(c, err)
 		}
 		if EventStore != nil {
 			agg, _ := EventStore.AggregateByCategory(c.Context(), m.ID.String(), since)
@@ -368,7 +441,7 @@ func (s Service) handleListProjects(c *fiber.Ctx) error {
 		SELECT id, COALESCE(name, repo_url, ''), repo_url, lang_primary, created_at
 		FROM projects WHERE team_id = $1 ORDER BY created_at DESC`, teamID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	defer rows.Close()
 	type project struct {
@@ -382,7 +455,7 @@ func (s Service) handleListProjects(c *fiber.Ctx) error {
 	for rows.Next() {
 		var p project
 		if err := rows.Scan(&p.ID, &p.Name, &p.RepoURL, &p.LangPri, &p.CreatedAt); err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			return s.internalErr(c, err)
 		}
 		out = append(out, p)
 	}
@@ -400,8 +473,12 @@ func (s Service) handleCreateProject(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"error": "только owner/admin могут создавать проекты"})
 	}
 	var req projectReq
-	if err := c.BodyParser(&req); err != nil || req.Name == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "name required"})
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+	}
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" || len(req.Name) > maxProjectNameLen {
+		return c.Status(400).JSON(fiber.Map{"error": "name 1..200 chars"})
 	}
 	id := uuid.New()
 	rootHash := req.RepoURL
@@ -413,7 +490,7 @@ func (s Service) handleCreateProject(c *fiber.Ctx) error {
 		VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6)`,
 		id, uid, teamID, req.Name, req.RepoURL, rootHash)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	return c.JSON(fiber.Map{"id": id, "name": req.Name})
 }
@@ -465,7 +542,7 @@ func (s Service) handleIngestCommit(c *fiber.Ctx) error {
 		projID, teamID, uid, req.SHA, req.Message, req.Branch,
 		req.FilesChanged, req.LinesAdded, req.LinesRemoved, req.AILinesPct, authoredAt)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	return c.JSON(fiber.Map{"ok": true})
 }
@@ -505,7 +582,7 @@ func (s Service) queryCommits(c *fiber.Ctx, where string, args ...any) error {
 		        c.files_changed, c.lines_added, c.lines_removed, c.ai_lines_pct, c.authored_at
 		 FROM commits c JOIN users u ON u.id = c.user_id `+where, args...)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	defer rows.Close()
 	type commit struct {
@@ -527,7 +604,7 @@ func (s Service) queryCommits(c *fiber.Ctx, where string, args ...any) error {
 		var k commit
 		if err := rows.Scan(&k.ID, &k.ProjectID, &k.UserID, &k.Author, &k.SHA, &k.Message, &k.Branch,
 			&k.FilesChanged, &k.LinesAdded, &k.LinesRemoved, &k.AILinesPct, &k.AuthoredAt); err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			return s.internalErr(c, err)
 		}
 		out = append(out, k)
 	}
@@ -584,7 +661,7 @@ func (s Service) handleCreateInvite(c *fiber.Ctx) error {
 		INSERT INTO team_invites (team_id, code, created_by, max_uses, expires_at)
 		VALUES ($1, $2, $3, $4, $5)`, teamID, code, uid, 10, expires)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	return c.JSON(fiber.Map{"code": code, "expires_at": expires, "max_uses": 10})
 }
@@ -612,7 +689,7 @@ func (s Service) handleInviteAccept(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "invalid or expired invite"})
 	}
 	if err := s.addMember(c.Context(), inv.TeamID, uid, "member"); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	_ = s.consumeInvite(c.Context(), inv.Code, uid)
 	return c.JSON(fiber.Map{"team_id": inv.TeamID})
@@ -629,7 +706,7 @@ func (s Service) handleAdminListAllTeams(c *fiber.Ctx) error {
 		       (SELECT count(*) FROM team_members WHERE team_id = t.id) AS member_count
 		FROM teams t ORDER BY t.created_at DESC`)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	defer rows.Close()
 	type teamRow struct {
@@ -643,7 +720,7 @@ func (s Service) handleAdminListAllTeams(c *fiber.Ctx) error {
 	for rows.Next() {
 		var t teamRow
 		if err := rows.Scan(&t.ID, &t.Name, &t.Plan, &t.CreatedAt, &t.Members); err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			return s.internalErr(c, err)
 		}
 		out = append(out, t)
 	}
@@ -658,7 +735,7 @@ func (s Service) handleAdminListAllUsers(c *fiber.Ctx) error {
 		SELECT id, email, COALESCE(display_name, email), global_role, created_at
 		FROM users ORDER BY created_at DESC LIMIT 200`)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return s.internalErr(c, err)
 	}
 	defer rows.Close()
 	type userRow struct {
@@ -672,7 +749,7 @@ func (s Service) handleAdminListAllUsers(c *fiber.Ctx) error {
 	for rows.Next() {
 		var u userRow
 		if err := rows.Scan(&u.ID, &u.Email, &u.DisplayName, &u.GlobalRole, &u.CreatedAt); err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			return s.internalErr(c, err)
 		}
 		out = append(out, u)
 	}
