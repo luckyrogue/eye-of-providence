@@ -13,7 +13,7 @@
 #   docker build -t eop-dashboard -f dashboard.Dockerfile \
 #     --build-arg VITE_BACKEND_URL=https://eop-api.rysdavletov.org .
 
-FROM node:20-alpine AS builder
+FROM node:25-alpine AS builder
 WORKDIR /repo
 
 RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
