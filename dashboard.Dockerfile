@@ -45,6 +45,7 @@ COPY --from=builder /repo/dashboard/dist /usr/share/nginx/html
 # - кладём template в /etc/nginx/templates/*.template
 # - при старте docker-entrypoint.sh создаёт /etc/nginx/conf.d/default.conf
 RUN rm -f /etc/nginx/conf.d/default.conf \
+    && mkdir -p /etc/nginx/templates \
     && cat > /etc/nginx/templates/default.conf.template <<'NGINXCONF'
 server {
   listen 8080;
