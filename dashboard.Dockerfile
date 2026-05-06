@@ -35,7 +35,7 @@ RUN pnpm -F @eop/dashboard build
 FROM caddy:2-alpine
 
 # CSP connect-src должен включать API origin, чтобы fetch() работал.
-ARG CSP_CONNECT_SRC="http://localhost:8080"
+ARG CSP_CONNECT_SRC="https://eop-api.rysdavletov.org"
 ENV CSP_CONNECT_SRC=${CSP_CONNECT_SRC}
 
 # Статика
@@ -69,6 +69,6 @@ RUN mkdir -p /data/caddy /config/caddy \
 USER nobody:nobody
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget -q --spider http://localhost:8080/ || exit 1
+    CMD wget -q --spider https://eop-api.rysdavletov.org/ || exit 1
 
 EXPOSE 8080
