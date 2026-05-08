@@ -3,8 +3,9 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { Activity, Eye, LogOut, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import { cn } from "@eop/ui";
 import { useAuth } from "../hooks/useAuth";
-import { useMe, useTeams } from "../hooks/queries";
-import { AUTH_FAILED_EVENT } from "../api";
+import { useMe } from "../api/me";
+import { useTeams } from "../api/teams";
+import { AUTH_FAILED_EVENT } from "../lib/http";
 
 export function AppLayout() {
   const { isAuthed, logout } = useAuth();

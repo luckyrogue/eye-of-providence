@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Admin } from "../Admin";
-import { useMe } from "../hooks/queries";
+import { useMe } from "../api/me";
 import { getTz } from "../tz";
 
 export function AdminRoute() {

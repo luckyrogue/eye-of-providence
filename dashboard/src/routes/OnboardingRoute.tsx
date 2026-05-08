@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Onboarding } from "../Onboarding";
 import { useAuth } from "../hooks/useAuth";
-import { useTeams } from "../hooks/queries";
+import { useTeams } from "../api/teams";
 
 export function OnboardingRoute() {
   const { isAuthed } = useAuth();

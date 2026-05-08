@@ -8,10 +8,9 @@ import { ConfirmProvider } from "@eop/ui";
 import "@eop/ui/styles.css";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { queryClient } from "./queryClient";
-import { router } from "./router";
+import { router } from "./routes/router";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <Toaster position="bottom-right" toastOptions={{ className: "font-sans" }} />
       <ConfirmProvider>
@@ -21,5 +20,4 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       </ConfirmProvider>
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
-  </React.StrictMode>,
 );

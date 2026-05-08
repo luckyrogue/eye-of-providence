@@ -16,8 +16,8 @@ import {
   useMembers, useTeamSummary, useProjects, useTeamCommits,
   useUpdateMemberRole, useRemoveMember, useUpdateTeam, useDeleteTeam,
   useCreateInvite, useCreateProject,
-} from "./hooks/queries";
-import type { Team, TeamMember, MemberStat, Project, Commit } from "./api";
+  type Team, type TeamMember, type MemberStat, type Commit,
+} from "./api/teams";
 
 export function Teams({ tz }: { tz: string }) {
   const teams = useTeams();

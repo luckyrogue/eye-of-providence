@@ -12,8 +12,8 @@ import { useMutationToast } from "./hooks/useMutationToast";
 import {
   useAdminStats, useAdminTeams, useAdminUsers, useAdminPayments,
   useAdminDeleteTeam, useAdminDeleteUser, useAdminUpdateUser, useAdminAddMember, useAdminSetSubscription,
-} from "./hooks/queries";
-import type { AdminStats, AdminTeam, AdminUser } from "./api";
+  type AdminStats, type AdminTeam, type AdminUser,
+} from "./api/admin";
 
 type TabKey = "overview" | "teams" | "users";
 

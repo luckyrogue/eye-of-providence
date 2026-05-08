@@ -6,17 +6,8 @@ import { Heatmap } from "../Heatmap";
 import { Languages } from "../Languages";
 import { Trend } from "../Trend";
 import { formatDate, formatTime, getTz } from "../tz";
-import {
-  useRecent,
-  useSummary,
-  useLanguages,
-  useHeatmap,
-  useTrend,
-  useReports,
-  useGenerateReport,
-  useIngestDemo,
-} from "../hooks/queries";
-import type { Report } from "../api";
+import { useRecent, useSummary, useLanguages, useHeatmap, useTrend, useIngestDemo } from "../api/events";
+import { useReports, useGenerateReport, type Report } from "../api/reports";
 
 const CATEGORY_LABELS: Record<string, string> = {
   manual: "вручную", ai: "AI", refactor: "рефакторинг", idle: "простой", reading: "чтение", other: "прочее",
