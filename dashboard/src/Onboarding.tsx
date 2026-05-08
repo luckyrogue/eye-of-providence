@@ -1,9 +1,17 @@
 import { useState } from "react";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
-import { ArrowRight, Building2, Check, Copy, Download, Eye, Loader2, Mail, Rocket, SkipForward } from "lucide-react";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Eyebrow, Input, Stepper } from "@eop/ui";
+import { ArrowRight, Building2, Copy, Download, Eye, Loader2, Mail, Rocket, SkipForward } from "lucide-react";
 import { createTeam, createInvite } from "./api";
+import { useMutationToast } from "./hooks/useMutationToast";
 
 type Step = "company" | "invite" | "install" | "done";
+
+const STEPS = [
+  { key: "company", label: "Компания" },
+  { key: "invite", label: "Команда" },
+  { key: "install", label: "Агент" },
+  { key: "done", label: "Готово" },
+];
 
 export function Onboarding({ onFinish }: { onFinish: () => void }) {
   const [step, setStep] = useState<Step>("company");
@@ -11,37 +19,31 @@ export function Onboarding({ onFinish }: { onFinish: () => void }) {
   const [teamName, setTeamName] = useState("");
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const runToast = useMutationToast();
 
   const inviteUrl = inviteCode ? `${window.location.origin}/?invite=${inviteCode}` : "";
 
   async function createCompany() {
     if (!teamName.trim()) return;
     setBusy(true);
-    setError(null);
-    try {
-      const r = await createTeam(teamName.trim());
+    const r = await runToast(createTeam(teamName.trim()), {
+      success: "Компания создана",
+      error: "Не удалось создать компанию",
+    });
+    setBusy(false);
+    if (r) {
       setTeamID(r.id);
       localStorage.setItem("eop_team", r.id);
       setStep("invite");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
     }
   }
 
   async function generateInvite() {
     if (!teamID) return;
     setBusy(true);
-    try {
-      const r = await createInvite(teamID);
-      setInviteCode(r.code);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
+    const r = await runToast(createInvite(teamID), { error: "Не удалось создать invite" });
+    setBusy(false);
+    if (r) setInviteCode(r.code);
   }
 
   function copyInvite() {
@@ -54,7 +56,7 @@ export function Onboarding({ onFinish }: { onFinish: () => void }) {
 
       <div className="mx-auto max-w-2xl pt-10 pb-6">
         <div className="text-center mb-10 reveal">
-          <span className="eyebrow">Welcome aboard</span>
+          <Eyebrow>Welcome aboard</Eyebrow>
           <h1 className="display-head text-4xl md:text-5xl mt-3">
             Let's set up <em>your company</em>.
           </h1>
@@ -63,13 +65,7 @@ export function Onboarding({ onFinish }: { onFinish: () => void }) {
           </p>
         </div>
 
-        <Stepper current={step} />
-
-        {error && (
-          <div className="mt-4 rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-            {error}
-          </div>
-        )}
+        <Stepper steps={STEPS} current={step} className="max-w-md mx-auto" />
 
         <div className="mt-6">
           {step === "company" && (
@@ -99,47 +95,6 @@ export function Onboarding({ onFinish }: { onFinish: () => void }) {
           {step === "done" && <DoneStep onFinish={onFinish} />}
         </div>
       </div>
-    </div>
-  );
-}
-
-function Stepper({ current }: { current: Step }) {
-  const steps: { key: Step; label: string }[] = [
-    { key: "company", label: "Компания" },
-    { key: "invite", label: "Команда" },
-    { key: "install", label: "Агент" },
-    { key: "done", label: "Готово" },
-  ];
-  const index = steps.findIndex((s) => s.key === current);
-  return (
-    <div className="flex items-center gap-2 max-w-md mx-auto">
-      {steps.map((s, i) => {
-        const isActive = i === index;
-        const isDone = i < index;
-        return (
-          <div key={s.key} className="flex-1 flex items-center gap-2">
-            <div
-              className={`flex items-center justify-center h-7 w-7 rounded-full text-[11px] font-mono transition-colors ${
-                isDone
-                  ? "bg-primary text-primary-foreground"
-                  : isActive
-                    ? "border-2 border-primary text-primary"
-                    : "border border-border text-muted-foreground"
-              }`}
-            >
-              {isDone ? <Check className="h-3.5 w-3.5" /> : i + 1}
-            </div>
-            <span
-              className={`text-xs font-mono uppercase tracking-widest2 ${
-                isActive || isDone ? "text-foreground" : "text-muted-foreground"
-              }`}
-            >
-              {s.label}
-            </span>
-            {i < steps.length - 1 && <div className="flex-1 h-px bg-border" />}
-          </div>
-        );
-      })}
     </div>
   );
 }
