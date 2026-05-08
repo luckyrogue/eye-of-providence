@@ -2,7 +2,7 @@
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email        TEXT UNIQUE NOT NULL,
     name         TEXT,
@@ -13,7 +13,7 @@ CREATE TABLE users (
     deleted_at   TIMESTAMPTZ
 );
 
-CREATE TABLE teams (
+CREATE TABLE IF NOT EXISTS teams (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name          TEXT NOT NULL,
     plan          TEXT NOT NULL DEFAULT 'free',
@@ -21,7 +21,7 @@ CREATE TABLE teams (
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE devices (
+CREATE TABLE IF NOT EXISTS devices (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     os          TEXT NOT NULL,        -- macos | windows
@@ -32,7 +32,7 @@ CREATE TABLE devices (
     UNIQUE (user_id, fingerprint)
 );
 
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     repo_url       TEXT,
@@ -42,7 +42,7 @@ CREATE TABLE projects (
     UNIQUE (user_id, root_path_hash)
 );
 
-CREATE TABLE consent (
+CREATE TABLE IF NOT EXISTS consent (
     user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     scope      TEXT NOT NULL,
     granted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -50,7 +50,7 @@ CREATE TABLE consent (
     PRIMARY KEY (user_id, scope)
 );
 
-CREATE TABLE api_tokens (
+CREATE TABLE IF NOT EXISTS api_tokens (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     scope        TEXT NOT NULL,
@@ -59,7 +59,7 @@ CREATE TABLE api_tokens (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE reports (
+CREATE TABLE IF NOT EXISTS reports (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     period         TEXT NOT NULL,    -- weekly_2026_W18 | monthly_2026_05
@@ -69,4 +69,4 @@ CREATE TABLE reports (
     generated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_reports_user_period ON reports(user_id, period);
+CREATE INDEX IF NOT EXISTS idx_reports_user_period ON reports(user_id, period);
