@@ -126,6 +126,11 @@ func main() {
 	app.Use("/v1/auth/dev-token", authLimiter)
 	app.Use("/v1/auth/github/callback", authLimiter)
 
+	// Public routes регистрируются ПЕРВЫМИ. Fiber `app.Group(prefix, handler)`
+	// работает как `app.Use(prefix, handler)` — middleware ловит все
+	// последующие маршруты под префиксом. Если ingest/analytics зарегистрировать
+	// до teams, они навесят auth на весь /v1, и /v1/auth/register перестанет
+	// быть public.
 	auth.RegisterRoutes(app, auth.Service{
 		JWTSecret:      cfg.JWTSecret,
 		GitHub:         auth.NewGitHubOAuth(cfg.GitHubClientID, cfg.GitHubClientSec, cfg.GitHubCallback),
@@ -133,14 +138,6 @@ func main() {
 		Users:          auth.NewUsersPG(pgPool),
 		EnableDevToken: cfg.EnableDevToken,
 	})
-	auth.RegisterMeRoutes(app, auth.MeService{
-		JWTSecret:  cfg.JWTSecret,
-		Pool:       pgPool,
-		EventStore: eventStore,
-		Logger:     log,
-	})
-	ingest.RegisterRoutes(app, eventStore, log, cfg.JWTSecret)
-	analytics.RegisterRoutes(app, eventStore, log, cfg.JWTSecret)
 
 	teams.EventStore = eventStore
 	teams.RegisterRoutes(app, teams.Service{
@@ -149,6 +146,16 @@ func main() {
 		Logger:     log,
 		InviteOnly: cfg.InviteOnly,
 	})
+
+	// Protected routes — навешивают auth middleware на весь /v1.
+	auth.RegisterMeRoutes(app, auth.MeService{
+		JWTSecret:  cfg.JWTSecret,
+		Pool:       pgPool,
+		EventStore: eventStore,
+		Logger:     log,
+	})
+	ingest.RegisterRoutes(app, eventStore, log, cfg.JWTSecret)
+	analytics.RegisterRoutes(app, eventStore, log, cfg.JWTSecret)
 
 	gemini := reports.NewGeminiClient(cfg.GeminiAPIKey, "gemini-2.5-flash")
 	reports.RegisterRoutes(app, reports.Service{
