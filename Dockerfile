@@ -128,7 +128,8 @@ SH
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD wget -q --spider http://localhost:3000/ || exit 1
+# Healthcheck выключен: entrypoint.sh завершается, если умрёт nginx или api,
+# поэтому Swarm всё равно увидит crash. HEALTHCHECK + Swarm любил рубить
+# контейнер по timeout, чем создавал restart-loop.
 
 ENTRYPOINT ["/entrypoint.sh"]
