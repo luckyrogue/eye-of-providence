@@ -14,5 +14,6 @@ export { Avatar } from "./avatar";
 export { Badge, type BadgeTone } from "./badge";
 export { Select } from "./select";
 export { ConfirmDialog, ConfirmProvider, useConfirm } from "./confirm-dialog";
+export { PromptDialog } from "./prompt-dialog";
 export { DangerZone } from "./danger-zone";
 export { StatTile, type StatTileAccent } from "./stat-tile";
