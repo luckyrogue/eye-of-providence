@@ -142,6 +142,100 @@ export async function fetchBetaInfo(): Promise<BetaInfo> {
   return res.json();
 }
 
+// --- Me ---
+
+export type Me = {
+  user_id: string;
+  email: string;
+  provider: string;
+  display_name?: string;
+  github_login?: string;
+  global_role?: "user" | "super_admin";
+};
+
+export async function fetchMe(): Promise<Me> {
+  const res = await authed("/v1/me");
+  if (!res.ok) throw new Error(`me failed: ${res.status}`);
+  return res.json();
+}
+
+// --- Super-admin ---
+
+export type AdminStats = {
+  users_total: number;
+  teams_total: number;
+  members_total: number;
+  beta_limit: number;
+};
+
+export type AdminTeam = {
+  id: string; name: string; plan: string; created_at: string;
+  member_count: number;
+  owner_email?: string;
+};
+
+export type AdminUser = {
+  id: string; email: string; display_name: string;
+  global_role: string; created_at: string;
+  teams_count?: number;
+};
+
+export async function adminStats(): Promise<AdminStats> {
+  const res = await authed("/v1/admin/stats");
+  if (!res.ok) throw new Error(`adminStats failed: ${res.status}`);
+  return res.json();
+}
+
+export async function adminListTeams(): Promise<AdminTeam[]> {
+  const res = await authed("/v1/admin/teams");
+  if (!res.ok) throw new Error(`adminListTeams failed: ${res.status}`);
+  const data = await res.json();
+  return data.teams ?? [];
+}
+
+export async function adminListUsers(): Promise<AdminUser[]> {
+  const res = await authed("/v1/admin/users");
+  if (!res.ok) throw new Error(`adminListUsers failed: ${res.status}`);
+  const data = await res.json();
+  return data.users ?? [];
+}
+
+export async function adminDeleteTeam(teamID: string): Promise<void> {
+  const res = await authed(`/v1/admin/teams/${teamID}`, { method: "DELETE" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `adminDeleteTeam failed: ${res.status}`);
+  }
+}
+
+export async function adminDeleteUser(userID: string): Promise<void> {
+  const res = await authed(`/v1/admin/users/${userID}`, { method: "DELETE" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `adminDeleteUser failed: ${res.status}`);
+  }
+}
+
+export async function adminUpdateUser(userID: string, payload: { global_role?: string; display_name?: string }): Promise<void> {
+  const res = await authed(`/v1/admin/users/${userID}`, {
+    method: "PATCH", body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `adminUpdateUser failed: ${res.status}`);
+  }
+}
+
+export async function adminAddMember(teamID: string, email: string, role: string): Promise<void> {
+  const res = await authed(`/v1/admin/teams/${teamID}/members`, {
+    method: "POST", body: JSON.stringify({ email, role }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `adminAddMember failed: ${res.status}`);
+  }
+}
+
 export type Project = { id: string; name: string; repo_url: string | null; lang_primary: string | null; created_at: string };
 
 export async function listProjects(teamID: string): Promise<Project[]> {

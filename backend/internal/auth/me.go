@@ -36,10 +36,19 @@ func RegisterMeRoutes(app *fiber.App, s MeService) {
 			uid, err := uuid.Parse(claims.UserID)
 			if err == nil {
 				var ghLogin *string
+				var globalRole *string
+				var displayName *string
 				_ = s.Pool.QueryRow(c.Context(),
-					"SELECT github_login FROM users WHERE id = $1", uid).Scan(&ghLogin)
+					"SELECT github_login, global_role, display_name FROM users WHERE id = $1", uid).
+					Scan(&ghLogin, &globalRole, &displayName)
 				if ghLogin != nil {
 					out["github_login"] = *ghLogin
+				}
+				if globalRole != nil {
+					out["global_role"] = *globalRole
+				}
+				if displayName != nil {
+					out["display_name"] = *displayName
 				}
 			}
 		}

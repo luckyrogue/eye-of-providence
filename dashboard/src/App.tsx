@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from "@eop/ui";
-import { Activity, Brain, Eye, FileText, LogOut, Settings as SettingsIcon, Sparkles, Users } from "lucide-react";
+import { Activity, Brain, Eye, FileText, LogOut, Settings as SettingsIcon, Shield, Sparkles, Users } from "lucide-react";
 import {
   AUTH_FAILED_EVENT,
   fetchRecent,
@@ -11,11 +11,13 @@ import {
   ingestDemoEvent,
   generateReport,
   listReports,
+  fetchMe,
   type EventRow,
   type LangCell,
   type HeatmapCell,
   type TrendPoint,
   type Report,
+  type Me,
 } from "./api";
 import { Markdown } from "./Markdown";
 import { Heatmap } from "./Heatmap";
@@ -24,9 +26,10 @@ import { Settings } from "./Settings";
 import { Trend } from "./Trend";
 import { Auth } from "./Auth";
 import { Teams } from "./Teams";
+import { Admin } from "./Admin";
 import { formatDate, formatTime, getTz } from "./tz";
 
-type Tab = "dashboard" | "team" | "settings";
+type Tab = "dashboard" | "team" | "settings" | "admin";
 
 const CATEGORY_LABELS: Record<string, string> = {
   manual: "вручную",
@@ -57,6 +60,7 @@ export default function App() {
   const [busy, setBusy] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("dashboard");
   const [tz, setTz] = useState(getTz());
+  const [me, setMe] = useState<Me | null>(null);
 
   function logout() {
     localStorage.removeItem("eop_token");
@@ -128,8 +132,13 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (userId) refresh();
+    if (userId) {
+      refresh();
+      fetchMe().then(setMe).catch(() => {});
+    }
   }, [userId, tz]);
+
+  const isSuperAdmin = me?.global_role === "super_admin";
 
   // Глобальный слушатель: api.ts эмитит это событие, когда любой authed запрос
   // получил 401. Чистим локальный state и возвращаем пользователя на форму логина.
@@ -180,6 +189,15 @@ export default function App() {
               >
                 <SettingsIcon className="h-4 w-4" /> Настройки
               </button>
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setTab("admin")}
+                  title="Super admin panel"
+                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors ${tab === "admin" ? "bg-primary text-primary-foreground" : "text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"}`}
+                >
+                  <Shield className="h-4 w-4" /> Admin
+                </button>
+              )}
               <span className="mx-2 h-5 w-px bg-border" />
               <button
                 onClick={logout}
@@ -204,6 +222,8 @@ export default function App() {
           <Settings onWiped={logout} onTzChange={setTz} />
         ) : tab === "team" ? (
           <Teams tz={tz} />
+        ) : tab === "admin" && isSuperAdmin ? (
+          <Admin tz={tz} />
         ) : (
           <>
             <div className="reveal">

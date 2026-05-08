@@ -38,14 +38,15 @@
   - 2-3 недели на каждый. **Без этого дашборд пустой.**
 - **Onboarding wizard** после регистрации: 4 шага «Создай команду → установи агент → пригласи людей → отправь первое событие». Сейчас новый owner видит белый экран.
 - **Transactional emails** (Resend / Postmark): invite, password reset, weekly report digest, alert на инвайт-лимит. Must-have для team-продукта.
-- **Billing scaffolding** через Stripe: даже на free — Customer / Subscription объекты в БД, чтобы переход на paid не требовал миграции данных.
+- **Constraint: 1 owner = 1 company.** В бете один пользователь может быть `owner` только в одной компании. В других — может состоять как `member` через invite. Это упрощает onboarding и предотвращает «одного человека-фабрику воркспейсов» в early days.
+- ~~Billing scaffolding через Stripe~~ — **отложено до выхода из беты**. Пока остаёмся полностью free для founding companies.
 
 ### Tech debt
 
 - **Тесты**. Сейчас покрытие околонулевое. Цель Q1: **40% line coverage в `backend/`**.
   - Integration-тесты на auth flow, ingest pipeline, team RBAC, beta-limit.
   - E2E на dashboard через Playwright (login → dashboard → invite → second user joins).
-- **Observability**. Sentry frontend + backend, structured logs в Loki/Grafana cloud free tier, Uptime Kuma для public status. Без этого первый incident у paying customer поломает доверие.
+- **Observability — минимум**. Structured logs (zap) в stdout, Uptime Kuma для public status, ручной grep по логам Dokploy. **Sentry осознанно откладываем** до первых платящих — пока 3 founding companies, владелец сам читает логи.
 - **DB миграции с down-сценариями**. Сейчас только up. Для production rollback — блокер.
 
 ### Метрика квартала
@@ -84,11 +85,13 @@ Activation rate > 70%, week-2 retention > 40%, ≥1 paying customer.
 
 ## Q3 — Market (декабрь-февраль 2026/27)
 
-> **Тема: продукт продаётся.**
+> **Тема: продукт обрастает аудиторией. Pricing — отдельный решительный момент, но не дефолт.**
 
 ### Фичи
 
-- **Pricing live.** Free → $X/seat. Stripe billing, invoice generation, dunning emails. Снять beta-лимит 3 компании.
+- ~~Pricing live~~ — **остаёмся free, beta-лимит 3 пока сохраняется.** Решение о монетизации принимаем по сигналам:
+  - Если 3 founding companies активно пользуются + есть waitlist > 30 — снимаем лимит, делаем self-serve free signup, отдельно начинаем разговор о Pro-tier.
+  - Если активность слабая — продолжаем итерации с founding companies, **не отвлекаемся на billing**.
 - **Marketing**:
   - Blog (1 пост в неделю): технические разборы attribution, истории команд, бенчмарки AI-coders
   - Changelog page (auto-generated из conventional commits)
@@ -117,7 +120,7 @@ Activation rate > 70%, week-2 retention > 40%, ≥1 paying customer.
 
 ### Метрика квартала
 
-MRR > $1k, signup-to-paid conversion > 5%, churn < 5%/mo.
+WAU > 30 (3 компании × ~10 активных), week-2 retention > 50%, активный pipeline у каждой founding company.
 
 ---
 
@@ -154,7 +157,7 @@ MRR > $5k, NRR > 110%, ≥1 enterprise (>$500/mo) customer.
 
 | Тема | Q1 | Q2 | Q3 | Q4 |
 |---|---|---|---|---|
-| **Privacy/Security** | Sentry, secrets audit, rate limiting | Penetration test (3rd party) | SOC2 prep + Vanta | SOC2 Type 1 audit |
+| **Privacy/Security** | secrets audit, rate limiting (без Sentry — пока stdout-логи Dokploy) | Penetration test (3rd party), Sentry / similar | SOC2 prep + Vanta | SOC2 Type 1 audit |
 | **Документация** | README + setup + agent install guides | API docs (OpenAPI auto-gen) | User docs site (mintlify) | Enterprise / SOC2 docs |
 | **Команда** | соло | +1 frontend (contractor or full-time) | +1 backend | +1 DevRel/marketing |
 | **Метрики** | DAU, signups, activation | MRR (≥1), retention W2/W4 | MRR ≥ $1k, conversion ≥ 5% | MRR ≥ $5k, NRR ≥ 110% |

@@ -119,9 +119,14 @@ func RegisterRoutes(app *fiber.App, s Service) {
 
 	g.Post("/invites/:code/accept", s.handleInviteAccept)
 
-	// Super admin
+	// Super admin — full management. Все защищены requireSuperAdmin внутри.
 	g.Get("/admin/teams", s.handleAdminListAllTeams)
 	g.Get("/admin/users", s.handleAdminListAllUsers)
+	g.Get("/admin/stats", s.handleAdminStats)
+	g.Delete("/admin/teams/:id", s.handleAdminDeleteTeam)
+	g.Delete("/admin/users/:id", s.handleAdminDeleteUser)
+	g.Patch("/admin/users/:id", s.handleAdminUpdateUser)
+	g.Post("/admin/teams/:id/members", s.handleAdminAddMember)
 }
 
 // --- Public auth config (для UI) ---
@@ -299,8 +304,24 @@ func (s Service) handleCreateTeam(c *fiber.Ctx) error {
 	if req.Name == "" || len(req.Name) > maxTeamNameLen {
 		return c.Status(400).JSON(fiber.Map{"error": "name 1..100 chars"})
 	}
-	// Beta-лимит: всего N команд в системе. Super_admin может больше — для отладки.
-	if s.BetaTeamLimit > 0 && !s.isSuperAdmin(c) {
+	isSuper := s.isSuperAdmin(c)
+	// Constraint: 1 owner = 1 company. Один пользователь может быть owner'ом только
+	// в одной команде. В других — только member через invite. Super_admin исключён.
+	if !isSuper {
+		var ownedCount int
+		if err := s.Pool.QueryRow(c.Context(),
+			"SELECT count(*) FROM team_members WHERE user_id=$1 AND role='owner'", uid).Scan(&ownedCount); err != nil {
+			return s.internalErr(c, err)
+		}
+		if ownedCount > 0 {
+			return c.Status(403).JSON(fiber.Map{
+				"error": "you already own a company — one owner = one company in beta",
+				"code":  "owner_limit",
+			})
+		}
+	}
+	// Beta-лимит: всего N команд в системе. Super_admin обходит.
+	if s.BetaTeamLimit > 0 && !isSuper {
 		var teamCount int
 		if err := s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM teams").Scan(&teamCount); err != nil {
 			return s.internalErr(c, err)
@@ -723,23 +744,26 @@ func (s Service) handleAdminListAllTeams(c *fiber.Ctx) error {
 	}
 	rows, err := s.Pool.Query(c.Context(), `
 		SELECT t.id, t.name, t.plan, t.created_at,
-		       (SELECT count(*) FROM team_members WHERE team_id = t.id) AS member_count
+		       (SELECT count(*) FROM team_members WHERE team_id = t.id) AS member_count,
+		       (SELECT u.email FROM team_members tm JOIN users u ON u.id = tm.user_id
+		        WHERE tm.team_id = t.id AND tm.role = 'owner' ORDER BY u.created_at LIMIT 1) AS owner_email
 		FROM teams t ORDER BY t.created_at DESC`)
 	if err != nil {
 		return s.internalErr(c, err)
 	}
 	defer rows.Close()
 	type teamRow struct {
-		ID        uuid.UUID `json:"id"`
-		Name      string    `json:"name"`
-		Plan      string    `json:"plan"`
-		Members   int       `json:"members"`
-		CreatedAt time.Time `json:"created_at"`
+		ID          uuid.UUID `json:"id"`
+		Name        string    `json:"name"`
+		Plan        string    `json:"plan"`
+		MemberCount int       `json:"member_count"`
+		OwnerEmail  *string   `json:"owner_email"`
+		CreatedAt   time.Time `json:"created_at"`
 	}
 	out := []teamRow{}
 	for rows.Next() {
 		var t teamRow
-		if err := rows.Scan(&t.ID, &t.Name, &t.Plan, &t.CreatedAt, &t.Members); err != nil {
+		if err := rows.Scan(&t.ID, &t.Name, &t.Plan, &t.CreatedAt, &t.MemberCount, &t.OwnerEmail); err != nil {
 			return s.internalErr(c, err)
 		}
 		out = append(out, t)
@@ -752,8 +776,9 @@ func (s Service) handleAdminListAllUsers(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"error": "super_admin only"})
 	}
 	rows, err := s.Pool.Query(c.Context(), `
-		SELECT id, email, COALESCE(display_name, email), global_role, created_at
-		FROM users ORDER BY created_at DESC LIMIT 200`)
+		SELECT u.id, u.email, COALESCE(u.display_name, u.email), u.global_role, u.created_at,
+		       (SELECT count(*) FROM team_members WHERE user_id = u.id) AS teams_count
+		FROM users u ORDER BY u.created_at DESC LIMIT 200`)
 	if err != nil {
 		return s.internalErr(c, err)
 	}
@@ -764,11 +789,12 @@ func (s Service) handleAdminListAllUsers(c *fiber.Ctx) error {
 		DisplayName string    `json:"display_name"`
 		GlobalRole  string    `json:"global_role"`
 		CreatedAt   time.Time `json:"created_at"`
+		TeamsCount  int       `json:"teams_count"`
 	}
 	out := []userRow{}
 	for rows.Next() {
 		var u userRow
-		if err := rows.Scan(&u.ID, &u.Email, &u.DisplayName, &u.GlobalRole, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Email, &u.DisplayName, &u.GlobalRole, &u.CreatedAt, &u.TeamsCount); err != nil {
 			return s.internalErr(c, err)
 		}
 		out = append(out, u)
@@ -971,4 +997,145 @@ func (s Service) handleRemoveMember(c *fiber.Ctx) error {
 		return s.internalErr(c, err)
 	}
 	return c.JSON(fiber.Map{"ok": true})
+}
+
+// --- Super admin endpoints ---
+
+// requireSuperAdmin — guard для super_admin handler'ов. Возвращает true если пускаем.
+func (s Service) requireSuperAdmin(c *fiber.Ctx) bool {
+	if !s.isSuperAdmin(c) {
+		_ = c.Status(403).JSON(fiber.Map{"error": "super_admin only"})
+		return false
+	}
+	return true
+}
+
+func (s Service) handleAdminStats(c *fiber.Ctx) error {
+	if !s.requireSuperAdmin(c) {
+		return nil
+	}
+	var users, teams, members int
+	_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM users").Scan(&users)
+	_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM teams").Scan(&teams)
+	_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM team_members").Scan(&members)
+	return c.JSON(fiber.Map{
+		"users_total":   users,
+		"teams_total":   teams,
+		"members_total": members,
+		"beta_limit":    s.BetaTeamLimit,
+	})
+}
+
+func (s Service) handleAdminDeleteTeam(c *fiber.Ctx) error {
+	if !s.requireSuperAdmin(c) {
+		return nil
+	}
+	teamID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+	}
+	if _, err := s.Pool.Exec(c.Context(), "DELETE FROM teams WHERE id=$1", teamID); err != nil {
+		return s.internalErr(c, err)
+	}
+	return c.JSON(fiber.Map{"ok": true})
+}
+
+func (s Service) handleAdminDeleteUser(c *fiber.Ctx) error {
+	if !s.requireSuperAdmin(c) {
+		return nil
+	}
+	uid, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid user id"})
+	}
+	// Запрет на самоудаление, чтобы super_admin не остался без аккаунта.
+	if uid == userID(c) {
+		return c.Status(409).JSON(fiber.Map{"error": "cannot delete yourself"})
+	}
+	if _, err := s.Pool.Exec(c.Context(), "DELETE FROM users WHERE id=$1", uid); err != nil {
+		return s.internalErr(c, err)
+	}
+	return c.JSON(fiber.Map{"ok": true})
+}
+
+type adminUpdateUserReq struct {
+	GlobalRole  *string `json:"global_role"`
+	DisplayName *string `json:"display_name"`
+}
+
+func (s Service) handleAdminUpdateUser(c *fiber.Ctx) error {
+	if !s.requireSuperAdmin(c) {
+		return nil
+	}
+	uid, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid user id"})
+	}
+	var req adminUpdateUserReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+	}
+	if req.GlobalRole != nil {
+		role := strings.ToLower(strings.TrimSpace(*req.GlobalRole))
+		if role != "user" && role != "super_admin" {
+			return c.Status(400).JSON(fiber.Map{"error": "global_role must be user | super_admin"})
+		}
+		// Запрет понизить себя — иначе можно ребутнуть систему без super_admin'а.
+		if uid == userID(c) && role != "super_admin" {
+			return c.Status(409).JSON(fiber.Map{"error": "cannot demote yourself"})
+		}
+		if _, err := s.Pool.Exec(c.Context(),
+			"UPDATE users SET global_role=$1 WHERE id=$2", role, uid); err != nil {
+			return s.internalErr(c, err)
+		}
+	}
+	if req.DisplayName != nil {
+		dn, ok := validateDisplayName(*req.DisplayName)
+		if !ok {
+			return c.Status(400).JSON(fiber.Map{"error": "display_name 1..64 chars, no newlines"})
+		}
+		if _, err := s.Pool.Exec(c.Context(),
+			"UPDATE users SET display_name=$1 WHERE id=$2", dn, uid); err != nil {
+			return s.internalErr(c, err)
+		}
+	}
+	return c.JSON(fiber.Map{"ok": true})
+}
+
+type adminAddMemberReq struct {
+	Email string `json:"email"`
+	Role  string `json:"role"`
+}
+
+func (s Service) handleAdminAddMember(c *fiber.Ctx) error {
+	if !s.requireSuperAdmin(c) {
+		return nil
+	}
+	teamID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+	}
+	var req adminAddMemberReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+	}
+	email, ok := validateEmail(req.Email)
+	if !ok {
+		return c.Status(400).JSON(fiber.Map{"error": "valid email required"})
+	}
+	role := strings.ToLower(strings.TrimSpace(req.Role))
+	if role == "" {
+		role = "member"
+	}
+	if role != "owner" && role != "admin" && role != "member" {
+		return c.Status(400).JSON(fiber.Map{"error": "role must be owner | admin | member"})
+	}
+	user, err := auth.FindUserByEmail(c.Context(), s.Pool, email)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "user with this email not found"})
+	}
+	if err := s.addMember(c.Context(), teamID, user.ID, role); err != nil {
+		return s.internalErr(c, err)
+	}
+	return c.JSON(fiber.Map{"ok": true, "user_id": user.ID})
 }
