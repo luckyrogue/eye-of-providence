@@ -47,7 +47,98 @@
   * {
     @apply border-border;
   }
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "ss01", "cv11";
+  }
+}
+
+@layer components {
+  /* Mono caps-lock label с верхней линией — для секций и stat-card-меток */
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-widest3 text-muted-foreground;
+  }
+  .eyebrow::before {
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 1px;
+    background: hsl(var(--border));
+    vertical-align: middle;
+    margin-right: 8px;
+    transform: translateY(-1px);
+  }
+
+  /* Display heading с gradient на <em> */
+  .display-head {
+    @apply font-display font-bold tracking-tightest leading-[0.95];
+  }
+  .display-head em {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--foreground)) 0%,
+      hsl(var(--muted-foreground)) 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-style: normal;
+  }
+
+  /* Premium hover на cards */
+  .card-hover {
+    @apply transition-all duration-300 ease-out-expo;
+  }
+  .card-hover:hover {
+    @apply -translate-y-0.5 shadow-lg;
+    border-color: hsl(var(--ring) / 0.4);
+  }
+
+  /* Reveal-on-mount fade-up — добавляется через `.reveal` класс */
+  .reveal {
+    @apply animate-fade-up;
+  }
+  .reveal-delay-1 { animation-delay: 60ms; }
+  .reveal-delay-2 { animation-delay: 120ms; }
+  .reveal-delay-3 { animation-delay: 180ms; }
+  .reveal-delay-4 { animation-delay: 240ms; }
+  .reveal-delay-5 { animation-delay: 300ms; }
+
+  /* Sticky-header с blur */
+  .header-blur {
+    @apply backdrop-blur-md bg-background/70;
+  }
+
+  /* Subtle dotted background для Auth-страницы */
+  .dot-grid {
+    background-image: radial-gradient(
+      hsl(var(--foreground) / 0.06) 1px,
+      transparent 1px
+    );
+    background-size: 24px 24px;
+  }
+}
+
+/* Премиум-скроллбар (Webkit) */
+@layer utilities {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 999px;
+    border: 2px solid hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
   }
 }

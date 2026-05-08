@@ -149,15 +149,15 @@ export default function App() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {userId && (
-      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <div className="border-b header-blur sticky top-0 z-10">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center transition-transform duration-300 ease-out-expo hover:rotate-[8deg]">
               <Eye className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight">Eye of Providence</h1>
-              <p className="text-xs text-muted-foreground">Сколько ты пишешь сам, а сколько — с AI</p>
+              <h1 className="font-display text-lg font-bold tracking-tightest leading-none">Eye of Providence</h1>
+              <p className="text-[11px] uppercase tracking-widest2 text-muted-foreground mt-1">Manual vs AI · live</p>
             </div>
           </div>
           {userId && (
@@ -206,15 +206,21 @@ export default function App() {
           <Teams tz={tz} />
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <StatCard label="Доля AI" value={`${aiRatio}%`} hint="за 7 дней" icon={<Brain className="h-4 w-4 text-purple-500" />} accent="purple" />
-              <StatCard label="Активное время" value={Math.round(totalMs / 60000)} unit="мин" hint={`${events.length} событий за период`} icon={<Activity className="h-4 w-4 text-blue-500" />} accent="blue" />
-              <StatCard label="Отчёты" value={reports.length} hint="сгенерировано" icon={<FileText className="h-4 w-4 text-amber-500" />} accent="amber" />
+            <div className="reveal">
+              <div className="flex items-baseline justify-between mb-3">
+                <span className="eyebrow">Overview</span>
+                <span className="font-mono text-[11px] text-muted-foreground">last 7 days</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <StatCard label="Доля AI" value={`${aiRatio}%`} hint="за 7 дней" icon={<Brain className="h-4 w-4 text-purple-500" />} accent="purple" delay={1} />
+                <StatCard label="Активное время" value={Math.round(totalMs / 60000)} unit="мин" hint={`${events.length} событий за период`} icon={<Activity className="h-4 w-4 text-blue-500" />} accent="blue" delay={2} />
+                <StatCard label="Отчёты" value={reports.length} hint="сгенерировано" icon={<FileText className="h-4 w-4 text-amber-500" />} accent="amber" delay={3} />
+              </div>
             </div>
 
-            <Card>
+            <Card className="card-hover">
               <CardHeader>
-                <CardTitle>Динамика за 30 дней</CardTitle>
+                <CardTitle className="font-display tracking-tight">Динамика за 30 дней</CardTitle>
                 <CardDescription>Время вручную vs с AI по дням</CardDescription>
               </CardHeader>
               <CardContent>
@@ -223,18 +229,18 @@ export default function App() {
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Card>
+              <Card className="card-hover">
                 <CardHeader>
-                  <CardTitle>Тепловая карта</CardTitle>
+                  <CardTitle className="font-display tracking-tight">Тепловая карта</CardTitle>
                   <CardDescription>За 30 дней, день недели × час · {tz}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Heatmap cells={heatmap} />
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="card-hover">
                 <CardHeader>
-                  <CardTitle>По языкам</CardTitle>
+                  <CardTitle className="font-display tracking-tight">По языкам</CardTitle>
                   <CardDescription>Доля AI и ручного кода по языкам</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -243,10 +249,10 @@ export default function App() {
               </Card>
             </div>
 
-            <Card>
+            <Card className="card-hover">
               <CardHeader className="flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 font-display tracking-tight">
                     <Sparkles className="h-4 w-4 text-purple-500" />
                     AI-отчёт
                   </CardTitle>
@@ -290,9 +296,9 @@ export default function App() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="card-hover">
               <CardHeader>
-                <CardTitle>Последние события</CardTitle>
+                <CardTitle className="font-display tracking-tight">Последние события</CardTitle>
                 <CardDescription>Из event store. Время в часовом поясе из настроек.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -346,29 +352,30 @@ export default function App() {
   );
 }
 
-function StatCard({ label, value, unit, hint, icon, accent }: {
+function StatCard({ label, value, unit, hint, icon, accent, delay }: {
   label: string; value: string | number; unit?: string; hint: string;
-  icon: React.ReactNode; accent: "purple" | "blue" | "amber";
+  icon: React.ReactNode; accent: "purple" | "blue" | "amber"; delay?: 1 | 2 | 3;
 }) {
   const accents = {
     purple: "from-purple-500/20",
     blue: "from-blue-500/20",
     amber: "from-amber-500/20",
   };
+  const delayClass = delay ? `reveal-delay-${delay}` : "";
   return (
-    <Card className="overflow-hidden relative">
+    <Card className={`overflow-hidden relative card-hover reveal ${delayClass}`}>
       <div className={`absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl ${accents[accent]} to-transparent`} />
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground">{label}</CardTitle>
+          <CardTitle className="font-mono text-[10px] uppercase tracking-widest3 text-muted-foreground">{label}</CardTitle>
           {icon}
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-4xl font-bold tabular-nums">
-          {value}{unit && <span className="text-base font-normal"> {unit}</span>}
+        <div className="font-display text-5xl font-bold tabular-nums tracking-tightest">
+          {value}{unit && <span className="text-base font-normal text-muted-foreground"> {unit}</span>}
         </div>
-        <p className="text-xs text-muted-foreground mt-1">{hint}</p>
+        <p className="text-xs text-muted-foreground mt-2 font-mono">{hint}</p>
       </CardContent>
     </Card>
   );

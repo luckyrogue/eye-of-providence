@@ -58,12 +58,25 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
   );
 
   return (
-    <Card className="max-w-md mx-auto mt-12">
+    <div className="relative">
+      <div className="dot-grid pointer-events-none absolute inset-x-0 top-0 h-[420px] -z-10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+      <div className="mx-auto max-w-xl pt-12 pb-6 text-center reveal">
+        <span className="eyebrow">Eye of Providence</span>
+        <h1 className="display-head text-5xl md:text-6xl mt-3">
+          <em>{mode === "register" ? "Создай" : "Войди"}.</em>
+          <br />
+          Отслеживай.
+        </h1>
+        <p className="mt-4 text-sm text-muted-foreground max-w-sm mx-auto">
+          Сколько ты пишешь сам, а сколько — с AI. Privacy-by-design.
+        </p>
+      </div>
+      <Card className="max-w-md mx-auto card-hover reveal reveal-delay-2">
       <CardHeader>
         <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
           <Eye className="h-6 w-6 text-primary-foreground" />
         </div>
-        <CardTitle className="text-center">
+        <CardTitle className="text-center font-display tracking-tight">
           {mode === "register" ? "Регистрация" : "Вход"}
         </CardTitle>
         <CardDescription className="text-center">
@@ -142,11 +155,12 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
 
         <button
           onClick={() => setMode(mode === "register" ? "login" : "register")}
-          className="w-full text-xs text-muted-foreground hover:text-foreground"
+          className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           {mode === "register" ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться"}
         </button>
       </CardContent>
     </Card>
+    </div>
   );
 }
