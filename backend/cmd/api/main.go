@@ -141,10 +141,11 @@ func main() {
 
 	teams.EventStore = eventStore
 	teams.RegisterRoutes(app, teams.Service{
-		Pool:       pgPool,
-		JWTSecret:  cfg.JWTSecret,
-		Logger:     log,
-		InviteOnly: cfg.InviteOnly,
+		Pool:          pgPool,
+		JWTSecret:     cfg.JWTSecret,
+		Logger:        log,
+		InviteOnly:    cfg.InviteOnly,
+		BetaTeamLimit: cfg.BetaTeamLimit,
 	})
 
 	// Protected routes — навешивают auth middleware на весь /v1.

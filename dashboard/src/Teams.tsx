@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
-import { Brain, Copy, FolderGit2, GitCommit, Plus, Users } from "lucide-react";
+import { Brain, Copy, FolderGit2, GitCommit, Plus, Settings, Sparkles, Trash2, UserMinus, Users } from "lucide-react";
 import {
   listMyTeams, createTeam, listMembers, teamSummary,
   createInvite, listProjects, createProject, listTeamCommits,
-  type Team, type TeamMember, type MemberStat, type Project, type Commit,
+  updateTeam, deleteTeam, updateMemberRole, removeMember, fetchBetaInfo,
+  type Team, type TeamMember, type MemberStat, type Project, type Commit, type BetaInfo,
 } from "./api";
 import { formatDate } from "./tz";
 
@@ -13,12 +14,14 @@ export function Teams({ tz }: { tz: string }) {
   const [activeTeam, setActiveTeam] = useState<string | null>(localStorage.getItem("eop_team") || null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [beta, setBeta] = useState<BetaInfo | null>(null);
 
   async function refreshTeams() {
     setError(null);
     try {
-      const t = await listMyTeams();
+      const [t, b] = await Promise.all([listMyTeams(), fetchBetaInfo().catch(() => null)]);
       setTeams(t);
+      setBeta(b);
       if (!activeTeam && t.length) {
         setActiveTeam(t[0].id);
         localStorage.setItem("eop_team", t[0].id);
@@ -40,7 +43,7 @@ export function Teams({ tz }: { tz: string }) {
       setActiveTeam(r.id);
       localStorage.setItem("eop_team", r.id);
     } catch (e) {
-      setError(String(e));
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
@@ -51,17 +54,49 @@ export function Teams({ tz }: { tz: string }) {
     localStorage.setItem("eop_team", id);
   }
 
+  function onTeamChanged(updated: { name?: string; deleted?: boolean }) {
+    if (updated.deleted) {
+      localStorage.removeItem("eop_team");
+      setActiveTeam(null);
+    }
+    refreshTeams();
+  }
+
+  const slotsLeft = beta?.slots_remaining ?? -1;
+  const betaFull = beta?.limit && beta.limit > 0 && slotsLeft === 0;
+
   return (
     <div className="space-y-4">
-      {error && <div className="rounded-md border border-destructive bg-destructive/10 p-2 text-sm text-destructive">{error}</div>}
+      {error && <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 
-      <Card>
+      {beta && beta.limit > 0 && (
+        <div className="rounded-xl border bg-gradient-to-br from-purple-500/5 to-blue-500/5 p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-foreground/5 flex items-center justify-center">
+              <Sparkles className="h-5 w-5 text-purple-500" />
+            </div>
+            <div>
+              <div className="font-mono text-[11px] uppercase tracking-widest3 text-muted-foreground">Beta program</div>
+              <div className="text-sm font-medium mt-0.5">
+                {betaFull
+                  ? `Все ${beta.limit} мест заняты — open seats coming soon`
+                  : `${slotsLeft} из ${beta.limit} мест свободно`}
+              </div>
+            </div>
+          </div>
+          <div className="font-display text-3xl font-bold tabular-nums tracking-tightest text-muted-foreground">
+            {beta.teams_count}<span className="text-muted-foreground/50">/{beta.limit}</span>
+          </div>
+        </div>
+      )}
+
+      <Card className="card-hover">
         <CardHeader className="flex-row items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2"><Users className="h-4 w-4" /> Мои команды</CardTitle>
+            <CardTitle className="flex items-center gap-2 font-display tracking-tight"><Users className="h-4 w-4" /> Мои команды</CardTitle>
             <CardDescription>Можешь состоять в нескольких — переключайся внизу.</CardDescription>
           </div>
-          <Button size="sm" onClick={newTeam} disabled={busy}>
+          <Button size="sm" onClick={newTeam} disabled={busy || !!betaFull}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Новая команда
           </Button>
         </CardHeader>
@@ -81,7 +116,7 @@ export function Teams({ tz }: { tz: string }) {
                   }`}
                 >
                   {t.name}
-                  <span className="ml-2 text-[10px] uppercase opacity-70">{translateRole(t.role)}</span>
+                  <span className="ml-2 font-mono text-[10px] uppercase tracking-widest2 opacity-70">{translateRole(t.role)}</span>
                 </button>
               ))}
             </div>
@@ -89,7 +124,16 @@ export function Teams({ tz }: { tz: string }) {
         </CardContent>
       </Card>
 
-      {activeTeam && <TeamDetail teamID={activeTeam} role={teams.find((t) => t.id === activeTeam)?.role || "member"} tz={tz} />}
+      {activeTeam && (
+        <TeamDetail
+          key={activeTeam}
+          teamID={activeTeam}
+          team={teams.find((t) => t.id === activeTeam)}
+          role={teams.find((t) => t.id === activeTeam)?.role || "member"}
+          tz={tz}
+          onChanged={onTeamChanged}
+        />
+      )}
     </div>
   );
 }
@@ -98,8 +142,14 @@ function translateRole(r: string): string {
   return { owner: "владелец", admin: "админ", member: "участник" }[r] ?? r;
 }
 
-function TeamDetail({ teamID, role, tz }: { teamID: string; role: string; tz: string }) {
-  const [tab, setTab] = useState<"members" | "projects" | "commits">("members");
+function TeamDetail({ teamID, team, role, tz, onChanged }: {
+  teamID: string;
+  team?: Team;
+  role: string;
+  tz: string;
+  onChanged: (u: { name?: string; deleted?: boolean }) => void;
+}) {
+  const [tab, setTab] = useState<"members" | "projects" | "commits" | "settings">("members");
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [stats, setStats] = useState<MemberStat[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -143,13 +193,13 @@ function TeamDetail({ teamID, role, tz }: { teamID: string; role: string; tz: st
   }
 
   return (
-    <Card>
+    <Card className="card-hover">
       <CardHeader className="flex-row items-center justify-between">
         <div>
-          <CardTitle>Команда</CardTitle>
+          <CardTitle className="font-display tracking-tight">{team?.name || "Команда"}</CardTitle>
           <CardDescription>{members.length} участник{plural(members.length)}</CardDescription>
         </div>
-        <div className="flex gap-1 text-sm">
+        <div className="flex gap-1 text-sm flex-wrap justify-end">
           <TabBtn active={tab === "members"} onClick={() => setTab("members")} icon={<Users className="h-3.5 w-3.5" />}>
             Участники
           </TabBtn>
@@ -159,6 +209,11 @@ function TeamDetail({ teamID, role, tz }: { teamID: string; role: string; tz: st
           <TabBtn active={tab === "commits"} onClick={() => setTab("commits")} icon={<GitCommit className="h-3.5 w-3.5" />}>
             Коммиты
           </TabBtn>
+          {role === "owner" && (
+            <TabBtn active={tab === "settings"} onClick={() => setTab("settings")} icon={<Settings className="h-3.5 w-3.5" />}>
+              Настройки
+            </TabBtn>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -192,34 +247,17 @@ function TeamDetail({ teamID, role, tz }: { teamID: string; role: string; tz: st
             )}
 
             <ul className="space-y-2">
-              {members.map((m) => {
-                const stat = stats.find((s) => s.id === m.id);
-                return (
-                  <li key={m.id} className="flex items-center justify-between rounded-md border p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-sm font-medium">
-                        {m.display_name.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium">{m.display_name}</div>
-                        <div className="text-xs text-muted-foreground">{m.email} · {translateRole(m.role)}</div>
-                      </div>
-                    </div>
-                    {stat && stat.total_ms > 0 && (
-                      <div className="text-right">
-                        <div className="flex items-center gap-1 text-sm">
-                          <Brain className="h-3.5 w-3.5 text-purple-500" />
-                          <span className="font-medium tabular-nums">{stat.ai_ratio}%</span>
-                          <span className="text-muted-foreground">AI</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground tabular-nums">
-                          {Math.round(stat.total_ms / 60000)} мин · 7 дней
-                        </div>
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
+              {members.map((m) => (
+                <MemberRow
+                  key={m.id}
+                  member={m}
+                  stat={stats.find((s) => s.id === m.id)}
+                  myRole={role}
+                  teamID={teamID}
+                  onChanged={refresh}
+                  onError={setError}
+                />
+              ))}
             </ul>
           </>
         )}
@@ -229,8 +267,174 @@ function TeamDetail({ teamID, role, tz }: { teamID: string; role: string; tz: st
         {tab === "commits" && (
           <CommitsTable commits={commits} tz={tz} />
         )}
+
+        {tab === "settings" && role === "owner" && team && (
+          <TeamSettings teamID={teamID} team={team} onChanged={onChanged} onError={setError} />
+        )}
       </CardContent>
     </Card>
+  );
+}
+
+function MemberRow({ member, stat, myRole, teamID, onChanged, onError }: {
+  member: TeamMember;
+  stat?: MemberStat;
+  myRole: string;
+  teamID: string;
+  onChanged: () => void;
+  onError: (msg: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const canManage = myRole === "owner" || (myRole === "admin" && member.role !== "owner");
+  const canChangeRole = myRole === "owner";
+
+  async function changeRole(role: string) {
+    if (role === member.role) return;
+    setBusy(true);
+    try {
+      await updateMemberRole(teamID, member.id, role);
+      onChanged();
+    } catch (e) {
+      onError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    if (!confirm(`Удалить ${member.display_name} из команды?`)) return;
+    setBusy(true);
+    try {
+      await removeMember(teamID, member.id);
+      onChanged();
+    } catch (e) {
+      onError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <li className="flex items-center justify-between rounded-md border p-3 hover:bg-muted/30 transition-colors">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-sm font-medium shrink-0">
+          {member.display_name.slice(0, 2).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-medium truncate">{member.display_name}</div>
+          <div className="text-xs text-muted-foreground truncate">{member.email}</div>
+        </div>
+      </div>
+      <div className="flex items-center gap-3 shrink-0">
+        {stat && stat.total_ms > 0 && (
+          <div className="text-right hidden sm:block">
+            <div className="flex items-center gap-1 text-sm justify-end">
+              <Brain className="h-3.5 w-3.5 text-purple-500" />
+              <span className="font-medium tabular-nums">{stat.ai_ratio}%</span>
+            </div>
+            <div className="text-[10px] text-muted-foreground tabular-nums font-mono">
+              {Math.round(stat.total_ms / 60000)} мин · 7д
+            </div>
+          </div>
+        )}
+        {canChangeRole ? (
+          <select
+            value={member.role}
+            disabled={busy}
+            onChange={(e) => changeRole(e.target.value)}
+            className="rounded-md border bg-background px-2 py-1 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="owner">владелец</option>
+            <option value="admin">админ</option>
+            <option value="member">участник</option>
+          </select>
+        ) : (
+          <span className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">{translateRole(member.role)}</span>
+        )}
+        {canManage && (
+          <button
+            onClick={remove}
+            disabled={busy}
+            title="Удалить из команды"
+            className="rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+          >
+            <UserMinus className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function TeamSettings({ teamID, team, onChanged, onError }: {
+  teamID: string;
+  team: Team;
+  onChanged: (u: { name?: string; deleted?: boolean }) => void;
+  onError: (msg: string) => void;
+}) {
+  const [name, setName] = useState(team.name);
+  const [busy, setBusy] = useState(false);
+
+  async function save() {
+    if (name.trim() === team.name || !name.trim()) return;
+    setBusy(true);
+    try {
+      await updateTeam(teamID, name.trim());
+      onChanged({ name: name.trim() });
+    } catch (e) {
+      onError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function destroy() {
+    const confirm1 = prompt(`Введи "${team.name}" чтобы подтвердить удаление команды (необратимо)`);
+    if (confirm1 !== team.name) return;
+    setBusy(true);
+    try {
+      await deleteTeam(teamID);
+      onChanged({ deleted: true });
+    } catch (e) {
+      onError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <label className="font-mono text-[11px] uppercase tracking-widest2 text-muted-foreground">Название</label>
+        <div className="flex gap-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={busy}
+            className="flex-1 rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            maxLength={100}
+          />
+          <Button onClick={save} disabled={busy || name.trim() === team.name || !name.trim()} size="sm">
+            Сохранить
+          </Button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4">
+        <div className="font-mono text-[11px] uppercase tracking-widest2 text-destructive mb-1">Danger zone</div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="text-sm">
+            <div className="font-medium">Удалить команду</div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Уничтожит участников, проекты, инвайты и историю коммитов. Необратимо.
+            </p>
+          </div>
+          <Button onClick={destroy} disabled={busy} variant="destructive" size="sm">
+            <Trash2 className="h-3.5 w-3.5 mr-1" /> Удалить
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 

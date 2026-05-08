@@ -93,7 +93,52 @@ export async function listMyTeams(): Promise<Team[]> {
 
 export async function createTeam(name: string): Promise<{ id: string; name: string; role: string }> {
   const res = await authed("/v1/teams", { method: "POST", body: JSON.stringify({ name }) });
-  if (!res.ok) throw new Error(`createTeam failed: ${res.status}`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `createTeam failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function updateTeam(teamID: string, name: string): Promise<void> {
+  const res = await authed(`/v1/teams/${teamID}`, { method: "PATCH", body: JSON.stringify({ name }) });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `updateTeam failed: ${res.status}`);
+  }
+}
+
+export async function deleteTeam(teamID: string): Promise<void> {
+  const res = await authed(`/v1/teams/${teamID}`, { method: "DELETE" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `deleteTeam failed: ${res.status}`);
+  }
+}
+
+export async function updateMemberRole(teamID: string, userID: string, role: string): Promise<void> {
+  const res = await authed(`/v1/teams/${teamID}/members/${userID}`, {
+    method: "PATCH", body: JSON.stringify({ role }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `updateMemberRole failed: ${res.status}`);
+  }
+}
+
+export async function removeMember(teamID: string, userID: string): Promise<void> {
+  const res = await authed(`/v1/teams/${teamID}/members/${userID}`, { method: "DELETE" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `removeMember failed: ${res.status}`);
+  }
+}
+
+export type BetaInfo = { teams_count: number; limit: number; slots_remaining: number };
+
+export async function fetchBetaInfo(): Promise<BetaInfo> {
+  const res = await authed("/v1/beta/info");
+  if (!res.ok) throw new Error(`betaInfo failed: ${res.status}`);
   return res.json();
 }
 

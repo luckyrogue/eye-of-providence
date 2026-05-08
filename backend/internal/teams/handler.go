@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net/mail"
+	"strconv"
 	"strings"
 	"time"
 
@@ -77,10 +78,11 @@ func validateDisplayName(s string) (string, bool) {
 const tokenTTL = 90 * 24 * time.Hour
 
 type Service struct {
-	Pool       *pgxpool.Pool
-	JWTSecret  string
-	Logger     *zap.Logger
-	InviteOnly bool // регистрация только по invite (первый user всегда может — bootstrap)
+	Pool          *pgxpool.Pool
+	JWTSecret     string
+	Logger        *zap.Logger
+	InviteOnly    bool // регистрация только по invite (первый user всегда может — bootstrap)
+	BetaTeamLimit int  // 0 = без лимита, иначе — максимум команд для бета-программы
 }
 
 func RegisterRoutes(app *fiber.App, s Service) {
@@ -96,10 +98,15 @@ func RegisterRoutes(app *fiber.App, s Service) {
 
 	g.Get("/teams", s.handleListMyTeams)
 	g.Post("/teams", s.handleCreateTeam)
+	g.Get("/beta/info", s.handleBetaInfo)
 
 	t := g.Group("/teams/:id")
 	t.Get("/", s.handleTeamDetail)
+	t.Patch("/", s.handleUpdateTeam)
+	t.Delete("/", s.handleDeleteTeam)
 	t.Get("/members", s.handleListMembers)
+	t.Patch("/members/:user_id", s.handleUpdateMemberRole)
+	t.Delete("/members/:user_id", s.handleRemoveMember)
 	t.Post("/invites", s.handleCreateInvite)
 	t.Get("/summary", s.handleTeamSummary)
 
@@ -291,6 +298,19 @@ func (s Service) handleCreateTeam(c *fiber.Ctx) error {
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" || len(req.Name) > maxTeamNameLen {
 		return c.Status(400).JSON(fiber.Map{"error": "name 1..100 chars"})
+	}
+	// Beta-лимит: всего N команд в системе. Super_admin может больше — для отладки.
+	if s.BetaTeamLimit > 0 && !s.isSuperAdmin(c) {
+		var teamCount int
+		if err := s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM teams").Scan(&teamCount); err != nil {
+			return s.internalErr(c, err)
+		}
+		if teamCount >= s.BetaTeamLimit {
+			return c.Status(403).JSON(fiber.Map{
+				"error": "beta full: free tier limited to " + strconv.Itoa(s.BetaTeamLimit) + " companies",
+				"code":  "beta_full",
+			})
+		}
 	}
 	tx, err := s.Pool.Begin(c.Context())
 	if err != nil {
@@ -797,4 +817,158 @@ func randomCode(bytes int) string {
 	b := make([]byte, bytes)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// --- Beta info ---
+
+func (s Service) handleBetaInfo(c *fiber.Ctx) error {
+	var teamCount int
+	if err := s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM teams").Scan(&teamCount); err != nil {
+		return s.internalErr(c, err)
+	}
+	limit := s.BetaTeamLimit
+	remaining := -1 // -1 = без лимита
+	if limit > 0 {
+		remaining = limit - teamCount
+		if remaining < 0 {
+			remaining = 0
+		}
+	}
+	return c.JSON(fiber.Map{
+		"teams_count":     teamCount,
+		"limit":           limit,
+		"slots_remaining": remaining,
+	})
+}
+
+// --- Team update / delete ---
+
+type updateTeamReq struct {
+	Name *string `json:"name"`
+}
+
+func (s Service) handleUpdateTeam(c *fiber.Ctx) error {
+	uid := userID(c)
+	teamID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+	}
+	role, ok := s.teamRole(c.Context(), uid, teamID)
+	if !ok || role != "owner" {
+		return c.Status(403).JSON(fiber.Map{"error": "только владелец может изменять команду"})
+	}
+	var req updateTeamReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+	}
+	if req.Name != nil {
+		name := strings.TrimSpace(*req.Name)
+		if name == "" || len(name) > maxTeamNameLen {
+			return c.Status(400).JSON(fiber.Map{"error": "name 1..100 chars"})
+		}
+		if _, err := s.Pool.Exec(c.Context(), "UPDATE teams SET name=$1 WHERE id=$2", name, teamID); err != nil {
+			return s.internalErr(c, err)
+		}
+	}
+	return c.JSON(fiber.Map{"ok": true})
+}
+
+func (s Service) handleDeleteTeam(c *fiber.Ctx) error {
+	uid := userID(c)
+	teamID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+	}
+	role, ok := s.teamRole(c.Context(), uid, teamID)
+	if !ok || role != "owner" {
+		return c.Status(403).JSON(fiber.Map{"error": "только владелец может удалять команду"})
+	}
+	// Каскад через FK ON DELETE CASCADE удалит team_members, projects, invites, commits.
+	if _, err := s.Pool.Exec(c.Context(), "DELETE FROM teams WHERE id=$1", teamID); err != nil {
+		return s.internalErr(c, err)
+	}
+	return c.JSON(fiber.Map{"ok": true})
+}
+
+// --- Member role / remove ---
+
+type updateMemberRoleReq struct {
+	Role string `json:"role"`
+}
+
+func (s Service) handleUpdateMemberRole(c *fiber.Ctx) error {
+	uid := userID(c)
+	teamID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+	}
+	targetUID, err := uuid.Parse(c.Params("user_id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid user id"})
+	}
+	role, ok := s.teamRole(c.Context(), uid, teamID)
+	if !ok || role != "owner" {
+		return c.Status(403).JSON(fiber.Map{"error": "только владелец может менять роли"})
+	}
+	var req updateMemberRoleReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+	}
+	newRole := strings.ToLower(strings.TrimSpace(req.Role))
+	if newRole != "owner" && newRole != "admin" && newRole != "member" {
+		return c.Status(400).JSON(fiber.Map{"error": "role must be owner | admin | member"})
+	}
+	// Если назначаем нового owner — старый owner не должен остаться один: в БД допустим
+	// несколько owner'ов, проблема только если owner понижает себя в одиночестве.
+	if uid == targetUID && newRole != "owner" {
+		var ownerCount int
+		_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM team_members WHERE team_id=$1 AND role='owner'", teamID).Scan(&ownerCount)
+		if ownerCount <= 1 {
+			return c.Status(409).JSON(fiber.Map{"error": "нельзя понизить последнего владельца — назначь другого сначала"})
+		}
+	}
+	if _, err := s.Pool.Exec(c.Context(),
+		"UPDATE team_members SET role=$1 WHERE team_id=$2 AND user_id=$3",
+		newRole, teamID, targetUID); err != nil {
+		return s.internalErr(c, err)
+	}
+	return c.JSON(fiber.Map{"ok": true})
+}
+
+func (s Service) handleRemoveMember(c *fiber.Ctx) error {
+	uid := userID(c)
+	teamID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+	}
+	targetUID, err := uuid.Parse(c.Params("user_id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid user id"})
+	}
+	role, ok := s.teamRole(c.Context(), uid, teamID)
+	if !ok || (role != "owner" && role != "admin") {
+		return c.Status(403).JSON(fiber.Map{"error": "только владелец или админ могут удалять участников"})
+	}
+	// Нельзя удалить последнего владельца (включая случай "владелец сам себя").
+	var targetRole string
+	_ = s.Pool.QueryRow(c.Context(),
+		"SELECT role FROM team_members WHERE team_id=$1 AND user_id=$2",
+		teamID, targetUID).Scan(&targetRole)
+	if targetRole == "owner" {
+		var ownerCount int
+		_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM team_members WHERE team_id=$1 AND role='owner'", teamID).Scan(&ownerCount)
+		if ownerCount <= 1 {
+			return c.Status(409).JSON(fiber.Map{"error": "нельзя удалить последнего владельца"})
+		}
+	}
+	// Admin не может удалять owner'а.
+	if role == "admin" && targetRole == "owner" {
+		return c.Status(403).JSON(fiber.Map{"error": "админ не может удалить владельца"})
+	}
+	if _, err := s.Pool.Exec(c.Context(),
+		"DELETE FROM team_members WHERE team_id=$1 AND user_id=$2",
+		teamID, targetUID); err != nil {
+		return s.internalErr(c, err)
+	}
+	return c.JSON(fiber.Map{"ok": true})
 }

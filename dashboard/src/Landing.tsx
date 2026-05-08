@@ -71,7 +71,7 @@ function Hero() {
       <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[600px] w-[1100px] bg-gradient-to-br from-purple-500/10 via-blue-500/5 to-transparent blur-3xl pointer-events-none" />
 
       <div className="relative mx-auto max-w-6xl px-6 pt-20 pb-24 text-center">
-        <span className="eyebrow reveal">Now in beta · free</span>
+        <span className="eyebrow reveal">Beta · 3 founding companies free</span>
         <h1 className="display-head text-5xl sm:text-6xl md:text-7xl mt-5 max-w-3xl mx-auto reveal reveal-delay-1">
           See how much you code <em>vs.</em> the AI.
         </h1>
@@ -309,12 +309,12 @@ function Pricing() {
     <section id="pricing" className="py-24">
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center mb-12">
-          <span className="eyebrow">Pricing</span>
+          <span className="eyebrow">Pricing · Beta</span>
           <h2 className="display-head text-4xl md:text-5xl mt-3 max-w-2xl mx-auto">
-            Free during beta. <em>Forever for solo devs.</em>
+            Free for the <em>first 3 companies</em>. Forever for solo devs.
           </h2>
           <p className="text-muted-foreground mt-4 max-w-lg mx-auto">
-            We're in early access. No credit card, no trial countdown. Team plans land later — you'll be the first to know.
+            We onboard 3 founding companies free of charge — no credit card, no trial countdown, no seat caps. Self-hosted is free for everyone.
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
@@ -333,19 +333,19 @@ function Pricing() {
             cta="Get started"
           />
           <PriceCard
-            name="Team"
-            price="$0"
-            period="/seat / month — beta"
+            name="Founding Company"
+            price="Free"
+            period="for the first 3"
             highlight={true}
             features={[
               "Everything in Solo",
+              "Unlimited team members",
               "Unlimited projects",
-              "Team analytics & roles",
-              "Invite-only signups",
+              "Roles, invites, member analytics",
               "18-month event history",
-              "Priority email support",
+              "Direct line to the founders",
             ]}
-            cta="Join the beta"
+            cta="Claim a slot"
           />
           <PriceCard
             name="Self-hosted"
