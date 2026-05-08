@@ -11,7 +11,6 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -105,24 +104,14 @@ func listSorted(dir string, pred func(string) bool) ([]string, error) {
 }
 
 func openCH(dsn string) (clickhouse.Conn, error) {
-	u, err := url.Parse(dsn)
+	opts, err := clickhouse.ParseDSN(dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse dsn: %w", err)
 	}
-	pass, _ := u.User.Password()
-	db := strings.TrimPrefix(u.Path, "/")
-	if db == "" {
-		db = "default"
+	if opts.DialTimeout == 0 {
+		opts.DialTimeout = 5 * time.Second
 	}
-	return clickhouse.Open(&clickhouse.Options{
-		Addr: []string{u.Host},
-		Auth: clickhouse.Auth{
-			Database: db,
-			Username: u.User.Username(),
-			Password: pass,
-		},
-		DialTimeout: 5 * time.Second,
-	})
+	return clickhouse.Open(opts)
 }
 
 // splitStatements — наивный сплит по `;` в конце строки. Достаточно для

@@ -3,8 +3,6 @@ package store
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"strings"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -16,26 +14,17 @@ type ClickHouseStore struct {
 	conn driver.Conn
 }
 
-// OpenClickHouse — DSN формата clickhouse://user:pass@host:port/db.
+// OpenClickHouse — DSN формата clickhouse://user:pass@host:port/db[?secure=true].
+// Использует ParseDSN из clickhouse-go, чтобы поддерживать TLS (Cloud), compression, и другие опции.
 func OpenClickHouse(dsn string) (*ClickHouseStore, error) {
-	u, err := url.Parse(dsn)
+	opts, err := clickhouse.ParseDSN(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("parse dsn: %w", err)
 	}
-	pass, _ := u.User.Password()
-	db := strings.TrimPrefix(u.Path, "/")
-	if db == "" {
-		db = "default"
+	if opts.DialTimeout == 0 {
+		opts.DialTimeout = 5 * time.Second
 	}
-	conn, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{u.Host},
-		Auth: clickhouse.Auth{
-			Database: db,
-			Username: u.User.Username(),
-			Password: pass,
-		},
-		DialTimeout: 5 * time.Second,
-	})
+	conn, err := clickhouse.Open(opts)
 	if err != nil {
 		return nil, err
 	}
