@@ -12,6 +12,7 @@ import {
   generateReport,
   listReports,
   fetchMe,
+  listMyTeams,
   type EventRow,
   type LangCell,
   type HeatmapCell,
@@ -27,6 +28,7 @@ import { Trend } from "./Trend";
 import { Auth } from "./Auth";
 import { Teams } from "./Teams";
 import { Admin } from "./Admin";
+import { Onboarding } from "./Onboarding";
 import { formatDate, formatTime, getTz } from "./tz";
 
 type Tab = "dashboard" | "team" | "settings" | "admin";
@@ -61,6 +63,10 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("dashboard");
   const [tz, setTz] = useState(getTz());
   const [me, setMe] = useState<Me | null>(null);
+  // teamCount: null = не знаем (не загрузили), 0 = онбординг, >0 = есть команды.
+  const [teamCount, setTeamCount] = useState<number | null>(null);
+  // showOnboarding можно вручную выключить (skip-кнопкой в самом онбординге).
+  const [skipOnboarding, setSkipOnboarding] = useState(false);
 
   function logout() {
     // Чистим все eop_* ключи, чтобы данные предыдущего юзера не утекли в новую сессию.
@@ -77,6 +83,8 @@ export default function App() {
     setReports([]);
     setActive(null);
     setMe(null);
+    setTeamCount(null);
+    setSkipOnboarding(false);
     setTab("dashboard");
   }
 
@@ -139,10 +147,22 @@ export default function App() {
     if (userId) {
       refresh();
       fetchMe().then(setMe).catch(() => {});
+      listMyTeams().then((ts) => setTeamCount(ts.length)).catch(() => setTeamCount(0));
     }
   }, [userId, tz]);
 
   const isSuperAdmin = me?.global_role === "super_admin";
+  // Показываем онбординг, если юзер залогинен, у него ноль команд, и он не нажал
+  // skip. Super_admin тоже видит онбординг при первом заходе — это нормально,
+  // первая компания всё равно нужна.
+  const needsOnboarding = !!userId && teamCount === 0 && !skipOnboarding;
+
+  function finishOnboarding() {
+    setSkipOnboarding(true);
+    // Перечитать teamCount + refresh данных после создания команды.
+    listMyTeams().then((ts) => setTeamCount(ts.length)).catch(() => {});
+    refresh();
+  }
 
   // Глобальный слушатель: api.ts эмитит это событие, когда любой authed запрос
   // получил 401. Чистим локальный state и возвращаем пользователя на форму логина.
@@ -161,7 +181,7 @@ export default function App() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      {userId && (
+      {userId && !needsOnboarding && (
       <div className="border-b header-blur sticky top-0 z-10">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -222,6 +242,8 @@ export default function App() {
 
         {!userId ? (
           <Auth onAuth={onAuth} />
+        ) : needsOnboarding ? (
+          <Onboarding onFinish={finishOnboarding} />
         ) : tab === "settings" ? (
           <Settings onWiped={logout} onTzChange={setTz} />
         ) : tab === "team" ? (
@@ -359,8 +381,11 @@ export default function App() {
                       ))}
                       {events.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="py-8 text-center text-muted-foreground">
-                            Нет событий — нажми «Отправить демо-события»
+                          <td colSpan={6} className="py-12 text-center">
+                            <div className="space-y-2">
+                              <div className="font-mono text-[10px] uppercase tracking-widest3 text-muted-foreground">No events yet</div>
+                              <p className="text-sm">Установи агент или нажми «Отправить демо-события», чтобы увидеть данные.</p>
+                            </div>
                           </td>
                         </tr>
                       )}
