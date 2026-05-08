@@ -138,6 +138,30 @@ export function Teams({ tz }: { tz: string }) {
   );
 }
 
+function PlanBadge({ team }: { team: Team }) {
+  const plan = team.subscription_plan || "free";
+  const until = team.subscription_until ? new Date(team.subscription_until) : null;
+  const isActive = plan !== "free" && (!until || until > new Date());
+  const colors: Record<string, string> = {
+    free: "bg-muted text-muted-foreground border-border",
+    pro: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
+    team: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30",
+    enterprise: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  };
+  return (
+    <div className="inline-flex items-center gap-2">
+      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-mono uppercase tracking-widest2 ${colors[plan] ?? colors.free}`}>
+        {plan}
+      </span>
+      {until && (
+        <span className={`text-[10px] font-mono ${isActive ? "text-muted-foreground" : "text-destructive"}`}>
+          {isActive ? "до" : "истёк"} {until.toISOString().slice(0, 10)}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function translateRole(r: string): string {
   return { owner: "владелец", admin: "админ", member: "участник" }[r] ?? r;
 }
@@ -196,8 +220,11 @@ function TeamDetail({ teamID, team, role, tz, onChanged }: {
     <Card className="card-hover">
       <CardHeader className="flex-row items-center justify-between">
         <div>
-          <CardTitle className="font-display tracking-tight">{team?.name || "Команда"}</CardTitle>
-          <CardDescription>{members.length} участник{plural(members.length)}</CardDescription>
+          <div className="flex items-center gap-3 flex-wrap">
+            <CardTitle className="font-display tracking-tight">{team?.name || "Команда"}</CardTitle>
+            {team && <PlanBadge team={team} />}
+          </div>
+          <CardDescription>{members.length} участник{plural(members.length)}{team?.subscription_note ? ` · ${team.subscription_note}` : ""}</CardDescription>
         </div>
         <div className="flex gap-1 text-sm flex-wrap justify-end">
           <TabBtn active={tab === "members"} onClick={() => setTab("members")} icon={<Users className="h-3.5 w-3.5" />}>

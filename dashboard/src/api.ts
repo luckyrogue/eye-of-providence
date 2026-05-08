@@ -82,7 +82,14 @@ export async function login(email: string, password: string): Promise<AuthRespon
   return data;
 }
 
-export type Team = { id: string; name: string; role: string };
+export type Team = {
+  id: string;
+  name: string;
+  role: string;
+  subscription_plan?: string;
+  subscription_until?: string | null;
+  subscription_note?: string | null;
+};
 
 export async function listMyTeams(): Promise<Team[]> {
   const res = await authed("/v1/teams");
@@ -170,9 +177,46 @@ export type AdminStats = {
 
 export type AdminTeam = {
   id: string; name: string; plan: string; created_at: string;
+  subscription_plan: string;
+  subscription_until: string | null;
+  subscription_note: string | null;
   member_count: number;
   owner_email?: string;
 };
+
+export type Payment = {
+  id: string;
+  amount_cents: number;
+  currency: string;
+  method: string;
+  note: string;
+  covers_until: string;
+  paid_at: string;
+  recorded_by: string;
+};
+
+export async function adminSetSubscription(teamID: string, payload: {
+  plan?: string;
+  until?: string | null;
+  note?: string | null;
+  payment?: { amount_cents: number; currency: string; method: string; note: string; covers_until: string };
+}): Promise<{ payment_id: string | null }> {
+  const res = await authed(`/v1/admin/teams/${teamID}/subscription`, {
+    method: "PATCH", body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `setSubscription failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function adminListPayments(teamID: string): Promise<Payment[]> {
+  const res = await authed(`/v1/admin/teams/${teamID}/payments`);
+  if (!res.ok) throw new Error(`listPayments failed: ${res.status}`);
+  const data = await res.json();
+  return data.payments ?? [];
+}
 
 export type AdminUser = {
   id: string; email: string; display_name: string;

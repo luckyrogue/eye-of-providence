@@ -127,6 +127,8 @@ func RegisterRoutes(app *fiber.App, s Service) {
 	g.Delete("/admin/users/:id", s.handleAdminDeleteUser)
 	g.Patch("/admin/users/:id", s.handleAdminUpdateUser)
 	g.Post("/admin/teams/:id/members", s.handleAdminAddMember)
+	g.Patch("/admin/teams/:id/subscription", s.handleSetSubscription)
+	g.Get("/admin/teams/:id/payments", s.handleListPayments)
 }
 
 // --- Public auth config (для UI) ---
@@ -264,15 +266,18 @@ func (s Service) handleLogin(c *fiber.Ctx) error {
 // --- Teams ---
 
 type teamRow struct {
-	ID   uuid.UUID `json:"id"`
-	Name string    `json:"name"`
-	Role string    `json:"role"`
+	ID                uuid.UUID  `json:"id"`
+	Name              string     `json:"name"`
+	Role              string     `json:"role"`
+	SubscriptionPlan  string     `json:"subscription_plan"`
+	SubscriptionUntil *time.Time `json:"subscription_until"`
+	SubscriptionNote  *string    `json:"subscription_note,omitempty"`
 }
 
 func (s Service) handleListMyTeams(c *fiber.Ctx) error {
 	uid := userID(c)
 	rows, err := s.Pool.Query(c.Context(), `
-		SELECT t.id, t.name, tm.role
+		SELECT t.id, t.name, tm.role, t.subscription_plan, t.subscription_until, t.subscription_note
 		FROM team_members tm JOIN teams t ON t.id = tm.team_id
 		WHERE tm.user_id = $1 ORDER BY t.created_at`, uid)
 	if err != nil {
@@ -282,7 +287,7 @@ func (s Service) handleListMyTeams(c *fiber.Ctx) error {
 	out := []teamRow{}
 	for rows.Next() {
 		var t teamRow
-		if err := rows.Scan(&t.ID, &t.Name, &t.Role); err != nil {
+		if err := rows.Scan(&t.ID, &t.Name, &t.Role, &t.SubscriptionPlan, &t.SubscriptionUntil, &t.SubscriptionNote); err != nil {
 			return s.internalErr(c, err)
 		}
 		out = append(out, t)
@@ -744,6 +749,7 @@ func (s Service) handleAdminListAllTeams(c *fiber.Ctx) error {
 	}
 	rows, err := s.Pool.Query(c.Context(), `
 		SELECT t.id, t.name, t.plan, t.created_at,
+		       t.subscription_plan, t.subscription_until, t.subscription_note,
 		       (SELECT count(*) FROM team_members WHERE team_id = t.id) AS member_count,
 		       (SELECT u.email FROM team_members tm JOIN users u ON u.id = tm.user_id
 		        WHERE tm.team_id = t.id AND tm.role = 'owner' ORDER BY u.created_at LIMIT 1) AS owner_email
@@ -753,17 +759,22 @@ func (s Service) handleAdminListAllTeams(c *fiber.Ctx) error {
 	}
 	defer rows.Close()
 	type teamRow struct {
-		ID          uuid.UUID `json:"id"`
-		Name        string    `json:"name"`
-		Plan        string    `json:"plan"`
-		MemberCount int       `json:"member_count"`
-		OwnerEmail  *string   `json:"owner_email"`
-		CreatedAt   time.Time `json:"created_at"`
+		ID                uuid.UUID  `json:"id"`
+		Name              string     `json:"name"`
+		Plan              string     `json:"plan"`
+		SubscriptionPlan  string     `json:"subscription_plan"`
+		SubscriptionUntil *time.Time `json:"subscription_until"`
+		SubscriptionNote  *string    `json:"subscription_note"`
+		MemberCount       int        `json:"member_count"`
+		OwnerEmail        *string    `json:"owner_email"`
+		CreatedAt         time.Time  `json:"created_at"`
 	}
 	out := []teamRow{}
 	for rows.Next() {
 		var t teamRow
-		if err := rows.Scan(&t.ID, &t.Name, &t.Plan, &t.CreatedAt, &t.MemberCount, &t.OwnerEmail); err != nil {
+		if err := rows.Scan(&t.ID, &t.Name, &t.Plan, &t.CreatedAt,
+			&t.SubscriptionPlan, &t.SubscriptionUntil, &t.SubscriptionNote,
+			&t.MemberCount, &t.OwnerEmail); err != nil {
 			return s.internalErr(c, err)
 		}
 		out = append(out, t)
@@ -1138,4 +1149,154 @@ func (s Service) handleAdminAddMember(c *fiber.Ctx) error {
 		return s.internalErr(c, err)
 	}
 	return c.JSON(fiber.Map{"ok": true, "user_id": user.ID})
+}
+
+// --- Subscriptions (manual billing) ---
+
+type setSubscriptionReq struct {
+	Plan  *string `json:"plan"`  // "free" | "pro" | "team" | "enterprise"
+	Until *string `json:"until"` // ISO8601 timestamptz; nil = не менять; "" = очистить (revoke)
+	Note  *string `json:"note"`  // публичная заметка (видна owner'у)
+
+	// Опциональный payment record. Если есть amount_cents > 0 и covers_until — пишем в team_payments.
+	Payment *struct {
+		AmountCents int    `json:"amount_cents"`
+		Currency    string `json:"currency"`
+		Method      string `json:"method"`
+		Note        string `json:"note"`
+		CoversUntil string `json:"covers_until"` // ISO8601
+	} `json:"payment"`
+}
+
+func (s Service) handleSetSubscription(c *fiber.Ctx) error {
+	if !s.requireSuperAdmin(c) {
+		return nil
+	}
+	teamID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+	}
+	var req setSubscriptionReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+	}
+
+	tx, err := s.Pool.Begin(c.Context())
+	if err != nil {
+		return s.internalErr(c, err)
+	}
+	defer tx.Rollback(c.Context())
+
+	if req.Plan != nil {
+		plan := strings.ToLower(strings.TrimSpace(*req.Plan))
+		if plan != "free" && plan != "pro" && plan != "team" && plan != "enterprise" {
+			return c.Status(400).JSON(fiber.Map{"error": "plan must be free | pro | team | enterprise"})
+		}
+		if _, err := tx.Exec(c.Context(),
+			"UPDATE teams SET subscription_plan=$1 WHERE id=$2", plan, teamID); err != nil {
+			return s.internalErr(c, err)
+		}
+	}
+	if req.Until != nil {
+		if *req.Until == "" {
+			if _, err := tx.Exec(c.Context(),
+				"UPDATE teams SET subscription_until=NULL WHERE id=$1", teamID); err != nil {
+				return s.internalErr(c, err)
+			}
+		} else {
+			ts, err := time.Parse(time.RFC3339, *req.Until)
+			if err != nil {
+				return c.Status(400).JSON(fiber.Map{"error": "until must be ISO8601 (RFC3339)"})
+			}
+			if _, err := tx.Exec(c.Context(),
+				"UPDATE teams SET subscription_until=$1 WHERE id=$2", ts, teamID); err != nil {
+				return s.internalErr(c, err)
+			}
+		}
+	}
+	if req.Note != nil {
+		note := strings.TrimSpace(*req.Note)
+		var noteVal any
+		if note == "" {
+			noteVal = nil
+		} else {
+			noteVal = note
+		}
+		if _, err := tx.Exec(c.Context(),
+			"UPDATE teams SET subscription_note=$1 WHERE id=$2", noteVal, teamID); err != nil {
+			return s.internalErr(c, err)
+		}
+	}
+
+	var paymentID *uuid.UUID
+	if req.Payment != nil && req.Payment.AmountCents > 0 {
+		coversUntil, err := time.Parse(time.RFC3339, req.Payment.CoversUntil)
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "payment.covers_until must be ISO8601"})
+		}
+		method := strings.TrimSpace(req.Payment.Method)
+		if method == "" {
+			method = "manual_transfer"
+		}
+		currency := strings.ToUpper(strings.TrimSpace(req.Payment.Currency))
+		if currency == "" {
+			currency = "USD"
+		}
+		pid := uuid.New()
+		if _, err := tx.Exec(c.Context(), `
+			INSERT INTO team_payments
+			  (id, team_id, amount_cents, currency, method, note, covers_until, recorded_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			pid, teamID, req.Payment.AmountCents, currency, method,
+			strings.TrimSpace(req.Payment.Note), coversUntil, userID(c)); err != nil {
+			return s.internalErr(c, err)
+		}
+		paymentID = &pid
+	}
+
+	if err := tx.Commit(c.Context()); err != nil {
+		return s.internalErr(c, err)
+	}
+	return c.JSON(fiber.Map{"ok": true, "payment_id": paymentID})
+}
+
+func (s Service) handleListPayments(c *fiber.Ctx) error {
+	if !s.requireSuperAdmin(c) {
+		return nil
+	}
+	teamID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+	}
+	rows, err := s.Pool.Query(c.Context(), `
+		SELECT id, amount_cents, currency, method, note, covers_until, paid_at, recorded_by
+		FROM team_payments WHERE team_id=$1 ORDER BY paid_at DESC LIMIT 200`, teamID)
+	if err != nil {
+		return s.internalErr(c, err)
+	}
+	defer rows.Close()
+	type payment struct {
+		ID          uuid.UUID `json:"id"`
+		AmountCents int       `json:"amount_cents"`
+		Currency    string    `json:"currency"`
+		Method      string    `json:"method"`
+		Note        string    `json:"note"`
+		CoversUntil time.Time `json:"covers_until"`
+		PaidAt      time.Time `json:"paid_at"`
+		RecordedBy  uuid.UUID `json:"recorded_by"`
+	}
+	out := []payment{}
+	for rows.Next() {
+		var p payment
+		var note *string
+		if err := rows.Scan(&p.ID, &p.AmountCents, &p.Currency, &p.Method, &note,
+			&p.CoversUntil, &p.PaidAt, &p.RecordedBy); err != nil {
+			return s.internalErr(c, err)
+		}
+		if note != nil {
+			p.Note = *note
+		}
+		out = append(out, p)
+	}
+	return c.JSON(fiber.Map{"payments": out})
 }
