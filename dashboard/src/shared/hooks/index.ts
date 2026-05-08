@@ -1,2 +1,2 @@
-export * from "./useAuth";
-export * from "./useMutationToast";
+export * from "./use-auth";
+export * from "./use-mutation-toast";

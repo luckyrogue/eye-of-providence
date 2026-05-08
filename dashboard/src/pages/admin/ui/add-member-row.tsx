@@ -1,6 +1,6 @@
 import { Button } from "@eop/ui";
 import { useAdminAddMember, type AdminUser } from "../../../entities/admin";
-import { useMutationToast } from "../../../shared/hooks/useMutationToast";
+import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 
 export function AddMemberRow({
   teamID,

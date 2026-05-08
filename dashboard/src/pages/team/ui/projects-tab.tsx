@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button, EmptyState, PromptDialog } from "@eop/ui";
 import { Plus } from "lucide-react";
 import { useProjects, useCreateProject } from "../../../entities/team";
-import { useMutationToast } from "../../../shared/hooks/useMutationToast";
+import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { formatDate } from "../../../shared/lib/tz";
 
 type Stage = "closed" | "name" | "repo";

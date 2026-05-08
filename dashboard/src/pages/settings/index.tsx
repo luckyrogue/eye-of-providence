@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { Settings } from "./Settings";
-import { useAuth } from "../../shared/hooks/useAuth";
+import { Settings } from "./settings";
+import { useAuth } from "../../shared/hooks/use-auth";
 
 export function SettingsRoute() {
   const { logout } = useAuth();
@@ -12,7 +12,6 @@ export function SettingsRoute() {
         logout();
         navigate("/login", { replace: true });
       }}
-      onTzChange={() => { /* tz обновляется через query refetch при смене */ }}
     />
   );
 }

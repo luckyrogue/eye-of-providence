@@ -1,7 +1,7 @@
 import { Avatar, Select, useConfirm } from "@eop/ui";
 import { Brain, UserMinus } from "lucide-react";
 import { useUpdateMemberRole, useRemoveMember, type MemberStat, type TeamMember } from "../../../entities/team";
-import { useMutationToast } from "../../../shared/hooks/useMutationToast";
+import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { translateRole } from "../utils";
 
 export function MemberRow({

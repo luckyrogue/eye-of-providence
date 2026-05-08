@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Eyebrow, Tab, TabBar } from "@eop/ui";
 import { useAdminStats, useAdminTeams, useAdminUsers } from "../../entities/admin";
-import { Overview } from "./ui/Overview";
-import { TeamsTable } from "./ui/TeamsTable";
-import { UsersTable } from "./ui/UsersTable";
+import { Overview } from "./ui/overview";
+import { TeamsTable } from "./ui/teams-table";
+import { UsersTable } from "./ui/users-table";
 
 type TabKey = "overview" | "teams" | "users";
 

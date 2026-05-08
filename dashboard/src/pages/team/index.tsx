@@ -1,4 +1,4 @@
-import { Teams } from "./Teams";
+import { Teams } from "./teams";
 import { getTz } from "../../shared/lib/tz";
 
 export function TeamRoute() {

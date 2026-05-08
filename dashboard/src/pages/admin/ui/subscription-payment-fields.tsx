@@ -1,5 +1,5 @@
 import type { UseFormRegister } from "react-hook-form";
-import type { SubscriptionForm } from "./SubscriptionModal";
+import type { SubscriptionForm } from "./subscription-modal";
 
 export function SubscriptionPaymentFields({
   register,

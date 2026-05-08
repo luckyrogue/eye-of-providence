@@ -3,8 +3,8 @@ import { toast } from "sonner";
 import { Button } from "@eop/ui";
 import { Copy, Plus } from "lucide-react";
 import { useCreateInvite, type MemberStat, type TeamMember } from "../../../entities/team";
-import { useMutationToast } from "../../../shared/hooks/useMutationToast";
-import { MemberRow } from "./MemberRow";
+import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { MemberRow } from "./member-row";
 
 export function MembersTab({
   teamID,

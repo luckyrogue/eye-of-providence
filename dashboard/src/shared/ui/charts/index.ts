@@ -1,3 +1,3 @@
-export { Heatmap } from "./Heatmap";
-export { Languages } from "./Languages";
-export { Trend } from "./Trend";
+export { Heatmap } from "./heatmap";
+export { Languages } from "./languages";
+export { Trend } from "./trend";

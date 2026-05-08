@@ -1,19 +1,15 @@
-# Dev image для dashboard — Vite dev server с HMR.
-FROM node:20-alpine
+FROM node:22-alpine
 
 RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
 
 WORKDIR /repo
 
-# pnpm-workspace + manifest файлы → cache layer
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY ui/package.json ui/
 COPY dashboard/package.json dashboard/
 
 RUN pnpm install --frozen-lockfile=false
 
-# Код будет bind-mount'ится через docker-compose volumes,
-# но скопируем для первого запуска чтобы tsconfig резолвил.
 COPY ui ui
 COPY dashboard dashboard
 

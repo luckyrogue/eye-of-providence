@@ -7,9 +7,9 @@ import {
   type AdminTeam,
   type SetSubscriptionReq,
 } from "../../../entities/admin";
-import { useMutationToast } from "../../../shared/hooks/useMutationToast";
-import { SubscriptionPaymentFields } from "./SubscriptionPaymentFields";
-import { SubscriptionPaymentsList } from "./SubscriptionPaymentsList";
+import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { SubscriptionPaymentFields } from "./subscription-payment-fields";
+import { SubscriptionPaymentsList } from "./subscription-payments-list";
 
 export interface SubscriptionForm {
   plan: "free" | "pro" | "team" | "enterprise";

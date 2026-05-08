@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Eyebrow, Stepper } from "@eop/ui";
 import { createInvite, createTeam } from "../../entities/team";
-import { useMutationToast } from "../../shared/hooks/useMutationToast";
-import { CompanyStep } from "./ui/CompanyStep";
-import { InviteStep } from "./ui/InviteStep";
-import { InstallStep } from "./ui/InstallStep";
-import { DoneStep } from "./ui/DoneStep";
+import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
+import { CompanyStep } from "./ui/company-step";
+import { InviteStep } from "./ui/invite-step";
+import { InstallStep } from "./ui/install-step";
+import { DoneStep } from "./ui/done-step";
 
 type Step = "company" | "invite" | "install" | "done";
 

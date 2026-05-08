@@ -10,7 +10,7 @@ import {
   type AuthConfig,
 } from "../../entities/user";
 import { previewInvite, type InvitePreview } from "../../entities/team";
-import { useMutationToast } from "../../shared/hooks/useMutationToast";
+import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
 
 type Mode = "login" | "register";
 

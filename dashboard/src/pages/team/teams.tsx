@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, PromptDialog } from "@eop/ui";
 import { Plus, Users } from "lucide-react";
 import { useTeams, useBetaInfo, useCreateTeam } from "../../entities/team";
-import { useMutationToast } from "../../shared/hooks/useMutationToast";
+import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
 import { BetaBanner } from "../../widgets/beta-banner";
-import { TeamDetail } from "./ui/TeamDetail";
+import { TeamDetail } from "./ui/team-detail";
 import { translateRole } from "./utils";
 
 export function Teams({ tz }: { tz: string }) {

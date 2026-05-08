@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Auth } from "./Auth";
-import { useAuth } from "../../shared/hooks/useAuth";
+import { Auth } from "./auth";
+import { useAuth } from "../../shared/hooks/use-auth";
 
 export function AuthRoute({ mode }: { mode: "login" | "register" }) {
   const { isAuthed, setAuth } = useAuth();

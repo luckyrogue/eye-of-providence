@@ -2,10 +2,10 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, PlanBadge, Tab, TabBar } from "@eop/ui";
 import { FolderGit2, GitCommit, Settings, Users } from "lucide-react";
 import { useMembers, useTeamSummary, type Team } from "../../../entities/team";
-import { MembersTab } from "./MembersTab";
-import { ProjectsTab } from "./ProjectsTab";
-import { CommitsTab } from "./CommitsTab";
-import { SettingsTab } from "./SettingsTab";
+import { MembersTab } from "./members-tab";
+import { ProjectsTab } from "./projects-tab";
+import { CommitsTab } from "./commits-tab";
+import { SettingsTab } from "./settings-tab";
 import { plural } from "../utils";
 
 type TabKey = "members" | "projects" | "commits" | "settings";

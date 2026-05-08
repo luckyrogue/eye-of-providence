@@ -2,11 +2,11 @@ import { Fragment, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, PlanBadge, useConfirm } from "@eop/ui";
 import { CreditCard, Trash2, UserPlus } from "lucide-react";
 import { useAdminDeleteTeam, type AdminTeam, type AdminUser } from "../../../entities/admin";
-import { useMutationToast } from "../../../shared/hooks/useMutationToast";
+import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { formatDate } from "../../../shared/lib/tz";
-import { IconButton } from "./IconButton";
-import { AddMemberRow } from "./AddMemberRow";
-import { SubscriptionModal } from "./SubscriptionModal";
+import { IconButton } from "./icon-button";
+import { AddMemberRow } from "./add-member-row";
+import { SubscriptionModal } from "./subscription-modal";
 
 export function TeamsTable({
   teams,

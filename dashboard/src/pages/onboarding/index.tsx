@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Onboarding } from "./Onboarding";
-import { useAuth } from "../../shared/hooks/useAuth";
+import { Onboarding } from "./onboarding";
+import { useAuth } from "../../shared/hooks/use-auth";
 import { useTeams } from "../../entities/team";
 
 export function OnboardingRoute() {

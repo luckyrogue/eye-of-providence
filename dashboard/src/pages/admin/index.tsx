@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Admin } from "./Admin";
+import { Admin } from "./admin";
 import { useMe } from "../../entities/user";
 import { getTz } from "../../shared/lib/tz";
 

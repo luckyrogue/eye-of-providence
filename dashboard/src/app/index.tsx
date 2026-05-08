@@ -1,4 +1,3 @@
-import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -6,7 +5,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "sonner";
 import { ConfirmProvider } from "@eop/ui";
 import "@eop/ui/styles.css";
-import { ErrorBoundary } from "./ErrorBoundary";
+import { ErrorBoundary } from "./error-boundary";
 import { queryClient } from "../shared/config/query-client";
 import { router } from "./router";
 

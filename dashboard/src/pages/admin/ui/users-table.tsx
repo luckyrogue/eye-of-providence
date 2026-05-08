@@ -1,9 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, Select, useConfirm } from "@eop/ui";
 import { Trash2 } from "lucide-react";
 import { useAdminDeleteUser, useAdminUpdateUser, type AdminUser } from "../../../entities/admin";
-import { useMutationToast } from "../../../shared/hooks/useMutationToast";
+import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { formatDate } from "../../../shared/lib/tz";
-import { IconButton } from "./IconButton";
+import { IconButton } from "./icon-button";
 
 export function UsersTable({ users, tz }: { users: AdminUser[]; tz: string }) {
   const update = useAdminUpdateUser();

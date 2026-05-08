@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { Activity, Eye, LogOut, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import { cn } from "@eop/ui";
-import { useAuth } from "../../shared/hooks/useAuth";
+import { useAuth } from "../../shared/hooks/use-auth";
 import { useMe } from "../../entities/user";
 import { useTeams } from "../../entities/team";
 import { AUTH_FAILED_EVENT } from "../../shared/api/http";

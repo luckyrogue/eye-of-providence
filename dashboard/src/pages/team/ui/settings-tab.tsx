@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { Button, DangerZone, Input, useConfirm } from "@eop/ui";
 import { Trash2 } from "lucide-react";
 import { useUpdateTeam, useDeleteTeam, type Team } from "../../../entities/team";
-import { useMutationToast } from "../../../shared/hooks/useMutationToast";
+import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 
 interface RenameForm {
   name: string;

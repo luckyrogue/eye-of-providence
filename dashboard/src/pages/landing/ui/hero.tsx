@@ -1,6 +1,6 @@
 import { Button, Eyebrow } from "@eop/ui";
 import { ArrowRight, Check } from "lucide-react";
-import { ProductPreview } from "./ProductPreview";
+import { ProductPreview } from "./product-preview";
 
 const TRUST_SIGNALS = ["Privacy-by-design", "Self-hostable", "No credit card"];
 
