@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
+  Avatar,
   Button,
   Card, CardContent, CardDescription, CardHeader, CardTitle,
-  EmptyState, Input, PlanBadge, Tab, TabBar,
+  DangerZone, EmptyState, Input, PlanBadge, Select, Tab, TabBar,
+  useConfirm,
 } from "@eop/ui";
 import { Brain, Copy, FolderGit2, GitCommit, Plus, Settings, Sparkles, Trash2, UserMinus, Users } from "lucide-react";
 import { formatDate } from "./tz";
@@ -242,6 +244,7 @@ function MemberRow({ member, stat, myRole, teamID }: {
   const updateRole = useUpdateMemberRole(teamID);
   const removeM = useRemoveMember(teamID);
   const runToast = useMutationToast();
+  const confirm = useConfirm();
   const canManage = myRole === "owner" || (myRole === "admin" && member.role !== "owner");
   const canChangeRole = myRole === "owner";
   const busy = updateRole.isPending || removeM.isPending;
@@ -255,7 +258,13 @@ function MemberRow({ member, stat, myRole, teamID }: {
   }
 
   async function remove() {
-    if (!confirm(`Удалить ${member.display_name} из команды?`)) return;
+    const ok = await confirm({
+      title: `Удалить ${member.display_name}?`,
+      description: "Участник потеряет доступ к этой команде. Историю событий это не затронет.",
+      destructive: true,
+      confirmText: "Удалить",
+    });
+    if (!ok) return;
     await runToast(removeM.mutateAsync(member.id), {
       success: "Участник удалён",
       error: "Не удалось удалить",
@@ -265,9 +274,7 @@ function MemberRow({ member, stat, myRole, teamID }: {
   return (
     <li className="flex items-center justify-between rounded-md border p-3 hover:bg-muted/30 transition-colors">
       <div className="flex items-center gap-3 min-w-0">
-        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-sm font-medium shrink-0">
-          {member.display_name.slice(0, 2).toUpperCase()}
-        </div>
+        <Avatar name={member.display_name} />
         <div className="min-w-0">
           <div className="text-sm font-medium truncate">{member.display_name}</div>
           <div className="text-xs text-muted-foreground truncate">{member.email}</div>
@@ -286,16 +293,17 @@ function MemberRow({ member, stat, myRole, teamID }: {
           </div>
         )}
         {canChangeRole ? (
-          <select
+          <Select
+            mono
             value={member.role}
             disabled={busy}
             onChange={(e) => changeRole(e.target.value)}
-            className="rounded-md border bg-background px-2 py-1 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+            className="px-2 py-1 text-xs"
           >
             <option value="owner">владелец</option>
             <option value="admin">админ</option>
             <option value="member">участник</option>
-          </select>
+          </Select>
         ) : (
           <span className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
             {translateRole(member.role)}
@@ -417,6 +425,7 @@ function TeamSettingsTab({ team }: { team: Team }) {
   const update = useUpdateTeam(team.id);
   const del = useDeleteTeam(team.id);
   const runToast = useMutationToast();
+  const confirm = useConfirm();
   const { register, handleSubmit, formState: { isDirty }, reset } = useForm<RenameForm>({
     defaultValues: { name: team.name },
   });
@@ -432,8 +441,14 @@ function TeamSettingsTab({ team }: { team: Team }) {
   }
 
   async function destroy() {
-    const confirm1 = prompt(`Введи "${team.name}" чтобы подтвердить удаление команды (необратимо)`);
-    if (confirm1 !== team.name) return;
+    const ok = await confirm({
+      title: `Удалить «${team.name}»?`,
+      description: "Уничтожит участников, проекты, инвайты и историю коммитов. Необратимо.",
+      typeToConfirm: team.name,
+      destructive: true,
+      confirmText: "Удалить навсегда",
+    });
+    if (!ok) return;
     await runToast(del.mutateAsync(), {
       success: "Команда удалена",
       error: "Не удалось удалить",
@@ -455,20 +470,15 @@ function TeamSettingsTab({ team }: { team: Team }) {
         </div>
       </form>
 
-      <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4">
-        <div className="font-mono text-[11px] uppercase tracking-widest2 text-destructive mb-1">Danger zone</div>
-        <div className="flex items-center justify-between gap-4">
-          <div className="text-sm">
-            <div className="font-medium">Удалить команду</div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Уничтожит участников, проекты, инвайты и историю коммитов. Необратимо.
-            </p>
-          </div>
+      <DangerZone
+        title="Удалить команду"
+        description="Уничтожит участников, проекты, инвайты и историю коммитов. Необратимо."
+        action={
           <Button onClick={destroy} disabled={del.isPending} variant="destructive" size="sm">
             <Trash2 className="h-3.5 w-3.5 mr-1" /> Удалить
           </Button>
-        </div>
-      </div>
+        }
+      />
     </div>
   );
 }

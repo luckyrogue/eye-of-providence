@@ -3,7 +3,8 @@ import { useForm } from "react-hook-form";
 import {
   Button,
   Card, CardContent, CardDescription, CardHeader, CardTitle,
-  EmptyState, Eyebrow, Input, Modal, PlanBadge, Tab, TabBar,
+  EmptyState, Eyebrow, Input, Modal, PlanBadge, Select, StatTile, Tab, TabBar,
+  useConfirm,
 } from "@eop/ui";
 import { Building2, CreditCard, Crown, Trash2, UserPlus, Users } from "lucide-react";
 import { formatDate } from "./tz";
@@ -58,34 +59,25 @@ function Overview({ stats }: { stats: AdminStats }) {
   );
 }
 
-function StatTile({ label, value, hint, icon }: { label: string; value: number; hint?: string; icon: React.ReactNode }) {
-  return (
-    <Card className="card-hover">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="font-mono text-[10px] uppercase tracking-widest3 text-muted-foreground">{label}</CardTitle>
-          {icon}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="font-display text-5xl font-bold tabular-nums tracking-tightest">{value}</div>
-        {hint && <p className="text-xs text-muted-foreground mt-2 font-mono">{hint}</p>}
-      </CardContent>
-    </Card>
-  );
-}
-
 function TeamsTable({ teams, users, tz }: { teams: AdminTeam[]; users: AdminUser[]; tz: string }) {
   const deleteTeam = useAdminDeleteTeam();
   const addMember = useAdminAddMember();
   const runToast = useMutationToast();
+  const confirm = useConfirm();
   const [adding, setAdding] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"member" | "admin" | "owner">("member");
   const [subTeam, setSubTeam] = useState<AdminTeam | null>(null);
 
   async function destroy(teamID: string, name: string) {
-    if (!confirm(`Удалить компанию "${name}" со всеми участниками, проектами, инвайтами? Необратимо.`)) return;
+    const ok = await confirm({
+      title: `Удалить «${name}»?`,
+      description: "Будут стерты все участники, проекты, инвайты, история коммитов. Необратимо.",
+      typeToConfirm: name,
+      destructive: true,
+      confirmText: "Удалить навсегда",
+    });
+    if (!ok) return;
     await runToast(deleteTeam.mutateAsync(teamID), { success: "Компания удалена", error: "Не удалось удалить" });
   }
 
@@ -201,6 +193,7 @@ function UsersTable({ users, tz }: { users: AdminUser[]; tz: string }) {
   const update = useAdminUpdateUser();
   const del = useAdminDeleteUser();
   const runToast = useMutationToast();
+  const confirm = useConfirm();
 
   async function setRole(uid: string, role: string) {
     await runToast(update.mutateAsync({ userID: uid, payload: { global_role: role } }), {
@@ -210,7 +203,13 @@ function UsersTable({ users, tz }: { users: AdminUser[]; tz: string }) {
   }
 
   async function destroy(uid: string, email: string) {
-    if (!confirm(`Удалить пользователя ${email}? Все его данные будут стерты. Необратимо.`)) return;
+    const ok = await confirm({
+      title: `Удалить ${email}?`,
+      description: "Все события и отчёты будут стерты. Необратимо.",
+      destructive: true,
+      confirmText: "Удалить",
+    });
+    if (!ok) return;
     await runToast(del.mutateAsync(uid), { success: "Пользователь удалён", error: "Не удалось удалить" });
   }
 
@@ -242,15 +241,16 @@ function UsersTable({ users, tz }: { users: AdminUser[]; tz: string }) {
                     <td className="py-2 px-3 font-mono text-xs">{u.email}</td>
                     <td className="py-2 px-3">{u.display_name}</td>
                     <td className="py-2 px-3">
-                      <select
+                      <Select
+                        mono
                         value={u.global_role}
                         onChange={(e) => setRole(u.id, e.target.value)}
                         disabled={update.isPending}
-                        className="rounded-md border bg-background px-2 py-0.5 text-xs font-mono"
+                        className="px-2 py-0.5 text-xs"
                       >
                         <option value="user">user</option>
                         <option value="super_admin">super_admin</option>
-                      </select>
+                      </Select>
                     </td>
                     <td className="py-2 px-3 text-right tabular-nums">{u.teams_count ?? 0}</td>
                     <td className="py-2 px-3 text-xs text-muted-foreground">{formatDate(u.created_at, tz)}</td>
@@ -312,6 +312,7 @@ interface SubscriptionForm {
 function SubscriptionModal({ team, tz, onClose }: { team: AdminTeam | null; tz: string; onClose: () => void }) {
   const setSub = useAdminSetSubscription();
   const runToast = useMutationToast();
+  const confirm = useConfirm();
   const payments = useAdminPayments(team?.id ?? null);
 
   const { register, handleSubmit, watch, setValue, reset } = useForm<SubscriptionForm>({
@@ -377,7 +378,13 @@ function SubscriptionModal({ team, tz, onClose }: { team: AdminTeam | null; tz: 
 
   async function revoke() {
     if (!team) return;
-    if (!confirm(`Отозвать подписку у "${team.name}"? Команда уйдёт на free.`)) return;
+    const proceed = await confirm({
+      title: `Отозвать подписку у «${team.name}»?`,
+      description: "Команда уйдёт на free-тариф. Это можно обратить, выдав подписку заново.",
+      destructive: true,
+      confirmText: "Отозвать",
+    });
+    if (!proceed) return;
     const ok = await runToast(
       setSub.mutateAsync({ teamID: team.id, payload: { plan: "free", until: "" } }),
       { success: "Подписка отозвана", error: "Не удалось отозвать" },
@@ -399,18 +406,12 @@ function SubscriptionModal({ team, tz, onClose }: { team: AdminTeam | null; tz: 
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">План</label>
-            <select
-              {...register("plan")}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono"
-            >
-              <option value="free">free</option>
-              <option value="pro">pro</option>
-              <option value="team">team</option>
-              <option value="enterprise">enterprise</option>
-            </select>
-          </div>
+          <Select label="План" mono {...register("plan")} className="w-full px-3 py-2">
+            <option value="free">free</option>
+            <option value="pro">pro</option>
+            <option value="team">team</option>
+            <option value="enterprise">enterprise</option>
+          </Select>
           <div className="space-y-1">
             <label className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">Активна до</label>
             <input

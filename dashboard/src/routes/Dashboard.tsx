@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, EmptyState, Eyebrow } from "@eop/ui";
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Button, EmptyState, Eyebrow, SkeletonTable, StatTile } from "@eop/ui";
 import { Activity, Brain, FileText, Sparkles } from "lucide-react";
 import { Markdown } from "../Markdown";
 import { Heatmap } from "../Heatmap";
@@ -54,9 +54,9 @@ export function DashboardRoute() {
           <span className="font-mono text-[11px] text-muted-foreground">last 7 days</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard label="Доля AI" value={`${aiRatio}%`} hint="за 7 дней" icon={<Brain className="h-4 w-4 text-purple-500" />} accent="purple" delay={1} />
-          <StatCard label="Активное время" value={Math.round(totalMs / 60000)} unit="мин" hint={`${eventsList.length} событий за период`} icon={<Activity className="h-4 w-4 text-blue-500" />} accent="blue" delay={2} />
-          <StatCard label="Отчёты" value={reportsList.length} hint="сгенерировано" icon={<FileText className="h-4 w-4 text-amber-500" />} accent="amber" delay={3} />
+          <StatTile label="Доля AI" value={`${aiRatio}%`} hint="за 7 дней" icon={<Brain className="h-4 w-4 text-purple-500" />} accent="purple" className="reveal reveal-delay-1" />
+          <StatTile label="Активное время" value={Math.round(totalMs / 60000)} unit="мин" hint={`${eventsList.length} событий за период`} icon={<Activity className="h-4 w-4 text-blue-500" />} accent="blue" className="reveal reveal-delay-2" />
+          <StatTile label="Отчёты" value={reportsList.length} hint="сгенерировано" icon={<FileText className="h-4 w-4 text-amber-500" />} accent="amber" className="reveal reveal-delay-3" />
         </div>
       </div>
 
@@ -192,43 +192,19 @@ export function DashboardRoute() {
   );
 }
 
-function StatCard({ label, value, unit, hint, icon, accent, delay }: {
-  label: string; value: string | number; unit?: string; hint: string;
-  icon: React.ReactNode; accent: "purple" | "blue" | "amber"; delay?: 1 | 2 | 3;
-}) {
-  const accents = { purple: "from-purple-500/20", blue: "from-blue-500/20", amber: "from-amber-500/20" };
-  const delayClass = delay ? `reveal-delay-${delay}` : "";
-  return (
-    <Card className={`overflow-hidden relative card-hover reveal ${delayClass}`}>
-      <div className={`absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl ${accents[accent]} to-transparent`} />
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="font-mono text-[10px] uppercase tracking-widest3 text-muted-foreground">{label}</CardTitle>
-          {icon}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="font-display text-5xl font-bold tabular-nums tracking-tightest">
-          {value}{unit && <span className="text-base font-normal text-muted-foreground"> {unit}</span>}
-        </div>
-        <p className="text-xs text-muted-foreground mt-2 font-mono">{hint}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-const CATEGORY_COLORS: Record<string, string> = {
-  manual: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
-  ai: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30",
-  refactor: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
-  idle: "bg-neutral-500/10 text-neutral-600 dark:text-neutral-400 border-neutral-500/30",
-  other: "bg-neutral-500/10 text-neutral-600 dark:text-neutral-400 border-neutral-500/30",
+const CATEGORY_TONES: Record<string, "blue" | "purple" | "amber" | "neutral"> = {
+  manual: "blue",
+  ai: "purple",
+  refactor: "amber",
+  idle: "neutral",
+  other: "neutral",
+  reading: "neutral",
 };
 
 function CategoryBadge({ cat }: { cat: string }) {
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${CATEGORY_COLORS[cat] ?? CATEGORY_COLORS.other}`}>
+    <Badge tone={CATEGORY_TONES[cat] ?? "neutral"}>
       {CATEGORY_LABELS[cat] ?? cat}
-    </span>
+    </Badge>
   );
 }
