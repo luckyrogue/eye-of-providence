@@ -11,9 +11,25 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: eop
+          POSTGRES_PASSWORD: eop_dev
+          POSTGRES_DB: eop_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: backend
+    env:
+      EOP_TEST_PG_DSN: postgres://eop:eop_dev@localhost:5432/eop_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -22,7 +38,10 @@ jobs:
           cache-dependency-path: backend/go.sum
       - run: go mod download
       - run: go vet ./...
-      - run: go test -race -count=1 ./...
+      - name: Unit tests
+        run: go test -race -count=1 ./...
+      - name: Integration tests (Postgres)
+        run: go test -race -count=1 -tags=integration ./internal/teams/...
       - run: go build ./...
 
   frontend:
