@@ -1,3 +1,11 @@
 export { Button, buttonVariants } from "./button";
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./card";
 export { cn } from "./cn";
+export { PlanBadge, type Plan } from "./plan-badge";
+export { EmptyState } from "./empty-state";
+export { TabBar, Tab } from "./tab-bar";
+export { Modal } from "./modal";
+export { Stepper, type StepperItem } from "./stepper";
+export { Input } from "./input";
+export { Eyebrow } from "./eyebrow";
+export { PageHeader } from "./page-header";
