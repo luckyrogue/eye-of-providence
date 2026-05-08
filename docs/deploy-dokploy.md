@@ -128,7 +128,7 @@ clickhouse-client --host <host> --user eop --password <CH_PASSWORD> --database e
 - **Source**: тот же git repo.
 - **Build Path**: `.` (КОРЕНЬ репо — нужно для ui/ workspace).
 - **Dockerfile**: `dashboard.Dockerfile`
-- **Port**: `8080` (Caddy внутри слушает 8080).
+- **Port**: `3000` (Nginx внутри слушает 3000).
 - **Domain**: `eop-dash.rysdavletov.org`
 
 **Build Arguments** (важно!):
@@ -191,7 +191,7 @@ docker run -p 8080:8080 \
   -e EOP_POSTGRES_DSN=... \
   -e EOP_CLICKHOUSE_DSN=... \
   eop-api:latest
-docker run -p 8081:8080 eop-dashboard:latest
+docker run -p 8081:3000 eop-dashboard:latest
 ```
 
 Открой `http://localhost:8081`.

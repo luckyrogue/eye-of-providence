@@ -4,7 +4,7 @@
 # Dokploy:
 #   Dockerfile:   dashboard.Dockerfile
 #   Build Path:   .
-#   Port:         80
+#   Port:         3000
 #   Build Args:
 #     VITE_BACKEND_URL=https://eop-api.rysdavletov.org
 #     CSP_CONNECT_SRC=https://eop-api.rysdavletov.org
@@ -49,7 +49,7 @@ RUN rm -f /etc/nginx/conf.d/default.conf \
     && mkdir -p /etc/nginx/templates \
     && cat > /etc/nginx/templates/default.conf.template <<'NGINXCONF'
 server {
-  listen 80;
+  listen 3000;
   server_name _;
 
   root /usr/share/nginx/html;
@@ -72,6 +72,6 @@ server {
 NGINXCONF
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget -q --spider http://localhost/index.html || exit 1
+    CMD wget -q --spider http://localhost:3000/index.html || exit 1
 
-EXPOSE 80
+EXPOSE 3000

@@ -91,7 +91,7 @@ services:
         CSP_CONNECT_SRC: ${VITE_BACKEND_URL:-http://localhost:8080}
     restart: unless-stopped
     ports:
-      - "${DASHBOARD_PORT:-8081}:8080"
+      - "${DASHBOARD_PORT:-8081}:3000"
     depends_on:
       - api
 
