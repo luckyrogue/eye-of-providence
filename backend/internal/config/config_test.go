@@ -5,10 +5,42 @@ import (
 	"testing"
 )
 
-func TestValidate_DevelopmentAlwaysOK(t *testing.T) {
+func TestValidate_DevelopmentRejectsDefaultSecret(t *testing.T) {
+	// Default JWT secret опасен в любом env — даже dev может случайно оказаться в публике.
 	c := Config{Env: "development", JWTSecret: defaultJWTSecret, AllowedOrigins: "*"}
+	if err := c.Validate(); err == nil {
+		t.Fatal("dev with default JWT secret should fail validation")
+	}
+}
+
+func TestValidate_DevelopmentWithRealSecretOK(t *testing.T) {
+	c := Config{Env: "development", JWTSecret: strings.Repeat("a", 32), AllowedOrigins: "*"}
 	if err := c.Validate(); err != nil {
-		t.Fatalf("dev should not fail validation, got %v", err)
+		t.Fatalf("dev with real secret should pass, got %v", err)
+	}
+}
+
+func TestValidate_RejectsWildcardSubdomain(t *testing.T) {
+	c := Config{
+		Env: "development", JWTSecret: strings.Repeat("a", 32),
+		AllowedOrigins: "https://*.foo.com",
+	}
+	err := c.Validate()
+	if err == nil || !strings.Contains(err.Error(), "wildcard") {
+		t.Fatalf("expected wildcard subdomain rejection, got %v", err)
+	}
+}
+
+func TestValidate_ProductionRejectsDevToken(t *testing.T) {
+	c := Config{
+		Env: "production", JWTSecret: strings.Repeat("a", 64),
+		AllowedOrigins: "https://example.com",
+		PostgresDSN:    "postgres://x@y:5432/z", ClickHouseDSN: "clickhouse://x@y:9000/z",
+		EnableDevToken: true,
+	}
+	err := c.Validate()
+	if err == nil || !strings.Contains(err.Error(), "EOP_ENABLE_DEV_TOKEN") {
+		t.Fatalf("expected dev-token rejection in prod, got %v", err)
 	}
 }
 

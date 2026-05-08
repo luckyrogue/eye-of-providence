@@ -324,7 +324,7 @@ export type TeamMember = {
   email: string;
   display_name: string;
   role: string;
-  created_at: string;
+  joined_at: string;
 };
 
 export async function listMembers(teamID: string): Promise<TeamMember[]> {

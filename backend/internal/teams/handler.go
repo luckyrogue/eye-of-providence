@@ -206,14 +206,13 @@ func (s Service) handleRegister(c *fiber.Ctx) error {
 		s.Logger.Info("first user promoted to super_admin", zap.String("email", user.Email))
 	}
 
+	// Атомарно: invite consumes (защищает от race), затем добавляем юзера.
 	var joinedTeam *uuid.UUID
 	if req.InviteCode != nil && *req.InviteCode != "" {
-		inv, err := s.findInvite(c.Context(), *req.InviteCode)
+		teamID, err := s.consumeInvite(c.Context(), *req.InviteCode, user.ID)
 		if err == nil {
-			if err := s.addMember(c.Context(), inv.TeamID, user.ID, "member"); err == nil {
-				_ = s.consumeInvite(c.Context(), inv.Code, user.ID)
-				joinedTeam = &inv.TeamID
-			}
+			_ = s.addMember(c.Context(), teamID, user.ID, "member")
+			joinedTeam = &teamID
 		}
 	}
 
@@ -310,11 +309,25 @@ func (s Service) handleCreateTeam(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "name 1..100 chars"})
 	}
 	isSuper := s.isSuperAdmin(c)
-	// Constraint: 1 owner = 1 company. Один пользователь может быть owner'ом только
-	// в одной команде. В других — только member через invite. Super_admin исключён.
+
+	// Все проверки и INSERT'ы — внутри одной tx с pg_advisory_xact_lock,
+	// чтобы устранить TOCTOU между beta-counter и INSERT.
+	// Любой concurrent caller встанет в очередь на этот лок до конца нашей tx.
+	tx, err := s.Pool.Begin(c.Context())
+	if err != nil {
+		return s.internalErr(c, err)
+	}
+	defer tx.Rollback(c.Context())
+
+	// Глобальный sentinel-lock на создание команды (key = arbitrary constant).
+	if _, err := tx.Exec(c.Context(), "SELECT pg_advisory_xact_lock($1)", int64(8331_2026_001)); err != nil {
+		return s.internalErr(c, err)
+	}
+
+	// Constraint: 1 owner = 1 company. Super_admin исключён.
 	if !isSuper {
 		var ownedCount int
-		if err := s.Pool.QueryRow(c.Context(),
+		if err := tx.QueryRow(c.Context(),
 			"SELECT count(*) FROM team_members WHERE user_id=$1 AND role='owner'", uid).Scan(&ownedCount); err != nil {
 			return s.internalErr(c, err)
 		}
@@ -328,7 +341,7 @@ func (s Service) handleCreateTeam(c *fiber.Ctx) error {
 	// Beta-лимит: всего N команд в системе. Super_admin обходит.
 	if s.BetaTeamLimit > 0 && !isSuper {
 		var teamCount int
-		if err := s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM teams").Scan(&teamCount); err != nil {
+		if err := tx.QueryRow(c.Context(), "SELECT count(*) FROM teams").Scan(&teamCount); err != nil {
 			return s.internalErr(c, err)
 		}
 		if teamCount >= s.BetaTeamLimit {
@@ -338,11 +351,7 @@ func (s Service) handleCreateTeam(c *fiber.Ctx) error {
 			})
 		}
 	}
-	tx, err := s.Pool.Begin(c.Context())
-	if err != nil {
-		return s.internalErr(c, err)
-	}
-	defer tx.Rollback(c.Context())
+
 	teamID := uuid.New()
 	if _, err := tx.Exec(c.Context(),
 		"INSERT INTO teams (id, name, plan, created_by) VALUES ($1, $2, 'free', $3)",
@@ -565,16 +574,19 @@ func (s Service) handleIngestCommit(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "bad project_id"})
 	}
-	// Достаём team_id проекта и проверяем что юзер в этой команде
+	// Достаём team_id проекта и проверяем что юзер в этой команде.
+	// Если team_id IS NULL (проект осиротел после удаления команды) — отказываем,
+	// иначе любой авторизованный юзер мог бы писать commit'ы в orphan-проект.
 	var teamID *uuid.UUID
 	if err := s.Pool.QueryRow(c.Context(),
 		"SELECT team_id FROM projects WHERE id=$1", projID).Scan(&teamID); err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "project not found"})
 	}
-	if teamID != nil {
-		if _, ok := s.teamRole(c.Context(), uid, *teamID); !ok {
-			return c.Status(403).JSON(fiber.Map{"error": "not a team member"})
-		}
+	if teamID == nil {
+		return c.Status(410).JSON(fiber.Map{"error": "project orphaned (team deleted)"})
+	}
+	if _, ok := s.teamRole(c.Context(), uid, *teamID); !ok {
+		return c.Status(403).JSON(fiber.Map{"error": "not a team member"})
 	}
 	authoredAt, err := time.Parse(time.RFC3339, req.AuthoredAt)
 	if err != nil {
@@ -683,12 +695,19 @@ func (s Service) findInvite(ctx context.Context, code string) (*Invite, error) {
 	return &inv, nil
 }
 
-func (s Service) consumeInvite(ctx context.Context, code string, userID uuid.UUID) error {
-	_, err := s.Pool.Exec(ctx, `
+// consumeInvite — атомарно увеличивает use_count если invite ещё валиден.
+// Возвращает team_id если получилось (invite ещё не исчерпан и не expired),
+// иначе ошибку. Защищает от concurrent accept'ов с одной же ссылки.
+func (s Service) consumeInvite(ctx context.Context, code string, userID uuid.UUID) (uuid.UUID, error) {
+	var teamID uuid.UUID
+	err := s.Pool.QueryRow(ctx, `
 		UPDATE team_invites
 		SET use_count = use_count + 1, used_by = $2, used_at = now()
-		WHERE code = $1`, code, userID)
-	return err
+		WHERE code = $1
+		  AND use_count < max_uses
+		  AND (expires_at IS NULL OR expires_at > now())
+		RETURNING team_id`, code, userID).Scan(&teamID)
+	return teamID, err
 }
 
 func (s Service) handleCreateInvite(c *fiber.Ctx) error {
@@ -730,15 +749,15 @@ func (s Service) handleInvitePreview(c *fiber.Ctx) error {
 
 func (s Service) handleInviteAccept(c *fiber.Ctx) error {
 	uid := userID(c)
-	inv, err := s.findInvite(c.Context(), c.Params("code"))
+	// consumeInvite атомарно проверяет лимиты и инкрементирует use_count.
+	teamID, err := s.consumeInvite(c.Context(), c.Params("code"), uid)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "invalid or expired invite"})
 	}
-	if err := s.addMember(c.Context(), inv.TeamID, uid, "member"); err != nil {
+	if err := s.addMember(c.Context(), teamID, uid, "member"); err != nil {
 		return s.internalErr(c, err)
 	}
-	_ = s.consumeInvite(c.Context(), inv.Code, uid)
-	return c.JSON(fiber.Map{"team_id": inv.TeamID})
+	return c.JSON(fiber.Map{"team_id": teamID})
 }
 
 // --- Super admin ---
@@ -955,8 +974,21 @@ func (s Service) handleUpdateMemberRole(c *fiber.Ctx) error {
 	if newRole != "owner" && newRole != "admin" && newRole != "member" {
 		return c.Status(400).JSON(fiber.Map{"error": "role must be owner | admin | member"})
 	}
-	// Если назначаем нового owner — старый owner не должен остаться один: в БД допустим
-	// несколько owner'ов, проблема только если owner понижает себя в одиночестве.
+	// Если назначаем нового owner — проверка что target не owner'ит другую команду
+	// (1-owner-per-user invariant). Super_admin обходит.
+	if newRole == "owner" && !s.isSuperAdmin(c) {
+		var existingOwned int
+		_ = s.Pool.QueryRow(c.Context(),
+			"SELECT count(*) FROM team_members WHERE user_id=$1 AND role='owner' AND team_id<>$2",
+			targetUID, teamID).Scan(&existingOwned)
+		if existingOwned > 0 {
+			return c.Status(409).JSON(fiber.Map{
+				"error": "user already owns another company — one owner = one company in beta",
+				"code":  "owner_limit",
+			})
+		}
+	}
+	// Если owner понижает себя — не должен быть последним.
 	if uid == targetUID && newRole != "owner" {
 		var ownerCount int
 		_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM team_members WHERE team_id=$1 AND role='owner'", teamID).Scan(&ownerCount)
@@ -1145,7 +1177,25 @@ func (s Service) handleAdminAddMember(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "user with this email not found"})
 	}
-	if err := s.addMember(c.Context(), teamID, user.ID, role); err != nil {
+	// Защита 1-owner invariant: super_admin может назначить owner'а на любую команду,
+	// но не на ту, где этот юзер уже owner какой-то другой команды.
+	if role == "owner" {
+		var existingOwned int
+		_ = s.Pool.QueryRow(c.Context(),
+			"SELECT count(*) FROM team_members WHERE user_id=$1 AND role='owner' AND team_id<>$2",
+			user.ID, teamID).Scan(&existingOwned)
+		if existingOwned > 0 {
+			return c.Status(409).JSON(fiber.Map{
+				"error": "user already owns another company",
+				"code":  "owner_limit",
+			})
+		}
+	}
+	// UPSERT — если юзер уже member, обновим роль (вместо silent no-op).
+	if _, err := s.Pool.Exec(c.Context(), `
+		INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, $3)
+		ON CONFLICT (team_id, user_id) DO UPDATE SET role = EXCLUDED.role`,
+		teamID, user.ID, role); err != nil {
 		return s.internalErr(c, err)
 	}
 	return c.JSON(fiber.Map{"ok": true, "user_id": user.ID})
@@ -1181,6 +1231,40 @@ func (s Service) handleSetSubscription(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
 	}
 
+	// Вся валидация — ДО tx.Begin, чтобы плохой запрос не открывал idle txn slot
+	// (DoS amplification).
+	var planNorm string
+	if req.Plan != nil {
+		planNorm = strings.ToLower(strings.TrimSpace(*req.Plan))
+		if planNorm != "free" && planNorm != "pro" && planNorm != "team" && planNorm != "enterprise" {
+			return c.Status(400).JSON(fiber.Map{"error": "plan must be free | pro | team | enterprise"})
+		}
+	}
+	var untilTS *time.Time
+	clearUntil := false
+	if req.Until != nil {
+		if *req.Until == "" {
+			clearUntil = true
+		} else {
+			ts, err := time.Parse(time.RFC3339, *req.Until)
+			if err != nil {
+				return c.Status(400).JSON(fiber.Map{"error": "until must be ISO8601 (RFC3339)"})
+			}
+			untilTS = &ts
+		}
+	}
+	var coversUntil *time.Time
+	if req.Payment != nil {
+		if req.Payment.AmountCents <= 0 {
+			return c.Status(400).JSON(fiber.Map{"error": "payment.amount_cents must be > 0 if payment is set"})
+		}
+		ts, err := time.Parse(time.RFC3339, req.Payment.CoversUntil)
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "payment.covers_until must be ISO8601"})
+		}
+		coversUntil = &ts
+	}
+
 	tx, err := s.Pool.Begin(c.Context())
 	if err != nil {
 		return s.internalErr(c, err)
@@ -1188,30 +1272,20 @@ func (s Service) handleSetSubscription(c *fiber.Ctx) error {
 	defer tx.Rollback(c.Context())
 
 	if req.Plan != nil {
-		plan := strings.ToLower(strings.TrimSpace(*req.Plan))
-		if plan != "free" && plan != "pro" && plan != "team" && plan != "enterprise" {
-			return c.Status(400).JSON(fiber.Map{"error": "plan must be free | pro | team | enterprise"})
-		}
 		if _, err := tx.Exec(c.Context(),
-			"UPDATE teams SET subscription_plan=$1 WHERE id=$2", plan, teamID); err != nil {
+			"UPDATE teams SET subscription_plan=$1 WHERE id=$2", planNorm, teamID); err != nil {
 			return s.internalErr(c, err)
 		}
 	}
-	if req.Until != nil {
-		if *req.Until == "" {
-			if _, err := tx.Exec(c.Context(),
-				"UPDATE teams SET subscription_until=NULL WHERE id=$1", teamID); err != nil {
-				return s.internalErr(c, err)
-			}
-		} else {
-			ts, err := time.Parse(time.RFC3339, *req.Until)
-			if err != nil {
-				return c.Status(400).JSON(fiber.Map{"error": "until must be ISO8601 (RFC3339)"})
-			}
-			if _, err := tx.Exec(c.Context(),
-				"UPDATE teams SET subscription_until=$1 WHERE id=$2", ts, teamID); err != nil {
-				return s.internalErr(c, err)
-			}
+	if clearUntil {
+		if _, err := tx.Exec(c.Context(),
+			"UPDATE teams SET subscription_until=NULL WHERE id=$1", teamID); err != nil {
+			return s.internalErr(c, err)
+		}
+	} else if untilTS != nil {
+		if _, err := tx.Exec(c.Context(),
+			"UPDATE teams SET subscription_until=$1 WHERE id=$2", *untilTS, teamID); err != nil {
+			return s.internalErr(c, err)
 		}
 	}
 	if req.Note != nil {
@@ -1229,11 +1303,7 @@ func (s Service) handleSetSubscription(c *fiber.Ctx) error {
 	}
 
 	var paymentID *uuid.UUID
-	if req.Payment != nil && req.Payment.AmountCents > 0 {
-		coversUntil, err := time.Parse(time.RFC3339, req.Payment.CoversUntil)
-		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "payment.covers_until must be ISO8601"})
-		}
+	if coversUntil != nil {
 		method := strings.TrimSpace(req.Payment.Method)
 		if method == "" {
 			method = "manual_transfer"
@@ -1248,7 +1318,7 @@ func (s Service) handleSetSubscription(c *fiber.Ctx) error {
 			  (id, team_id, amount_cents, currency, method, note, covers_until, recorded_by)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 			pid, teamID, req.Payment.AmountCents, currency, method,
-			strings.TrimSpace(req.Payment.Note), coversUntil, userID(c)); err != nil {
+			strings.TrimSpace(req.Payment.Note), *coversUntil, userID(c)); err != nil {
 			return s.internalErr(c, err)
 		}
 		paymentID = &pid

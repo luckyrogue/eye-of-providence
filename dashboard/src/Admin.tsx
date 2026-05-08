@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Building2, CreditCard, Crown, Trash2, UserPlus, Users, X } from "lucide-react";
 import {
@@ -146,8 +146,8 @@ function TeamsTable({ teams, users, onChange, onError, tz }: {
               </thead>
               <tbody>
                 {teams.map((t) => (
-                  <>
-                    <tr key={t.id} className="border-t hover:bg-muted/30">
+                  <Fragment key={t.id}>
+                    <tr className="border-t hover:bg-muted/30">
                       <td className="py-2 px-3 font-medium">{t.name}</td>
                       <td className="py-2 px-3"><PlanPill team={t} /></td>
                       <td className="py-2 px-3 text-right tabular-nums">{t.member_count}</td>
@@ -208,7 +208,7 @@ function TeamsTable({ teams, users, onChange, onError, tz }: {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
                 {teams.length === 0 && (
                   <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">Пока нет компаний</td></tr>

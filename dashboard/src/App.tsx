@@ -63,8 +63,11 @@ export default function App() {
   const [me, setMe] = useState<Me | null>(null);
 
   function logout() {
-    localStorage.removeItem("eop_token");
-    localStorage.removeItem("eop_user_id");
+    // Чистим все eop_* ключи, чтобы данные предыдущего юзера не утекли в новую сессию.
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("eop_")) localStorage.removeItem(k);
+    }
     setUserId(null);
     setEvents([]);
     setSummary({});
@@ -73,6 +76,7 @@ export default function App() {
     setTrend([]);
     setReports([]);
     setActive(null);
+    setMe(null);
     setTab("dashboard");
   }
 

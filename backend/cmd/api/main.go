@@ -93,7 +93,7 @@ func main() {
 	allowCreds := cfg.AllowedOrigins != "*"
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.AllowedOrigins,
-		AllowMethods:     "GET,POST,DELETE,OPTIONS",
+		AllowMethods:     "GET,POST,PATCH,DELETE,OPTIONS",
 		AllowHeaders:     "Authorization,Content-Type,X-Request-Id",
 		AllowCredentials: allowCreds,
 	}))
@@ -125,6 +125,24 @@ func main() {
 	app.Use("/v1/auth/register", authLimiter)
 	app.Use("/v1/auth/dev-token", authLimiter)
 	app.Use("/v1/auth/github/callback", authLimiter)
+
+	// Глобальный rate-limit на authed endpoints. Ключ = JWT-юзер если есть, иначе IP.
+	// 120 req/min нормальной нагрузки достаточно для UI; защищает /v1/teams POST,
+	// /v1/admin/*, /v1/commits, /v1/ingest от наглого abuse'а.
+	app.Use("/v1/", limiter.New(limiter.Config{
+		Max:        120,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			h := c.Get("Authorization")
+			if h != "" {
+				return "auth:" + h
+			}
+			return "ip:" + c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "too many requests"})
+		},
+	}))
 
 	// Public routes регистрируются ПЕРВЫМИ. Fiber `app.Group(prefix, handler)`
 	// работает как `app.Use(prefix, handler)` — middleware ловит все
