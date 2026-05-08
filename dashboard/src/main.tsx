@@ -7,7 +7,7 @@ import { Toaster } from "sonner";
 import { ConfirmProvider } from "@eop/ui";
 import "@eop/ui/styles.css";
 import { ErrorBoundary } from "./ErrorBoundary";
-import { queryClient } from "./queryClient";
+import { queryClient } from "./app/queryClient";
 import { router } from "./routes/router";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

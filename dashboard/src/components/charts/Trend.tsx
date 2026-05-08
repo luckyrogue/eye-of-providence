@@ -1,4 +1,4 @@
-import type { TrendPoint } from "./api";
+import type { TrendPoint } from "../../api/events";
 
 export function Trend({ points }: { points: TrendPoint[] }) {
   const byDate = new Map<string, { manual: number; ai: number }>();

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { HeatmapCell } from "./api";
+import type { HeatmapCell } from "../../api/events";
 
 const DAYS = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Button, EmptyState, Eyebrow, SkeletonTable, StatTile } from "@eop/ui";
 import { Activity, Brain, FileText, Sparkles } from "lucide-react";
-import { Markdown } from "../Markdown";
-import { Heatmap } from "../Heatmap";
-import { Languages } from "../Languages";
-import { Trend } from "../Trend";
-import { formatDate, formatTime, getTz } from "../tz";
+import { Markdown } from "../components/Markdown";
+import { Heatmap } from "../components/charts/Heatmap";
+import { Languages } from "../components/charts/Languages";
+import { Trend } from "../components/charts/Trend";
+import { formatDate, formatTime, getTz } from "../utils/tz";
 import { useRecent, useSummary, useLanguages, useHeatmap, useTrend, useIngestDemo } from "../api/events";
 import { useReports, useGenerateReport, type Report } from "../api/reports";
 

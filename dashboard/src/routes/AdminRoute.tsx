@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Admin } from "../Admin";
 import { useMe } from "../api/me";
-import { getTz } from "../tz";
+import { getTz } from "../utils/tz";
 
 export function AdminRoute() {
   const me = useMe();

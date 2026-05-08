@@ -1,5 +1,3 @@
-// Timezone preference: хранится в localStorage, по умолчанию — браузерный default.
-
 const KEY = "eop_tz";
 
 export function getTz(): string {
@@ -27,7 +25,6 @@ export const TIMEZONES: { label: string; value: string }[] = [
   { label: "UTC", value: "UTC" },
 ];
 
-// Уникальные значения для select
 export const UNIQUE_TIMEZONES = Array.from(
   new Map(TIMEZONES.map((t) => [t.value, t])).values(),
 );

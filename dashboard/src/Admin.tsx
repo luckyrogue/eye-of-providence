@@ -7,7 +7,7 @@ import {
   useConfirm,
 } from "@eop/ui";
 import { Building2, CreditCard, Crown, Trash2, UserPlus, Users } from "lucide-react";
-import { formatDate } from "./tz";
+import { formatDate } from "./utils/tz";
 import { useMutationToast } from "./hooks/useMutationToast";
 import {
   useAdminStats, useAdminTeams, useAdminUsers, useAdminPayments,

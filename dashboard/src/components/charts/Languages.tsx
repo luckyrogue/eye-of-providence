@@ -1,4 +1,4 @@
-import type { LangCell } from "./api";
+import type { LangCell } from "../../api/events";
 
 export function Languages({ cells, top = 6 }: { cells: LangCell[]; top?: number }) {
   const byLang = new Map<string, { manual: number; ai: number; refactor: number; other: number; total: number }>();

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Globe, Shield, Trash2, User } from "lucide-react";
 import { fetchProfile, deleteMyData, type Profile } from "./api";
-import { getTz, setTz, UNIQUE_TIMEZONES } from "./tz";
+import { getTz, setTz, UNIQUE_TIMEZONES } from "./utils/tz";
 
 export function Settings({ onWiped, onTzChange }: { onWiped: () => void; onTzChange: (tz: string) => void }) {
   const [profile, setProfile] = useState<Profile | null>(null);
