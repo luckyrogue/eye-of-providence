@@ -53,6 +53,29 @@ func (s *MemoryStore) AggregateByCategory(_ context.Context, userID string, sinc
 	return agg, nil
 }
 
+func (s *MemoryStore) AggregateByCategoryBulk(_ context.Context, userIDs []string, since time.Time) (map[string]map[string]uint64, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	want := make(map[string]struct{}, len(userIDs))
+	for _, u := range userIDs {
+		want[u] = struct{}{}
+	}
+	out := map[string]map[string]uint64{}
+	for _, e := range s.events {
+		if e.TS.Before(since) {
+			continue
+		}
+		if _, ok := want[e.UserID]; !ok {
+			continue
+		}
+		if out[e.UserID] == nil {
+			out[e.UserID] = map[string]uint64{}
+		}
+		out[e.UserID][e.Category] += uint64(e.DurationMS)
+	}
+	return out, nil
+}
+
 func (s *MemoryStore) Heatmap(_ context.Context, userID string, since time.Time, tz string) ([]HeatmapCell, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

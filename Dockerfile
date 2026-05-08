@@ -36,7 +36,7 @@ RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY ui/package.json ui/
 COPY dashboard/package.json dashboard/
-RUN pnpm install --frozen-lockfile=false
+RUN pnpm install --frozen-lockfile
 
 COPY ui ui
 COPY dashboard dashboard
@@ -128,8 +128,11 @@ SH
 
 EXPOSE 3000
 
-# Healthcheck выключен: entrypoint.sh завершается, если умрёт nginx или api,
-# поэтому Swarm всё равно увидит crash. HEALTHCHECK + Swarm любил рубить
-# контейнер по timeout, чем создавал restart-loop.
+# start-period=60s даёт миграциям и ClickHouse Cloud TLS-handshake'у
+# завершиться до того как Swarm начнёт считать неудачные probe'ы.
+# /healthz пробивает nginx → Go API → проверяет PG+CH; возвращает 503 если
+# что-то деградировано — Swarm перенесёт трафик на здоровый instance.
+HEALTHCHECK --start-period=60s --interval=15s --timeout=5s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/healthz >/dev/null 2>&1 || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

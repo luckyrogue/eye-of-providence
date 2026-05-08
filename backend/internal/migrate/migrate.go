@@ -22,7 +22,16 @@ import (
 //go:embed sql/*.sql
 var fs embed.FS
 
+// pgMigrationLockID — sentinel id для pg_advisory_lock.
+// Сериализует одновременные попытки прогнать миграции из нескольких replica'ей
+// при rolling deploy. Тот, кто получает lock, прогоняет миграции; остальные
+// ждут, потом видят что миграции уже применены (CREATE IF NOT EXISTS) и идут
+// дальше.
+const pgMigrationLockID int64 = 8331_2026_002
+
 // RunPostgres — применяет все sql/NNN_*.up.sql (где NNN — номер) к Postgres.
+// Безопасен при параллельном запуске на нескольких replica'ях: использует
+// session-level pg_advisory_lock, чтобы только один процесс прогонял DDL.
 func RunPostgres(ctx context.Context, pool *pgxpool.Pool) error {
 	if pool == nil {
 		return nil
@@ -33,12 +42,25 @@ func RunPostgres(ctx context.Context, pool *pgxpool.Pool) error {
 	if err != nil {
 		return err
 	}
+	// Берём один коннект и держим lock на всё время DDL.
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire conn for migrate: %w", err)
+	}
+	defer conn.Release()
+	if _, err := conn.Exec(ctx, "SELECT pg_advisory_lock($1)", pgMigrationLockID); err != nil {
+		return fmt.Errorf("acquire migration lock: %w", err)
+	}
+	defer func() {
+		// Лок сам отпустится при Release/disconnect, но явный unlock корректнее.
+		_, _ = conn.Exec(context.Background(), "SELECT pg_advisory_unlock($1)", pgMigrationLockID)
+	}()
 	for _, name := range files {
 		body, err := fs.ReadFile("sql/" + name)
 		if err != nil {
 			return fmt.Errorf("read %s: %w", name, err)
 		}
-		if _, err := pool.Exec(ctx, string(body)); err != nil {
+		if _, err := conn.Exec(ctx, string(body)); err != nil {
 			return fmt.Errorf("apply %s: %w", name, err)
 		}
 	}

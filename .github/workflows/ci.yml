@@ -135,17 +135,26 @@ jobs:
             ${{ env.IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Trivy scan
+      - name: Trivy scan (CRITICAL — block, HIGH — report)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.IMAGE }}:${{ github.sha }}
           format: table
-          severity: CRITICAL,HIGH
+          severity: CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+      - name: Trivy report (HIGH, non-blocking)
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          format: table
+          severity: HIGH
           exit-code: "0"
 
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     needs: [docker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
@@ -158,3 +167,23 @@ jobs:
             exit 1
           fi
           curl -fsSL -X POST "$WEBHOOK"
+      # Ждём пока новый image поднимется и /healthz вернёт 200.
+      # Если Dokploy откатился (failed migration, broken env, и т.п.) —
+      # CI красный и видно сразу, а не через час по тикету пользователей.
+      - name: Wait for /healthz
+        if: ${{ vars.HEALTH_URL != '' }}
+        env:
+          HEALTH_URL: ${{ vars.HEALTH_URL }}
+        run: |
+          echo "Polling $HEALTH_URL ..."
+          for i in $(seq 1 60); do
+            sleep 5
+            code=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 5 "$HEALTH_URL" || echo "000")
+            echo "  attempt $i → HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "::notice::deploy healthy after $((i*5))s"
+              exit 0
+            fi
+          done
+          echo "::error::deploy did not become healthy within 5min"
+          exit 1

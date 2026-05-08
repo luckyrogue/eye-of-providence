@@ -31,6 +31,11 @@ const (
 	maxDisplayNameLen = 64
 	maxTeamNameLen    = 100
 	maxProjectNameLen = 200
+
+	// teamCreationLockID — sentinel-id для pg_advisory_xact_lock, защищающий
+	// инвариант "1 owner = 1 team" + лимит beta-команд от race'ов.
+	// Произвольное число, фиксированное на весь жизненный цикл проекта.
+	teamCreationLockID int64 = 8331_2026_001
 )
 
 func validateEmail(s string) (string, bool) {
@@ -322,8 +327,7 @@ func (s Service) handleCreateTeam(c *fiber.Ctx) error {
 	}
 	defer tx.Rollback(c.Context())
 
-	// Глобальный sentinel-lock на создание команды (key = arbitrary constant).
-	if _, err := tx.Exec(c.Context(), "SELECT pg_advisory_xact_lock($1)", int64(8331_2026_001)); err != nil {
+	if _, err := tx.Exec(c.Context(), "SELECT pg_advisory_xact_lock($1)", teamCreationLockID); err != nil {
 		return s.internalErr(c, err)
 	}
 
@@ -428,7 +432,7 @@ func (s Service) handleListMembers(c *fiber.Ctx) error {
 // --- Team summary (per-member ratio за 7 дней) ---
 
 type EventStoreLike interface {
-	AggregateByCategory(ctx context.Context, userID string, since time.Time) (map[string]uint64, error)
+	AggregateByCategoryBulk(ctx context.Context, userIDs []string, since time.Time) (map[string]map[string]uint64, error)
 }
 
 var EventStore EventStoreLike
@@ -459,22 +463,35 @@ func (s Service) handleTeamSummary(c *fiber.Ctx) error {
 		AIRatio     int       `json:"ai_ratio"`
 	}
 	out := []memberStat{}
+	memberIDs := []string{}
 	since := time.Now().UTC().Add(-7 * 24 * time.Hour)
 	for rows.Next() {
 		var m memberStat
 		if err := rows.Scan(&m.ID, &m.DisplayName); err != nil {
 			return s.internalErr(c, err)
 		}
-		if EventStore != nil {
-			agg, _ := EventStore.AggregateByCategory(c.Context(), m.ID.String(), since)
-			m.AIMS = agg["ai"]
-			m.ManualMS = agg["manual"] + agg["refactor"]
-			m.TotalMS = m.AIMS + m.ManualMS + agg["other"] + agg["reading"]
-			if m.TotalMS > 0 {
-				m.AIRatio = int(float64(m.AIMS) * 100.0 / float64(m.TotalMS))
+		out = append(out, m)
+		memberIDs = append(memberIDs, m.ID.String())
+	}
+	if rows.Err() != nil {
+		return s.internalErr(c, rows.Err())
+	}
+	// Один запрос в EventStore вместо N отдельных по каждому участнику.
+	if EventStore != nil && len(memberIDs) > 0 {
+		bulk, err := EventStore.AggregateByCategoryBulk(c.Context(), memberIDs, since)
+		if err != nil {
+			s.Logger.Warn("team summary aggregate failed", zap.Error(err))
+		} else {
+			for i := range out {
+				agg := bulk[out[i].ID.String()]
+				out[i].AIMS = agg["ai"]
+				out[i].ManualMS = agg["manual"] + agg["refactor"]
+				out[i].TotalMS = out[i].AIMS + out[i].ManualMS + agg["other"] + agg["reading"]
+				if out[i].TotalMS > 0 {
+					out[i].AIRatio = int(float64(out[i].AIMS) * 100.0 / float64(out[i].TotalMS))
+				}
 			}
 		}
-		out = append(out, m)
 	}
 	return c.JSON(fiber.Map{"members": out, "since": since})
 }
@@ -765,17 +782,32 @@ func (s Service) handleInviteAccept(c *fiber.Ctx) error {
 
 // --- Super admin ---
 
+// adminListPagination — общий парсер ?limit=N&offset=N для admin-list эндпоинтов.
+// limit max=200, default=100. offset >= 0.
+func adminListPagination(c *fiber.Ctx) (limit, offset int) {
+	limit = 100
+	if v, err := strconv.Atoi(c.Query("limit")); err == nil && v > 0 {
+		limit = min(v, 200)
+	}
+	if v, err := strconv.Atoi(c.Query("offset")); err == nil && v > 0 {
+		offset = v
+	}
+	return limit, offset
+}
+
 func (s Service) handleAdminListAllTeams(c *fiber.Ctx) error {
 	if !s.isSuperAdmin(c) {
 		return c.Status(403).JSON(fiber.Map{"error": "super_admin only"})
 	}
+	limit, offset := adminListPagination(c)
 	rows, err := s.Pool.Query(c.Context(), `
 		SELECT t.id, t.name, t.plan, t.created_at,
 		       t.subscription_plan, t.subscription_until, t.subscription_note,
 		       (SELECT count(*) FROM team_members WHERE team_id = t.id) AS member_count,
 		       (SELECT u.email FROM team_members tm JOIN users u ON u.id = tm.user_id
 		        WHERE tm.team_id = t.id AND tm.role = 'owner' ORDER BY u.created_at LIMIT 1) AS owner_email
-		FROM teams t ORDER BY t.created_at DESC`)
+		FROM teams t ORDER BY t.created_at DESC
+		LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return s.internalErr(c, err)
 	}
@@ -801,17 +833,18 @@ func (s Service) handleAdminListAllTeams(c *fiber.Ctx) error {
 		}
 		out = append(out, t)
 	}
-	return c.JSON(fiber.Map{"teams": out})
+	return c.JSON(fiber.Map{"teams": out, "limit": limit, "offset": offset})
 }
 
 func (s Service) handleAdminListAllUsers(c *fiber.Ctx) error {
 	if !s.isSuperAdmin(c) {
 		return c.Status(403).JSON(fiber.Map{"error": "super_admin only"})
 	}
+	limit, offset := adminListPagination(c)
 	rows, err := s.Pool.Query(c.Context(), `
 		SELECT u.id, u.email, COALESCE(u.display_name, u.email), u.global_role, u.created_at,
 		       (SELECT count(*) FROM team_members WHERE user_id = u.id) AS teams_count
-		FROM users u ORDER BY u.created_at DESC LIMIT 200`)
+		FROM users u ORDER BY u.created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return s.internalErr(c, err)
 	}
@@ -832,7 +865,7 @@ func (s Service) handleAdminListAllUsers(c *fiber.Ctx) error {
 		}
 		out = append(out, u)
 	}
-	return c.JSON(fiber.Map{"users": out})
+	return c.JSON(fiber.Map{"users": out, "limit": limit, "offset": offset})
 }
 
 // --- helpers ---
@@ -888,10 +921,7 @@ func (s Service) handleBetaInfo(c *fiber.Ctx) error {
 	limit := s.BetaTeamLimit
 	remaining := -1 // -1 = без лимита
 	if limit > 0 {
-		remaining = limit - teamCount
-		if remaining < 0 {
-			remaining = 0
-		}
+		remaining = max(limit-teamCount, 0)
 	}
 	return c.JSON(fiber.Map{
 		"teams_count":     teamCount,

@@ -28,7 +28,11 @@ func OpenClickHouse(dsn string) (*ClickHouseStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := conn.Ping(context.Background()); err != nil {
+	// Bounded ping — DialTimeout защищает только сам коннект, для read'а
+	// после установки соединения нужен явный deadline.
+	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := conn.Ping(pingCtx); err != nil {
 		return nil, fmt.Errorf("clickhouse ping: %w", err)
 	}
 	return &ClickHouseStore{conn: conn}, nil
@@ -138,6 +142,50 @@ func (s *ClickHouseStore) AggregateByCategory(ctx context.Context, userID string
 			return nil, err
 		}
 		out[category] = sum
+	}
+	return out, rows.Err()
+}
+
+// AggregateByCategoryBulk — один CH-запрос для всех userIDs.
+// Возвращает map[userID]map[category]ms. Если userIDs пустой — пустую map.
+func (s *ClickHouseStore) AggregateByCategoryBulk(ctx context.Context, userIDs []string, since time.Time) (map[string]map[string]uint64, error) {
+	out := map[string]map[string]uint64{}
+	if len(userIDs) == 0 {
+		return out, nil
+	}
+	uids := make([]uuid.UUID, 0, len(userIDs))
+	for _, s := range userIDs {
+		u, err := uuid.Parse(s)
+		if err != nil {
+			continue
+		}
+		uids = append(uids, u)
+	}
+	if len(uids) == 0 {
+		return out, nil
+	}
+	rows, err := s.conn.Query(ctx, `
+		SELECT user_id, category, sum(duration_ms)
+		FROM events
+		WHERE user_id IN (?) AND ts >= ?
+		GROUP BY user_id, category
+	`, uids, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var uid uuid.UUID
+		var category string
+		var sum uint64
+		if err := rows.Scan(&uid, &category, &sum); err != nil {
+			return nil, err
+		}
+		key := uid.String()
+		if out[key] == nil {
+			out[key] = map[string]uint64{}
+		}
+		out[key][category] = sum
 	}
 	return out, rows.Err()
 }

@@ -30,6 +30,9 @@ type EventStore interface {
 	Insert(ctx context.Context, events []Event) error
 	ListRecent(ctx context.Context, userID string, limit int) ([]Event, error)
 	AggregateByCategory(ctx context.Context, userID string, since time.Time) (map[string]uint64, error)
+	// AggregateByCategoryBulk — один запрос для нескольких пользователей.
+	// Возвращает userID → {category → duration_ms}. Используется на team-detail.
+	AggregateByCategoryBulk(ctx context.Context, userIDs []string, since time.Time) (map[string]map[string]uint64, error)
 	Heatmap(ctx context.Context, userID string, since time.Time, tz string) ([]HeatmapCell, error)
 	LanguageBreakdown(ctx context.Context, userID string, since time.Time) ([]LangCell, error)
 	ActiveUserIDs(ctx context.Context, since time.Time) ([]string, error)

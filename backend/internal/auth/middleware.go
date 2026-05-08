@@ -29,11 +29,15 @@ func Middleware(secret string, pool *pgxpool.Pool) fiber.Handler {
 		// Если pool == nil (тесты или старт без БД) — пропускаем проверку.
 		if pool != nil {
 			uid, err := uuid.Parse(claims.UserID)
-			if err == nil {
-				dbTV, dbErr := TokenVersion(c.Context(), pool, uid)
-				if dbErr != nil || dbTV != claims.TokenVersion {
-					return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "session invalidated"})
-				}
+			if err != nil {
+				// Подпись валидна, но user_id не UUID — значит, что наш код
+				// когда-то выпустил битый токен (или сменилась схема).
+				// Не пускаем — иначе revocation-чек тихо отключается.
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token subject"})
+			}
+			dbTV, dbErr := TokenVersion(c.Context(), pool, uid)
+			if dbErr != nil || dbTV != claims.TokenVersion {
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "session invalidated"})
 			}
 		}
 		c.Locals(ctxClaimsKey, claims)

@@ -21,14 +21,27 @@ type response struct {
 	Rejected int `json:"rejected"`
 }
 
+// maxEventsPerBatch — защита от 1 запроса на миллион событий, который может
+// насильно нагрузить ClickHouse. Клиенты должны слать по batch'ам.
+const maxEventsPerBatch = 5000
+
 func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwtSecret string, pool *pgxpool.Pool) {
 	g := app.Group("/v1", auth.Middleware(jwtSecret, pool))
 
 	g.Post("/ingest", func(c *fiber.Ctx) error {
 		claims := auth.ClaimsFromCtx(c)
+		if claims.UserID == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing subject"})
+		}
 		var req request
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid body"})
+		}
+		if len(req.Events) > maxEventsPerBatch {
+			return c.Status(fiber.StatusRequestEntityTooLarge).JSON(fiber.Map{
+				"error":     "too many events in one batch",
+				"max_batch": maxEventsPerBatch,
+			})
 		}
 
 		accepted, rejected := 0, 0
