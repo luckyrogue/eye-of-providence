@@ -57,9 +57,9 @@ jobs:
           workspaces: agent/src-tauri
       - run: cargo check
 
-  docker-api:
+  docker:
     runs-on: ubuntu-latest
-    needs: [backend]
+    needs: [backend, frontend]
     permissions:
       contents: read
       packages: write
@@ -68,7 +68,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
       - name: Compute image base (lowercase owner)
-        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/eop-api" >> "$GITHUB_ENV"
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/eop" >> "$GITHUB_ENV"
       - name: Login to GHCR
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
@@ -76,61 +76,22 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build (& push on main) api image
+      - name: Build (& push on main) combined image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: api.Dockerfile
-          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          load: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
-          tags: |
-            ${{ env.IMAGE }}:${{ github.sha }}
-            ${{ env.IMAGE }}:latest
-          cache-from: type=gha,scope=api
-          cache-to: type=gha,mode=max,scope=api
-      - name: Trivy scan (api)
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
-          format: table
-          severity: CRITICAL,HIGH
-          exit-code: "0" # warning, not blocking — поднимем до 1 после первого clean run
-
-  docker-dashboard:
-    runs-on: ubuntu-latest
-    needs: [frontend]
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - name: Compute image base (lowercase owner)
-        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/eop-dashboard" >> "$GITHUB_ENV"
-      - name: Login to GHCR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build (& push on main) dashboard image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: dashboard.Dockerfile
+          file: Dockerfile
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           load: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
           build-args: |
-            VITE_BACKEND_URL=${{ vars.VITE_BACKEND_URL || 'http://localhost:8080' }}
-            CSP_CONNECT_SRC=${{ vars.CSP_CONNECT_SRC || 'http://localhost:8080' }}
+            VITE_BACKEND_URL=${{ vars.VITE_BACKEND_URL || '/api' }}
+            CSP_CONNECT_SRC=${{ vars.CSP_CONNECT_SRC || '''self''' }}
           tags: |
             ${{ env.IMAGE }}:${{ github.sha }}
             ${{ env.IMAGE }}:latest
-          cache-from: type=gha,scope=dashboard
-          cache-to: type=gha,mode=max,scope=dashboard
-      - name: Trivy scan (dashboard)
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Trivy scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.IMAGE }}:${{ github.sha }}
@@ -138,32 +99,17 @@ jobs:
           severity: CRITICAL,HIGH
           exit-code: "0"
 
-  deploy-api:
+  deploy:
     runs-on: ubuntu-latest
-    needs: [docker-api]
+    needs: [docker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - name: Trigger Dokploy webhook (api)
+      - name: Trigger Dokploy webhook
         env:
-          WEBHOOK: ${{ secrets.DOKPLOY_API_WEBHOOK }}
+          WEBHOOK: ${{ secrets.DOKPLOY_WEBHOOK }}
         run: |
           if [ -z "$WEBHOOK" ]; then
-            echo "::error::DOKPLOY_API_WEBHOOK secret is not set"
-            exit 1
-          fi
-          curl -fsSL -X POST "$WEBHOOK"
-
-  deploy-dashboard:
-    runs-on: ubuntu-latest
-    needs: [docker-dashboard]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - name: Trigger Dokploy webhook (dashboard)
-        env:
-          WEBHOOK: ${{ secrets.DOKPLOY_DASHBOARD_WEBHOOK }}
-        run: |
-          if [ -z "$WEBHOOK" ]; then
-            echo "::error::DOKPLOY_DASHBOARD_WEBHOOK secret is not set"
+            echo "::error::DOKPLOY_WEBHOOK secret is not set"
             exit 1
           fi
           curl -fsSL -X POST "$WEBHOOK"

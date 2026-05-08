@@ -1,4 +1,4 @@
-.PHONY: help doctor dev dev-up dev-down dev-logs docker-build docker-build-api docker-build-dashboard infra-up infra-down backend-ingest backend-auth backend-reports proto-gen agent-dev dashboard-dev clean
+.PHONY: help doctor dev dev-up dev-down dev-logs docker-build infra-up infra-down backend-ingest backend-auth backend-reports proto-gen agent-dev dashboard-dev clean
 
 doctor:
 	@./scripts/doctor.sh
@@ -15,17 +15,11 @@ dev-down:
 dev-logs:
 	docker compose -f infra/docker-compose.dev.yml logs -f api dashboard
 
-# Production Docker images (для деплоя через Dokploy/Coolify/Portainer/любой Docker host)
-docker-build: docker-build-api docker-build-dashboard
-
-docker-build-api:
-	docker build -t eop-api:latest -f api.Dockerfile .
-
-docker-build-dashboard:
-	docker build -t eop-dashboard:latest \
-		-f dashboard.Dockerfile \
-		--build-arg VITE_BACKEND_URL=$${VITE_BACKEND_URL:-http://localhost:8080} \
-		--build-arg CSP_CONNECT_SRC=$${CSP_CONNECT_SRC:-$${VITE_BACKEND_URL:-http://localhost:8080}} \
+# Production Docker image (combined api + dashboard, для Dokploy/Coolify/любой Docker host)
+docker-build:
+	docker build -t eop:latest \
+		--build-arg VITE_BACKEND_URL=$${VITE_BACKEND_URL:-/api} \
+		--build-arg CSP_CONNECT_SRC=$${CSP_CONNECT_SRC:-'self'} \
 		.
 
 help:
@@ -34,9 +28,7 @@ help:
 	@echo "  make dev                      — поднять весь стек локально (api + dashboard + db, hot-reload)"
 	@echo "  make dev-down                 — погасить dev-стек"
 	@echo "  make dev-logs                 — следить за логами api + dashboard"
-	@echo "  make docker-build             — собрать prod Docker images (api + dashboard)"
-	@echo "  make docker-build-api         — только api"
-	@echo "  make docker-build-dashboard   — только dashboard (VITE_BACKEND_URL env)"
+	@echo "  make docker-build             — собрать prod Docker image (combined api + dashboard)"
 	@echo "  make infra-up                 — поднять только postgres/clickhouse/redis (без api)"
 	@echo "  make infra-down               — погасить infra"
 	@echo "  make backend-ingest     — запустить ingest service"
