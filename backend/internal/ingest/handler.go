@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
@@ -20,8 +21,8 @@ type response struct {
 	Rejected int `json:"rejected"`
 }
 
-func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwtSecret string) {
-	g := app.Group("/v1", auth.Middleware(jwtSecret))
+func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwtSecret string, pool *pgxpool.Pool) {
+	g := app.Group("/v1", auth.Middleware(jwtSecret, pool))
 
 	g.Post("/ingest", func(c *fiber.Ctx) error {
 		claims := auth.ClaimsFromCtx(c)

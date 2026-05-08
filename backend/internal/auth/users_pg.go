@@ -33,3 +33,23 @@ func (u *UsersPG) Upsert(ctx context.Context, userID uuid.UUID, email, githubLog
 	`, userID, email, githubLogin)
 	return err
 }
+
+// TokenVersion — текущий счётчик версии JWT для юзера. Middleware сравнивает
+// его с `tv` claim'ом и rejects старые токены.
+func TokenVersion(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) (int, error) {
+	var tv int
+	err := pool.QueryRow(ctx,
+		"SELECT token_version FROM users WHERE id=$1", userID).Scan(&tv)
+	return tv, err
+}
+
+// BumpTokenVersion — инкрементирует counter, инвалидируя все ранее выпущенные JWT.
+// Вызывать при: смене global_role, удалении юзера (best-effort), wipe данных.
+func BumpTokenVersion(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) error {
+	if pool == nil {
+		return nil
+	}
+	_, err := pool.Exec(ctx,
+		"UPDATE users SET token_version = token_version + 1 WHERE id=$1", userID)
+	return err
+}

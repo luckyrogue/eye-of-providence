@@ -23,7 +23,7 @@ type MeService struct {
 }
 
 func RegisterMeRoutes(app *fiber.App, s MeService) {
-	g := app.Group("/v1/me", Middleware(s.JWTSecret))
+	g := app.Group("/v1/me", Middleware(s.JWTSecret, s.Pool))
 
 	g.Get("/", func(c *fiber.Ctx) error {
 		claims := ClaimsFromCtx(c)

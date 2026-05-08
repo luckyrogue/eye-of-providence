@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
@@ -20,10 +21,11 @@ type Service struct {
 	Gemini     *GeminiClient
 	Logger     *zap.Logger
 	JWTSecret  string
+	Pool       *pgxpool.Pool
 }
 
 func RegisterRoutes(app *fiber.App, s Service) {
-	g := app.Group("/v1/reports", auth.Middleware(s.JWTSecret))
+	g := app.Group("/v1/reports", auth.Middleware(s.JWTSecret, s.Pool))
 
 	g.Post("/generate", func(c *fiber.Ctx) error {
 		claims := auth.ClaimsFromCtx(c)

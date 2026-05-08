@@ -106,7 +106,7 @@ func main() {
 		c.Set("Content-Type", "text/plain; version=0.0.4")
 		return c.SendString(metrics.Render())
 	})
-	app.Get("/v1/admin/cost", auth.Middleware(cfg.JWTSecret), func(c *fiber.Ctx) error {
+	app.Get("/v1/admin/cost", auth.Middleware(cfg.JWTSecret, pgPool), func(c *fiber.Ctx) error {
 		return c.JSON(metrics.Snapshot())
 	})
 
@@ -154,6 +154,7 @@ func main() {
 		GitHub:         auth.NewGitHubOAuth(cfg.GitHubClientID, cfg.GitHubClientSec, cfg.GitHubCallback),
 		Logger:         log,
 		Users:          auth.NewUsersPG(pgPool),
+		Pool:           pgPool,
 		EnableDevToken: cfg.EnableDevToken,
 	})
 
@@ -173,8 +174,8 @@ func main() {
 		EventStore: eventStore,
 		Logger:     log,
 	})
-	ingest.RegisterRoutes(app, eventStore, log, cfg.JWTSecret)
-	analytics.RegisterRoutes(app, eventStore, log, cfg.JWTSecret)
+	ingest.RegisterRoutes(app, eventStore, log, cfg.JWTSecret, pgPool)
+	analytics.RegisterRoutes(app, eventStore, log, cfg.JWTSecret, pgPool)
 
 	gemini := reports.NewGeminiClient(cfg.GeminiAPIKey, "gemini-2.5-flash")
 	reports.RegisterRoutes(app, reports.Service{
@@ -182,6 +183,7 @@ func main() {
 		EventStore: eventStore,
 		Gemini:     gemini,
 		Logger:     log,
+		Pool:       pgPool,
 		JWTSecret:  cfg.JWTSecret,
 	})
 

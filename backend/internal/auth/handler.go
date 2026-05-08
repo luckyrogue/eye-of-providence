@@ -8,17 +8,19 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
-const tokenTTL = 90 * 24 * time.Hour
+const tokenTTL = 14 * 24 * time.Hour
 
 type Service struct {
 	JWTSecret      string
 	GitHub         *GitHubOAuth
 	Logger         *zap.Logger
 	Users          *UsersPG
-	EnableDevToken bool // false в production — роут /dev-token не регистрируется
+	Pool           *pgxpool.Pool // нужен для чтения token_version при выпуске JWT
+	EnableDevToken bool          // false в production — роут /dev-token не регистрируется
 }
 
 func RegisterRoutes(app *fiber.App, s Service) {
@@ -58,14 +60,17 @@ func RegisterRoutes(app *fiber.App, s Service) {
 		// Детерминированный UUID на основе github user.id — позволяет
 		// ClickHouse user_id оставаться UUID-типизированным.
 		userUUID := uuid.NewSHA1(uuid.NameSpaceURL, []byte(fmt.Sprintf("github:%d", user.ID)))
-		email := user.Email
-		if email == "" {
-			email = fmt.Sprintf("github-%s@local.eop", user.Login)
-		}
-		if err := s.Users.Upsert(c.Context(), userUUID, email, user.Login); err != nil {
+		// Email теперь всегда приходит verified из github.go — fallback не нужен.
+		// Если Upsert упал (например, email collision с существующим password-юзером)
+		// — JWT не выпускаем, иначе клиент получает токен на несуществующий аккаунт.
+		if err := s.Users.Upsert(c.Context(), userUUID, user.Email, user.Login); err != nil {
 			s.Logger.Warn("github user upsert failed", zap.Error(err))
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "could not link github account (email may already be in use)",
+			})
 		}
-		tok, err := IssueJWT(s.JWTSecret, userUUID.String(), email, "github", tokenTTL)
+		tv, _ := TokenVersion(c.Context(), s.Pool, userUUID)
+		tok, err := IssueJWT(s.JWTSecret, userUUID.String(), user.Email, "github", tv, tokenTTL)
 		if err != nil {
 			s.Logger.Error("issue jwt failed", zap.Error(err))
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "auth failed"})
@@ -93,7 +98,8 @@ func registerDevToken(g fiber.Router, s Service) {
 		if err := s.Users.Upsert(c.Context(), userID, email, ""); err != nil {
 			s.Logger.Warn("user upsert failed (continuing with token)", zap.Error(err))
 		}
-		tok, err := IssueJWT(s.JWTSecret, userID.String(), email, "dev", tokenTTL)
+		tv, _ := TokenVersion(c.Context(), s.Pool, userID)
+		tok, err := IssueJWT(s.JWTSecret, userID.String(), email, "dev", tv, tokenTTL)
 		if err != nil {
 			s.Logger.Error("issue jwt failed", zap.Error(err))
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "auth failed"})

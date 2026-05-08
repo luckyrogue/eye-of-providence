@@ -22,6 +22,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/store"
 )
 
 const (
@@ -75,7 +76,7 @@ func validateDisplayName(s string) (string, bool) {
 	return s, true
 }
 
-const tokenTTL = 90 * 24 * time.Hour
+const tokenTTL = 14 * 24 * time.Hour
 
 type Service struct {
 	Pool          *pgxpool.Pool
@@ -94,7 +95,7 @@ func RegisterRoutes(app *fiber.App, s Service) {
 	app.Get("/v1/invites/:code", s.handleInvitePreview)
 
 	// Authed
-	g := app.Group("/v1", auth.Middleware(s.JWTSecret))
+	g := app.Group("/v1", auth.Middleware(s.JWTSecret, s.Pool))
 
 	g.Get("/teams", s.handleListMyTeams)
 	g.Post("/teams", s.handleCreateTeam)
@@ -216,7 +217,8 @@ func (s Service) handleRegister(c *fiber.Ctx) error {
 		}
 	}
 
-	tok, err := auth.IssueJWT(s.JWTSecret, user.ID.String(), user.Email, "password", tokenTTL)
+	tv, _ := auth.TokenVersion(c.Context(), s.Pool, user.ID)
+	tok, err := auth.IssueJWT(s.JWTSecret, user.ID.String(), user.Email, "password", tv, tokenTTL)
 	if err != nil {
 		return s.internalErr(c, err)
 	}
@@ -251,7 +253,8 @@ func (s Service) handleLogin(c *fiber.Ctx) error {
 	if err != nil || !auth.VerifyPassword(user.PasswordHash, req.Password) {
 		return c.Status(401).JSON(fiber.Map{"error": "invalid email or password"})
 	}
-	tok, err := auth.IssueJWT(s.JWTSecret, user.ID.String(), user.Email, "password", tokenTTL)
+	tv, _ := auth.TokenVersion(c.Context(), s.Pool, user.ID)
+	tok, err := auth.IssueJWT(s.JWTSecret, user.ID.String(), user.Email, "password", tv, tokenTTL)
 	if err != nil {
 		return s.internalErr(c, err)
 	}
@@ -1095,6 +1098,25 @@ func (s Service) handleAdminDeleteUser(c *fiber.Ctx) error {
 	if uid == userID(c) {
 		return c.Status(409).JSON(fiber.Map{"error": "cannot delete yourself"})
 	}
+	// Защита: не оставить систему без хотя бы одного super_admin'а.
+	var role string
+	_ = s.Pool.QueryRow(c.Context(), "SELECT global_role FROM users WHERE id=$1", uid).Scan(&role)
+	if role == "super_admin" {
+		var count int
+		_ = s.Pool.QueryRow(c.Context(),
+			"SELECT count(*) FROM users WHERE global_role='super_admin'").Scan(&count)
+		if count <= 1 {
+			return c.Status(409).JSON(fiber.Map{"error": "cannot delete last super_admin"})
+		}
+	}
+	// ClickHouse cleanup ДО Postgres-удаления — после удаления users-row мы потеряем
+	// uid, и события юзера останутся orphan'ами (не привязаны к существующему юзеру).
+	if d, ok := EventStore.(store.UserDeleter); ok {
+		if err := d.DeleteUserData(c.Context(), uid.String()); err != nil {
+			s.Logger.Warn("clickhouse delete failed (continuing)",
+				zap.String("user_id", uid.String()), zap.Error(err))
+		}
+	}
 	if _, err := s.Pool.Exec(c.Context(), "DELETE FROM users WHERE id=$1", uid); err != nil {
 		return s.internalErr(c, err)
 	}
@@ -1131,6 +1153,9 @@ func (s Service) handleAdminUpdateUser(c *fiber.Ctx) error {
 			"UPDATE users SET global_role=$1 WHERE id=$2", role, uid); err != nil {
 			return s.internalErr(c, err)
 		}
+		// Инвалидируем существующие JWT этого юзера — иначе при демоуте super_admin
+		// сохранил бы доступ к /v1/admin/* до истечения 14d токена.
+		_ = auth.BumpTokenVersion(c.Context(), s.Pool, uid)
 	}
 	if req.DisplayName != nil {
 		dn, ok := validateDisplayName(*req.DisplayName)

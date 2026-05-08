@@ -8,17 +8,19 @@ import (
 )
 
 type Claims struct {
-	UserID   string `json:"sub"`
-	Email    string `json:"email,omitempty"`
-	Provider string `json:"provider,omitempty"` // github | google | dev
+	UserID       string `json:"sub"`
+	Email        string `json:"email,omitempty"`
+	Provider     string `json:"provider,omitempty"` // github | google | dev | password
+	TokenVersion int    `json:"tv"`                 // bumps на демоут/wipe → старые JWT инвалидируются
 	jwt.RegisteredClaims
 }
 
-func IssueJWT(secret, userID, email, provider string, ttl time.Duration) (string, error) {
+func IssueJWT(secret, userID, email, provider string, tokenVersion int, ttl time.Duration) (string, error) {
 	claims := Claims{
-		UserID:   userID,
-		Email:    email,
-		Provider: provider,
+		UserID:       userID,
+		Email:        email,
+		Provider:     provider,
+		TokenVersion: tokenVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(ttl)),
