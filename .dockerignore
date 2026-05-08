@@ -1,5 +1,6 @@
 # Используется когда build context = корень репо (для dashboard).
 
+
 .git
 .github
 .claude
