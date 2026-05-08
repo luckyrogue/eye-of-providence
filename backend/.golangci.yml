@@ -1,0 +1,46 @@
+version: "2"
+
+run:
+  timeout: 5m
+  go: "1.25"
+  build-tags:
+    - integration
+
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - gocritic
+    - misspell
+    - revive
+    - unconvert
+    - unparam
+    - prealloc
+
+  settings:
+    revive:
+      rules:
+        - name: var-naming
+        - name: exported
+          disabled: true
+        - name: unused-parameter
+          disabled: true
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+    misspell:
+      locale: US
+
+  exclusions:
+    paths:
+      - internal/migrate/sql
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - unparam
+          - gocritic
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
