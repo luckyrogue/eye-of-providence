@@ -1,4 +1,5 @@
 import type { UseFormRegister } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import type { SubscriptionForm } from "./subscription-modal";
 
 export function SubscriptionPaymentFields({
@@ -8,11 +9,12 @@ export function SubscriptionPaymentFields({
   register: UseFormRegister<SubscriptionForm>;
   enabled: boolean;
 }) {
+  const { t } = useTranslation("app");
   return (
     <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
       <label className="flex items-center gap-2 text-sm font-medium">
         <input type="checkbox" {...register("recordPayment")} />
-        Записать платёж
+        {t("admin.payment_record_label")}
       </label>
       {enabled && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -20,12 +22,12 @@ export function SubscriptionPaymentFields({
             type="number"
             min="0"
             {...register("amount")}
-            placeholder="сумма (центы)"
+            placeholder={t("admin.payment_amount_placeholder")}
             className="rounded-md border bg-background px-2 py-1.5 text-sm font-mono"
           />
           <input
             {...register("currency")}
-            placeholder="USD"
+            placeholder={t("admin.payment_currency_placeholder")}
             maxLength={3}
             className="rounded-md border bg-background px-2 py-1.5 text-sm font-mono uppercase"
           />
@@ -40,14 +42,12 @@ export function SubscriptionPaymentFields({
           </select>
           <input
             {...register("paymentNote")}
-            placeholder="ref / note"
+            placeholder={t("admin.payment_method_placeholder")}
             className="rounded-md border bg-background px-2 py-1.5 text-sm"
           />
         </div>
       )}
-      <p className="text-[11px] text-muted-foreground font-mono">
-        Сумма в центах: 5000 RUB → введи 500000. Запись добавится в журнал платежей.
-      </p>
+      <p className="text-[11px] text-muted-foreground font-mono">{t("admin.payment_amount_hint")}</p>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { Button, Eyebrow, Input, Modal, Select, useConfirm } from "@eop/ui";
 import {
   useAdminPayments,
@@ -42,6 +43,7 @@ export function SubscriptionModal({
   tz: string;
   onClose: () => void;
 }) {
+  const { t } = useTranslation(["app", "common"]);
   const setSub = useAdminSetSubscription();
   const runToast = useMutationToast();
   const confirm = useConfirm();
@@ -89,8 +91,8 @@ export function SubscriptionModal({
       };
     }
     const ok = await runToast(setSub.mutateAsync({ teamID: team.id, payload }), {
-      success: "Подписка обновлена",
-      error: "Не удалось обновить подписку",
+      success: t("app:admin.subscription_save_success"),
+      error: t("app:admin.subscription_update_failed"),
     });
     if (ok !== null) onClose();
   }
@@ -98,15 +100,18 @@ export function SubscriptionModal({
   async function revoke() {
     if (!team) return;
     const proceed = await confirm({
-      title: `Отозвать подписку у «${team.name}»?`,
-      description: "Команда уйдёт на free-тариф. Это можно обратить, выдав подписку заново.",
+      title: t("app:admin.subscription_revoke_confirm_title", { name: team.name }),
+      description: t("app:admin.subscription_revoke_confirm_lead"),
       destructive: true,
-      confirmText: "Отозвать",
+      confirmText: t("app:admin.subscription_revoke_confirm"),
     });
     if (!proceed) return;
     const ok = await runToast(
       setSub.mutateAsync({ teamID: team.id, payload: { plan: "free", until: "" } }),
-      { success: "Подписка отозвана", error: "Не удалось отозвать" },
+      {
+        success: t("app:admin.subscription_revoked_success"),
+        error: t("app:admin.subscription_revoke_failed"),
+      },
     );
     if (ok !== null) onClose();
   }
@@ -119,13 +124,13 @@ export function SubscriptionModal({
     <Modal open={!!team} onClose={onClose}>
       <form onSubmit={handleSubmit(onSave)} className="p-6 space-y-5">
         <div>
-          <Eyebrow>Subscription</Eyebrow>
+          <Eyebrow>{t("app:admin.subscription_eyebrow")}</Eyebrow>
           <h3 className="display-head text-2xl mt-2">{team.name}</h3>
           <p className="text-xs text-muted-foreground mt-1">{team.owner_email ?? "—"}</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Select label="План" mono {...register("plan")} className="w-full px-3 py-2">
+          <Select label={t("app:admin.subscription_plan_label")} mono {...register("plan")} className="w-full px-3 py-2">
             <option value="free">free</option>
             <option value="pro">pro</option>
             <option value="team">team</option>
@@ -133,7 +138,7 @@ export function SubscriptionModal({
           </Select>
           <div className="space-y-1">
             <label className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
-              Активна до
+              {t("app:admin.subscription_until_label")}
             </label>
             <input
               type="date"
@@ -155,7 +160,11 @@ export function SubscriptionModal({
           </div>
         </div>
 
-        <Input label="Заметка (видна owner'у)" placeholder="напр. «Custom deal до конца года»" {...register("note")} />
+        <Input
+          label={t("app:admin.subscription_note_label")}
+          placeholder={t("app:admin.subscription_note_placeholder")}
+          {...register("note")}
+        />
 
         {plan !== "free" && (
           <SubscriptionPaymentFields register={register} enabled={recordPayment} />
@@ -169,12 +178,14 @@ export function SubscriptionModal({
             disabled={setSub.isPending}
             className="text-destructive hover:bg-destructive/10"
           >
-            Отозвать (вернуть на free)
+            {t("app:admin.subscription_revoke")}
           </Button>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>Отмена</Button>
+            <Button type="button" variant="outline" onClick={onClose}>
+              {t("common:actions.cancel")}
+            </Button>
             <Button type="submit" disabled={setSub.isPending}>
-              {setSub.isPending ? "..." : "Сохранить"}
+              {setSub.isPending ? "..." : t("common:actions.save")}
             </Button>
           </div>
         </div>
