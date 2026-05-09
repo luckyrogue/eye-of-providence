@@ -8,7 +8,7 @@ export function setTz(tz: string) {
   localStorage.setItem(KEY, tz);
 }
 
-export const TIMEZONES: { label: string; value: string }[] = [
+const TIMEZONES: { label: string; value: string }[] = [
   { label: "Москва (UTC+3)", value: "Europe/Moscow" },
   { label: "Санкт-Петербург (UTC+3)", value: "Europe/Moscow" },
   { label: "Казань (UTC+3)", value: "Europe/Moscow" },

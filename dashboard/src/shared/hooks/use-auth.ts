@@ -13,7 +13,7 @@ function subscribe(cb: () => void) {
   return () => window.removeEventListener("storage", cb);
 }
 
-export function useUserId(): string | null {
+function useUserId(): string | null {
   // useSyncExternalStore — реакция на cross-tab logout (`storage` event).
   return useSyncExternalStore(
     subscribe,

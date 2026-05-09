@@ -3,7 +3,6 @@ package reports
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"time"
 
@@ -21,18 +20,6 @@ type PostgresStore struct {
 // NewPostgresStore — обёртка над уже открытым pool. Закрывать pool — обязанность caller.
 func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
 	return &PostgresStore{pool: pool}
-}
-
-// OpenPostgres — открывает свой pool. Используется когда reports — отдельный процесс.
-func OpenPostgres(ctx context.Context, dsn string) (*PostgresStore, error) {
-	pool, err := pgxpool.New(ctx, dsn)
-	if err != nil {
-		return nil, fmt.Errorf("pgxpool new: %w", err)
-	}
-	if err := pool.Ping(ctx); err != nil {
-		return nil, fmt.Errorf("postgres ping: %w", err)
-	}
-	return &PostgresStore{pool: pool}, nil
 }
 
 func (s *PostgresStore) Save(r Report) {

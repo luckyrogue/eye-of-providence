@@ -4,8 +4,8 @@
 #   (или: make dev)
 #
 # Что внутри:
-# - postgres:5432 — applied migrations 001/002/003 автоматически
-# - clickhouse:9000 / 8123 — applied migrations
+# - postgres:5432 — миграции применит API через golang-migrate (EOP_AUTO_MIGRATE=true в dev по дефолту)
+# - clickhouse:9000 / 8123 — то же самое
 # - redis:6379
 # - api:8080 — backend, hot-reload через air при изменении .go файлов
 # - dashboard:5173 — Vite dev server
@@ -24,7 +24,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
-      - ../backend/migrations:/migrations:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U eop -d eop"]
       interval: 3s
@@ -44,7 +43,6 @@ services:
       - "9000:9000"
     volumes:
       - clickhouse_dev_data:/var/lib/clickhouse
-      - ../backend/migrations:/migrations:ro
     ulimits:
       nofile:
         soft: 262144
@@ -63,57 +61,16 @@ services:
     volumes:
       - redis_dev_data:/data
 
-  # Применяет миграции один раз и завершается. Идемпотентно (IF NOT EXISTS / ON CONFLICT).
-  db-migrate:
-    image: postgres:16-alpine
-    container_name: eop-dev-db-migrate
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      PGPASSWORD: eop_dev
-    volumes:
-      - ../backend/migrations:/migrations:ro
-    entrypoint: >
-      sh -c "
-        echo '==> Applying Postgres migrations...';
-        for f in /migrations/0*.up.sql; do
-          [ -f \"$$f\" ] || continue;
-          echo \"  $$f\";
-          psql -h postgres -U eop -d eop -v ON_ERROR_STOP=1 -f \"$$f\";
-        done;
-        echo '==> Postgres migrations done';
-      "
-
-  ch-migrate:
-    image: clickhouse/clickhouse-server:24.10-alpine
-    container_name: eop-dev-ch-migrate
-    depends_on:
-      clickhouse:
-        condition: service_healthy
-    volumes:
-      - ../backend/migrations:/migrations:ro
-    entrypoint: >
-      sh -c "
-        echo '==> Applying ClickHouse migrations...';
-        for f in /migrations/clickhouse_*.sql; do
-          [ -f \"$$f\" ] || continue;
-          echo \"  $$f\";
-          clickhouse-client --host clickhouse --user eop --password eop_dev --database eop --multiquery < \"$$f\";
-        done;
-        echo '==> ClickHouse migrations done';
-      "
-
   api:
     build:
       context: ../backend
       dockerfile: Dockerfile.dev
     container_name: eop-dev-api
     depends_on:
-      db-migrate:
-        condition: service_completed_successfully
-      ch-migrate:
-        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
       redis:
         condition: service_started
     ports:

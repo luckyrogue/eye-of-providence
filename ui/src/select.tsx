@@ -1,7 +1,7 @@
 import { forwardRef, type SelectHTMLAttributes } from "react";
 import { cn } from "./cn";
 
-export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   mono?: boolean;
 }
