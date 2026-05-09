@@ -168,6 +168,15 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
           >
             {mode === "register" ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться"}
           </button>
+
+          {mode === "login" && (
+            <a
+              href="/forgot-password"
+              className="block w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Забыли пароль?
+            </a>
+          )}
         </CardContent>
       </Card>
     </div>

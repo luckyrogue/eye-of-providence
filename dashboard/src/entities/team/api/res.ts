@@ -6,7 +6,13 @@ type ListMembersRes = { members: TeamMember[] };
 type TeamSummaryRes = { members: MemberStat[] };
 type ListProjectsRes = { projects: Project[] };
 type ListCommitsRes = { commits: Commit[] };
-type CreateInviteRes = { code: string; expires_at: string };
+type CreateInviteRes = {
+  code: string;
+  expires_at: string;
+  max_uses?: number;
+  email?: string;
+  sent?: boolean;
+};
 
 export type {
   ListTeamsRes,

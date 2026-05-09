@@ -65,8 +65,12 @@ export const updateMemberRole = (teamID: string, userID: string, role: string) =
 export const removeMember = (teamID: string, userID: string) =>
   http.delete(`/v1/teams/${teamID}/members/${userID}`).then(() => undefined);
 
-export const createInvite = (teamID: string) =>
-  http.post<CreateInviteRes>(`/v1/teams/${teamID}/invites`).then((r) => r.data);
+export const createInvite = (teamID: string, email?: string) => {
+  const body = email ? { email } : undefined;
+  return http
+    .post<CreateInviteRes>(`/v1/teams/${teamID}/invites`, body)
+    .then((r) => r.data);
+};
 
 export const previewInvite = (code: string) =>
   http.get<InvitePreview>(`/v1/invites/${code}`).then((r) => r.data);

@@ -5,6 +5,12 @@ import { AppLayout } from "../widgets/app-layout";
 
 const Landing = lazy(() => import("../pages/landing").then((m) => ({ default: m.Landing })));
 const AuthRoute = lazy(() => import("../pages/auth").then((m) => ({ default: m.AuthRoute })));
+const ForgotPasswordRoute = lazy(() =>
+  import("../pages/password-reset").then((m) => ({ default: m.ForgotPasswordRoute })),
+);
+const ResetPasswordRoute = lazy(() =>
+  import("../pages/password-reset").then((m) => ({ default: m.ResetPasswordRoute })),
+);
 const OnboardingRoute = lazy(() =>
   import("../pages/onboarding").then((m) => ({ default: m.OnboardingRoute })),
 );
@@ -34,6 +40,8 @@ export const router = createBrowserRouter([
   { path: "/landing", element: <Navigate to="/" replace /> },
   { path: "/login", element: wrap(<AuthRoute mode="login" />) },
   { path: "/signup", element: wrap(<AuthRoute mode="register" />) },
+  { path: "/forgot-password", element: wrap(<ForgotPasswordRoute />) },
+  { path: "/reset-password", element: wrap(<ResetPasswordRoute />) },
   { path: "/onboarding", element: wrap(<OnboardingRoute />) },
   {
     element: <AppLayout />,

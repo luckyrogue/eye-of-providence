@@ -22,6 +22,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/mailer"
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
@@ -89,6 +90,8 @@ type Service struct {
 	Logger        *zap.Logger
 	InviteOnly    bool // регистрация только по invite (первый user всегда может — bootstrap)
 	BetaTeamLimit int  // 0 = без лимита, иначе — максимум команд для бета-программы
+	Mailer        mailer.Mailer
+	PublicURL     string // base URL дашборда для invite-ссылок в письме
 }
 
 func RegisterRoutes(app *fiber.App, s Service) {
@@ -96,6 +99,8 @@ func RegisterRoutes(app *fiber.App, s Service) {
 	a := app.Group("/v1/auth")
 	a.Post("/register", s.handleRegister)
 	a.Post("/login", s.handleLogin)
+	a.Post("/forgot-password", s.handleForgotPassword)
+	a.Post("/reset-password", s.handleResetPassword)
 	a.Get("/config", s.handleAuthConfig)
 	app.Get("/v1/invites/:code", s.handleInvitePreview)
 
@@ -740,15 +745,68 @@ func (s Service) handleCreateInvite(c *fiber.Ctx) error {
 	if !ok || (role != "owner" && role != "admin") {
 		return c.Status(403).JSON(fiber.Map{"error": "только owner/admin могут создавать invites"})
 	}
+
+	// Optional payload: {"email": "..."}. Без email — link-only (как раньше).
+	var req struct {
+		Email string `json:"email"`
+	}
+	_ = c.BodyParser(&req)
+	var emailPtr *string
+	if req.Email != "" {
+		clean, ok := validateEmail(req.Email)
+		if !ok {
+			return c.Status(400).JSON(fiber.Map{"error": "невалидный email"})
+		}
+		// Email-invite — только 1 use (линк не должен переисполь­зоваться).
+		emailPtr = &clean
+	}
+	maxUses := 10
+	if emailPtr != nil {
+		maxUses = 1
+	}
+
 	code := randomCode(16)
 	expires := time.Now().Add(7 * 24 * time.Hour)
-	_, err = s.Pool.Exec(c.Context(), `
-		INSERT INTO team_invites (team_id, code, created_by, max_uses, expires_at)
-		VALUES ($1, $2, $3, $4, $5)`, teamID, code, uid, 10, expires)
-	if err != nil {
+	if _, err = s.Pool.Exec(c.Context(), `
+		INSERT INTO team_invites (team_id, code, created_by, max_uses, expires_at, email)
+		VALUES ($1, $2, $3, $4, $5, $6)`, teamID, code, uid, maxUses, expires, emailPtr); err != nil {
 		return s.internalErr(c, err)
 	}
-	return c.JSON(fiber.Map{"code": code, "expires_at": expires, "max_uses": 10})
+
+	// Если email задан — шлём письмо. Любой fail при отправке логируем, но
+	// не падаем: инвайт уже создан, юзер может скопировать ссылку руками.
+	sentAt := time.Time{}
+	if emailPtr != nil && s.Mailer != nil {
+		if err := s.sendInviteEmail(c.Context(), teamID, uid, *emailPtr, code); err != nil {
+			s.Logger.Warn("invite email send failed",
+				zap.String("team", teamID.String()),
+				zap.String("to", *emailPtr),
+				zap.Error(err))
+		} else {
+			sentAt = time.Now()
+			_, _ = s.Pool.Exec(c.Context(),
+				`UPDATE team_invites SET sent_at = $1 WHERE code = $2`, sentAt, code)
+		}
+	}
+
+	out := fiber.Map{"code": code, "expires_at": expires, "max_uses": maxUses}
+	if emailPtr != nil {
+		out["email"] = *emailPtr
+		out["sent"] = !sentAt.IsZero()
+	}
+	return c.JSON(out)
+}
+
+// sendInviteEmail — собирает данные (имя команды + display_name приглашающего)
+// и шлёт письмо через Mailer. Не делает ретраев — Mailer.Send сам отвечает за HTTP.
+func (s Service) sendInviteEmail(ctx context.Context, teamID, inviterID uuid.UUID, to, code string) error {
+	var teamName, inviterName string
+	_ = s.Pool.QueryRow(ctx, `SELECT name FROM teams WHERE id = $1`, teamID).Scan(&teamName)
+	_ = s.Pool.QueryRow(ctx, `SELECT COALESCE(display_name, '') FROM users WHERE id = $1`, inviterID).Scan(&inviterName)
+
+	inviteURL := strings.TrimRight(s.PublicURL, "/") + "/?invite=" + code
+	subject, html, text := mailer.InviteEmail(teamName, inviteURL, inviterName)
+	return s.Mailer.Send(ctx, to, subject, html, text)
 }
 
 func (s Service) handleInvitePreview(c *fiber.Ctx) error {

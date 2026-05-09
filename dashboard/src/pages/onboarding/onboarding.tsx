@@ -33,6 +33,7 @@ export function Onboarding({
   const [teamID, setTeamID] = useState<string | null>(initialTeamID);
   const [teamName, setTeamName] = useState("");
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [inviteEmailSent, setInviteEmailSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const runToast = useMutationToast();
 
@@ -53,12 +54,18 @@ export function Onboarding({
     }
   }
 
-  async function generateInvite() {
+  async function generateInvite(email?: string) {
     if (!teamID) return;
     setBusy(true);
-    const r = await runToast(createInvite(teamID), { error: "Не удалось создать invite" });
+    const r = await runToast(createInvite(teamID, email), {
+      success: email ? "Приглашение отправлено" : undefined,
+      error: "Не удалось создать invite",
+    });
     setBusy(false);
-    if (r) setInviteCode(r.code);
+    if (r) {
+      setInviteCode(r.code);
+      if (email && r.sent) setInviteEmailSent(true);
+    }
   }
 
   function copyInvite() {
@@ -93,6 +100,7 @@ export function Onboarding({
             <InviteStep
               busy={busy}
               inviteUrl={inviteUrl}
+              inviteEmailSent={inviteEmailSent}
               onGenerate={generateInvite}
               onCopy={copyInvite}
               onSkip={() => setStep("event")}

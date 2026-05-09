@@ -1,7 +1,12 @@
 //go:build integration
 
-// Запуск: EOP_TEST_PG_DSN=postgres://eop:eop_dev@localhost:5432/eop_test \
-//   go test -tags=integration ./internal/migrate/...
+// Запуск:
+//   EOP_TEST_PG_MIGRATE_DSN=postgres://eop:eop_dev@localhost:5432/eop_migrate_test \
+//     go test -tags=integration ./internal/migrate/...
+//
+// ВАЖНО: эти тесты deлают `m.Down()` (полный сброс схемы) и должны работать
+// против ВЫДЕЛЕННОЙ БД. Если запустить против общего EOP_TEST_PG_DSN, с которым
+// идут teams-integration-тесты, будут гонки. Поэтому отдельный env var.
 
 package migrate
 
@@ -15,13 +20,19 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 )
 
+func dsnFromEnv(t *testing.T) string {
+	t.Helper()
+	dsn := os.Getenv("EOP_TEST_PG_MIGRATE_DSN")
+	if dsn == "" {
+		t.Skip("EOP_TEST_PG_MIGRATE_DSN not set; skipping migrate integration test (destructive)")
+	}
+	return dsn
+}
+
 // TestPostgresRoundtrip — up до головы, потом down all, потом up снова.
 // Если хоть одна .down.sql битая — тест поймает.
 func TestPostgresRoundtrip(t *testing.T) {
-	dsn := os.Getenv("EOP_TEST_PG_DSN")
-	if dsn == "" {
-		t.Skip("EOP_TEST_PG_DSN not set; skipping integration test")
-	}
+	dsn := dsnFromEnv(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
@@ -80,10 +91,7 @@ func TestPostgresRoundtrip(t *testing.T) {
 // TestPostgresStepByStep — гарантирует, что каждая отдельная up.sql + down.sql
 // валидна в обе стороны. Идём по одной от 0 до head, потом обратно по одной.
 func TestPostgresStepByStep(t *testing.T) {
-	dsn := os.Getenv("EOP_TEST_PG_DSN")
-	if dsn == "" {
-		t.Skip("EOP_TEST_PG_DSN not set; skipping integration test")
-	}
+	dsn := dsnFromEnv(t)
 
 	m, err := NewPostgres(dsn)
 	if err != nil {

@@ -77,6 +77,16 @@ export async function dismissOnboarding(): Promise<void> {
   await http.post("/v1/me/onboarding/dismiss");
 }
 
+export async function forgotPassword(email: string): Promise<void> {
+  // Backend всегда отвечает 200 (не палит существование email'а),
+  // нам остаётся только показать "если такой email есть, мы прислали письмо".
+  await http.post("/v1/auth/forgot-password", { email });
+}
+
+export async function resetPassword(token: string, password: string): Promise<void> {
+  await http.post("/v1/auth/reset-password", { token, password });
+}
+
 export async function deleteMyData(): Promise<void> {
   await http.delete("/v1/me/data");
   localStorage.removeItem("eop_token");

@@ -26,6 +26,7 @@ import (
 	"github.com/eye-of-providence/backend/internal/config"
 	"github.com/eye-of-providence/backend/internal/ingest"
 	eoplog "github.com/eye-of-providence/backend/internal/log"
+	"github.com/eye-of-providence/backend/internal/mailer"
 	"github.com/eye-of-providence/backend/internal/metrics"
 	"github.com/eye-of-providence/backend/internal/migrate"
 	"github.com/eye-of-providence/backend/internal/reports"
@@ -158,6 +159,7 @@ func main() {
 		EnableDevToken: cfg.EnableDevToken,
 	})
 
+	mail := chooseMailer(cfg, log)
 	teams.EventStore = eventStore
 	teams.RegisterRoutes(app, teams.Service{
 		Pool:          pgPool,
@@ -165,6 +167,8 @@ func main() {
 		Logger:        log,
 		InviteOnly:    cfg.InviteOnly,
 		BetaTeamLimit: cfg.BetaTeamLimit,
+		Mailer:        mail,
+		PublicURL:     cfg.PublicURL,
 	})
 
 	// Protected routes — навешивают auth middleware на весь /v1.
@@ -361,6 +365,15 @@ func chooseEventStore(cfg config.Config, log *zap.Logger) store.EventStore {
 	}
 	log.Info("clickhouse event store ready")
 	return ch
+}
+
+func chooseMailer(cfg config.Config, log *zap.Logger) mailer.Mailer {
+	if cfg.ResendAPIKey == "" {
+		log.Info("mailer noop: EOP_RESEND_API_KEY empty (emails will only be logged)")
+		return mailer.Noop(log)
+	}
+	log.Info("mailer ready", zap.String("from", cfg.MailFrom))
+	return mailer.NewResend(cfg.ResendAPIKey, cfg.MailFrom, log)
 }
 
 func chooseReportStore(log *zap.Logger, pool *pgxpool.Pool) reports.ReportStore {
