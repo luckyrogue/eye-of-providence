@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - uses: actions/setup-go@v5
@@ -43,7 +43,7 @@ jobs:
     defaults:
       run: { working-directory: backend }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with: { persist-credentials: false }
       - uses: actions/setup-go@v5
         with:
@@ -88,7 +88,7 @@ jobs:
     env:
       EOP_TEST_PG_DSN: postgres://eop:eop_dev@localhost:5432/eop_test?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with: { persist-credentials: false }
       - uses: actions/setup-go@v5
         with:
