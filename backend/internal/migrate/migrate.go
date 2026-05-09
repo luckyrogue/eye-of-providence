@@ -22,11 +22,15 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
-	// Регистрируем драйверы по схеме URL: postgres:// и clickhouse://.
 	_ "github.com/golang-migrate/migrate/v4/database/clickhouse"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	// pgx/v5 driver — та же библиотека, что и app pool (jackc/pgx/v5),
+	// одинаковая семантика DSN. Альтернатива (database/postgres → lib/pq)
+	// требует явный sslmode=disable, иначе на серверах без SSL даёт
+	// "SSL is not enabled on the server" — ловили в prod.
+	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
@@ -56,11 +60,29 @@ func newMigrator(subdir, dsn string) (*migrate.Migrate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("iofs source for %s: %w", subdir, err)
 	}
+	// PG: переключаем схему DSN с `postgres://` на `pgx5://`, чтобы
+	// golang-migrate использовал pgx/v5 driver (а не lib/pq).
+	if subdir == pgSubdir {
+		dsn = toPgx5DSN(dsn)
+	}
 	m, err := migrate.NewWithSourceInstance("iofs", src, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("migrate init for %s: %w", subdir, err)
 	}
 	return m, nil
+}
+
+// toPgx5DSN — `postgres://...` / `postgresql://...` → `pgx5://...`.
+// Юзер держит в env стандартный postgres:// DSN, мы перенаправляем golang-migrate
+// на pgx/v5 driver. Если уже pgx5:// — оставляем как есть.
+func toPgx5DSN(dsn string) string {
+	if strings.HasPrefix(dsn, "postgres://") {
+		return "pgx5://" + strings.TrimPrefix(dsn, "postgres://")
+	}
+	if strings.HasPrefix(dsn, "postgresql://") {
+		return "pgx5://" + strings.TrimPrefix(dsn, "postgresql://")
+	}
+	return dsn
 }
 
 // RunPostgres — auto-migrate on API startup. No-op if dsn пустой.
