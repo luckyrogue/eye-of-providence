@@ -54,6 +54,11 @@ RUN pnpm -F @eop/dashboard build
 ############################
 FROM nginx:1.27-alpine
 
+# Подтягиваем последние patch-версии apk-пакетов (libcrypto3, libssl3, libxml2,
+# zlib и пр.), даже если base-image отстал на пару дней. Trivy gates на
+# CRITICAL — фиксят vendors через apk-репозиторий быстрее, чем в base-tag.
+RUN apk upgrade --no-cache && rm -rf /var/cache/apk/*
+
 # Go-бинарь + migrate CLI (для ручного rollback в проде)
 COPY --from=api-builder /out/api /usr/local/bin/api
 COPY --from=api-builder /out/migrate /usr/local/bin/migrate
