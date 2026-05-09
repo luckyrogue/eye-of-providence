@@ -1,0 +1,88 @@
+# Reusable: build, scan, push combined image.
+#
+# Push происходит ТОЛЬКО на main (callerproверяет github.ref). На PR — load.
+# Trivy: CRITICAL = block (exit 1), HIGH = report (exit 0). HIGH SARIF
+# выгружается в GH Security tab, чтобы видеть тренд.
+name: _docker
+
+on:
+  workflow_call:
+    inputs:
+      push:
+        type: boolean
+        required: true
+        description: "Толкать образ в GHCR (true только на main)"
+    outputs:
+      image:
+        description: "Полное имя образа с тегом github.sha"
+        value: ${{ jobs.build.outputs.image }}
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+jobs:
+  build:
+    name: docker / build + scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: docker/setup-buildx-action@v3
+      - name: Compute image base (lowercase owner)
+        id: meta
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/eop"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          echo "image=$IMAGE:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - name: Login to GHCR
+        if: ${{ inputs.push }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Build (& push if main)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: ${{ inputs.push }}
+          load: ${{ !inputs.push }}
+          build-args: |
+            VITE_BACKEND_URL=${{ vars.VITE_BACKEND_URL || '/api' }}
+            CSP_CONNECT_SRC=${{ vars.CSP_CONNECT_SRC || '''self''' }}
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+      - name: Trivy CRITICAL (block)
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          format: table
+          severity: CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+      - name: Trivy HIGH (SARIF, non-blocking)
+        if: always()
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          format: sarif
+          output: trivy-image.sarif
+          severity: HIGH
+          exit-code: "0"
+      - name: Upload Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image

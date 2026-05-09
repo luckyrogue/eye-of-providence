@@ -1,0 +1,106 @@
+# Nightly deeper scans — runs at 03:00 UTC daily.
+#
+# Зачем отдельно от ci.yml:
+#   - CodeQL security-extended медленнее (~2x), не хочется тормозить PR
+#   - Trivy на ghcr.io image: видим новые CVE на УЖЕ задеплоенном image
+#     (CI не пересобирается без push'а)
+#   - pnpm audit: новые advisories на текущем lockfile
+#
+# Workflow_dispatch чтобы можно было запустить руками.
+name: Nightly
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # 03:00 UTC ежедневно
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  codeql-extended:
+    name: nightly / codeql security-extended
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: go
+            build-mode: autobuild
+          - language: javascript-typescript
+            build-mode: none
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - if: matrix.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: backend/go.sum
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended
+      - if: matrix.language == 'go'
+        run: cd backend && go build ./...
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "nightly-/language:${{ matrix.language }}"
+
+  trivy-image:
+    name: nightly / trivy on latest image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+      packages: read
+    steps:
+      - name: Compute image
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/eop:latest" >> "$GITHUB_ENV"
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Trivy ALL severities (SARIF)
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}
+          format: sarif
+          output: trivy-nightly.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: false
+          exit-code: "0"
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-nightly.sarif
+          category: trivy-nightly
+
+  pnpm-audit:
+    name: nightly / pnpm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: pnpm audit (production deps, fail on HIGH+)
+        run: pnpm audit --prod --audit-level high
+        continue-on-error: true # не блокируем cron, только сигнал

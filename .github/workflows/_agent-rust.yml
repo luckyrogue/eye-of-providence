@@ -1,0 +1,31 @@
+# Reusable: Tauri Rust agent — cargo check.
+# macos-runner т.к. agent выпускается под macOS (с Apple-specific deps).
+name: _agent-rust
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: agent-rust / check
+    runs-on: macos-latest
+    timeout-minutes: 20
+    defaults:
+      run: { working-directory: agent/src-tauri }
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: agent/src-tauri
+      - name: cargo check
+        run: cargo check --locked
+      - name: cargo fmt
+        run: cargo fmt --check
+      - name: cargo clippy
+        run: cargo clippy -- -D warnings
+        continue-on-error: true # пока не уверены что clippy clean — не блокируем

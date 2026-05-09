@@ -1,0 +1,46 @@
+# Reusable: frontend matrix per pnpm workspace.
+#
+# Каждый workspace проверяется параллельно. install — кешируется (pnpm store).
+name: _frontend
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: frontend / ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: "@eop/ui"
+            cmd: "lint"
+            label: "ui"
+          - package: "@eop/dashboard"
+            cmd: "build"
+            label: "dashboard"
+          - package: "@eop/agent"
+            cmd: "build"
+            label: "agent"
+          - package: "@eop/browser-extension"
+            cmd: "build"
+            label: "browser-extension"
+          - package: "eop-vscode"
+            cmd: "compile"
+            label: "vscode"
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run ${{ matrix.cmd }} for ${{ matrix.package }}
+        run: pnpm -F ${{ matrix.package }} ${{ matrix.cmd }}

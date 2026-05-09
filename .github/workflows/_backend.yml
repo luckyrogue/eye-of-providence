@@ -1,0 +1,99 @@
+# Reusable: backend lint + unit + integration + build.
+#
+# Вызывается из ci.yml. permissions наследуются от caller'а (минимум — read).
+# Postgres-services поднимаются только для integration-job, чтобы lint/unit
+# не ждали PG ready.
+name: _backend
+
+on:
+  workflow_call:
+    inputs:
+      run-integration:
+        type: boolean
+        default: true
+        description: "Запускать integration-тесты (требуют PG)"
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: backend / lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: backend/go.sum
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.12
+          working-directory: backend
+          args: --timeout=5m
+
+  unit:
+    name: backend / unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run: { working-directory: backend }
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: backend/go.sum
+      - run: go mod download
+      - name: go vet
+        run: go vet ./...
+      - name: Unit tests
+        run: go test -race -count=1 -coverprofile=coverage.out ./...
+      - name: Build
+        run: go build ./...
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage.out
+          retention-days: 7
+
+  integration:
+    name: backend / integration
+    if: ${{ inputs.run-integration }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: eop
+          POSTGRES_PASSWORD: eop_dev
+          POSTGRES_DB: eop_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run: { working-directory: backend }
+    env:
+      EOP_TEST_PG_DSN: postgres://eop:eop_dev@localhost:5432/eop_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: backend/go.sum
+      - run: go mod download
+      - name: Integration tests (Postgres)
+        run: go test -race -count=1 -tags=integration ./internal/teams/...

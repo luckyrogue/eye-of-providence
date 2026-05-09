@@ -1,0 +1,18 @@
+# CODEOWNERS — автоматический request-review при PR в указанные пути.
+#
+# Sole maintainer для всех областей пока проект соло. По мере роста команды
+# раздать по доменам (backend, frontend, agent, infra).
+#
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# default fallback
+*                           @luckyrogue
+
+# Critical paths требуют review:
+.github/                    @luckyrogue
+infra/                      @luckyrogue
+Dockerfile                  @luckyrogue
+backend/internal/migrate/   @luckyrogue
+backend/internal/auth/      @luckyrogue
+.env.example                @luckyrogue
+SECURITY.md                 @luckyrogue

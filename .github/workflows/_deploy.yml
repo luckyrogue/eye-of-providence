@@ -1,0 +1,50 @@
+# Reusable: trigger Dokploy webhook + post-deploy /healthz polling.
+#
+# Webhook в secret'е, healthcheck-URL — в repo vars (необязательная).
+name: _deploy
+
+on:
+  workflow_call:
+    secrets:
+      DOKPLOY_WEBHOOK:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy / dokploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: ${{ vars.HEALTH_URL }}
+    steps:
+      - name: Trigger Dokploy webhook
+        env:
+          WEBHOOK: ${{ secrets.DOKPLOY_WEBHOOK }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "::error::DOKPLOY_WEBHOOK secret is not set"
+            exit 1
+          fi
+          curl -fsSL -X POST "$WEBHOOK"
+      # Ждём пока новый image поднимется и /healthz вернёт 200.
+      - name: Wait for /healthz
+        if: ${{ vars.HEALTH_URL != '' }}
+        env:
+          HEALTH_URL: ${{ vars.HEALTH_URL }}
+        run: |
+          echo "Polling $HEALTH_URL ..."
+          for i in $(seq 1 60); do
+            sleep 5
+            code=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 5 "$HEALTH_URL" || echo "000")
+            echo "  attempt $i → HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "::notice::deploy healthy after $((i*5))s"
+              exit 0
+            fi
+          done
+          echo "::error::deploy did not become healthy within 5min"
+          exit 1

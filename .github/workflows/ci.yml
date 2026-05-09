@@ -1,3 +1,19 @@
+# Main CI orchestrator.
+#
+# Архитектура:
+#   1. detect-changes — paths-filter определяет какие зоны затронуты.
+#   2. _security.yml — всегда (codeql + gitleaks + trivy fs).
+#   3. _backend / _frontend / _agent-rust — только если соответствующие
+#      пути изменились или ветка main (полный прогон).
+#   4. _docker — после успеха backend + frontend + security.
+#   5. _deploy — только push на main, после docker.
+#
+# permissions: минимум `contents: read` на верхнем уровне; reusable
+# workflow'ы запрашивают доп. права (packages: write для GHCR,
+# security-events: write для SARIF) — но только в своих джобах.
+#
+# concurrency: PR-runs кенселятся на новых push'ах. На main НЕ кенселим —
+# чтобы не сломать deploy в середине.
 name: CI
 
 on:
@@ -5,8 +21,6 @@ on:
     branches: [main]
   pull_request:
 
-# Один последний run на ветку — старые отменяются. На main не отменяем,
-# чтобы не сломать deploy.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -15,175 +29,113 @@ permissions:
   contents: read
 
 jobs:
-  backend-lint:
+  changes:
+    name: detect-changes
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      agent_rust: ${{ steps.filter.outputs.agent_rust }}
+      docker: ${{ steps.filter.outputs.docker }}
+      ci: ${{ steps.filter.outputs.ci }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+        with: { persist-credentials: false }
+      - id: filter
+        uses: dorny/paths-filter@v3
         with:
-          go-version: "1.25"
-          cache-dependency-path: backend/go.sum
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v7
-        with:
-          version: v2.12
-          working-directory: backend
-          args: --timeout=5m
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'dashboard/**'
+              - 'ui/**'
+              - 'agent/src/**'
+              - 'agent/index.html'
+              - 'agent/package.json'
+              - 'agent/vite.config.ts'
+              - 'agent/tsconfig.json'
+              - 'agent/tailwind.config.js'
+              - 'agent/postcss.config.js'
+              - 'browser-extension/**'
+              - 'ide-vscode/**'
+              - 'pnpm-workspace.yaml'
+              - 'pnpm-lock.yaml'
+              - 'package.json'
+            agent_rust:
+              - 'agent/src-tauri/**'
+            docker:
+              - 'Dockerfile'
+              - 'backend/**'
+              - 'dashboard/**'
+              - 'ui/**'
+            ci:
+              - '.github/**'
+
+  security:
+    name: security
+    needs: changes
+    uses: ./.github/workflows/_security.yml
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: read
 
   backend:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: eop
-          POSTGRES_PASSWORD: eop_dev
-          POSTGRES_DB: eop_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    defaults:
-      run:
-        working-directory: backend
-    env:
-      EOP_TEST_PG_DSN: postgres://eop:eop_dev@localhost:5432/eop_test?sslmode=disable
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.25"
-          cache-dependency-path: backend/go.sum
-      - run: go mod download
-      - name: Unit tests
-        run: go test -race -count=1 ./...
-      - name: Integration tests (Postgres)
-        run: go test -race -count=1 -tags=integration ./internal/teams/...
-      - run: go build ./...
+    name: backend
+    needs: changes
+    if: |
+      needs.changes.outputs.backend == 'true' ||
+      needs.changes.outputs.ci == 'true' ||
+      github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/_backend.yml
 
   frontend:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm -F @eop/ui lint
-      - name: Type-check + build dashboard
-        run: pnpm -F @eop/dashboard build
-      - run: pnpm -F @eop/agent build
-      - name: Build browser-extension
-        run: pnpm -F @eop/browser-extension build
-      - name: Compile vscode extension
-        run: pnpm -F eop-vscode compile
+    name: frontend
+    needs: changes
+    if: |
+      needs.changes.outputs.frontend == 'true' ||
+      needs.changes.outputs.ci == 'true' ||
+      github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/_frontend.yml
 
   agent-rust:
-    runs-on: macos-latest
-    timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: agent/src-tauri
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: agent/src-tauri
-      - run: cargo check
+    name: agent-rust
+    needs: changes
+    if: |
+      needs.changes.outputs.agent_rust == 'true' ||
+      needs.changes.outputs.ci == 'true'
+    uses: ./.github/workflows/_agent-rust.yml
 
+  # Docker: на PR — build-only (load), на main — push в GHCR.
+  # Запускаем только если backend+frontend+security прошли (или skipped).
   docker:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [backend, backend-lint, frontend]
+    name: docker
+    needs: [changes, backend, frontend, security]
+    if: |
+      always() && !cancelled() &&
+      (needs.backend.result == 'success' || needs.backend.result == 'skipped') &&
+      (needs.frontend.result == 'success' || needs.frontend.result == 'skipped') &&
+      needs.security.result == 'success' &&
+      (needs.changes.outputs.docker == 'true' ||
+       needs.changes.outputs.ci == 'true' ||
+       github.ref == 'refs/heads/main')
+    uses: ./.github/workflows/_docker.yml
+    with:
+      push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     permissions:
       contents: read
       packages: write
       security-events: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - name: Compute image base (lowercase owner)
-        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/eop" >> "$GITHUB_ENV"
-      - name: Login to GHCR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build (& push on main) combined image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile
-          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          load: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
-          build-args: |
-            VITE_BACKEND_URL=${{ vars.VITE_BACKEND_URL || '/api' }}
-            CSP_CONNECT_SRC=${{ vars.CSP_CONNECT_SRC || '''self''' }}
-          tags: |
-            ${{ env.IMAGE }}:${{ github.sha }}
-            ${{ env.IMAGE }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      - name: Trivy scan (CRITICAL — block, HIGH — report)
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
-          format: table
-          severity: CRITICAL
-          exit-code: "1"
-          ignore-unfixed: true
-      - name: Trivy report (HIGH, non-blocking)
-        if: always()
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
-          format: table
-          severity: HIGH
-          exit-code: "0"
 
   deploy:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: [docker]
+    name: deploy
+    needs: docker
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - name: Trigger Dokploy webhook
-        env:
-          WEBHOOK: ${{ secrets.DOKPLOY_WEBHOOK }}
-        run: |
-          if [ -z "$WEBHOOK" ]; then
-            echo "::error::DOKPLOY_WEBHOOK secret is not set"
-            exit 1
-          fi
-          curl -fsSL -X POST "$WEBHOOK"
-      # Ждём пока новый image поднимется и /healthz вернёт 200.
-      # Если Dokploy откатился (failed migration, broken env, и т.п.) —
-      # CI красный и видно сразу, а не через час по тикету пользователей.
-      - name: Wait for /healthz
-        if: ${{ vars.HEALTH_URL != '' }}
-        env:
-          HEALTH_URL: ${{ vars.HEALTH_URL }}
-        run: |
-          echo "Polling $HEALTH_URL ..."
-          for i in $(seq 1 60); do
-            sleep 5
-            code=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 5 "$HEALTH_URL" || echo "000")
-            echo "  attempt $i → HTTP $code"
-            if [ "$code" = "200" ]; then
-              echo "::notice::deploy healthy after $((i*5))s"
-              exit 0
-            fi
-          done
-          echo "::error::deploy did not become healthy within 5min"
-          exit 1
+    uses: ./.github/workflows/_deploy.yml
+    secrets:
+      DOKPLOY_WEBHOOK: ${{ secrets.DOKPLOY_WEBHOOK }}
