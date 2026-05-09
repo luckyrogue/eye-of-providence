@@ -25,4 +25,10 @@ type AuthResponse = {
 
 type AuthConfig = { invite_only: boolean; is_first_user: boolean };
 
-export type { Me, Profile, AuthResponse, AuthConfig };
+type OnboardingStatus = {
+  teams_count: number;
+  has_event: boolean;
+  dismissed: boolean;
+};
+
+export type { Me, Profile, AuthResponse, AuthConfig, OnboardingStatus };

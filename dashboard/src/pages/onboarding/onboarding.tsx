@@ -3,22 +3,34 @@ import { Eyebrow, Stepper } from "@eop/ui";
 import { createInvite, createTeam } from "../../entities/team";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
 import { CompanyStep } from "./ui/company-step";
-import { InviteStep } from "./ui/invite-step";
 import { InstallStep } from "./ui/install-step";
-import { DoneStep } from "./ui/done-step";
+import { InviteStep } from "./ui/invite-step";
+import { EventStep } from "./ui/event-step";
 
-type Step = "company" | "invite" | "install" | "done";
+// Порядок шагов из ROADMAP.md:
+//   создай команду → установи агент → пригласи людей → первое событие.
+// install идёт ПЕРЕД invite, потому что приглашённые поставят агент сами,
+// а владелец должен убедиться что у него самого всё работает первым.
+type Step = "company" | "install" | "invite" | "event";
 
 const STEPS = [
   { key: "company", label: "Компания" },
-  { key: "invite", label: "Команда" },
   { key: "install", label: "Агент" },
-  { key: "done", label: "Готово" },
+  { key: "invite", label: "Команда" },
+  { key: "event", label: "Событие" },
 ];
 
-export function Onboarding({ onFinish }: { onFinish: () => void }) {
-  const [step, setStep] = useState<Step>("company");
-  const [teamID, setTeamID] = useState<string | null>(null);
+export function Onboarding({
+  initialStep,
+  initialTeamID,
+  onFinish,
+}: {
+  initialStep: Step;
+  initialTeamID: string | null;
+  onFinish: () => void;
+}) {
+  const [step, setStep] = useState<Step>(initialStep);
+  const [teamID, setTeamID] = useState<string | null>(initialTeamID);
   const [teamName, setTeamName] = useState("");
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -37,7 +49,7 @@ export function Onboarding({ onFinish }: { onFinish: () => void }) {
     if (r) {
       setTeamID(r.id);
       localStorage.setItem("eop_team", r.id);
-      setStep("invite");
+      setStep("install");
     }
   }
 
@@ -64,7 +76,7 @@ export function Onboarding({ onFinish }: { onFinish: () => void }) {
             Let's set up <em>your company</em>.
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">
-            Four-минутная установка. Можно skip'нуть любой шаг и вернуться позже.
+            Четыре шага, ~5 минут. Любой шаг можно пропустить и вернуться позже.
           </p>
         </div>
 
@@ -74,20 +86,20 @@ export function Onboarding({ onFinish }: { onFinish: () => void }) {
           {step === "company" && (
             <CompanyStep name={teamName} setName={setTeamName} busy={busy} onSubmit={createCompany} />
           )}
+          {step === "install" && (
+            <InstallStep onSkip={() => setStep("invite")} onContinue={() => setStep("invite")} />
+          )}
           {step === "invite" && (
             <InviteStep
               busy={busy}
               inviteUrl={inviteUrl}
               onGenerate={generateInvite}
               onCopy={copyInvite}
-              onSkip={() => setStep("install")}
-              onContinue={() => setStep("install")}
+              onSkip={() => setStep("event")}
+              onContinue={() => setStep("event")}
             />
           )}
-          {step === "install" && (
-            <InstallStep onSkip={() => setStep("done")} onContinue={() => setStep("done")} />
-          )}
-          {step === "done" && <DoneStep onFinish={onFinish} />}
+          {step === "event" && <EventStep onFinish={onFinish} onSkip={onFinish} />}
         </div>
       </div>
     </div>

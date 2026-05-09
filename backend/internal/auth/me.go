@@ -13,8 +13,11 @@ import (
 )
 
 // MeService — endpoints для текущего пользователя:
-//   GET    /v1/me              — профиль (id, email, github_login)
-//   DELETE /v1/me/data         — стирает все события и отчёты пользователя
+//
+//	GET    /v1/me                       — профиль (id, email, github_login)
+//	GET    /v1/me/onboarding-status     — состояние онбординга (для wizard'а)
+//	POST   /v1/me/onboarding/dismiss    — пометить wizard завершённым/закрытым
+//	DELETE /v1/me/data                  — стирает все события и отчёты пользователя
 type MeService struct {
 	JWTSecret  string
 	Pool       *pgxpool.Pool // может быть nil (in-memory mode)
@@ -54,6 +57,9 @@ func RegisterMeRoutes(app *fiber.App, s MeService) {
 		}
 		return c.JSON(out)
 	})
+
+	g.Get("/onboarding-status", onboardingStatusHandler(s))
+	g.Post("/onboarding/dismiss", onboardingDismissHandler(s))
 
 	g.Delete("/data", func(c *fiber.Ctx) error {
 		claims := ClaimsFromCtx(c)

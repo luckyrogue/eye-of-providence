@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { http } from "../../../shared/api/http";
-import type { AuthConfig, AuthResponse } from "./types";
+import type { AuthConfig, AuthResponse, OnboardingStatus } from "./types";
 import type { AuthRes, DevTokenRes, MeRes, ProfileRes } from "./res";
 
 // --- Request payload types ---
@@ -22,6 +22,7 @@ export const userKeys = {
   me: ["me"] as const,
   profile: ["me.profile"] as const,
   authConfig: ["auth.config"] as const,
+  onboarding: ["me.onboarding"] as const,
 };
 
 // --- Auth fetchers ---
@@ -69,6 +70,13 @@ export async function fetchAuthConfig(): Promise<AuthConfig> {
 export const fetchMe = () => http.get<MeRes>("/v1/me").then((r) => r.data);
 export const fetchProfile = () => http.get<ProfileRes>("/v1/me/").then((r) => r.data);
 
+export const fetchOnboardingStatus = () =>
+  http.get<OnboardingStatus>("/v1/me/onboarding-status").then((r) => r.data);
+
+export async function dismissOnboarding(): Promise<void> {
+  await http.post("/v1/me/onboarding/dismiss");
+}
+
 export async function deleteMyData(): Promise<void> {
   await http.delete("/v1/me/data");
   localStorage.removeItem("eop_token");
@@ -82,6 +90,25 @@ export const useAuthConfig = () =>
 
 export const useMe = () => useQuery({ queryKey: userKeys.me, queryFn: fetchMe });
 export const useProfile = () => useQuery({ queryKey: userKeys.profile, queryFn: fetchProfile });
+
+// useOnboardingStatus — wizard'у нужен polling на step 4 (ждём первое событие).
+// Caller передаёт refetchInterval только когда реально ждёт; иначе — once-on-mount.
+export const useOnboardingStatus = (opts?: { refetchInterval?: number; enabled?: boolean }) =>
+  useQuery({
+    queryKey: userKeys.onboarding,
+    queryFn: fetchOnboardingStatus,
+    refetchInterval: opts?.refetchInterval,
+    enabled: opts?.enabled ?? true,
+    staleTime: 0,
+  });
+
+export function useDismissOnboarding() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: dismissOnboarding,
+    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.onboarding }),
+  });
+}
 
 export function useLogin() {
   const qc = useQueryClient();

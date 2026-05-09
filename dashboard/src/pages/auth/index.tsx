@@ -8,9 +8,9 @@ export function AuthRoute({ mode }: { mode: "login" | "register" }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
-  // Уже залогинен — редирект на dashboard.
+  // Уже залогинен — редирект через /onboarding (он сам решит куда дальше).
   useEffect(() => {
-    if (isAuthed) navigate("/dashboard", { replace: true });
+    if (isAuthed) navigate("/onboarding", { replace: true });
   }, [isAuthed, navigate]);
 
   // Если в URL ?invite=CODE — Auth компонент сам подхватит, мы просто пропускаем mode-prop.
@@ -20,7 +20,9 @@ export function AuthRoute({ mode }: { mode: "login" | "register" }) {
 
   function onAuth(r: { token: string; user_id: string; display_name?: string }) {
     setAuth(r);
-    navigate("/dashboard", { replace: true });
+    // Всегда через /onboarding — он сам редиректнет на /dashboard,
+    // если onboarding уже завершён (status.dismissed=true).
+    navigate("/onboarding", { replace: true });
   }
 
   return <Auth onAuth={onAuth} />;
