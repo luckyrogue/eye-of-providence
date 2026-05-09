@@ -96,4 +96,6 @@ jobs:
           cache-dependency-path: backend/go.sum
       - run: go mod download
       - name: Integration tests (Postgres)
-        run: go test -race -count=1 -tags=integration ./internal/teams/...
+        # -p 1: integration пакеты (teams + auth) разделяют одну тестовую БД,
+        # параллельный запуск даёт race на TRUNCATE / FK CASCADE.
+        run: go test -race -count=1 -p 1 -tags=integration ./internal/teams/... ./internal/auth/...
