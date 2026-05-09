@@ -23,8 +23,8 @@ pnpm-debug.log*
 *.tsbuildinfo
 
 # Rust / Tauri
+# Cargo.lock КОММИТИМ (Tauri agent — binary, нужны воспроизводимые билды).
 agent/src-tauri/target/
-agent/src-tauri/Cargo.lock
 target/
 
 # Go

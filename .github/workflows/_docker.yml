@@ -64,7 +64,7 @@ jobs:
           provenance: true
           sbom: true
       - name: Trivy CRITICAL (block)
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.IMAGE }}:${{ github.sha }}
           format: table
@@ -73,7 +73,7 @@ jobs:
           ignore-unfixed: true
       - name: Trivy HIGH (SARIF, non-blocking)
         if: always()
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.IMAGE }}:${{ github.sha }}
           format: sarif
