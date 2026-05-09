@@ -36,8 +36,8 @@
         "desc": "Heatmap'ы, разбивка по репо и расширению. Видно где AI помогает, а где ты пишешь руками."
       },
       {
-        "title": "Privacy by design",
-        "desc": "Мы никогда не храним промпты, код или экран. Только метаданные событий. Можешь self-host'ить весь стек."
+        "title": "Конфиденциальность с самого начала",
+        "desc": "Мы никогда не храним промпты, код или экран. Только метаданные событий. Можешь развернуть весь стек у себя."
       },
       {
         "title": "AI-отчёты",
@@ -80,7 +80,7 @@
         ]
       },
       {
-        "name": "Founding Company",
+        "name": "Компания-основатель",
         "price": "Бесплатно",
         "period": "для первых 3",
         "cta": "Занять место",
@@ -94,9 +94,9 @@
         ]
       },
       {
-        "name": "Self-hosted",
+        "name": "На своём сервере",
         "price": "Бесплатно",
-        "period": "open-core",
+        "period": "открытое ядро",
         "cta": "Документация",
         "features": [
           "Весь стек у тебя",
@@ -144,15 +144,15 @@
     "button": "Начать — бесплатно"
   },
   "footer": {
-    "tagline": "Privacy-first аналитика AI-workflow для инженеров. Self-hostable.",
+    "tagline": "Privacy-first аналитика AI-workflow для инженеров. С возможностью self-host.",
     "product_title": "Продукт",
-    "legal_title": "Legal",
+    "legal_title": "Юридическое",
     "status_ok": "Все системы работают"
   },
   "preview": {
-    "ai_ratio": "AI ratio",
-    "active_time": "Active time",
-    "manual": "Manual",
+    "ai_ratio": "Доля AI",
+    "active_time": "Активное время",
+    "manual": "Вручную",
     "last_30": "Последние 30 дней"
   }
 }

@@ -26,7 +26,7 @@
       { "title": "Atribución IA vs manual", "desc": "Detecta automáticamente qué viene de Copilot, Cursor, Claude Code, ChatGPT — y qué escribiste tú mismo." },
       { "title": "Tiempo real de codificación", "desc": "Minutos de foco activo, no tiempo de calendario. Idle, cambio de contexto y lectura se miden por separado." },
       { "title": "Por idioma y proyecto", "desc": "Heatmaps, desglose por repo y extensión. Ves dónde la IA ayuda y dónde escribes todo a mano." },
-      { "title": "Privacy by design", "desc": "Nunca guardamos tus prompts, código ni pantalla. Solo metadatos de eventos. Self-host del stack completo si quieres." },
+      { "title": "Privacidad desde el diseño", "desc": "Nunca guardamos tus prompts, código ni pantalla. Solo metadatos de eventos. Aloja el stack completo en tu infra si quieres." },
       { "title": "Reportes con IA", "desc": "Resúmenes semanales y mensuales de Gemini — qué cambió, dónde aceleraste, en qué enfocarte después." },
       { "title": "Hecho para equipos", "desc": "Equipos invite-only, accesos por rol, desglose por proyecto para engineering managers." }
     ]
@@ -56,16 +56,16 @@
         "features": ["Panel personal", "Hasta 3 proyectos", "30 días de historial", "Reporte IA semanal", "Soporte de comunidad"]
       },
       {
-        "name": "Founding Company",
+        "name": "Empresa fundadora",
         "price": "Gratis",
         "period": "para los 3 primeros",
         "cta": "Reservar plaza",
         "features": ["Todo lo de Solo", "Miembros ilimitados", "Proyectos ilimitados", "Roles, invitaciones, analítica de miembros", "18 meses de historial", "Línea directa con los founders"]
       },
       {
-        "name": "Self-hosted",
+        "name": "En tu servidor",
         "price": "Gratis",
-        "period": "open-core",
+        "period": "núcleo abierto",
         "cta": "Leer docs",
         "features": ["Stack completo en tu infra", "Tus datos en tu infraestructura", "Docker / docker-compose", "Postgres + ClickHouse", "Soporte de comunidad"]
       }
@@ -89,14 +89,14 @@
     "button": "Empezar — gratis"
   },
   "footer": {
-    "tagline": "Analítica privacy-first de workflow con IA para ingenieros. Self-hostable.",
+    "tagline": "Analítica privacy-first de workflow con IA para ingenieros. Auto-alojable.",
     "product_title": "Producto",
-    "legal_title": "Legal",
+    "legal_title": "Aviso legal",
     "status_ok": "Todos los sistemas operativos"
   },
   "preview": {
-    "ai_ratio": "AI ratio",
-    "active_time": "Active time",
+    "ai_ratio": "Cuota IA",
+    "active_time": "Tiempo activo",
     "manual": "Manual",
     "last_30": "Últimos 30 días"
   }
