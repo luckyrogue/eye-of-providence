@@ -45,6 +45,9 @@
 | `EOP_INVITE_ONLY` | `true` пока бета | `true` |
 | `EOP_ENABLE_DEV_TOKEN` | **Должно быть `false`** на prod | `false` |
 | `EOP_BODY_LIMIT_BYTES` | Дефолт 1 MiB; ingest батчам нужно больше | `5242880` |
+| `EOP_RESEND_API_KEY` | Resend API key. Пусто = Mailer Noop (логи без HTTP) | `re_...` |
+| `EOP_MAIL_FROM` | RFC-5322 from-address (домен должен быть верифицирован в Resend) | `Eye of Providence <noreply@app.example.com>` |
+| `EOP_PUBLIC_URL` | Base URL дашборда — идёт в invite-/reset-ссылки в письмах | `https://app.example.com` |
 
 ## Required GitHub Actions secrets / vars
 
