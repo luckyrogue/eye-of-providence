@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@eop/ui";
 import { useAdminAddMember, type AdminUser } from "../../../entities/admin";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
@@ -21,15 +22,16 @@ export function AddMemberRow({
   onCancel: () => void;
   onAdded: () => void;
 }) {
+  const { t } = useTranslation(["app", "common"]);
   const addMember = useAdminAddMember();
   const runToast = useMutationToast();
 
   async function add() {
     if (!email.trim()) return;
-    const ok = await runToast(
-      addMember.mutateAsync({ teamID, email: email.trim(), role }),
-      { success: "Участник добавлен", error: "Не удалось добавить" },
-    );
+    const ok = await runToast(addMember.mutateAsync({ teamID, email: email.trim(), role }), {
+      success: t("app:admin.add_member_added"),
+      error: t("app:admin.add_member_failed"),
+    });
     if (ok !== null) onAdded();
   }
 
@@ -57,10 +59,10 @@ export function AddMemberRow({
             <option value="owner">owner</option>
           </select>
           <Button size="sm" onClick={add} disabled={addMember.isPending || !email.trim()}>
-            Добавить
+            {t("app:admin.add_member_submit")}
           </Button>
           <Button size="sm" variant="ghost" onClick={onCancel}>
-            Отмена
+            {t("common:actions.cancel")}
           </Button>
         </div>
       </td>

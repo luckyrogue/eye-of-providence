@@ -1,8 +1,8 @@
+import { useTranslation } from "react-i18next";
 import { Avatar, Select, useConfirm } from "@eop/ui";
 import { Brain, UserMinus } from "lucide-react";
 import { useUpdateMemberRole, useRemoveMember, type MemberStat, type TeamMember } from "../../../entities/team";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-import { translateRole } from "../utils";
 
 export function MemberRow({
   member,
@@ -15,6 +15,7 @@ export function MemberRow({
   myRole: string;
   teamID: string;
 }) {
+  const { t } = useTranslation("app");
   const updateRole = useUpdateMemberRole(teamID);
   const removeM = useRemoveMember(teamID);
   const runToast = useMutationToast();
@@ -26,22 +27,22 @@ export function MemberRow({
   async function changeRole(role: string) {
     if (role === member.role) return;
     await runToast(updateRole.mutateAsync({ userID: member.id, role }), {
-      success: "Роль обновлена",
-      error: "Не удалось изменить роль",
+      success: t("team_detail.member_role_updated"),
+      error: t("team_detail.member_role_update_failed"),
     });
   }
 
   async function remove() {
     const ok = await confirm({
-      title: `Удалить ${member.display_name}?`,
-      description: "Участник потеряет доступ к этой команде. Историю событий это не затронет.",
+      title: t("team_detail.member_remove_title", { name: member.display_name }),
+      description: t("team_detail.member_remove_lead"),
       destructive: true,
-      confirmText: "Удалить",
+      confirmText: t("team_detail.member_remove_confirm"),
     });
     if (!ok) return;
     await runToast(removeM.mutateAsync(member.id), {
-      success: "Участник удалён",
-      error: "Не удалось удалить",
+      success: t("team_detail.member_removed"),
+      error: t("team_detail.member_remove_failed"),
     });
   }
 
@@ -62,7 +63,7 @@ export function MemberRow({
               <span className="font-medium tabular-nums">{stat.ai_ratio}%</span>
             </div>
             <div className="text-[10px] text-muted-foreground tabular-nums font-mono">
-              {Math.round(stat.total_ms / 60000)} мин · 7д
+              {t("team_detail.member_minutes_7d", { minutes: Math.round(stat.total_ms / 60000) })}
             </div>
           </div>
         )}
@@ -74,13 +75,13 @@ export function MemberRow({
             onChange={(e) => changeRole(e.target.value)}
             className="px-2 py-1 text-xs"
           >
-            <option value="owner">владелец</option>
-            <option value="admin">админ</option>
-            <option value="member">участник</option>
+            <option value="owner">{t("team_detail.role.owner")}</option>
+            <option value="admin">{t("team_detail.role.admin")}</option>
+            <option value="member">{t("team_detail.role.member")}</option>
           </Select>
         ) : (
           <span className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
-            {translateRole(member.role)}
+            {t(`team_detail.role.${member.role}` as const, { defaultValue: member.role })}
           </span>
         )}
         {canManage && (
@@ -88,8 +89,8 @@ export function MemberRow({
             type="button"
             onClick={remove}
             disabled={busy}
-            title="Удалить из команды"
-            aria-label="Удалить из команды"
+            title={t("team_detail.member_remove_btn_title")}
+            aria-label={t("team_detail.member_remove_btn_title")}
             className="rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
           >
             <UserMinus className="h-3.5 w-3.5" />

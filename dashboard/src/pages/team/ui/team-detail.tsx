@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, PlanBadge, Tab, TabBar } from "@eop/ui";
 import { FolderGit2, GitCommit, Settings, Users } from "lucide-react";
 import { useMembers, useTeamSummary, type Team } from "../../../entities/team";
@@ -6,17 +7,21 @@ import { MembersTab } from "./members-tab";
 import { ProjectsTab } from "./projects-tab";
 import { CommitsTab } from "./commits-tab";
 import { SettingsTab } from "./settings-tab";
-import { plural } from "../utils";
 
 type TabKey = "members" | "projects" | "commits" | "settings";
 
 export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; tz: string }) {
+  const { t } = useTranslation("app");
   const role = team.role;
   const [tab, setTab] = useState<TabKey>("members");
   const members = useMembers(teamID);
   const stats = useTeamSummary(teamID);
   const note = team.subscription_note;
   const memberCount = members.data?.length ?? 0;
+
+  // i18next plural — _one/_few/_many подбираются автоматически по locale
+  // (русский имеет all 3, English только one/many).
+  const memberCountLabel = t("team_detail.members_count", { count: memberCount });
 
   return (
     <Card className="card-hover">
@@ -27,22 +32,23 @@ export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; t
             <PlanBadge plan={team.subscription_plan ?? "free"} until={team.subscription_until} />
           </div>
           <CardDescription>
-            {memberCount} участник{plural(memberCount)}{note ? ` · ${note}` : ""}
+            {memberCountLabel}
+            {note ? ` · ${note}` : ""}
           </CardDescription>
         </div>
         <TabBar className="justify-end">
           <Tab active={tab === "members"} onClick={() => setTab("members")} icon={<Users className="h-3.5 w-3.5" />}>
-            Участники
+            {t("team_detail.tabs.members")}
           </Tab>
           <Tab active={tab === "projects"} onClick={() => setTab("projects")} icon={<FolderGit2 className="h-3.5 w-3.5" />}>
-            Проекты
+            {t("team_detail.tabs.projects")}
           </Tab>
           <Tab active={tab === "commits"} onClick={() => setTab("commits")} icon={<GitCommit className="h-3.5 w-3.5" />}>
-            Коммиты
+            {t("team_detail.tabs.commits")}
           </Tab>
           {role === "owner" && (
             <Tab active={tab === "settings"} onClick={() => setTab("settings")} icon={<Settings className="h-3.5 w-3.5" />}>
-              Настройки
+              {t("team_detail.tabs.settings")}
             </Tab>
           )}
         </TabBar>

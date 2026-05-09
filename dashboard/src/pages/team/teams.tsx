@@ -7,7 +7,6 @@ import { useMe } from "../../entities/user";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
 import { BetaBanner } from "../../widgets/beta-banner";
 import { TeamDetail } from "./ui/team-detail";
-import { translateRole } from "./utils";
 
 export function Teams({ tz }: { tz: string }) {
   const { t } = useTranslation(["app", "errors", "common"]);
@@ -93,20 +92,20 @@ export function Teams({ tz }: { tz: string }) {
             <p className="text-sm text-muted-foreground">{t("app:teams.empty")}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {teamsList.map((t) => (
+              {teamsList.map((team) => (
                 <button
-                  key={t.id}
+                  key={team.id}
                   type="button"
-                  onClick={() => switchTeam(t.id)}
+                  onClick={() => switchTeam(team.id)}
                   className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
-                    activeTeam === t.id
+                    activeTeam === team.id
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-card hover:bg-secondary"
                   }`}
                 >
-                  {t.name}
+                  {team.name}
                   <span className="ml-2 font-mono text-[10px] uppercase tracking-widest2 opacity-70">
-                    {translateRole(t.role)}
+                    {t(`app:team_detail.role.${team.role}` as const, { defaultValue: team.role })}
                   </span>
                 </button>
               ))}

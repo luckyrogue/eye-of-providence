@@ -1,4 +1,5 @@
 import { Fragment, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, PlanBadge, useConfirm } from "@eop/ui";
 import { CreditCard, Trash2, UserPlus } from "lucide-react";
 import { useAdminDeleteTeam, type AdminTeam, type AdminUser } from "../../../entities/admin";
@@ -17,6 +18,7 @@ export function TeamsTable({
   users: AdminUser[];
   tz: string;
 }) {
+  const { t } = useTranslation("app");
   const deleteTeam = useAdminDeleteTeam();
   const runToast = useMutationToast();
   const confirm = useConfirm();
@@ -27,14 +29,19 @@ export function TeamsTable({
 
   async function destroy(teamID: string, name: string) {
     const ok = await confirm({
-      title: `Удалить «${name}»?`,
-      description: "Будут стерты все участники, проекты, инвайты, история коммитов. Необратимо.",
+      title: t("admin.team_delete_confirm_title", { name, defaultValue: `Delete "${name}"?` }),
+      description: t("admin.team_delete_confirm_lead", {
+        defaultValue: "Will erase all members, projects, invites, commit history. Irreversible.",
+      }),
       typeToConfirm: name,
       destructive: true,
-      confirmText: "Удалить навсегда",
+      confirmText: t("team_detail.settings_danger_confirm"),
     });
     if (!ok) return;
-    await runToast(deleteTeam.mutateAsync(teamID), { success: "Компания удалена", error: "Не удалось удалить" });
+    await runToast(deleteTeam.mutateAsync(teamID), {
+      success: t("admin.team_deleted", { defaultValue: "Team deleted" }),
+      error: t("admin.team_delete_failed", { defaultValue: "Failed to delete" }),
+    });
   }
 
   function resetAdd() {
@@ -47,53 +54,70 @@ export function TeamsTable({
     <>
       <Card className="card-hover">
         <CardHeader>
-          <CardTitle className="font-display tracking-tight">Все компании</CardTitle>
-          <CardDescription>{teams.length} компаний в системе</CardDescription>
+          <CardTitle className="font-display tracking-tight">
+            {t("admin.all_teams_title", { defaultValue: "All companies" })}
+          </CardTitle>
+          <CardDescription>
+            {t("admin.all_teams_lead", { count: teams.length, defaultValue: `${teams.length} companies in the system` })}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {teams.length === 0 ? (
-            <EmptyState eyebrow="No companies" title="Пока нет ни одной компании" />
+            <EmptyState
+              eyebrow={t("admin.all_teams_empty_eyebrow", { defaultValue: "No companies" })}
+              title={t("admin.all_teams_empty_title", { defaultValue: "No companies yet" })}
+            />
           ) : (
             <div className="overflow-x-auto rounded-md border">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
-                    <th className="py-2.5 px-3 text-left">Название</th>
-                    <th className="py-2.5 px-3 text-left">Подписка</th>
-                    <th className="py-2.5 px-3 text-right">Members</th>
-                    <th className="py-2.5 px-3 text-left">Owner</th>
-                    <th className="py-2.5 px-3 text-left">Создана</th>
+                    <th className="py-2.5 px-3 text-left">{t("admin.teams_table_name")}</th>
+                    <th className="py-2.5 px-3 text-left">{t("admin.teams_subscribe")}</th>
+                    <th className="py-2.5 px-3 text-right">{t("admin.teams_table_members")}</th>
+                    <th className="py-2.5 px-3 text-left">{t("admin.teams_table_owner")}</th>
+                    <th className="py-2.5 px-3 text-left">{t("admin.teams_table_created")}</th>
                     <th className="py-2.5 px-3 text-right" />
                   </tr>
                 </thead>
                 <tbody>
-                  {teams.map((t) => (
-                    <Fragment key={t.id}>
+                  {teams.map((team) => (
+                    <Fragment key={team.id}>
                       <tr className="border-t hover:bg-muted/30">
-                        <td className="py-2 px-3 font-medium">{t.name}</td>
+                        <td className="py-2 px-3 font-medium">{team.name}</td>
                         <td className="py-2 px-3">
-                          <PlanBadge plan={t.subscription_plan} until={t.subscription_until} />
+                          <PlanBadge plan={team.subscription_plan} until={team.subscription_until} />
                         </td>
-                        <td className="py-2 px-3 text-right tabular-nums">{t.member_count}</td>
-                        <td className="py-2 px-3 text-xs text-muted-foreground">{t.owner_email ?? "—"}</td>
-                        <td className="py-2 px-3 text-xs text-muted-foreground">{formatDate(t.created_at, tz)}</td>
+                        <td className="py-2 px-3 text-right tabular-nums">{team.member_count}</td>
+                        <td className="py-2 px-3 text-xs text-muted-foreground">{team.owner_email ?? "—"}</td>
+                        <td className="py-2 px-3 text-xs text-muted-foreground">{formatDate(team.created_at, tz)}</td>
                         <td className="py-2 px-3 text-right">
                           <div className="flex justify-end gap-1">
-                            <IconButton title="Управление подпиской" onClick={() => setSubTeam(t)}>
+                            <IconButton
+                              title={t("admin.team_subscribe_btn", { defaultValue: "Manage subscription" })}
+                              onClick={() => setSubTeam(team)}
+                            >
                               <CreditCard className="h-3.5 w-3.5" />
                             </IconButton>
-                            <IconButton title="Добавить участника" onClick={() => setAdding(adding === t.id ? null : t.id)}>
+                            <IconButton
+                              title={t("admin.team_add_member_btn", { defaultValue: "Add member" })}
+                              onClick={() => setAdding(adding === team.id ? null : team.id)}
+                            >
                               <UserPlus className="h-3.5 w-3.5" />
                             </IconButton>
-                            <IconButton danger title="Удалить компанию" onClick={() => destroy(t.id, t.name)}>
+                            <IconButton
+                              danger
+                              title={t("admin.team_delete_btn", { defaultValue: "Delete company" })}
+                              onClick={() => destroy(team.id, team.name)}
+                            >
                               <Trash2 className="h-3.5 w-3.5" />
                             </IconButton>
                           </div>
                         </td>
                       </tr>
-                      {adding === t.id && (
+                      {adding === team.id && (
                         <AddMemberRow
-                          teamID={t.id}
+                          teamID={team.id}
                           users={users}
                           email={email}
                           setEmail={setEmail}

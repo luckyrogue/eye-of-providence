@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Eyebrow, Tab, TabBar } from "@eop/ui";
 import { useAdminStats, useAdminTeams, useAdminUsers } from "../../entities/admin";
 import { Overview } from "./ui/overview";
@@ -8,6 +9,7 @@ import { UsersTable } from "./ui/users-table";
 type TabKey = "overview" | "teams" | "users";
 
 export function Admin({ tz }: { tz: string }) {
+  const { t } = useTranslation("app");
   const [tab, setTab] = useState<TabKey>("overview");
   const { data: stats } = useAdminStats();
   const { data: teams } = useAdminTeams();
@@ -17,13 +19,21 @@ export function Admin({ tz }: { tz: string }) {
     <div className="space-y-4">
       <div className="flex items-baseline justify-between">
         <div>
-          <Eyebrow>Super admin</Eyebrow>
-          <h2 className="display-head text-3xl mt-2">Управление платформой</h2>
+          <Eyebrow>{t("admin.eyebrow", { defaultValue: "Super admin" })}</Eyebrow>
+          <h2 className="display-head text-3xl mt-2">
+            {t("admin.platform_management", { defaultValue: "Platform management" })}
+          </h2>
         </div>
         <TabBar>
-          <Tab active={tab === "overview"} onClick={() => setTab("overview")}>Обзор</Tab>
-          <Tab active={tab === "teams"} onClick={() => setTab("teams")}>Компании</Tab>
-          <Tab active={tab === "users"} onClick={() => setTab("users")}>Пользователи</Tab>
+          <Tab active={tab === "overview"} onClick={() => setTab("overview")}>
+            {t("admin.overview")}
+          </Tab>
+          <Tab active={tab === "teams"} onClick={() => setTab("teams")}>
+            {t("admin.teams")}
+          </Tab>
+          <Tab active={tab === "users"} onClick={() => setTab("users")}>
+            {t("admin.users")}
+          </Tab>
         </TabBar>
       </div>
 

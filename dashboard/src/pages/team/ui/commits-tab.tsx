@@ -1,17 +1,19 @@
+import { useTranslation } from "react-i18next";
 import { EmptyState } from "@eop/ui";
 import { useTeamCommits, type Commit } from "../../../entities/team";
 import { formatDate } from "../../../shared/lib/tz";
 
 export function CommitsTab({ teamID, tz }: { teamID: string; tz: string }) {
+  const { t } = useTranslation("app");
   const commits = useTeamCommits(teamID);
   const list: Commit[] = commits.data ?? [];
 
   if (list.length === 0) {
     return (
       <EmptyState
-        eyebrow="No commits yet"
-        title="Установи git post-commit hook"
-        description="После установки коммиты команды будут показаны здесь с разбивкой AI vs manual."
+        eyebrow={t("team_detail.commits_empty_eyebrow")}
+        title={t("team_detail.commits_empty_title")}
+        description={t("team_detail.commits_empty_lead")}
       />
     );
   }
@@ -20,12 +22,12 @@ export function CommitsTab({ teamID, tz }: { teamID: string; tz: string }) {
       <table className="w-full text-sm">
         <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
-            <th className="py-2.5 px-3 text-left">Время</th>
-            <th className="py-2.5 px-3 text-left">Автор</th>
-            <th className="py-2.5 px-3 text-left">SHA</th>
-            <th className="py-2.5 px-3 text-left">Сообщение</th>
-            <th className="py-2.5 px-3 text-right">+/-</th>
-            <th className="py-2.5 px-3 text-right">AI %</th>
+            <th className="py-2.5 px-3 text-left">{t("team_detail.commits_table_time")}</th>
+            <th className="py-2.5 px-3 text-left">{t("team_detail.commits_table_author")}</th>
+            <th className="py-2.5 px-3 text-left">{t("team_detail.commits_table_sha")}</th>
+            <th className="py-2.5 px-3 text-left">{t("team_detail.commits_table_message")}</th>
+            <th className="py-2.5 px-3 text-right">{t("team_detail.commits_table_diff")}</th>
+            <th className="py-2.5 px-3 text-right">{t("team_detail.commits_table_ai")}</th>
           </tr>
         </thead>
         <tbody>
