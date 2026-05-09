@@ -1,3 +1,4 @@
+import { Trans, useTranslation } from "react-i18next";
 import { Button, Eyebrow, cn } from "@eop/ui";
 import { Check } from "lucide-react";
 
@@ -6,51 +7,17 @@ type Tier = {
   price: string;
   period: string;
   features: string[];
-  highlight: boolean;
   cta: string;
 };
 
-const TIERS: Tier[] = [
-  {
-    name: "Solo",
-    price: "Free",
-    period: "forever",
-    highlight: false,
-    cta: "Get started",
-    features: ["Personal dashboard", "Up to 3 projects", "30-day event history", "Weekly AI report", "Community support"],
-  },
-  {
-    name: "Founding Company",
-    price: "Free",
-    period: "for the first 3",
-    highlight: true,
-    cta: "Claim a slot",
-    features: [
-      "Everything in Solo",
-      "Unlimited team members",
-      "Unlimited projects",
-      "Roles, invites, member analytics",
-      "18-month event history",
-      "Direct line to the founders",
-    ],
-  },
-  {
-    name: "Self-hosted",
-    price: "Free",
-    period: "open-core",
-    highlight: false,
-    cta: "Read the docs",
-    features: ["Run the whole stack", "Your data on your infra", "Docker / docker-compose", "Postgres + ClickHouse", "Community support"],
-  },
-];
-
-function PriceCard({ tier }: { tier: Tier }) {
-  const { name, price, period, features, highlight, cta } = tier;
+// highlight middle tier (Founding Company) — index === 1
+function PriceCard({ tier, highlight, mostPopular }: { tier: Tier; highlight: boolean; mostPopular: string }) {
+  const { name, price, period, features, cta } = tier;
   return (
     <div className={cn("relative rounded-xl border p-7 card-hover", highlight ? "border-foreground bg-card shadow-lg" : "bg-card")}>
       {highlight && (
         <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-foreground text-background px-3 py-1 text-[10px] font-mono uppercase tracking-widest2">
-          Most popular
+          {mostPopular}
         </span>
       )}
       <h3 className="font-display font-bold text-2xl tracking-tight">{name}</h3>
@@ -74,21 +41,26 @@ function PriceCard({ tier }: { tier: Tier }) {
 }
 
 export function Pricing() {
+  const { t } = useTranslation("landing");
+  const tiers = t("pricing.tiers", { returnObjects: true }) as Tier[];
   return (
     <section id="pricing" className="py-24">
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center mb-12">
-          <Eyebrow>Pricing · Beta</Eyebrow>
+          <Eyebrow>{t("pricing.eyebrow")}</Eyebrow>
           <h2 className="display-head text-4xl md:text-5xl mt-3 max-w-2xl mx-auto">
-            Free for the <em>first 3 companies</em>. Forever for solo devs.
+            <Trans i18nKey="landing:pricing.heading" components={{ em: <em /> }} />
           </h2>
-          <p className="text-muted-foreground mt-4 max-w-lg mx-auto">
-            We onboard 3 founding companies free of charge — no credit card, no trial countdown, no seat caps. Self-hosted is free for everyone.
-          </p>
+          <p className="text-muted-foreground mt-4 max-w-lg mx-auto">{t("pricing.lead")}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
-          {TIERS.map((t) => (
-            <PriceCard key={t.name} tier={t} />
+          {tiers.map((tier, i) => (
+            <PriceCard
+              key={tier.name}
+              tier={tier}
+              highlight={i === 1}
+              mostPopular={t("pricing.most_popular")}
+            />
           ))}
         </div>
       </div>

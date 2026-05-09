@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Activity, Brain, Code2, FileText, Github, Sparkles } from "lucide-react";
 
 const SOURCES = [
@@ -10,11 +11,12 @@ const SOURCES = [
 ];
 
 export function LogoStrip() {
+  const { t } = useTranslation("landing");
   return (
     <section className="border-y bg-muted/20">
       <div className="mx-auto max-w-6xl px-6 py-10">
         <p className="text-center text-xs font-mono uppercase tracking-widest3 text-muted-foreground mb-6">
-          Tracks every channel you actually use
+          {t("logo_strip.tagline")}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-sm text-muted-foreground">
           {SOURCES.map(({ name, Icon }) => (

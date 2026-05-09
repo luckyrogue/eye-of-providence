@@ -1,15 +1,103 @@
 {
-  "tagline": "Eye of Providence",
-  "hero_title": "How much you wrote yourself, how much with <em>AI</em>",
-  "hero_lead": "Privacy-by-design productivity dashboard for teams using AI-coders. See everyone. Don't leak content.",
-  "cta_signup": "Sign up",
-  "cta_login": "Sign in",
+  "nav": {
+    "features": "Features",
+    "how": "How it works",
+    "pricing": "Pricing",
+    "faq": "FAQ",
+    "sign_in": "Sign in",
+    "get_started": "Get started",
+    "open_dashboard": "Open dashboard"
+  },
+  "hero": {
+    "badge": "Beta · 3 founding companies free",
+    "heading": "See how much you code <em>vs.</em> the AI.",
+    "lead": "Privacy-first analytics for engineers. Track manual coding, AI assists, and where your time really goes — across IDE, browser, and CLI.",
+    "cta_primary": "Get started — free",
+    "cta_secondary": "See how it works",
+    "trust": ["Privacy-by-design", "Self-hostable", "No credit card"]
+  },
+  "logo_strip": {
+    "tagline": "Tracks every channel you actually use"
+  },
   "features": {
-    "multivendor_title": "Multi-vendor",
-    "multivendor_text": "Cursor, Copilot, Claude Code, ChatGPT — we see them all. They only see themselves.",
-    "privacy_title": "Privacy-first",
-    "privacy_text": "Categories + time metrics, not content. Local hashes, on-device aggregation.",
-    "team_title": "Team-aware",
-    "team_text": "Dashboard for tech leads: where AI accelerates, where it slows down, where review explodes."
+    "eyebrow": "Features",
+    "heading": "Everything you need to <em>understand</em> your AI workflow.",
+    "items": [
+      { "title": "AI vs manual attribution", "desc": "Automatically detect what came from Copilot, Cursor, Claude Code, ChatGPT — and what you typed yourself." },
+      { "title": "Real coding time", "desc": "Active focus minutes, not just calendar time. Idle, context-switching, and reading are measured separately." },
+      { "title": "By language & project", "desc": "Heatmaps, breakdowns by repo and file extension. See where AI helps and where you write everything by hand." },
+      { "title": "Privacy by design", "desc": "We never store your prompts, code, or screen content. Only event metadata. Self-host the whole stack if you want." },
+      { "title": "AI-generated reports", "desc": "Weekly and monthly summaries from Gemini — what changed, where you sped up, what to focus on next." },
+      { "title": "Built for teams", "desc": "Invite-only teams, role-based access, per-project breakdowns for engineering managers." }
+    ]
+  },
+  "how": {
+    "eyebrow": "How it works",
+    "heading": "From install to insight in <em>under five minutes</em>.",
+    "step_label": "step {{num}}",
+    "items": [
+      { "title": "Install the agent", "desc": "One binary on macOS or Windows. VS Code & Claude Code hooks ship as separate plugins." },
+      { "title": "Sign in", "desc": "Email + password or GitHub OAuth. Invite-only team mode keeps your org private." },
+      { "title": "Code as usual", "desc": "Agent classifies events locally. Only metadata leaves your machine — never code or prompts." },
+      { "title": "Read the dashboard", "desc": "Live charts, language breakdown, AI-generated reports. Cancel anytime, export anytime." }
+    ]
+  },
+  "pricing": {
+    "eyebrow": "Pricing · Beta",
+    "heading": "Free for the <em>first 3 companies</em>. Forever for solo devs.",
+    "lead": "We onboard 3 founding companies free of charge — no credit card, no trial countdown, no seat caps. Self-hosted is free for everyone.",
+    "most_popular": "Most popular",
+    "tiers": [
+      {
+        "name": "Solo",
+        "price": "Free",
+        "period": "forever",
+        "cta": "Get started",
+        "features": ["Personal dashboard", "Up to 3 projects", "30-day event history", "Weekly AI report", "Community support"]
+      },
+      {
+        "name": "Founding Company",
+        "price": "Free",
+        "period": "for the first 3",
+        "cta": "Claim a slot",
+        "features": ["Everything in Solo", "Unlimited team members", "Unlimited projects", "Roles, invites, member analytics", "18-month event history", "Direct line to the founders"]
+      },
+      {
+        "name": "Self-hosted",
+        "price": "Free",
+        "period": "open-core",
+        "cta": "Read the docs",
+        "features": ["Run the whole stack", "Your data on your infra", "Docker / docker-compose", "Postgres + ClickHouse", "Community support"]
+      }
+    ]
+  },
+  "faq": {
+    "eyebrow": "FAQ",
+    "heading": "Quick answers, <em>before you ask</em>.",
+    "items": [
+      { "q": "What does the agent actually collect?", "a": "Only metadata: focused app, idle/active state, paste sizes, language extensions, AI provider names. Never prompts, code content, screenshots, or keystrokes." },
+      { "q": "How is AI use detected?", "a": "Multiple signals — the active app and URL (e.g. claude.ai, ChatGPT), IDE plugin events (Copilot accept, Cursor agent), and clipboard heuristics for pasted code from AI windows. All classification happens on your machine." },
+      { "q": "Can I self-host?", "a": "Yes. The backend is Go, dashboard is React, storage is Postgres + ClickHouse + Redis. Docker compose works out of the box. You can run the entire stack on a single VM." },
+      { "q": "Is my data sold or shared?", "a": "No. We don't run ads, we don't sell aggregate data, we don't train models on your events. If we ever change that, we'd ask first." },
+      { "q": "What about my team's privacy?", "a": "Team admins see aggregates per member. They cannot see individual prompts, files, or content. Members can pause tracking anytime and export or delete all their data." },
+      { "q": "When does free end?", "a": "Solo and self-hosted are free forever. Team will eventually have paid tiers — but during beta, all team features are free with no time limit." }
+    ]
+  },
+  "cta": {
+    "heading": "Ship more. <em>Know how.</em>",
+    "lead": "Free during beta. Two minutes to try. Cancel any time.",
+    "button": "Get started — free"
+  },
+  "footer": {
+    "tagline": "Privacy-first AI workflow analytics for engineers. Self-hostable.",
+    "product_title": "Product",
+    "legal_title": "Legal",
+    "status_ok": "All systems operational"
+  },
+  "preview": {
+    "ai_ratio": "AI ratio",
+    "active_time": "Active time",
+    "manual": "Manual",
+    "last_30": "Last 30 days"
   }
 }

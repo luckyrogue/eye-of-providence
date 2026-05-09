@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { cn } from "@eop/ui";
 
 const ACCENTS = {
@@ -44,6 +45,7 @@ function FakeChart() {
 }
 
 export function ProductPreview() {
+  const { t } = useTranslation("landing");
   return (
     <div className="relative mt-16 mx-auto max-w-5xl reveal reveal-delay-5">
       <div className="absolute -inset-x-8 -inset-y-4 bg-gradient-to-b from-transparent via-purple-500/5 to-blue-500/10 blur-2xl pointer-events-none" />
@@ -56,12 +58,14 @@ export function ProductPreview() {
         </div>
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-3 gap-3">
-            <PreviewStat label="AI ratio" value="42%" accent="purple" />
-            <PreviewStat label="Active time" value="6h 18m" accent="blue" />
-            <PreviewStat label="Manual" value="58%" accent="amber" />
+            <PreviewStat label={t("preview.ai_ratio")} value="42%" accent="purple" />
+            <PreviewStat label={t("preview.active_time")} value="6h 18m" accent="blue" />
+            <PreviewStat label={t("preview.manual")} value="58%" accent="amber" />
           </div>
           <div className="rounded-lg border bg-card p-4 h-44 relative overflow-hidden">
-            <span className="font-mono text-[10px] uppercase tracking-widest3 text-muted-foreground">Last 30 days</span>
+            <span className="font-mono text-[10px] uppercase tracking-widest3 text-muted-foreground">
+              {t("preview.last_30")}
+            </span>
             <FakeChart />
           </div>
         </div>

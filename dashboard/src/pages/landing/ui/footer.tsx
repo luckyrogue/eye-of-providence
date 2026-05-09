@@ -1,19 +1,19 @@
+import { useTranslation } from "react-i18next";
 import { Eye } from "lucide-react";
 
-const PRODUCT_LINKS = [
-  { href: "#features", label: "Features" },
-  { href: "#pricing", label: "Pricing" },
-  { href: "#faq", label: "FAQ" },
-  { href: "/dashboard", label: "Dashboard" },
-];
-
-const LEGAL_LINKS = [
-  { href: "/privacy", label: "Privacy" },
-  { href: "/terms", label: "Terms" },
-  { href: "/security", label: "Security" },
-];
-
 export function Footer() {
+  const { t } = useTranslation("landing");
+  const productLinks = [
+    { href: "#features", label: t("nav.features") },
+    { href: "#pricing", label: t("nav.pricing") },
+    { href: "#faq", label: t("nav.faq") },
+    { href: "/dashboard", label: t("nav.open_dashboard") },
+  ];
+  const legalLinks = [
+    { href: "/privacy", label: "Privacy" },
+    { href: "/terms", label: "Terms" },
+    { href: "/security", label: "Security" },
+  ];
   return (
     <footer className="border-t">
       <div className="mx-auto max-w-6xl px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-sm">
@@ -24,19 +24,17 @@ export function Footer() {
             </div>
             <span className="font-display font-bold tracking-tightest">Eye of Providence</span>
           </div>
-          <p className="text-muted-foreground mt-3 max-w-xs leading-relaxed text-xs">
-            Privacy-first AI workflow analytics for engineers. Self-hostable.
-          </p>
+          <p className="text-muted-foreground mt-3 max-w-xs leading-relaxed text-xs">{t("footer.tagline")}</p>
         </div>
-        <FooterColumn title="Product" links={PRODUCT_LINKS} />
-        <FooterColumn title="Legal" links={LEGAL_LINKS} />
+        <FooterColumn title={t("footer.product_title")} links={productLinks} />
+        <FooterColumn title={t("footer.legal_title")} links={legalLinks} />
       </div>
       <div className="border-t">
         <div className="mx-auto max-w-6xl px-6 py-5 flex items-center justify-between text-xs text-muted-foreground font-mono">
           <span>© {new Date().getFullYear()} Eye of Providence</span>
           <span className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            All systems operational
+            {t("footer.status_ok")}
           </span>
         </div>
       </div>

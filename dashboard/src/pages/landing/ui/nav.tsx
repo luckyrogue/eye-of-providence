@@ -1,15 +1,16 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@eop/ui";
 import { Eye } from "lucide-react";
 
-const NAV_LINKS = [
-  { href: "#features", label: "Features" },
-  { href: "#how", label: "How it works" },
-  { href: "#pricing", label: "Pricing" },
-  { href: "#faq", label: "FAQ" },
-];
-
 export function Nav() {
+  const { t } = useTranslation("landing");
   const isAuthed = typeof window !== "undefined" && !!localStorage.getItem("eop_user_id");
+  const navLinks = [
+    { href: "#features", label: t("nav.features") },
+    { href: "#how", label: t("nav.how") },
+    { href: "#pricing", label: t("nav.pricing") },
+    { href: "#faq", label: t("nav.faq") },
+  ];
   return (
     <header className="sticky top-0 z-40 border-b header-blur">
       <div className="mx-auto max-w-6xl px-6 h-16 flex items-center justify-between">
@@ -20,7 +21,7 @@ export function Nav() {
           <span className="font-display font-bold tracking-tightest text-lg">Eye of Providence</span>
         </a>
         <nav className="hidden md:flex items-center gap-8 text-sm">
-          {NAV_LINKS.map((l) => (
+          {navLinks.map((l) => (
             <a key={l.href} href={l.href} className="text-muted-foreground hover:text-foreground transition-colors">
               {l.label}
             </a>
@@ -32,11 +33,11 @@ export function Nav() {
               href="/dashboard"
               className="hidden sm:inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Sign in
+              {t("nav.sign_in")}
             </a>
           )}
           <Button asChild size="sm">
-            <a href="/dashboard">{isAuthed ? "Open dashboard" : "Get started"}</a>
+            <a href="/dashboard">{isAuthed ? t("nav.open_dashboard") : t("nav.get_started")}</a>
           </Button>
         </div>
       </div>
