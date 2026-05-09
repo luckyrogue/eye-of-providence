@@ -40,6 +40,27 @@ linters:
           - errcheck
           - unparam
           - gocritic
+      # mailer/templates.go содержит RU/KK/ES строки — misspell даёт false
+      # positive на иностранных словах (`reportes` по-испански → "reporters").
+      - path: internal/mailer/templates\.go
+        linters:
+          - misspell
+      # defer .Close() / .Rollback() / .Release() — идиоматический паттерн,
+      # ошибки на close/rollback после транзакции бессмысленны или
+      # idempotent (rollback после commit = ErrTxClosed).
+      - linters:
+          - errcheck
+        source: "^\\s*defer .+\\.(Close|Rollback|Release)\\("
+      # log.Fatal / os.Exit в main() и runHealthcheck() — ОК, defer log.Sync()
+      # потеряем буфер, но процесс уже всё равно выходит.
+      - path: cmd/api/main\.go
+        linters:
+          - gocritic
+        text: "exitAfterDefer"
+      # QF1003 — quickfix suggestion staticcheck'а (use tagged switch). Стиль.
+      - linters:
+          - staticcheck
+        text: "QF1003"
 
 issues:
   max-issues-per-linter: 0

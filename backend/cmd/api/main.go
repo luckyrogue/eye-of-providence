@@ -102,7 +102,7 @@ func main() {
 		Format: "[${time}] rid=${locals:requestid} ${status} ${method} ${path} ${latency}\n",
 	}))
 
-	app.Get("/healthz", healthzHandler(pgPool, eventStore, log))
+	app.Get("/healthz", healthzHandler(pgPool, eventStore))
 	app.Get("/metrics", func(c *fiber.Ctx) error {
 		c.Set("Content-Type", "text/plain; version=0.0.4")
 		return c.SendString(metrics.Render())
@@ -266,7 +266,7 @@ func fiberErrorHandler(log *zap.Logger) fiber.ErrorHandler {
 	}
 }
 
-func healthzHandler(pool *pgxpool.Pool, ev store.EventStore, log *zap.Logger) fiber.Handler {
+func healthzHandler(pool *pgxpool.Pool, ev store.EventStore) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.Context(), 2*time.Second)
 		defer cancel()
