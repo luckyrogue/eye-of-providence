@@ -24,7 +24,10 @@ RUN go mod download
 COPY backend ./
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -trimpath -ldflags='-s -w' \
-    -o /out/api ./cmd/api
+    -o /out/api ./cmd/api && \
+    CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath -ldflags='-s -w' \
+    -o /out/migrate ./cmd/migrate
 
 ############################
 # Dashboard builder
@@ -51,8 +54,9 @@ RUN pnpm -F @eop/dashboard build
 ############################
 FROM nginx:1.27-alpine
 
-# Go-бинарь
+# Go-бинарь + migrate CLI (для ручного rollback в проде)
 COPY --from=api-builder /out/api /usr/local/bin/api
+COPY --from=api-builder /out/migrate /usr/local/bin/migrate
 
 # Статика dashboard
 COPY --from=dashboard-builder /repo/dashboard/dist /usr/share/nginx/html

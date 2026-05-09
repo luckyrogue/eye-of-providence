@@ -1,160 +1,111 @@
-// Package migrate — простой идемпотентный runner SQL-миграций для Postgres и ClickHouse.
+// Package migrate — тонкая обвёртка вокруг golang-migrate/migrate/v4.
 //
-// Файлы embed'ятся в бинарь из backend/migrations/. Все миграции написаны
-// idempotent через CREATE ... IF NOT EXISTS / ALTER ... IF NOT EXISTS,
-// так что применять их повторно безопасно — отдельной таблицы версий не нужно.
+// Файлы embed'ятся из:
+//   - sql/postgres/NNN_*.up.sql, NNN_*.down.sql       — Postgres
+//   - sql/clickhouse/NNN_*.up.sql, NNN_*.down.sql     — ClickHouse Cloud
 //
-// Запуск: на старте API при EOP_AUTO_MIGRATE=true.
+// На старте API (cmd/api при EOP_AUTO_MIGRATE=true) применяется только Up.
+// Down/Force/Version — через cmd/migrate (отдельный binary, ручной запуск).
+//
+// golang-migrate ведёт state в `schema_migrations` (PG) и
+// `schema_migrations` (CH) таблицах + использует свой advisory_lock на PG —
+// ручной pg_advisory_lock больше не нужен.
+//
+// При первом deploy этой версии на prod, где БД уже была накачена нашим
+// прежним idempotent-runner'ом, надо однократно сделать `migrate force 5`
+// (PG) и `migrate force 2` (CH), чтобы проставить current version без
+// повторного применения. См. cmd/migrate для деталей.
 package migrate
 
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
-	"sort"
-	"strings"
-	"time"
 
-	"github.com/ClickHouse/clickhouse-go/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/golang-migrate/migrate/v4"
+	// Регистрируем драйверы по схеме URL: postgres:// и clickhouse://.
+	_ "github.com/golang-migrate/migrate/v4/database/clickhouse"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
-//go:embed sql/*.sql
-var fs embed.FS
+//go:embed sql/postgres/*.sql sql/clickhouse/*.sql
+var fsys embed.FS
 
-// pgMigrationLockID — sentinel id для pg_advisory_lock.
-// Сериализует одновременные попытки прогнать миграции из нескольких replica'ей
-// при rolling deploy. Тот, кто получает lock, прогоняет миграции; остальные
-// ждут, потом видят что миграции уже применены (CREATE IF NOT EXISTS) и идут
-// дальше.
-const pgMigrationLockID int64 = 8331_2026_002
+const (
+	pgSubdir = "sql/postgres"
+	chSubdir = "sql/clickhouse"
+)
 
-// RunPostgres — применяет все sql/NNN_*.up.sql (где NNN — номер) к Postgres.
-// Безопасен при параллельном запуске на нескольких replica'ях: использует
-// session-level pg_advisory_lock, чтобы только один процесс прогонял DDL.
-func RunPostgres(ctx context.Context, pool *pgxpool.Pool) error {
-	if pool == nil {
-		return nil
-	}
-	files, err := listSorted("sql", func(name string) bool {
-		return strings.HasSuffix(name, ".up.sql") && !strings.HasPrefix(name, "clickhouse_")
-	})
-	if err != nil {
-		return err
-	}
-	// Берём один коннект и держим lock на всё время DDL.
-	conn, err := pool.Acquire(ctx)
-	if err != nil {
-		return fmt.Errorf("acquire conn for migrate: %w", err)
-	}
-	defer conn.Release()
-	if _, err := conn.Exec(ctx, "SELECT pg_advisory_lock($1)", pgMigrationLockID); err != nil {
-		return fmt.Errorf("acquire migration lock: %w", err)
-	}
-	defer func() {
-		// Лок сам отпустится при Release/disconnect, но явный unlock корректнее.
-		_, _ = conn.Exec(context.Background(), "SELECT pg_advisory_unlock($1)", pgMigrationLockID)
-	}()
-	for _, name := range files {
-		body, err := fs.ReadFile("sql/" + name)
-		if err != nil {
-			return fmt.Errorf("read %s: %w", name, err)
-		}
-		if _, err := conn.Exec(ctx, string(body)); err != nil {
-			return fmt.Errorf("apply %s: %w", name, err)
-		}
-	}
-	return nil
+// NewPostgres / NewClickHouse возвращают готовый *migrate.Migrate для CLI.
+// Caller обязан вызвать .Close() после использования.
+func NewPostgres(dsn string) (*migrate.Migrate, error) {
+	return newMigrator(pgSubdir, dsn)
 }
 
-// RunClickHouse — применяет sql/clickhouse_*.sql к ClickHouse.
-// Использует тот же DSN, что и event store, но открывает свой коннект (closing после).
+func NewClickHouse(dsn string) (*migrate.Migrate, error) {
+	return newMigrator(chSubdir, dsn)
+}
+
+func newMigrator(subdir, dsn string) (*migrate.Migrate, error) {
+	if dsn == "" {
+		return nil, errors.New("empty dsn")
+	}
+	src, err := iofs.New(fsys, subdir)
+	if err != nil {
+		return nil, fmt.Errorf("iofs source for %s: %w", subdir, err)
+	}
+	m, err := migrate.NewWithSourceInstance("iofs", src, dsn)
+	if err != nil {
+		return nil, fmt.Errorf("migrate init for %s: %w", subdir, err)
+	}
+	return m, nil
+}
+
+// RunPostgres — auto-migrate on API startup. No-op if dsn пустой.
+// Возвращает nil если БД уже на последней версии (ErrNoChange = ok).
+func RunPostgres(ctx context.Context, dsn string) error {
+	return runUp(ctx, pgSubdir, dsn, "postgres")
+}
+
+// RunClickHouse — auto-migrate on API startup. No-op если dsn пустой.
 func RunClickHouse(ctx context.Context, dsn string) error {
+	return runUp(ctx, chSubdir, dsn, "clickhouse")
+}
+
+func runUp(ctx context.Context, subdir, dsn, label string) error {
 	if dsn == "" {
 		return nil
 	}
-	files, err := listSorted("sql", func(name string) bool {
-		return strings.HasPrefix(name, "clickhouse_") && strings.HasSuffix(name, ".sql")
-	})
+	m, err := newMigrator(subdir, dsn)
 	if err != nil {
 		return err
 	}
-	if len(files) == 0 {
+	defer closeMigrator(m)
+
+	// m.Up() игнорирует ctx; делаем cancel через GracefulStop.
+	done := make(chan error, 1)
+	go func() { done <- m.Up() }()
+	select {
+	case err := <-done:
+		if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+			return fmt.Errorf("%s up: %w", label, err)
+		}
 		return nil
+	case <-ctx.Done():
+		// Не пытаемся стопать middle-of-DDL — это опаснее, чем дождаться.
+		// Просто возвращаем ctx.Err() — caller увидит таймаут.
+		// Сама миграция доедет в фоне и вернёт ошибку через done (которую мы дропнем).
+		return ctx.Err()
 	}
-	conn, err := openCH(dsn)
-	if err != nil {
-		return fmt.Errorf("clickhouse open: %w", err)
-	}
-	defer conn.Close()
-
-	for _, name := range files {
-		body, err := fs.ReadFile("sql/" + name)
-		if err != nil {
-			return fmt.Errorf("read %s: %w", name, err)
-		}
-		// Каждый statement в .sql файле — отдельный Exec. ClickHouse driver
-		// не любит multi-statement в одном Exec-вызове.
-		for _, stmt := range splitStatements(string(body)) {
-			if stmt == "" {
-				continue
-			}
-			if err := conn.Exec(ctx, stmt); err != nil {
-				return fmt.Errorf("apply %s [%s...]: %w", name, firstChars(stmt, 60), err)
-			}
-		}
-	}
-	return nil
 }
 
-func listSorted(dir string, pred func(string) bool) ([]string, error) {
-	entries, err := fs.ReadDir(dir)
-	if err != nil {
-		return nil, err
+// closeMigrator — лучшее усилие: source + database close. Ошибки не валим
+// наверх (миграции уже отработали к этому моменту).
+func closeMigrator(m *migrate.Migrate) {
+	if m == nil {
+		return
 	}
-	out := make([]string, 0, len(entries))
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		if pred(e.Name()) {
-			out = append(out, e.Name())
-		}
-	}
-	sort.Strings(out)
-	return out, nil
-}
-
-func openCH(dsn string) (clickhouse.Conn, error) {
-	opts, err := clickhouse.ParseDSN(dsn)
-	if err != nil {
-		return nil, fmt.Errorf("parse dsn: %w", err)
-	}
-	if opts.DialTimeout == 0 {
-		opts.DialTimeout = 5 * time.Second
-	}
-	return clickhouse.Open(opts)
-}
-
-// splitStatements — наивный сплит по `;` в конце строки. Достаточно для
-// наших миграций (без процедур и вложенных стрингов с ; внутри).
-func splitStatements(body string) []string {
-	body = strings.TrimSpace(body)
-	parts := strings.Split(body, ";")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		s := strings.TrimSpace(p)
-		if s != "" {
-			out = append(out, s)
-		}
-	}
-	return out
-}
-
-func firstChars(s string, n int) string {
-	s = strings.TrimSpace(s)
-	if len(s) <= n {
-		return s
-	}
-	return s[:n]
+	_, _ = m.Close()
 }

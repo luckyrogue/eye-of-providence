@@ -116,6 +116,40 @@ gunzip < /var/backups/eop/pg-eop-YYYYMMDDTHHMMSSZ.sql.gz \
 
 ClickHouse Cloud делает backup за тебя (default 24h retention; за деньгами больше).
 
+## Migrations (golang-migrate)
+
+Schema versioning через `golang-migrate/migrate/v4` поверх `schema_migrations` таблицы.
+
+**Up** делает API при старте (если `EOP_AUTO_MIGRATE=true`). Безопасен на rolling deploy: golang-migrate берёт PG advisory_lock, остальные replica'и ждут.
+
+**Down/force/version** — только через CLI:
+
+```bash
+# В контейнере (Dokploy → exec):
+docker exec -it eop_app sh
+# /usr/local/bin/migrate уже встроен в combined image
+migrate -db postgres version
+migrate -db postgres up
+migrate -db postgres down 1            # шаг назад на 1 миграцию
+migrate -db postgres goto 3            # привести к версии 3
+EOP_MIGRATE_CONFIRM=yes-i-mean-it migrate -db postgres down all
+```
+
+**Первый deploy этой версии на старую prod-БД:** прежний idempotent-runner не вёл `schema_migrations`. Нужно один раз вручную пометить состояние:
+
+```bash
+migrate -db postgres force 5         # помечает 1..5 как applied без запуска SQL
+migrate -db clickhouse force 2       # 001_events + 002_attribution_events
+```
+
+После этого auto-migrate при старте API увидит, что всё applied, и будет no-op.
+
+**Откат прод-миграции:** только при идентифицированной проблеме, всегда после backup'а:
+1. `migrate -db postgres version` — узнать current
+2. `infra/backup-postgres.sh` — снять дамп
+3. `migrate -db postgres down 1` — шаг назад
+4. Передеплоить старый image (`Rollback` в Dokploy)
+
 ## Healthcheck semantics
 
 `GET /healthz` через nginx → Go API:

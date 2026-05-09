@@ -59,7 +59,7 @@ func main() {
 
 	if cfg.AutoMigrate {
 		mctx, mcancel := context.WithTimeout(rootCtx, 60*time.Second)
-		if err := migrate.RunPostgres(mctx, pgPool); err != nil {
+		if err := migrate.RunPostgres(mctx, cfg.PostgresDSN); err != nil {
 			mcancel()
 			log.Fatal("postgres migrate failed", zap.Error(err))
 		}

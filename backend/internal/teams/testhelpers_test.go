@@ -35,7 +35,7 @@ func setupTestDB(t *testing.T) *pgxpool.Pool {
 	if err != nil {
 		t.Fatalf("connect: %v", err)
 	}
-	if err := migrate.RunPostgres(ctx, pool); err != nil {
+	if err := migrate.RunPostgres(ctx, dsn); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	truncateAll(t, pool)
