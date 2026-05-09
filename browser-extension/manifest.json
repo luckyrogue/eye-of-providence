@@ -20,7 +20,7 @@
     "https://lovable.dev/*",
     "http://localhost:8080/*",
     "http://127.0.0.1:8080/*",
-    "https://eop-api.rysdavletov.org/*"
+    "https://eop.rysdavletov.org/api/*"
   ],
   "background": {
     "service_worker": "src/background.ts",

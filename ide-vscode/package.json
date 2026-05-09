@@ -35,7 +35,7 @@
       "properties": {
         "eop.backendUrl": {
           "type": "string",
-          "default": "https://eop-api.rysdavletov.org",
+          "default": "https://eop.rysdavletov.org/api",
           "description": "Backend URL"
         },
         "eop.token": {

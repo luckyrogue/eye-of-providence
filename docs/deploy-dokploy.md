@@ -18,7 +18,7 @@ Eye of Providence деплоится через Dokploy как 4 сервиса:
 ## 0. Prerequisites
 
 - Сервер с установленным Dokploy (https://docs.dokploy.com/docs/core/installation).
-- Домены, направленные на сервер (например `eop-api.rysdavletov.org`, `eop-dash.rysdavletov.org`).
+- Домены, направленные на сервер (например `eop.rysdavletov.org/api`, `eop.rysdavletov.org`).
 - Этот репозиторий, форкнутый или клонированный к тебе на GitHub.
 
 ## 1. Postgres (Database)
@@ -76,7 +76,7 @@ volumes:
 - **Build Path**: `.`  (корень репо — там лежит `api.Dockerfile`)
 - **Dockerfile**: `api.Dockerfile`
 - **Port**: `8080`
-- **Domain**: `eop-api.rysdavletov.org` (Dokploy auto-привяжет Let's Encrypt).
+- **Domain**: `eop.rysdavletov.org/api` (Dokploy auto-привяжет Let's Encrypt).
 
 **Environment Variables:**
 
@@ -87,14 +87,14 @@ EOP_POSTGRES_DSN=postgres://eop:PASSWORD@eop-postgres-db-1:5432/eop?sslmode=disa
 EOP_CLICKHOUSE_DSN=clickhouse://eop:CH_PASSWORD@eop-clickhouse-clickhouse-1:9000/eop
 EOP_REDIS_ADDR=eop-redis-db-1:6379
 EOP_JWT_SECRET=<openssl rand -hex 32>      # ≥32 chars, иначе API не стартует в production
-EOP_ALLOWED_ORIGINS=https://eop-dash.rysdavletov.org
+EOP_ALLOWED_ORIGINS=https://eop.rysdavletov.org
 EOP_AUTO_MIGRATE=true                       # API сам прогонит SQL-миграции на старте
 EOP_INVITE_ONLY=true                        # регистрация только по invite (первый user — bootstrap)
 EOP_ENABLE_DEV_TOKEN=false                  # никогда не включать в production
 EOP_GEMINI_API_KEY=<https://aistudio.google.com/apikey>
 EOP_GITHUB_CLIENT_ID=<опц., GitHub OAuth>
 EOP_GITHUB_CLIENT_SECRET=<опц.>
-EOP_GITHUB_CALLBACK_URL=https://eop-api.rysdavletov.org/v1/auth/github/callback
+EOP_GITHUB_CALLBACK_URL=https://eop.rysdavletov.org/api/v1/auth/github/callback
 EOP_REPORTS_CRON_SEC=21600
 ```
 
@@ -129,12 +129,12 @@ clickhouse-client --host <host> --user eop --password <CH_PASSWORD> --database e
 - **Build Path**: `.` (КОРЕНЬ репо — нужно для ui/ workspace).
 - **Dockerfile**: `dashboard.Dockerfile`
 - **Port**: `3000` (Nginx внутри слушает 3000).
-- **Domain**: `eop-dash.rysdavletov.org`
+- **Domain**: `eop.rysdavletov.org`
 
 **Build Arguments** (важно!):
 ```
-VITE_BACKEND_URL=https://eop-api.rysdavletov.org
-CSP_CONNECT_SRC=https://eop-api.rysdavletov.org
+VITE_BACKEND_URL=https://eop.rysdavletov.org/api
+CSP_CONNECT_SRC=https://eop.rysdavletov.org/api
 ```
 
 `VITE_BACKEND_URL` — это compile-time (иначе dashboard будет ходить в localhost).
@@ -147,16 +147,16 @@ Deploy.
 ## 7. Проверка
 
 ```bash
-curl https://eop-api.rysdavletov.org/healthz
+curl https://eop.rysdavletov.org/api/healthz
 # {"service":"api","status":"ok"}
 
-curl -X POST https://eop-api.rysdavletov.org/v1/auth/register \
+curl -X POST https://eop.rysdavletov.org/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","password":"hunter2hunter2","display_name":"Test"}'
 # {"token":"...", "user_id":"..."}
 ```
 
-Открой `https://eop-dash.rysdavletov.org` → Регистрация → Создание команды.
+Открой `https://eop.rysdavletov.org` → Регистрация → Создание команды.
 
 ## 8. Создать super_admin
 
