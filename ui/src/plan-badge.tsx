@@ -13,10 +13,16 @@ export function PlanBadge({
   plan,
   until,
   className,
+  untilLabel = "until",
+  expiredLabel = "expired",
 }: {
   plan: Plan;
   until?: string | null;
   className?: string;
+  // i18n: caller passes locale-aware strings; English defaults для consumer'ов
+  // которые не настроили i18n.
+  untilLabel?: string;
+  expiredLabel?: string;
 }) {
   const dueDate = until ? new Date(until) : null;
   const isActive = plan !== "free" && (!dueDate || dueDate > new Date());
@@ -38,7 +44,7 @@ export function PlanBadge({
             isActive ? "text-muted-foreground" : "text-destructive",
           )}
         >
-          {isActive ? "до" : "истёк"} {dueDate.toISOString().slice(0, 10)}
+          {isActive ? untilLabel : expiredLabel} {dueDate.toISOString().slice(0, 10)}
         </span>
       )}
     </div>

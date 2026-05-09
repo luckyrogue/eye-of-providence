@@ -23,6 +23,37 @@
   "settings": {
     "title": "Баптаулар",
     "language": "Интерфейс тілі",
-    "timezone": "Уақыт белдеуі"
+    "timezone": "Уақыт белдеуі",
+    "timezone_lead": "Есептер мен оқиғалар кестесіндегі уақыт көрсетіміне әсер етеді.",
+    "timezone_current": "Ағымдағы: {{tz}}",
+    "timezone_now": "Қазір:",
+    "profile_title": "Профиль",
+    "profile_lead": "Біз сіз туралы не білеміз",
+    "profile_provider": "Провайдер",
+    "profile_loading": "жүктелуде…",
+    "profile_load_failed": "жүктеу сәтсіз",
+    "privacy_title": "Құпиялық",
+    "privacy_lead": "Eye of Providence жинамайтындар",
+    "privacy_files": "Файлдар, промпттар және AI жауаптарының мазмұны.",
+    "privacy_keystrokes": "Пернелердің өздері — тек олардың саны.",
+    "privacy_private_windows": "Жеке және incognito терезелердің тақырыптары.",
+    "privacy_clipboard": "Clipboard мазмұны — тек sha256 + өлшем.",
+    "danger_title": "Барлық деректерімді жою",
+    "danger_lead": "User-row, барлық оқиғалар мен есептер жойылады. Қайтарылмайды. Қайта тіркелу қажет болады.",
+    "danger_confirm_title": "Барлық деректерді жою?",
+    "danger_confirm_lead": "User-row, барлық оқиғалар мен есептер жойылады. Содан кейін қайта кіру қажет болады.",
+    "danger_confirm_btn": "Мәңгілікке жою",
+    "delete_success": "Деректер жойылды",
+    "delete_failed": "Жою сәтсіз"
+  },
+  "heatmap": {
+    "days": ["Жс", "Дс", "Сс", "Ср", "Бс", "Жм", "Сб"],
+    "total": "барлығы",
+    "minutes_short": "мин",
+    "hover_hint": "Толық ақпарат үшін ұяшыққа меңзерді апарыңыз."
+  },
+  "plan_badge": {
+    "until": "дейін",
+    "expired": "өтті"
   }
 }

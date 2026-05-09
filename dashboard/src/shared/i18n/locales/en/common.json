@@ -23,6 +23,37 @@
   "settings": {
     "title": "Settings",
     "language": "Interface language",
-    "timezone": "Timezone"
+    "timezone": "Timezone",
+    "timezone_lead": "Affects time display in reports and event table.",
+    "timezone_current": "Current: {{tz}}",
+    "timezone_now": "Now:",
+    "profile_title": "Profile",
+    "profile_lead": "What we know about you",
+    "profile_provider": "Provider",
+    "profile_loading": "loading…",
+    "profile_load_failed": "failed to load",
+    "privacy_title": "Privacy",
+    "privacy_lead": "What Eye of Providence does NOT collect",
+    "privacy_files": "Contents of files, prompts and AI responses.",
+    "privacy_keystrokes": "Actual keystrokes — only their count.",
+    "privacy_private_windows": "Titles of private/incognito windows.",
+    "privacy_clipboard": "Clipboard contents — only sha256 + size.",
+    "danger_title": "Delete all my data",
+    "danger_lead": "Erases user-row, all events and reports. Irreversible. You'll need to re-register.",
+    "danger_confirm_title": "Delete all data?",
+    "danger_confirm_lead": "Erases user-row, all events and reports. After this you'll need to sign in again.",
+    "danger_confirm_btn": "Delete forever",
+    "delete_success": "Data deleted",
+    "delete_failed": "Failed to delete"
+  },
+  "heatmap": {
+    "days": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    "total": "total",
+    "minutes_short": "min",
+    "hover_hint": "Hover a cell to see details."
+  },
+  "plan_badge": {
+    "until": "until",
+    "expired": "expired"
   }
 }

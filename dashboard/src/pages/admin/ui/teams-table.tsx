@@ -18,7 +18,7 @@ export function TeamsTable({
   users: AdminUser[];
   tz: string;
 }) {
-  const { t } = useTranslation("app");
+  const { t } = useTranslation(["app", "common"]);
   const deleteTeam = useAdminDeleteTeam();
   const runToast = useMutationToast();
   const confirm = useConfirm();
@@ -86,7 +86,12 @@ export function TeamsTable({
                       <tr className="border-t hover:bg-muted/30">
                         <td className="py-2 px-3 font-medium">{team.name}</td>
                         <td className="py-2 px-3">
-                          <PlanBadge plan={team.subscription_plan} until={team.subscription_until} />
+                          <PlanBadge
+                            plan={team.subscription_plan}
+                            until={team.subscription_until}
+                            untilLabel={t("common:plan_badge.until", { defaultValue: "until" })}
+                            expiredLabel={t("common:plan_badge.expired", { defaultValue: "expired" })}
+                          />
                         </td>
                         <td className="py-2 px-3 text-right tabular-nums">{team.member_count}</td>
                         <td className="py-2 px-3 text-xs text-muted-foreground">{team.owner_email ?? "—"}</td>

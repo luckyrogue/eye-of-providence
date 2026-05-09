@@ -1,7 +1,7 @@
 {
   "beta_banner": {
-    "title": "Beta program",
-    "full": "Все {{limit}} мест заняты — open seats coming soon",
+    "title": "Beta-программа",
+    "full": "Все {{limit}} мест заняты — скоро откроем ещё",
     "free_count": "{{slots}} из {{limit}} мест свободно"
   },
   "dashboard": {
@@ -29,7 +29,7 @@
     "events_lead": "Из event store. Время в часовом поясе из настроек.",
     "events_demo": "Отправить демо-события",
     "events_refresh": "Обновить",
-    "events_empty_eyebrow": "No events yet",
+    "events_empty_eyebrow": "Событий пока нет",
     "events_empty_title": "Установи агент или отправь демо-события",
     "events_empty_lead": "Дашборд начнёт показывать данные, как только агент или браузер-расширение пришлёт первое событие.",
     "table_time": "Время",
@@ -78,7 +78,7 @@
     "stat_revenue": "Доход (всё время)",
     "users_email": "Email",
     "users_name": "Имя",
-    "users_global_role": "Global role",
+    "users_global_role": "Глобальная роль",
     "users_team": "Команда",
     "users_actions": "Действия",
     "users_role_user": "user",

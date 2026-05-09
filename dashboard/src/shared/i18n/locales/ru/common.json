@@ -4,7 +4,7 @@
     "tagline": "Manual vs AI · live"
   },
   "nav": {
-    "dashboard": "Dashboard",
+    "dashboard": "Дашборд",
     "team": "Команда",
     "settings": "Настройки",
     "admin": "Admin"
@@ -23,6 +23,37 @@
   "settings": {
     "title": "Настройки",
     "language": "Язык интерфейса",
-    "timezone": "Часовой пояс"
+    "timezone": "Часовой пояс",
+    "timezone_lead": "Влияет на отображение времени в отчётах и таблице событий.",
+    "timezone_current": "Текущий: {{tz}}",
+    "timezone_now": "Сейчас:",
+    "profile_title": "Профиль",
+    "profile_lead": "Что мы знаем о тебе",
+    "profile_provider": "Провайдер",
+    "profile_loading": "загрузка…",
+    "profile_load_failed": "не удалось загрузить",
+    "privacy_title": "Приватность",
+    "privacy_lead": "Что Eye of Providence НЕ собирает",
+    "privacy_files": "Содержимое файлов, промптов и ответов AI.",
+    "privacy_keystrokes": "Сами нажатия клавиш — только их количество.",
+    "privacy_private_windows": "Заголовки приватных и incognito окон.",
+    "privacy_clipboard": "Содержимое clipboard — только sha256 + размер.",
+    "danger_title": "Удалить все мои данные",
+    "danger_lead": "Стерт user-row, все события и отчёты. Необратимо. Нужна будет повторная регистрация.",
+    "danger_confirm_title": "Удалить все данные?",
+    "danger_confirm_lead": "Стерт user-row, все события и отчёты. После этого нужно будет залогиниться заново.",
+    "danger_confirm_btn": "Удалить навсегда",
+    "delete_success": "Данные удалены",
+    "delete_failed": "Не удалось удалить"
+  },
+  "heatmap": {
+    "days": ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
+    "total": "всего",
+    "minutes_short": "мин",
+    "hover_hint": "Наведи на ячейку, чтобы увидеть детали."
+  },
+  "plan_badge": {
+    "until": "до",
+    "expired": "истёк"
   }
 }

@@ -23,6 +23,37 @@
   "settings": {
     "title": "Configuración",
     "language": "Idioma de la interfaz",
-    "timezone": "Zona horaria"
+    "timezone": "Zona horaria",
+    "timezone_lead": "Afecta la visualización del tiempo en reportes y tabla de eventos.",
+    "timezone_current": "Actual: {{tz}}",
+    "timezone_now": "Ahora:",
+    "profile_title": "Perfil",
+    "profile_lead": "Lo que sabemos sobre ti",
+    "profile_provider": "Proveedor",
+    "profile_loading": "cargando…",
+    "profile_load_failed": "no se pudo cargar",
+    "privacy_title": "Privacidad",
+    "privacy_lead": "Lo que Eye of Providence NO recoge",
+    "privacy_files": "Contenido de archivos, prompts y respuestas de IA.",
+    "privacy_keystrokes": "Pulsaciones de teclas — solo su recuento.",
+    "privacy_private_windows": "Títulos de ventanas privadas/incognito.",
+    "privacy_clipboard": "Contenido del portapapeles — solo sha256 + tamaño.",
+    "danger_title": "Eliminar todos mis datos",
+    "danger_lead": "Borra user-row, todos los eventos y reportes. Irreversible. Tendrás que registrarte de nuevo.",
+    "danger_confirm_title": "¿Eliminar todos los datos?",
+    "danger_confirm_lead": "Borra user-row, todos los eventos y reportes. Después tendrás que iniciar sesión de nuevo.",
+    "danger_confirm_btn": "Eliminar para siempre",
+    "delete_success": "Datos eliminados",
+    "delete_failed": "No se pudo eliminar"
+  },
+  "heatmap": {
+    "days": ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"],
+    "total": "total",
+    "minutes_short": "min",
+    "hover_hint": "Pasa el cursor por una celda para ver detalles."
+  },
+  "plan_badge": {
+    "until": "hasta",
+    "expired": "expiró"
   }
 }

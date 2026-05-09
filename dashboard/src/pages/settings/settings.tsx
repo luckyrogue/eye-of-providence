@@ -11,13 +11,6 @@ import { getTz, setTz, UNIQUE_TIMEZONES } from "../../shared/lib/tz";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
 import { LOCALE_LABELS, SUPPORTED_LOCALES, LOCALE_STORAGE_KEY, type Locale } from "../../shared/i18n";
 
-const PRIVACY_NOT_COLLECTED = [
-  "Содержимое файлов, промптов и ответов AI.",
-  "Сами нажатия клавиш — только их количество.",
-  "Заголовки приватных и incognito окон.",
-  "Содержимое clipboard — только sha256 + размер.",
-];
-
 export function Settings({ onWiped }: { onWiped: () => void }) {
   const { t, i18n } = useTranslation("common");
   const profile = useProfile();
@@ -28,6 +21,13 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
   const [locale, setLocaleState] = useState<Locale>(
     (i18n.resolvedLanguage as Locale) || "ru",
   );
+
+  const privacyItems = [
+    t("settings.privacy_files"),
+    t("settings.privacy_keystrokes"),
+    t("settings.privacy_private_windows"),
+    t("settings.privacy_clipboard"),
+  ];
 
   function changeLocale(next: Locale) {
     setLocaleState(next);
@@ -45,17 +45,16 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
 
   async function destroy() {
     const ok = await confirm({
-      title: "Удалить все данные?",
-      description:
-        "Стерт user-row, все события и отчёты. После этого нужно будет залогиниться заново.",
+      title: t("settings.danger_confirm_title"),
+      description: t("settings.danger_confirm_lead"),
       typeToConfirm: profile.data?.email ?? "delete",
       destructive: true,
-      confirmText: "Удалить навсегда",
+      confirmText: t("settings.danger_confirm_btn"),
     });
     if (!ok) return;
     const r = await runToast(deleteData.mutateAsync(), {
-      success: "Данные удалены",
-      error: "Не удалось удалить",
+      success: t("settings.delete_success"),
+      error: t("settings.delete_failed"),
     });
     if (r !== null) onWiped();
   }
@@ -66,9 +65,9 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
         <CardHeader>
           <div className="flex items-center gap-2">
             <User className="h-4 w-4 text-muted-foreground" />
-            <CardTitle>Профиль</CardTitle>
+            <CardTitle>{t("settings.profile_title")}</CardTitle>
           </div>
-          <CardDescription>Что мы знаем о тебе</CardDescription>
+          <CardDescription>{t("settings.profile_lead")}</CardDescription>
         </CardHeader>
         <CardContent>
           {profile.data ? (
@@ -81,7 +80,7 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
                   <dd>{profile.data.email}</dd>
                 </>
               )}
-              <dt className="text-muted-foreground">Провайдер</dt>
+              <dt className="text-muted-foreground">{t("settings.profile_provider")}</dt>
               <dd>{profile.data.provider ?? "—"}</dd>
               {profile.data.github_login && (
                 <>
@@ -92,7 +91,7 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
             </dl>
           ) : (
             <p className="text-sm text-muted-foreground">
-              {profile.isError ? "не удалось загрузить" : "загрузка…"}
+              {profile.isError ? t("settings.profile_load_failed") : t("settings.profile_loading")}
             </p>
           )}
         </CardContent>
@@ -126,17 +125,19 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
             <Globe className="h-4 w-4 text-muted-foreground" />
             <CardTitle>{t("settings.timezone")}</CardTitle>
           </div>
-          <CardDescription>Влияет на отображение времени в отчётах и таблице событий.</CardDescription>
+          <CardDescription>{t("settings.timezone_lead")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Select value={tz} onChange={(e) => changeTz(e.target.value)} className="w-full max-w-sm px-3 py-2 text-sm">
-            {!UNIQUE_TIMEZONES.find((t) => t.value === tz) && <option value={tz}>Текущий: {tz}</option>}
-            {UNIQUE_TIMEZONES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
+            {!UNIQUE_TIMEZONES.find((t) => t.value === tz) && (
+              <option value={tz}>{t("settings.timezone_current", { tz })}</option>
+            )}
+            {UNIQUE_TIMEZONES.map((tzo) => (
+              <option key={tzo.value} value={tzo.value}>{tzo.label}</option>
             ))}
           </Select>
           <p className="mt-2 text-xs text-muted-foreground">
-            Сейчас: <span className="font-mono">{tz}</span>
+            {t("settings.timezone_now")} <span className="font-mono">{tz}</span>
           </p>
         </CardContent>
       </Card>
@@ -145,23 +146,23 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Shield className="h-4 w-4 text-muted-foreground" />
-            <CardTitle>Приватность</CardTitle>
+            <CardTitle>{t("settings.privacy_title")}</CardTitle>
           </div>
-          <CardDescription>Что Eye of Providence НЕ собирает</CardDescription>
+          <CardDescription>{t("settings.privacy_lead")}</CardDescription>
         </CardHeader>
         <CardContent>
           <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-            {PRIVACY_NOT_COLLECTED.map((s) => <li key={s}>{s}</li>)}
+            {privacyItems.map((s) => <li key={s}>{s}</li>)}
           </ul>
         </CardContent>
       </Card>
 
       <DangerZone
-        title="Удалить все мои данные"
-        description="Стерт user-row, все события и отчёты. Необратимо. Нужна будет повторная регистрация."
+        title={t("settings.danger_title")}
+        description={t("settings.danger_lead")}
         action={
           <Button variant="destructive" size="sm" onClick={destroy} disabled={deleteData.isPending}>
-            <Trash2 className="h-3.5 w-3.5 mr-1" /> Удалить
+            <Trash2 className="h-3.5 w-3.5 mr-1" /> {t("actions.delete")}
           </Button>
         }
       />

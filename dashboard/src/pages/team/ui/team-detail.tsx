@@ -11,7 +11,7 @@ import { SettingsTab } from "./settings-tab";
 type TabKey = "members" | "projects" | "commits" | "settings";
 
 export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; tz: string }) {
-  const { t } = useTranslation("app");
+  const { t } = useTranslation(["app", "common"]);
   const role = team.role;
   const [tab, setTab] = useState<TabKey>("members");
   const members = useMembers(teamID);
@@ -29,7 +29,12 @@ export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; t
         <div>
           <div className="flex items-center gap-3 flex-wrap">
             <CardTitle className="font-display tracking-tight">{team.name}</CardTitle>
-            <PlanBadge plan={team.subscription_plan ?? "free"} until={team.subscription_until} />
+            <PlanBadge
+              plan={team.subscription_plan ?? "free"}
+              until={team.subscription_until}
+              untilLabel={t("common:plan_badge.until", { defaultValue: "until" })}
+              expiredLabel={t("common:plan_badge.expired", { defaultValue: "expired" })}
+            />
           </div>
           <CardDescription>
             {memberCountLabel}
