@@ -65,8 +65,15 @@ func (s Service) handleForgotPassword(c *fiber.Ctx) error {
 	}
 
 	if s.Mailer != nil {
+		// Берём locale из user-row — у юзера уже точно есть аккаунт (мы его нашли).
+		var userLocale *string
+		_ = s.Pool.QueryRow(c.Context(), `SELECT locale FROM users WHERE id = $1`, user.ID).Scan(&userLocale)
+		loc := mailer.Locale("")
+		if userLocale != nil {
+			loc = mailer.Locale(*userLocale)
+		}
 		resetURL := strings.TrimRight(s.PublicURL, "/") + "/reset-password?token=" + url.QueryEscape(tok)
-		subject, html, text := mailer.PasswordResetEmail(resetURL)
+		subject, html, text := mailer.PasswordResetEmail(resetURL, loc)
 		if err := s.Mailer.Send(c.Context(), email, subject, html, text); err != nil {
 			s.Logger.Warn("forgot-password email send failed", zap.String("to", email), zap.Error(err))
 			// Письмо не ушло — токен в БД остался, юзер может попросить повторно.

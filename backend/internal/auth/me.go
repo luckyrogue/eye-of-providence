@@ -14,7 +14,8 @@ import (
 
 // MeService — endpoints для текущего пользователя:
 //
-//	GET    /v1/me                       — профиль (id, email, github_login)
+//	GET    /v1/me                       — профиль (id, email, github_login, locale)
+//	PATCH  /v1/me/locale                — обновить locale (ru | en | kk | es)
 //	GET    /v1/me/onboarding-status     — состояние онбординга (для wizard'а)
 //	POST   /v1/me/onboarding/dismiss    — пометить wizard завершённым/закрытым
 //	DELETE /v1/me/data                  — стирает все события и отчёты пользователя
@@ -41,9 +42,10 @@ func RegisterMeRoutes(app *fiber.App, s MeService) {
 				var ghLogin *string
 				var globalRole *string
 				var displayName *string
+				var locale *string
 				_ = s.Pool.QueryRow(c.Context(),
-					"SELECT github_login, global_role, display_name FROM users WHERE id = $1", uid).
-					Scan(&ghLogin, &globalRole, &displayName)
+					"SELECT github_login, global_role, display_name, locale FROM users WHERE id = $1", uid).
+					Scan(&ghLogin, &globalRole, &displayName, &locale)
 				if ghLogin != nil {
 					out["github_login"] = *ghLogin
 				}
@@ -53,6 +55,9 @@ func RegisterMeRoutes(app *fiber.App, s MeService) {
 				if displayName != nil {
 					out["display_name"] = *displayName
 				}
+				if locale != nil {
+					out["locale"] = *locale
+				}
 			}
 		}
 		return c.JSON(out)
@@ -60,6 +65,7 @@ func RegisterMeRoutes(app *fiber.App, s MeService) {
 
 	g.Get("/onboarding-status", onboardingStatusHandler(s))
 	g.Post("/onboarding/dismiss", onboardingDismissHandler(s))
+	g.Patch("/locale", localeHandler(s))
 
 	g.Delete("/data", func(c *fiber.Ctx) error {
 		claims := ClaimsFromCtx(c)

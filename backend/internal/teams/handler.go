@@ -799,13 +799,24 @@ func (s Service) handleCreateInvite(c *fiber.Ctx) error {
 
 // sendInviteEmail — собирает данные (имя команды + display_name приглашающего)
 // и шлёт письмо через Mailer. Не делает ретраев — Mailer.Send сам отвечает за HTTP.
+//
+// Locale: invite шлётся "слепо" — у получателя ещё нет аккаунта (значит и
+// users.locale). Используем locale приглашающего как best-guess (часто это
+// тот же регион). Fallback в NormalizeLocale (ru).
 func (s Service) sendInviteEmail(ctx context.Context, teamID, inviterID uuid.UUID, to, code string) error {
 	var teamName, inviterName string
+	var inviterLocale *string
 	_ = s.Pool.QueryRow(ctx, `SELECT name FROM teams WHERE id = $1`, teamID).Scan(&teamName)
-	_ = s.Pool.QueryRow(ctx, `SELECT COALESCE(display_name, '') FROM users WHERE id = $1`, inviterID).Scan(&inviterName)
+	_ = s.Pool.QueryRow(ctx,
+		`SELECT COALESCE(display_name, ''), locale FROM users WHERE id = $1`, inviterID,
+	).Scan(&inviterName, &inviterLocale)
 
+	loc := mailer.Locale("")
+	if inviterLocale != nil {
+		loc = mailer.Locale(*inviterLocale)
+	}
 	inviteURL := strings.TrimRight(s.PublicURL, "/") + "/?invite=" + code
-	subject, html, text := mailer.InviteEmail(teamName, inviteURL, inviterName)
+	subject, html, text := mailer.InviteEmail(teamName, inviteURL, inviterName, loc)
 	return s.Mailer.Send(ctx, to, subject, html, text)
 }
 

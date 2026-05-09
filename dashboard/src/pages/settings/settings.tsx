@@ -6,7 +6,7 @@ import {
   DangerZone, Select, useConfirm,
 } from "@eop/ui";
 import { Globe, Languages, Shield, Trash2, User } from "lucide-react";
-import { useProfile, useDeleteMyData } from "../../entities/user";
+import { useProfile, useDeleteMyData, updateLocale } from "../../entities/user";
 import { getTz, setTz, UNIQUE_TIMEZONES } from "../../shared/lib/tz";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
 import { LOCALE_LABELS, SUPPORTED_LOCALES, LOCALE_STORAGE_KEY, type Locale } from "../../shared/i18n";
@@ -33,6 +33,9 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
     setLocaleState(next);
     localStorage.setItem(LOCALE_STORAGE_KEY, next);
     void i18n.changeLanguage(next);
+    // Best-effort persist на backend, чтобы emails (invite/reset/digest)
+    // приходили на нужном языке. Пропускаем ошибку — locale уже сохранён локально.
+    void updateLocale(next).catch(() => undefined);
   }
 
   function changeTz(value: string) {

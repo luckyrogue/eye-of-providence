@@ -85,7 +85,7 @@ func TestNoopMailer(t *testing.T) {
 
 // TestInviteEmailTemplate — sanity-check, что результат содержит ожидаемые токены.
 func TestInviteEmailTemplate(t *testing.T) {
-	subject, html, text := InviteEmail("Acme", "https://app.dev/?invite=ABC", "Темирлан")
+	subject, html, text := InviteEmail("Acme", "https://app.dev/?invite=ABC", "Темирлан", LocaleRU)
 	if !strings.Contains(subject, "Acme") {
 		t.Errorf("subject missing team name: %q", subject)
 	}

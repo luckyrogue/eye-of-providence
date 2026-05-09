@@ -77,6 +77,10 @@ export async function dismissOnboarding(): Promise<void> {
   await http.post("/v1/me/onboarding/dismiss");
 }
 
+export async function updateLocale(locale: string): Promise<void> {
+  await http.patch("/v1/me/locale", { locale });
+}
+
 export async function forgotPassword(email: string): Promise<void> {
   // Backend всегда отвечает 200 (не палит существование email'а),
   // нам остаётся только показать "если такой email есть, мы прислали письмо".
