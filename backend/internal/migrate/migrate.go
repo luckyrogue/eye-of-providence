@@ -65,6 +65,11 @@ func newMigrator(subdir, dsn string) (*migrate.Migrate, error) {
 	if subdir == pgSubdir {
 		dsn = toPgx5DSN(dsn)
 	}
+	// CH: golang-migrate по умолчанию создаёт schema_migrations с Engine=TinyLog,
+	// но ClickHouse Cloud (Shared databases) запрещает движки на локальный диск.
+	if subdir == chSubdir {
+		dsn = ensureCHMigrationsEngine(dsn)
+	}
 	m, err := migrate.NewWithSourceInstance("iofs", src, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("migrate init for %s: %w", subdir, err)
@@ -83,6 +88,20 @@ func toPgx5DSN(dsn string) string {
 		return "pgx5://" + strings.TrimPrefix(dsn, "postgresql://")
 	}
 	return dsn
+}
+
+// ensureCHMigrationsEngine — добавляет `x-migrations-table-engine=MergeTree`
+// в CH DSN если не задан. Нужно для CH Cloud Shared databases (default
+// TinyLog запрещён). MergeTree в Cloud автоматически реплицируется.
+func ensureCHMigrationsEngine(dsn string) string {
+	if strings.Contains(dsn, "x-migrations-table-engine=") {
+		return dsn
+	}
+	sep := "?"
+	if strings.Contains(dsn, "?") {
+		sep = "&"
+	}
+	return dsn + sep + "x-migrations-table-engine=MergeTree"
 }
 
 // RunPostgres — auto-migrate on API startup. No-op if dsn пустой.
