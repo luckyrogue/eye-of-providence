@@ -8,6 +8,8 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/google/uuid"
+
+	"github.com/eye-of-providence/backend/internal/metrics"
 )
 
 type ClickHouseStore struct {
@@ -42,6 +44,7 @@ func (s *ClickHouseStore) Insert(ctx context.Context, events []Event) error {
 	if len(events) == 0 {
 		return nil
 	}
+	defer metrics.ClickHouseWrite.ObserveSince(time.Now())
 	batch, err := s.conn.PrepareBatch(ctx, `
 		INSERT INTO events (
 			ts, user_id, device_id, session_id, app_bundle, category, source,
@@ -73,6 +76,7 @@ func (s *ClickHouseStore) Insert(ctx context.Context, events []Event) error {
 }
 
 func (s *ClickHouseStore) ListRecent(ctx context.Context, userID string, limit int) ([]Event, error) {
+	defer metrics.ClickHouseRead.ObserveSince(time.Now())
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, err
@@ -119,6 +123,7 @@ func (s *ClickHouseStore) ListRecent(ctx context.Context, userID string, limit i
 }
 
 func (s *ClickHouseStore) AggregateByCategory(ctx context.Context, userID string, since time.Time) (map[string]uint64, error) {
+	defer metrics.ClickHouseRead.ObserveSince(time.Now())
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, err
@@ -149,6 +154,7 @@ func (s *ClickHouseStore) AggregateByCategory(ctx context.Context, userID string
 // AggregateByCategoryBulk — один CH-запрос для всех userIDs.
 // Возвращает map[userID]map[category]ms. Если userIDs пустой — пустую map.
 func (s *ClickHouseStore) AggregateByCategoryBulk(ctx context.Context, userIDs []string, since time.Time) (map[string]map[string]uint64, error) {
+	defer metrics.ClickHouseRead.ObserveSince(time.Now())
 	out := map[string]map[string]uint64{}
 	if len(userIDs) == 0 {
 		return out, nil

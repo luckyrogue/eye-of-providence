@@ -161,6 +161,81 @@ migrate -db clickhouse force 2       # 001_events + 002_attribution_events
 
 Dockerfile `HEALTHCHECK` пробивает `127.0.0.1:3000/healthz` каждые 15s. start-period=60s даёт ClickHouse Cloud TLS-handshake'у и миграциям закончиться.
 
+## Observability
+
+### Uptime monitoring (Uptime Kuma)
+
+Self-hosted, бесплатный, Telegram/Email/Discord alerts из коробки. Поднимается одним
+docker-контейнером, держит historical SLI график.
+
+```bash
+# На VM (или отдельной "monitoring" машине):
+docker volume create uptime-kuma
+docker run -d --restart=always \
+  -p 3001:3001 \
+  -v uptime-kuma:/app/data \
+  --name uptime-kuma \
+  louislam/uptime-kuma:1
+```
+
+Открой `http://<host>:3001` (или прокинь через Traefik/Cloudflare Tunnel) →
+создай admin → **Add New Monitor**:
+
+- **Type**: HTTPS
+- **Name**: `eop-prod`
+- **URL**: `https://eop.rysdavletov.org/healthz`
+- **Heartbeat Interval**: 60 секунд (60s достаточно для прод-сервиса)
+- **Retries**: 2
+- **Accepted Status Codes**: 200 (на 503 — degraded — alert'нем)
+- **Notifications**: Telegram bot или email — по вкусу
+
+Backup volume: `docker run --rm -v uptime-kuma:/data -v $(pwd):/backup alpine tar czf /backup/uptime-kuma.tgz /data`.
+
+### Metrics (Prometheus-compatible)
+
+`GET /metrics` (public) — счётчики и histograms в Prometheus text format:
+
+```
+# HELP eop_http_request_duration_seconds HTTP request latency by Fiber middleware
+# TYPE eop_http_request_duration_seconds histogram
+eop_http_request_duration_seconds_bucket{le="0.005"} 234
+eop_http_request_duration_seconds_bucket{le="0.01"}  412
+...
+eop_http_request_duration_seconds_sum 12.45
+eop_http_request_duration_seconds_count 580
+
+# HELP eop_clickhouse_write_duration_seconds ClickHouse Insert/Bulk write latency
+...
+eop_ingest_events_accepted_total 12345
+```
+
+Если запустишь Prometheus scrape — добавь в `prometheus.yml`:
+
+```yaml
+scrape_configs:
+  - job_name: eop-prod
+    metrics_path: /metrics
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['eop.rysdavletov.org:443']
+        labels:
+          env: production
+```
+
+Минимум alert'ы (PromQL):
+- `histogram_quantile(0.95, eop_http_request_duration_seconds_bucket) > 1` — p95 > 1s
+- `rate(eop_ingest_errors_total[5m]) > 0` — события на ingest падают
+- `histogram_quantile(0.99, eop_clickhouse_write_duration_seconds_bucket) > 5` — CH writes тормозят
+
+Если Prometheus поднимать не хочется — Uptime Kuma + просто `curl /metrics | head` руками
+для разовых проверок.
+
+### Логи
+
+stdout от Go-binary через Dokploy → docker logs eop_app. Для долгого хранения / поиска
+по PID/request_id — поднять Loki + Grafana либо использовать managed (Better Stack /
+Datadog free tier). Defer'но.
+
 ## Troubleshooting
 
 | Симптом | Где смотреть | Что обычно |

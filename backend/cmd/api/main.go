@@ -89,6 +89,14 @@ func main() {
 
 	app.Use(fiberrecover.New(fiberrecover.Config{EnableStackTrace: cfg.Env != "production"}))
 	app.Use(requestid.New())
+	// Request-latency histogram для всех HTTP-запросов. Не различаем route'ы
+	// per-prom-label (overhead на UA-string'и), хватает агрегата по всему API.
+	app.Use(func(c *fiber.Ctx) error {
+		start := time.Now()
+		err := c.Next()
+		metrics.RequestLatency.ObserveSince(start)
+		return err
+	})
 
 	// Если AllowedOrigins=="*" — браузеры запрещают AllowCredentials=true с wildcard.
 	allowCreds := cfg.AllowedOrigins != "*"
