@@ -345,7 +345,7 @@ func (s Service) handleCreateTeam(c *fiber.Ctx) error {
 		}
 		if ownedCount > 0 {
 			return c.Status(403).JSON(fiber.Map{
-				"error": "you already own a company — one owner = one company in beta",
+				"error": "ты уже владелец компании — в бете 1 owner = 1 company",
 				"code":  "owner_limit",
 			})
 		}
@@ -1074,7 +1074,7 @@ func (s Service) handleUpdateMemberRole(c *fiber.Ctx) error {
 			targetUID, teamID).Scan(&existingOwned)
 		if existingOwned > 0 {
 			return c.Status(409).JSON(fiber.Map{
-				"error": "user already owns another company — one owner = one company in beta",
+				"error": "пользователь уже владелец другой компании — в бете 1 owner = 1 company",
 				"code":  "owner_limit",
 			})
 		}
@@ -1299,7 +1299,7 @@ func (s Service) handleAdminAddMember(c *fiber.Ctx) error {
 			user.ID, teamID).Scan(&existingOwned)
 		if existingOwned > 0 {
 			return c.Status(409).JSON(fiber.Map{
-				"error": "user already owns another company",
+				"error": "пользователь уже владелец другой компании",
 				"code":  "owner_limit",
 			})
 		}

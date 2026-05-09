@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, PromptDialog } from "@eop/ui";
 import { Plus, Users } from "lucide-react";
 import { useTeams, useBetaInfo, useCreateTeam } from "../../entities/team";
+import { useMe } from "../../entities/user";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
 import { BetaBanner } from "../../widgets/beta-banner";
 import { TeamDetail } from "./ui/team-detail";
@@ -10,12 +11,18 @@ import { translateRole } from "./utils";
 export function Teams({ tz }: { tz: string }) {
   const teams = useTeams();
   const beta = useBetaInfo();
+  const me = useMe();
   const createTeam = useCreateTeam();
   const runToast = useMutationToast();
   const [activeTeam, setActiveTeam] = useState<string | null>(localStorage.getItem("eop_team"));
   const [newTeamOpen, setNewTeamOpen] = useState(false);
 
   const teamsList = teams.data ?? [];
+  // 1 owner = 1 company invariant (бэкенд тоже ловит, но UI не должен звать
+  // запрос, обречённый на 403). Super_admin исключён.
+  const isSuperAdmin = me.data?.global_role === "super_admin";
+  const alreadyOwner = teamsList.some((t) => t.role === "owner");
+  const ownerBlocked = alreadyOwner && !isSuperAdmin;
 
   // Sync activeTeam с реальным списком: если ничего не выбрано, или выбранная
   // команда удалена — переключиться на первую доступную. Делаем в effect, не
@@ -36,13 +43,23 @@ export function Teams({ tz }: { tz: string }) {
   }
 
   async function onCreateTeam(name: string) {
-    const r = await runToast(createTeam.mutateAsync(name), {
-      success: "Команда создана",
-      error: "Не удалось создать команду",
-    });
-    if (r) {
+    try {
+      const r = await createTeam.mutateAsync(name);
+      runToast(Promise.resolve(r), { success: "Команда создана" });
       switchTeam(r.id);
       setNewTeamOpen(false);
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      if (code === "owner_limit") {
+        runToast(Promise.reject(new Error("В бете один пользователь может быть владельцем только одной компании")), {
+          error: "Нельзя создать ещё одну команду",
+        });
+      } else if (code === "beta_full") {
+        runToast(Promise.reject(new Error("Beta-программа заполнена")), { error: "Нельзя создать" });
+      } else {
+        const msg = e instanceof Error ? e.message : String(e);
+        runToast(Promise.reject(new Error(msg)), { error: "Не удалось создать команду" });
+      }
     }
   }
 
@@ -62,7 +79,18 @@ export function Teams({ tz }: { tz: string }) {
             </CardTitle>
             <CardDescription>Можешь состоять в нескольких — переключайся внизу.</CardDescription>
           </div>
-          <Button size="sm" onClick={() => setNewTeamOpen(true)} disabled={createTeam.isPending || betaFull}>
+          <Button
+            size="sm"
+            onClick={() => setNewTeamOpen(true)}
+            disabled={createTeam.isPending || betaFull || ownerBlocked}
+            title={
+              ownerBlocked
+                ? "Ты уже владелец компании — в бете 1 owner = 1 company"
+                : betaFull
+                  ? "Beta-программа заполнена"
+                  : undefined
+            }
+          >
             <Plus className="h-3.5 w-3.5 mr-1" /> Новая команда
           </Button>
         </CardHeader>
