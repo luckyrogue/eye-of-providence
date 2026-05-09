@@ -43,8 +43,12 @@ fn foreground_process_name() -> Option<String> {
 
         let mut buf = [0u16; MAX_PATH as usize];
         let mut size = buf.len() as u32;
-        let res =
-            QueryFullProcessImageNameW(handle, Default::default(), windows::core::PWSTR(buf.as_mut_ptr()), &mut size);
+        let res = QueryFullProcessImageNameW(
+            handle,
+            Default::default(),
+            windows::core::PWSTR(buf.as_mut_ptr()),
+            &mut size,
+        );
         let _ = CloseHandle(handle);
         if res.is_err() {
             return None;

@@ -29,7 +29,8 @@ pub fn spawn(
                     flush_focus(&store, &app, accumulated_ms);
                     accumulated_ms = 0;
                 }
-                let idle_event = Event::os_focus("__idle__", Category::Idle, poll_interval.as_millis() as u32);
+                let idle_event =
+                    Event::os_focus("__idle__", Category::Idle, poll_interval.as_millis() as u32);
                 let _ = store.push(&idle_event);
                 continue;
             }
@@ -72,9 +73,17 @@ fn flush_focus(store: &LocalStore, app: &str, ms: u32) {
 /// Очень грубая классификация по bundle id. Phase 3 заменяется на attribution-pipeline.
 fn classify_app(app_bundle: &str) -> Category {
     let b = app_bundle.to_ascii_lowercase();
-    if b.contains("vscode") || b.contains("jetbrains") || b.contains("cursor") || b.contains("xcode") {
+    if b.contains("vscode")
+        || b.contains("jetbrains")
+        || b.contains("cursor")
+        || b.contains("xcode")
+    {
         Category::Manual
-    } else if b.contains("safari") || b.contains("chrome") || b.contains("firefox") || b.contains("arc") {
+    } else if b.contains("safari")
+        || b.contains("chrome")
+        || b.contains("firefox")
+        || b.contains("arc")
+    {
         Category::Other // browser события приходят отдельно от extension
     } else {
         Category::Other

@@ -30,7 +30,9 @@ impl LocalStore {
                 ON event_buffer(lease_until);
             "#,
         )?;
-        Ok(Self { conn: Mutex::new(conn) })
+        Ok(Self {
+            conn: Mutex::new(conn),
+        })
     }
 
     pub fn push(&self, event: &Event) -> Result<()> {
@@ -68,8 +70,10 @@ impl LocalStore {
                 "UPDATE event_buffer SET lease_until = {} WHERE id IN ({})",
                 lease_until, placeholders
             );
-            let params: Vec<Box<dyn rusqlite::ToSql>> =
-                ids.iter().map(|i| Box::new(*i) as Box<dyn rusqlite::ToSql>).collect();
+            let params: Vec<Box<dyn rusqlite::ToSql>> = ids
+                .iter()
+                .map(|i| Box::new(*i) as Box<dyn rusqlite::ToSql>)
+                .collect();
             let refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|b| b.as_ref()).collect();
             conn.execute(&sql, refs.as_slice())?;
         }
@@ -90,8 +94,10 @@ impl LocalStore {
         let conn = self.conn.lock().unwrap();
         let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let sql = format!("DELETE FROM event_buffer WHERE id IN ({})", placeholders);
-        let params: Vec<Box<dyn rusqlite::ToSql>> =
-            ids.iter().map(|i| Box::new(*i) as Box<dyn rusqlite::ToSql>).collect();
+        let params: Vec<Box<dyn rusqlite::ToSql>> = ids
+            .iter()
+            .map(|i| Box::new(*i) as Box<dyn rusqlite::ToSql>)
+            .collect();
         let refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|b| b.as_ref()).collect();
         conn.execute(&sql, refs.as_slice())?;
         Ok(())
@@ -104,9 +110,14 @@ impl LocalStore {
         }
         let conn = self.conn.lock().unwrap();
         let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
-        let sql = format!("UPDATE event_buffer SET lease_until = NULL WHERE id IN ({})", placeholders);
-        let params: Vec<Box<dyn rusqlite::ToSql>> =
-            ids.iter().map(|i| Box::new(*i) as Box<dyn rusqlite::ToSql>).collect();
+        let sql = format!(
+            "UPDATE event_buffer SET lease_until = NULL WHERE id IN ({})",
+            placeholders
+        );
+        let params: Vec<Box<dyn rusqlite::ToSql>> = ids
+            .iter()
+            .map(|i| Box::new(*i) as Box<dyn rusqlite::ToSql>)
+            .collect();
         let refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|b| b.as_ref()).collect();
         conn.execute(&sql, refs.as_slice())?;
         Ok(())

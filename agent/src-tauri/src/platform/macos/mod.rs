@@ -66,7 +66,8 @@ fn cg_idle_seconds() -> u32 {
     }
     const COMBINED_SESSION_STATE: u32 = 0;
     const ANY_INPUT_EVENT: u32 = u32::MAX;
-    let secs = unsafe { CGEventSourceSecondsSinceLastEventType(COMBINED_SESSION_STATE, ANY_INPUT_EVENT) };
+    let secs =
+        unsafe { CGEventSourceSecondsSinceLastEventType(COMBINED_SESSION_STATE, ANY_INPUT_EVENT) };
     if secs.is_finite() && secs >= 0.0 {
         secs as u32
     } else {

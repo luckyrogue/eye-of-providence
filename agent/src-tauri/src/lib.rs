@@ -24,7 +24,9 @@ struct AgentState {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
         .init();
 
     tauri::Builder::default()
@@ -85,12 +87,19 @@ pub fn run() {
                     check_local_api_port: false,
                     backend_url: backend.as_deref(),
                     bearer_token: token.as_deref(),
-                }).await;
+                })
+                .await;
                 for r in &results {
                     match r.status {
-                        preflight::CheckStatus::Ok => tracing::info!(check = %r.id, "{}", r.message),
-                        preflight::CheckStatus::Warn => tracing::warn!(check = %r.id, "{}", r.message),
-                        preflight::CheckStatus::Error => tracing::error!(check = %r.id, "{}", r.message),
+                        preflight::CheckStatus::Ok => {
+                            tracing::info!(check = %r.id, "{}", r.message)
+                        }
+                        preflight::CheckStatus::Warn => {
+                            tracing::warn!(check = %r.id, "{}", r.message)
+                        }
+                        preflight::CheckStatus::Error => {
+                            tracing::error!(check = %r.id, "{}", r.message)
+                        }
                     }
                 }
             });
@@ -182,13 +191,17 @@ async fn preflight_run(state: tauri::State<'_, AgentState>) -> Result<Vec<CheckR
         check_local_api_port: true,
         backend_url: backend.as_deref(),
         bearer_token: token.as_deref(),
-    }).await)
+    })
+    .await)
 }
 
 // Простейший источник «псевдослучайных» байт для local-token (не cryptographic;
 // токен живёт только локально на машине пользователя). Используем системные nanoseconds.
 fn rand_byte() -> u8 {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let n = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.subsec_nanos()).unwrap_or(0);
+    let n = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.subsec_nanos())
+        .unwrap_or(0);
     (n & 0xff) as u8
 }

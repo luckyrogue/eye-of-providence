@@ -20,7 +20,11 @@ struct IngestBody {
     events: Vec<Event>,
 }
 
-pub fn spawn(store: Arc<LocalStore>, token: String, port: u16) -> tauri::async_runtime::JoinHandle<()> {
+pub fn spawn(
+    store: Arc<LocalStore>,
+    token: String,
+    port: u16,
+) -> tauri::async_runtime::JoinHandle<()> {
     tauri::async_runtime::spawn(async move {
         let addr = format!("127.0.0.1:{}", port);
         let listener = match TcpListener::bind(&addr).await {
@@ -51,7 +55,11 @@ pub fn spawn(store: Arc<LocalStore>, token: String, port: u16) -> tauri::async_r
     })
 }
 
-async fn handle(mut stream: TcpStream, store: Arc<LocalStore>, expected_token: String) -> Result<()> {
+async fn handle(
+    mut stream: TcpStream,
+    store: Arc<LocalStore>,
+    expected_token: String,
+) -> Result<()> {
     let (read, mut write) = stream.split();
     let mut reader = BufReader::new(read);
 
@@ -100,7 +108,12 @@ async fn handle(mut stream: TcpStream, store: Arc<LocalStore>, expected_token: S
             tracing::warn!(error = %err, "push failed");
         }
     }
-    reply(&mut write, 200, format!("{{\"accepted\":{}}}", parsed.events.len()).as_bytes()).await
+    reply(
+        &mut write,
+        200,
+        format!("{{\"accepted\":{}}}", parsed.events.len()).as_bytes(),
+    )
+    .await
 }
 
 fn parse_request_line(line: &str) -> (&str, &str) {

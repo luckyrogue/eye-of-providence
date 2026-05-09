@@ -31,6 +31,10 @@ struct NoopWatcher;
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 impl PlatformWatcher for NoopWatcher {
-    fn current_app(&self) -> Option<String> { None }
-    fn idle_seconds(&self) -> u32 { 0 }
+    fn current_app(&self) -> Option<String> {
+        None
+    }
+    fn idle_seconds(&self) -> u32 {
+        0
+    }
 }
