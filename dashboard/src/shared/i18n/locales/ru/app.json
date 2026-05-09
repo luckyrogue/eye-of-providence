@@ -1,0 +1,77 @@
+{
+  "beta_banner": {
+    "title": "Beta program",
+    "full": "Все {{limit}} мест заняты — open seats coming soon",
+    "free_count": "{{slots}} из {{limit}} мест свободно"
+  },
+  "dashboard": {
+    "overview": "Обзор",
+    "last_7_days": "за 7 дней",
+    "stat_ai_share": "Доля AI",
+    "stat_ai_hint": "за 7 дней",
+    "stat_active": "Активное время",
+    "stat_active_hint_events": "{{count}} событий за период",
+    "stat_minutes": "мин",
+    "stat_reports": "Отчёты",
+    "stat_reports_hint": "сгенерировано",
+    "trend_title": "Динамика за 30 дней",
+    "trend_lead": "Время вручную vs с AI по дням",
+    "heatmap_title": "Тепловая карта",
+    "heatmap_lead": "За 30 дней, день недели × час · {{tz}}",
+    "languages_title": "По языкам",
+    "languages_lead": "Доля AI и ручного кода по языкам",
+    "report_title": "AI-отчёт",
+    "report_lead": "Сгенерирован через Gemini (или mock-режим, если ключ не задан).",
+    "report_create_weekly": "Создать недельный",
+    "report_create_monthly": "Месячный",
+    "report_empty": "Нажми «Создать недельный», чтобы получить первый отчёт.",
+    "events_title": "Последние события",
+    "events_lead": "Из event store. Время в часовом поясе из настроек.",
+    "events_demo": "Отправить демо-события",
+    "events_refresh": "Обновить",
+    "events_empty_eyebrow": "No events yet",
+    "events_empty_title": "Установи агент или отправь демо-события",
+    "events_empty_lead": "Дашборд начнёт показывать данные, как только агент или браузер-расширение пришлёт первое событие.",
+    "table_time": "Время",
+    "table_app": "Приложение",
+    "table_category": "Категория",
+    "table_source": "Источник",
+    "table_provider": "Провайдер",
+    "table_duration": "Длительность",
+    "category": {
+      "manual": "вручную",
+      "ai": "AI",
+      "refactor": "рефакторинг",
+      "idle": "простой",
+      "reading": "чтение",
+      "other": "прочее"
+    },
+    "source": {
+      "os": "ОС",
+      "browser": "браузер",
+      "ide": "IDE",
+      "cli": "CLI"
+    }
+  },
+  "teams": {
+    "title": "Мои команды",
+    "lead": "Можешь состоять в нескольких — переключайся внизу.",
+    "new_team": "Новая команда",
+    "empty": "У тебя пока нет команд. Создай новую или попроси приглашение.",
+    "blocked_owner": "Ты уже владелец компании — в бете 1 owner = 1 company",
+    "blocked_beta_full": "Beta-программа заполнена",
+    "create_dialog_title": "Новая команда",
+    "create_dialog_lead": "Это будет workspace, в котором ваша команда увидит метрики.",
+    "create_dialog_label": "Название",
+    "create_dialog_placeholder": "Acme Inc.",
+    "created_toast": "Команда создана"
+  },
+  "admin": {
+    "title": "Admin",
+    "overview": "Обзор",
+    "users": "Пользователи",
+    "teams": "Команды",
+    "subscriptions": "Подписки",
+    "loading": "Загрузка…"
+  }
+}

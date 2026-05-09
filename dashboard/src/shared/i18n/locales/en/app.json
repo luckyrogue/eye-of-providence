@@ -1,0 +1,77 @@
+{
+  "beta_banner": {
+    "title": "Beta program",
+    "full": "All {{limit}} seats taken — open seats coming soon",
+    "free_count": "{{slots}} of {{limit}} seats free"
+  },
+  "dashboard": {
+    "overview": "Overview",
+    "last_7_days": "last 7 days",
+    "stat_ai_share": "AI share",
+    "stat_ai_hint": "for 7 days",
+    "stat_active": "Active time",
+    "stat_active_hint_events": "{{count}} events in period",
+    "stat_minutes": "min",
+    "stat_reports": "Reports",
+    "stat_reports_hint": "generated",
+    "trend_title": "Last 30 days",
+    "trend_lead": "Manual vs AI time per day",
+    "heatmap_title": "Heatmap",
+    "heatmap_lead": "Last 30 days, day of week × hour · {{tz}}",
+    "languages_title": "By language",
+    "languages_lead": "AI vs manual share per language",
+    "report_title": "AI report",
+    "report_lead": "Generated via Gemini (or mock mode if key not set).",
+    "report_create_weekly": "Create weekly",
+    "report_create_monthly": "Monthly",
+    "report_empty": "Click \"Create weekly\" to get the first report.",
+    "events_title": "Recent events",
+    "events_lead": "From event store. Time in timezone from settings.",
+    "events_demo": "Send demo events",
+    "events_refresh": "Refresh",
+    "events_empty_eyebrow": "No events yet",
+    "events_empty_title": "Install the agent or send demo events",
+    "events_empty_lead": "The dashboard will show data as soon as the agent or browser extension sends the first event.",
+    "table_time": "Time",
+    "table_app": "App",
+    "table_category": "Category",
+    "table_source": "Source",
+    "table_provider": "Provider",
+    "table_duration": "Duration",
+    "category": {
+      "manual": "manual",
+      "ai": "AI",
+      "refactor": "refactor",
+      "idle": "idle",
+      "reading": "reading",
+      "other": "other"
+    },
+    "source": {
+      "os": "OS",
+      "browser": "browser",
+      "ide": "IDE",
+      "cli": "CLI"
+    }
+  },
+  "teams": {
+    "title": "My teams",
+    "lead": "You can be in several — switch at the bottom.",
+    "new_team": "New team",
+    "empty": "You don't have any teams yet. Create one or ask for an invite.",
+    "blocked_owner": "You already own a company — in beta 1 owner = 1 company",
+    "blocked_beta_full": "Beta program is full",
+    "create_dialog_title": "New team",
+    "create_dialog_lead": "This will be the workspace where your team sees metrics.",
+    "create_dialog_label": "Name",
+    "create_dialog_placeholder": "Acme Inc.",
+    "created_toast": "Team created"
+  },
+  "admin": {
+    "title": "Admin",
+    "overview": "Overview",
+    "users": "Users",
+    "teams": "Teams",
+    "subscriptions": "Subscriptions",
+    "loading": "Loading…"
+  }
+}

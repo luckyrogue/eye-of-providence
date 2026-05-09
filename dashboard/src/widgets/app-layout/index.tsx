@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Activity, Eye, LogOut, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import { cn } from "@eop/ui";
 import { useAuth } from "../../shared/hooks/use-auth";
@@ -8,6 +9,7 @@ import { useTeams } from "../../entities/team";
 import { AUTH_FAILED_EVENT } from "../../shared/api/http";
 
 export function AppLayout() {
+  const { t } = useTranslation("common");
   const { isAuthed, logout } = useAuth();
   const navigate = useNavigate();
   const me = useMe();
@@ -53,18 +55,18 @@ export function AppLayout() {
               <Eye className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-display text-lg font-bold tracking-tightest leading-none">Eye of Providence</h1>
-              <p className="text-[11px] uppercase tracking-widest2 text-muted-foreground mt-1">Manual vs AI · live</p>
+              <h1 className="font-display text-lg font-bold tracking-tightest leading-none">{t("app.name")}</h1>
+              <p className="text-[11px] uppercase tracking-widest2 text-muted-foreground mt-1">{t("app.tagline")}</p>
             </div>
           </NavLink>
 
           <nav className="flex items-center gap-1 text-sm">
-            <NavItem to="/dashboard" icon={<Activity className="h-4 w-4" />}>Дашборд</NavItem>
-            <NavItem to="/team" icon={<Users className="h-4 w-4" />}>Команда</NavItem>
-            <NavItem to="/settings" icon={<SettingsIcon className="h-4 w-4" />}>Настройки</NavItem>
+            <NavItem to="/dashboard" icon={<Activity className="h-4 w-4" />}>{t("nav.dashboard")}</NavItem>
+            <NavItem to="/team" icon={<Users className="h-4 w-4" />}>{t("nav.team")}</NavItem>
+            <NavItem to="/settings" icon={<SettingsIcon className="h-4 w-4" />}>{t("nav.settings")}</NavItem>
             {isSuperAdmin && (
               <NavItem to="/admin" icon={<Shield className="h-4 w-4" />} accent>
-                Admin
+                {t("nav.admin")}
               </NavItem>
             )}
             <span className="mx-2 h-5 w-px bg-border" />
@@ -72,7 +74,7 @@ export function AppLayout() {
               onClick={doLogout}
               className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-muted-foreground hover:bg-secondary"
             >
-              <LogOut className="h-4 w-4" /> Выход
+              <LogOut className="h-4 w-4" /> {t("actions.logout")}
             </button>
           </nav>
         </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, PromptDialog } from "@eop/ui";
 import { Plus, Users } from "lucide-react";
 import { useTeams, useBetaInfo, useCreateTeam } from "../../entities/team";
@@ -9,6 +10,7 @@ import { TeamDetail } from "./ui/team-detail";
 import { translateRole } from "./utils";
 
 export function Teams({ tz }: { tz: string }) {
+  const { t } = useTranslation(["app", "errors", "common"]);
   const teams = useTeams();
   const beta = useBetaInfo();
   const me = useMe();
@@ -45,21 +47,13 @@ export function Teams({ tz }: { tz: string }) {
   async function onCreateTeam(name: string) {
     try {
       const r = await createTeam.mutateAsync(name);
-      runToast(Promise.resolve(r), { success: "Команда создана" });
+      runToast(Promise.resolve(r), { success: t("app:teams.created_toast") });
       switchTeam(r.id);
       setNewTeamOpen(false);
     } catch (e) {
       const code = (e as { code?: string }).code;
-      if (code === "owner_limit") {
-        runToast(Promise.reject(new Error("В бете один пользователь может быть владельцем только одной компании")), {
-          error: "Нельзя создать ещё одну команду",
-        });
-      } else if (code === "beta_full") {
-        runToast(Promise.reject(new Error("Beta-программа заполнена")), { error: "Нельзя создать" });
-      } else {
-        const msg = e instanceof Error ? e.message : String(e);
-        runToast(Promise.reject(new Error(msg)), { error: "Не удалось создать команду" });
-      }
+      const errorMsg = code ? t(`errors:${code}`, { defaultValue: t("errors:generic") }) : t("errors:generic");
+      runToast(Promise.reject(new Error(errorMsg)), { error: t("errors:team_create_failed") });
     }
   }
 
@@ -75,9 +69,9 @@ export function Teams({ tz }: { tz: string }) {
         <CardHeader className="flex-row items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 font-display tracking-tight">
-              <Users className="h-4 w-4" /> Мои команды
+              <Users className="h-4 w-4" /> {t("app:teams.title")}
             </CardTitle>
-            <CardDescription>Можешь состоять в нескольких — переключайся внизу.</CardDescription>
+            <CardDescription>{t("app:teams.lead")}</CardDescription>
           </div>
           <Button
             size="sm"
@@ -85,18 +79,18 @@ export function Teams({ tz }: { tz: string }) {
             disabled={createTeam.isPending || betaFull || ownerBlocked}
             title={
               ownerBlocked
-                ? "Ты уже владелец компании — в бете 1 owner = 1 company"
+                ? t("app:teams.blocked_owner")
                 : betaFull
-                  ? "Beta-программа заполнена"
+                  ? t("app:teams.blocked_beta_full")
                   : undefined
             }
           >
-            <Plus className="h-3.5 w-3.5 mr-1" /> Новая команда
+            <Plus className="h-3.5 w-3.5 mr-1" /> {t("app:teams.new_team")}
           </Button>
         </CardHeader>
         <CardContent>
           {teamsList.length === 0 ? (
-            <p className="text-sm text-muted-foreground">У тебя пока нет команд. Создай новую или попроси приглашение.</p>
+            <p className="text-sm text-muted-foreground">{t("app:teams.empty")}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {teamsList.map((t) => (
@@ -127,11 +121,11 @@ export function Teams({ tz }: { tz: string }) {
 
       <PromptDialog
         open={newTeamOpen}
-        title="Новая команда"
-        description="Это будет workspace, в котором ваша команда увидит метрики."
-        label="Название"
-        placeholder="Acme Inc."
-        confirmText="Создать"
+        title={t("app:teams.create_dialog_title")}
+        description={t("app:teams.create_dialog_lead")}
+        label={t("app:teams.create_dialog_label")}
+        placeholder={t("app:teams.create_dialog_placeholder")}
+        confirmText={t("common:actions.create")}
         busy={createTeam.isPending}
         onClose={() => setNewTeamOpen(false)}
         onConfirm={onCreateTeam}

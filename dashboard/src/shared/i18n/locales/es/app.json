@@ -1,0 +1,77 @@
+{
+  "beta_banner": {
+    "title": "Programa Beta",
+    "full": "Las {{limit}} plazas están ocupadas — open seats coming soon",
+    "free_count": "{{slots}} de {{limit}} plazas libres"
+  },
+  "dashboard": {
+    "overview": "Resumen",
+    "last_7_days": "últimos 7 días",
+    "stat_ai_share": "Cuota IA",
+    "stat_ai_hint": "en 7 días",
+    "stat_active": "Tiempo activo",
+    "stat_active_hint_events": "{{count}} eventos en el período",
+    "stat_minutes": "min",
+    "stat_reports": "Reportes",
+    "stat_reports_hint": "generados",
+    "trend_title": "Dinámica 30 días",
+    "trend_lead": "Tiempo manual vs IA por día",
+    "heatmap_title": "Mapa de calor",
+    "heatmap_lead": "30 días, día de la semana × hora · {{tz}}",
+    "languages_title": "Por idioma",
+    "languages_lead": "Cuota de IA y manual por idioma",
+    "report_title": "Reporte IA",
+    "report_lead": "Generado vía Gemini (o modo mock si la clave no está configurada).",
+    "report_create_weekly": "Crear semanal",
+    "report_create_monthly": "Mensual",
+    "report_empty": "Haz click en «Crear semanal» para obtener el primer reporte.",
+    "events_title": "Eventos recientes",
+    "events_lead": "Del event store. Hora en zona horaria de configuración.",
+    "events_demo": "Enviar eventos demo",
+    "events_refresh": "Actualizar",
+    "events_empty_eyebrow": "Sin eventos aún",
+    "events_empty_title": "Instala el agente o envía eventos demo",
+    "events_empty_lead": "El panel mostrará datos en cuanto el agente o la extensión envíe el primer evento.",
+    "table_time": "Hora",
+    "table_app": "Aplicación",
+    "table_category": "Categoría",
+    "table_source": "Fuente",
+    "table_provider": "Proveedor",
+    "table_duration": "Duración",
+    "category": {
+      "manual": "manual",
+      "ai": "IA",
+      "refactor": "refactor",
+      "idle": "inactivo",
+      "reading": "lectura",
+      "other": "otro"
+    },
+    "source": {
+      "os": "SO",
+      "browser": "navegador",
+      "ide": "IDE",
+      "cli": "CLI"
+    }
+  },
+  "teams": {
+    "title": "Mis equipos",
+    "lead": "Puedes estar en varios — cambia abajo.",
+    "new_team": "Nuevo equipo",
+    "empty": "Aún no tienes equipos. Crea uno o pide una invitación.",
+    "blocked_owner": "Ya eres propietario de una empresa — en beta 1 owner = 1 company",
+    "blocked_beta_full": "Programa beta completo",
+    "create_dialog_title": "Nuevo equipo",
+    "create_dialog_lead": "Será el workspace donde tu equipo verá las métricas.",
+    "create_dialog_label": "Nombre",
+    "create_dialog_placeholder": "Acme Inc.",
+    "created_toast": "Equipo creado"
+  },
+  "admin": {
+    "title": "Admin",
+    "overview": "Resumen",
+    "users": "Usuarios",
+    "teams": "Equipos",
+    "subscriptions": "Suscripciones",
+    "loading": "Cargando…"
+  }
+}

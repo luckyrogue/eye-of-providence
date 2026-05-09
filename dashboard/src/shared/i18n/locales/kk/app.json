@@ -1,0 +1,77 @@
+{
+  "beta_banner": {
+    "title": "Beta бағдарлама",
+    "full": "Барлық {{limit}} орын алынды — open seats coming soon",
+    "free_count": "{{limit}} орыннан {{slots}} бос"
+  },
+  "dashboard": {
+    "overview": "Шолу",
+    "last_7_days": "соңғы 7 күн",
+    "stat_ai_share": "AI үлесі",
+    "stat_ai_hint": "7 күн ішінде",
+    "stat_active": "Белсенді уақыт",
+    "stat_active_hint_events": "кезеңде {{count}} оқиға",
+    "stat_minutes": "мин",
+    "stat_reports": "Есептер",
+    "stat_reports_hint": "құрылған",
+    "trend_title": "Соңғы 30 күн динамикасы",
+    "trend_lead": "Қол vs AI уақыты күндер бойынша",
+    "heatmap_title": "Жылу картасы",
+    "heatmap_lead": "Соңғы 30 күн, апта күні × сағат · {{tz}}",
+    "languages_title": "Тілдер бойынша",
+    "languages_lead": "AI және қол кодының үлесі тіл бойынша",
+    "report_title": "AI-есеп",
+    "report_lead": "Gemini арқылы құрылған (немесе mock-режим, кілт жоқ болса).",
+    "report_create_weekly": "Апталық құру",
+    "report_create_monthly": "Айлық",
+    "report_empty": "«Апталық құру» басып, бірінші есепті алыңыз.",
+    "events_title": "Соңғы оқиғалар",
+    "events_lead": "Event store-дан. Уақыт — баптаулардағы уақыт белдеуі.",
+    "events_demo": "Демо оқиғалар жіберу",
+    "events_refresh": "Жаңарту",
+    "events_empty_eyebrow": "Оқиғалар жоқ",
+    "events_empty_title": "Агентті орнатыңыз немесе демо оқиғалар жіберіңіз",
+    "events_empty_lead": "Агент немесе browser extension алғашқы оқиға жіберісімен дашборд деректерді көрсете бастайды.",
+    "table_time": "Уақыт",
+    "table_app": "Қолданба",
+    "table_category": "Категория",
+    "table_source": "Дереккөз",
+    "table_provider": "Провайдер",
+    "table_duration": "Ұзақтығы",
+    "category": {
+      "manual": "қолмен",
+      "ai": "AI",
+      "refactor": "рефакторинг",
+      "idle": "тоқтау",
+      "reading": "оқу",
+      "other": "басқа"
+    },
+    "source": {
+      "os": "ОЖ",
+      "browser": "браузер",
+      "ide": "IDE",
+      "cli": "CLI"
+    }
+  },
+  "teams": {
+    "title": "Менің командаларым",
+    "lead": "Бірнеше командада бола аласыз — төменде ауысыңыз.",
+    "new_team": "Жаңа команда",
+    "empty": "Әзірге командаларыңыз жоқ. Жаңа құрыңыз немесе шақыру сұраңыз.",
+    "blocked_owner": "Сіз қазірдің өзінде компания иесісіз — бетада 1 owner = 1 company",
+    "blocked_beta_full": "Бета бағдарлама толды",
+    "create_dialog_title": "Жаңа команда",
+    "create_dialog_lead": "Бұл командаңыз метриканы көретін workspace болады.",
+    "create_dialog_label": "Аты",
+    "create_dialog_placeholder": "Acme Inc.",
+    "created_toast": "Команда құрылды"
+  },
+  "admin": {
+    "title": "Admin",
+    "overview": "Шолу",
+    "users": "Қолданушылар",
+    "teams": "Командалар",
+    "subscriptions": "Жазылулар",
+    "loading": "Жүктелуде…"
+  }
+}

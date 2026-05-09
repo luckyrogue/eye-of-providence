@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { Sparkles } from "lucide-react";
 import type { BetaInfo } from "../../entities/team";
 
 export function BetaBanner({ beta }: { beta: BetaInfo }) {
+  const { t } = useTranslation("app");
   const slotsLeft = beta.slots_remaining;
   const betaFull = beta.limit > 0 && slotsLeft === 0;
   return (
@@ -12,12 +14,12 @@ export function BetaBanner({ beta }: { beta: BetaInfo }) {
         </div>
         <div>
           <div className="font-mono text-[11px] uppercase tracking-widest3 text-muted-foreground">
-            Beta program
+            {t("beta_banner.title")}
           </div>
           <div className="text-sm font-medium mt-0.5">
             {betaFull
-              ? `Все ${beta.limit} мест заняты — open seats coming soon`
-              : `${slotsLeft} из ${beta.limit} мест свободно`}
+              ? t("beta_banner.full", { limit: beta.limit })
+              : t("beta_banner.free_count", { slots: slotsLeft, limit: beta.limit })}
           </div>
         </div>
       </div>
