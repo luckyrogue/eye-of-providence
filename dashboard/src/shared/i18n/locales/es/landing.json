@@ -1,0 +1,15 @@
+{
+  "tagline": "Eye of Providence",
+  "hero_title": "Cuánto escribes tú, cuánto con <em>IA</em>",
+  "hero_lead": "Panel de productividad privacy-by-design para equipos que usan AI-coders. Ves a todos. No filtras contenido.",
+  "cta_signup": "Crear cuenta",
+  "cta_login": "Iniciar sesión",
+  "features": {
+    "multivendor_title": "Multi-vendor",
+    "multivendor_text": "Cursor, Copilot, Claude Code, ChatGPT — los vemos todos. Ellos solo se ven a sí mismos.",
+    "privacy_title": "Privacy-first",
+    "privacy_text": "Categorías + métricas de tiempo, no contenido. Hashes locales, agregación on-device.",
+    "team_title": "Team-aware",
+    "team_text": "Panel para tech leads: dónde acelera la IA, dónde frena, dónde explota la review."
+  }
+}

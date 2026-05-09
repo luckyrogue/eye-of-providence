@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from "@eop/ui";
 import { ArrowRight, Copy, Loader2, Mail, SkipForward } from "lucide-react";
 
@@ -24,6 +25,7 @@ export function InviteStep({
   onSkip: () => void;
   onContinue: () => void;
 }) {
+  const { t } = useTranslation(["onboarding", "common"]);
   const [mode, setMode] = useState<"link" | "email">("link");
   const [email, setEmail] = useState("");
   const [copied, setCopied] = useState(false);
@@ -39,11 +41,9 @@ export function InviteStep({
       <CardHeader>
         <CardTitle className="font-display tracking-tight flex items-center gap-2">
           <Mail className="h-5 w-5" />
-          Пригласите команду
+          {t("invite.title")}
         </CardTitle>
-        <CardDescription>
-          Вышлите приглашение на email или сгенерируйте ссылку, чтобы поделиться ей напрямую.
-        </CardDescription>
+        <CardDescription>{t("invite.lead")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-2 text-xs">
@@ -54,7 +54,7 @@ export function InviteStep({
               mode === "link" ? "bg-secondary" : "hover:bg-secondary/50"
             }`}
           >
-            Ссылка (10 мест)
+            {t("invite.tab_link")}
           </button>
           <button
             type="button"
@@ -63,7 +63,7 @@ export function InviteStep({
               mode === "email" ? "bg-secondary" : "hover:bg-secondary/50"
             }`}
           >
-            Email (1 место)
+            {t("invite.tab_email")}
           </button>
         </div>
 
@@ -71,7 +71,7 @@ export function InviteStep({
           <>
             <Input
               type="email"
-              placeholder="teammate@example.com"
+              placeholder={t("invite.email_placeholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={busy || inviteEmailSent}
@@ -83,18 +83,18 @@ export function InviteStep({
                 className="w-full"
               >
                 {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                Отправить приглашение
+                {t("invite.send")}
               </Button>
             ) : (
               <div className="rounded-md border bg-green-500/10 border-green-500/40 p-3 text-sm">
-                Письмо отправлено. Если в течение 5 минут не пришло — проверь папку «Спам».
+                {t("invite.sent_ok")}
               </div>
             )}
           </>
         ) : !inviteUrl ? (
           <Button onClick={() => onGenerate(undefined)} disabled={busy} className="w-full">
             {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-            Сгенерировать invite-ссылку
+            {t("invite.generate")}
           </Button>
         ) : (
           <>
@@ -106,23 +106,21 @@ export function InviteStep({
               />
               <Button size="sm" variant="outline" onClick={copy}>
                 <Copy className="h-3.5 w-3.5 mr-1" />
-                {copied ? "Скопировано!" : "Скопировать"}
+                {copied ? t("invite.copied") : t("invite.copy")}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground font-mono">
-              Действительна 7 дней. До 10 регистраций. Отозвать в Команда → Участники.
-            </p>
+            <p className="text-xs text-muted-foreground font-mono">{t("invite.url_note")}</p>
           </>
         )}
 
         <div className="flex justify-between pt-2">
           <Button variant="ghost" onClick={onSkip} className="text-muted-foreground">
             <SkipForward className="h-3.5 w-3.5 mr-1.5" />
-            Пропустить
+            {t("common:actions.skip")}
           </Button>
           {(inviteUrl || inviteEmailSent) && (
             <Button onClick={onContinue}>
-              Дальше <ArrowRight className="h-4 w-4 ml-2" />
+              {t("common:actions.continue")} <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           )}
         </div>

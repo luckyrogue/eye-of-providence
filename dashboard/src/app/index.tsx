@@ -5,6 +5,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "sonner";
 import { ConfirmProvider } from "@eop/ui";
 import "@eop/ui/styles.css";
+import "../shared/i18n"; // side-effect: инициализирует i18next до первого render'а
 import { ErrorBoundary } from "./error-boundary";
 import { queryClient } from "../shared/config/query-client";
 import { router } from "./router";

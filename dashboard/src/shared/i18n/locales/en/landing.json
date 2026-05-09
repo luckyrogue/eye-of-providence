@@ -1,0 +1,15 @@
+{
+  "tagline": "Eye of Providence",
+  "hero_title": "How much you wrote yourself, how much with <em>AI</em>",
+  "hero_lead": "Privacy-by-design productivity dashboard for teams using AI-coders. See everyone. Don't leak content.",
+  "cta_signup": "Sign up",
+  "cta_login": "Sign in",
+  "features": {
+    "multivendor_title": "Multi-vendor",
+    "multivendor_text": "Cursor, Copilot, Claude Code, ChatGPT — we see them all. They only see themselves.",
+    "privacy_title": "Privacy-first",
+    "privacy_text": "Categories + time metrics, not content. Local hashes, on-device aggregation.",
+    "team_title": "Team-aware",
+    "team_text": "Dashboard for tech leads: where AI accelerates, where it slows down, where review explodes."
+  }
+}

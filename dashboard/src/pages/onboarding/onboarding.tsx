@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { Eyebrow, Stepper } from "@eop/ui";
 import { createInvite, createTeam } from "../../entities/team";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
@@ -13,13 +14,6 @@ import { EventStep } from "./ui/event-step";
 // а владелец должен убедиться что у него самого всё работает первым.
 type Step = "company" | "install" | "invite" | "event";
 
-const STEPS = [
-  { key: "company", label: "Компания" },
-  { key: "install", label: "Агент" },
-  { key: "invite", label: "Команда" },
-  { key: "event", label: "Событие" },
-];
-
 export function Onboarding({
   initialStep,
   initialTeamID,
@@ -29,6 +23,7 @@ export function Onboarding({
   initialTeamID: string | null;
   onFinish: () => void;
 }) {
+  const { t } = useTranslation(["onboarding", "errors"]);
   const [step, setStep] = useState<Step>(initialStep);
   const [teamID, setTeamID] = useState<string | null>(initialTeamID);
   const [teamName, setTeamName] = useState("");
@@ -37,14 +32,20 @@ export function Onboarding({
   const [busy, setBusy] = useState(false);
   const runToast = useMutationToast();
 
+  const stepDefs = [
+    { key: "company", label: t("onboarding:steps.company") },
+    { key: "install", label: t("onboarding:steps.install") },
+    { key: "invite", label: t("onboarding:steps.invite") },
+    { key: "event", label: t("onboarding:steps.event") },
+  ];
+
   const inviteUrl = inviteCode ? `${window.location.origin}/?invite=${inviteCode}` : "";
 
   async function createCompany() {
     if (!teamName.trim()) return;
     setBusy(true);
     const r = await runToast(createTeam(teamName.trim()), {
-      success: "Компания создана",
-      error: "Не удалось создать компанию",
+      error: t("errors:team_create_failed"),
     });
     setBusy(false);
     if (r) {
@@ -58,8 +59,7 @@ export function Onboarding({
     if (!teamID) return;
     setBusy(true);
     const r = await runToast(createInvite(teamID, email), {
-      success: email ? "Приглашение отправлено" : undefined,
-      error: "Не удалось создать invite",
+      error: t("errors:invite_create_failed"),
     });
     setBusy(false);
     if (r) {
@@ -78,16 +78,14 @@ export function Onboarding({
 
       <div className="mx-auto max-w-2xl pt-10 pb-6">
         <div className="text-center mb-10 reveal">
-          <Eyebrow>Welcome aboard</Eyebrow>
+          <Eyebrow>{t("onboarding:eyebrow")}</Eyebrow>
           <h1 className="display-head text-4xl md:text-5xl mt-3">
-            Let's set up <em>your company</em>.
+            <Trans i18nKey="onboarding:heading" components={{ em: <em /> }} />
           </h1>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Четыре шага, ~5 минут. Любой шаг можно пропустить и вернуться позже.
-          </p>
+          <p className="mt-3 text-sm text-muted-foreground">{t("onboarding:lead")}</p>
         </div>
 
-        <Stepper steps={STEPS} current={step} className="max-w-md mx-auto" />
+        <Stepper steps={stepDefs} current={step} className="max-w-md mx-auto" />
 
         <div className="mt-6">
           {step === "company" && (

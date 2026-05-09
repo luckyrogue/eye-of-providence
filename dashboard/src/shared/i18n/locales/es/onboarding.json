@@ -1,0 +1,52 @@
+{
+  "eyebrow": "Bienvenido a bordo",
+  "heading": "Configuremos <em>tu empresa</em>.",
+  "lead": "Cuatro pasos, ~5 minutos. Cualquier paso se puede saltar y volver más tarde.",
+  "steps": {
+    "company": "Empresa",
+    "install": "Agente",
+    "invite": "Equipo",
+    "event": "Evento"
+  },
+  "company": {
+    "title": "¿Cómo se llama tu empresa?",
+    "lead": "Será el espacio donde tu equipo verá las métricas. Puedes cambiarlo después.",
+    "placeholder": "Acme Inc.",
+    "submit": "Crear"
+  },
+  "install": {
+    "title": "Instala el agente",
+    "lead": "Sin agente no se recogen eventos. Puedes instalarlo más tarde — toma ~2 minutos.",
+    "macos_note": "10.15+",
+    "windows_note": "10/11",
+    "vscode_note": "marketplace",
+    "extras": "También hay extensión de navegador y git-hooks — detalles en la <a>documentación</a>.",
+    "skip": "Lo instalaré después",
+    "done": "Listo"
+  },
+  "invite": {
+    "title": "Invita a tu equipo",
+    "lead": "Envía una invitación por email o genera un enlace para compartir.",
+    "tab_link": "Enlace (10 plazas)",
+    "tab_email": "Email (1 plaza)",
+    "email_placeholder": "teammate@example.com",
+    "send": "Enviar invitación",
+    "sent_ok": "Email enviado. Si no llega en 5 minutos — revisa la carpeta «Spam».",
+    "generate": "Generar enlace de invitación",
+    "copied": "¡Copiado!",
+    "copy": "Copiar",
+    "url_note": "Válido durante 7 días. Hasta 10 registros. Revocar en Equipo → Miembros."
+  },
+  "event": {
+    "title_waiting": "Esperando el primer evento…",
+    "lead_waiting": "Abre tu editor y escribe un par de minutos. En cuanto el agente envíe un evento, el panel cobrará vida.",
+    "polling_note": "polling /v1/me/onboarding-status cada 5s",
+    "troubleshoot_title": "¿No llegan eventos? Verifica:",
+    "ts_tauri": "El agente Tauri está activo (icono en menu-bar / system-tray)",
+    "ts_vscode": "La extensión de VS Code está activa — abre cualquier <code>.ts</code>",
+    "ts_browser": "La extensión del navegador está encendida — cambia a ChatGPT / Claude",
+    "open_empty": "Abrir panel vacío",
+    "title_received": "¡Evento recibido!",
+    "lead_received": "El agente funciona. Abriendo el panel…"
+  }
+}

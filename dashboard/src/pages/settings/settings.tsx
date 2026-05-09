@@ -1,13 +1,15 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Card, CardContent, CardDescription, CardHeader, CardTitle,
   DangerZone, Select, useConfirm,
 } from "@eop/ui";
-import { Globe, Shield, Trash2, User } from "lucide-react";
+import { Globe, Languages, Shield, Trash2, User } from "lucide-react";
 import { useProfile, useDeleteMyData } from "../../entities/user";
 import { getTz, setTz, UNIQUE_TIMEZONES } from "../../shared/lib/tz";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
+import { LOCALE_LABELS, SUPPORTED_LOCALES, LOCALE_STORAGE_KEY, type Locale } from "../../shared/i18n";
 
 const PRIVACY_NOT_COLLECTED = [
   "Содержимое файлов, промптов и ответов AI.",
@@ -17,11 +19,21 @@ const PRIVACY_NOT_COLLECTED = [
 ];
 
 export function Settings({ onWiped }: { onWiped: () => void }) {
+  const { t, i18n } = useTranslation("common");
   const profile = useProfile();
   const deleteData = useDeleteMyData();
   const runToast = useMutationToast();
   const confirm = useConfirm();
   const [tz, setLocalTz] = useState(getTz());
+  const [locale, setLocaleState] = useState<Locale>(
+    (i18n.resolvedLanguage as Locale) || "ru",
+  );
+
+  function changeLocale(next: Locale) {
+    setLocaleState(next);
+    localStorage.setItem(LOCALE_STORAGE_KEY, next);
+    void i18n.changeLanguage(next);
+  }
 
   function changeTz(value: string) {
     setLocalTz(value);
@@ -86,8 +98,30 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
+            <Languages className="h-4 w-4 text-muted-foreground" />
+            <CardTitle>{t("settings.language")}</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Select
+            value={locale}
+            onChange={(e) => changeLocale(e.target.value as Locale)}
+            className="w-full max-w-sm px-3 py-2 text-sm"
+          >
+            {SUPPORTED_LOCALES.map((code) => (
+              <option key={code} value={code}>
+                {LOCALE_LABELS[code]}
+              </option>
+            ))}
+          </Select>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
             <Globe className="h-4 w-4 text-muted-foreground" />
-            <CardTitle>Часовой пояс</CardTitle>
+            <CardTitle>{t("settings.timezone")}</CardTitle>
           </div>
           <CardDescription>Влияет на отображение времени в отчётах и таблице событий.</CardDescription>
         </CardHeader>

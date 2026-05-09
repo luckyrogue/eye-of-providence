@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from "@eop/ui";
 import { Mail } from "lucide-react";
 import { forgotPassword } from "../../entities/user";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
 
 export function ForgotPasswordRoute() {
+  const { t } = useTranslation(["auth", "errors"]);
   const [sent, setSent] = useState(false);
   const runToast = useMutationToast();
   const {
@@ -17,7 +19,7 @@ export function ForgotPasswordRoute() {
 
   async function onSubmit(values: { email: string }) {
     const ok = await runToast(forgotPassword(values.email), {
-      error: "Не удалось отправить письмо",
+      error: t("errors:reset_email_failed"),
     });
     // Backend всегда возвращает 200 (privacy by design), так что показываем
     // "проверьте почту" даже если email несуществующий — это by design.
@@ -33,29 +35,32 @@ export function ForgotPasswordRoute() {
             <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
               <Mail className="h-6 w-6 text-primary-foreground" />
             </div>
-            <CardTitle className="text-center font-display tracking-tight">Сброс пароля</CardTitle>
+            <CardTitle className="text-center font-display tracking-tight">
+              {t("auth:forgot_title")}
+            </CardTitle>
             <CardDescription className="text-center">
-              {sent
-                ? "Если такой email зарегистрирован, мы отправили письмо со ссылкой для сброса. Срок действия — 1 час."
-                : "Введите email — мы пришлём ссылку для сброса пароля."}
+              {sent ? t("auth:forgot_sent") : t("auth:forgot_lead")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {!sent && (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
                 <Input
-                  label="Email"
+                  label={t("auth:field_email")}
                   type="email"
                   autoComplete="email"
                   placeholder="you@example.com"
                   error={errors.email?.message}
                   {...register("email", {
-                    required: "email обязателен",
-                    pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "невалидный email" },
+                    required: t("auth:validation_email_required"),
+                    pattern: {
+                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                      message: t("auth:validation_email_invalid"),
+                    },
                   })}
                 />
                 <Button type="submit" disabled={isSubmitting} className="w-full">
-                  {isSubmitting ? "..." : "Отправить ссылку"}
+                  {isSubmitting ? "..." : t("auth:forgot_submit")}
                 </Button>
               </form>
             )}
@@ -63,7 +68,7 @@ export function ForgotPasswordRoute() {
               to="/login"
               className="block w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              Вернуться ко входу
+              {t("auth:forgot_back")}
             </Link>
           </CardContent>
         </Card>

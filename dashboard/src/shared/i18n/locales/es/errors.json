@@ -1,0 +1,12 @@
+{
+  "owner_limit": "En la beta, un usuario solo puede ser propietario de una empresa",
+  "beta_full": "Programa beta completo",
+  "invite_invalid": "Invitación inválida o expirada",
+  "team_create_failed": "No se pudo crear la empresa",
+  "invite_create_failed": "No se pudo crear la invitación",
+  "auth_failed": "No se pudo iniciar sesión",
+  "register_failed": "El registro falló",
+  "reset_password_failed": "No se pudo restablecer la contraseña",
+  "reset_email_failed": "No se pudo enviar el correo",
+  "generic": "Algo salió mal"
+}

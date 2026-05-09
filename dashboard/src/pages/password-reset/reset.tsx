@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from "@eop/ui";
 import { CheckCircle2, Lock } from "lucide-react";
 import { resetPassword } from "../../entities/user";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
 
 export function ResetPasswordRoute() {
+  const { t } = useTranslation(["auth", "errors"]);
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const token = params.get("token") ?? "";
@@ -22,7 +24,7 @@ export function ResetPasswordRoute() {
   async function onSubmit(values: { password: string; password2: string }) {
     if (values.password !== values.password2) return;
     const ok = await runToast(resetPassword(token, values.password), {
-      error: "Не удалось сбросить пароль",
+      error: t("errors:reset_password_failed"),
     });
     if (ok !== undefined) {
       setDone(true);
@@ -37,14 +39,14 @@ export function ResetPasswordRoute() {
       <div className="mx-auto max-w-md pt-16">
         <Card>
           <CardHeader>
-            <CardTitle className="text-center">Невалидная ссылка</CardTitle>
+            <CardTitle className="text-center">{t("auth:reset_invalid_link")}</CardTitle>
             <CardDescription className="text-center">
-              В URL не хватает токена. Запроси сброс пароля заново.
+              {t("auth:reset_invalid_link_lead")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Link to="/forgot-password" className="block text-center text-sm underline">
-              Запросить новую ссылку
+              {t("auth:reset_request_new")}
             </Link>
           </CardContent>
         </Card>
@@ -66,41 +68,41 @@ export function ResetPasswordRoute() {
               )}
             </div>
             <CardTitle className="text-center font-display tracking-tight">
-              {done ? "Пароль изменён" : "Новый пароль"}
+              {done ? t("auth:reset_done_title") : t("auth:reset_title")}
             </CardTitle>
             <CardDescription className="text-center">
-              {done
-                ? "Открываю страницу входа…"
-                : "Минимум 8 символов. Все активные сессии будут разлогинены."}
+              {done ? t("auth:reset_done_lead") : t("auth:reset_lead")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {!done && (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
                 <Input
-                  label="Новый пароль"
+                  label={t("auth:reset_field_password")}
                   type="password"
                   autoComplete="new-password"
                   error={errors.password?.message}
                   {...register("password", {
-                    required: "пароль обязателен",
-                    minLength: { value: 8, message: "минимум 8 символов" },
+                    required: t("auth:validation_password_required"),
+                    minLength: { value: 8, message: t("auth:validation_password_min") },
                   })}
                 />
                 <Input
-                  label="Повторите пароль"
+                  label={t("auth:reset_field_password2")}
                   type="password"
                   autoComplete="new-password"
                   error={
                     errors.password2?.message ||
                     (watch("password2") && watch("password") !== watch("password2")
-                      ? "пароли не совпадают"
+                      ? t("auth:reset_passwords_mismatch")
                       : undefined)
                   }
-                  {...register("password2", { required: "повторите пароль" })}
+                  {...register("password2", {
+                    required: t("auth:validation_password_required"),
+                  })}
                 />
                 <Button type="submit" disabled={isSubmitting} className="w-full">
-                  {isSubmitting ? "..." : "Сменить пароль"}
+                  {isSubmitting ? "..." : t("auth:reset_submit")}
                 </Button>
               </form>
             )}

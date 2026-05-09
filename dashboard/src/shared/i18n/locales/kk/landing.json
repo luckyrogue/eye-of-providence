@@ -1,0 +1,15 @@
+{
+  "tagline": "Eye of Providence",
+  "hero_title": "Қанша өзің жазасың, қанша <em>AI</em>-мен",
+  "hero_lead": "AI-coder-лерді қолданатын командаларға арналған privacy-by-design өнімділік дашборды. Бәрін көресің. Контентті ашпайсың.",
+  "cta_signup": "Аккаунт құру",
+  "cta_login": "Кіру",
+  "features": {
+    "multivendor_title": "Multi-vendor",
+    "multivendor_text": "Cursor, Copilot, Claude Code, ChatGPT — біз бәрін көреміз. Олар тек өздерін көреді.",
+    "privacy_title": "Privacy-first",
+    "privacy_text": "Категориялар + уақыт метрикасы, контент емес. Жергілікті хеш, on-device агрегация.",
+    "team_title": "Team-aware",
+    "team_text": "Tech lead-қа арналған дашборд: AI қайда жылдамдатады, қайда баяулатады, review қайда асады."
+  }
+}

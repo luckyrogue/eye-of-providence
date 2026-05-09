@@ -1,0 +1,28 @@
+{
+  "app": {
+    "name": "Eye of Providence",
+    "tagline": "Manual vs AI · live"
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "team": "Equipo",
+    "settings": "Configuración",
+    "admin": "Admin"
+  },
+  "actions": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "create": "Crear",
+    "continue": "Continuar",
+    "back": "Atrás",
+    "skip": "Saltar",
+    "loading": "Cargando…",
+    "logout": "Salir"
+  },
+  "settings": {
+    "title": "Configuración",
+    "language": "Idioma de la interfaz",
+    "timezone": "Zona horaria"
+  }
+}

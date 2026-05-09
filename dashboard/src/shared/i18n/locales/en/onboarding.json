@@ -1,0 +1,52 @@
+{
+  "eyebrow": "Welcome aboard",
+  "heading": "Let's set up <em>your company</em>.",
+  "lead": "Four steps, ~5 minutes. Any step can be skipped and returned to later.",
+  "steps": {
+    "company": "Company",
+    "install": "Agent",
+    "invite": "Team",
+    "event": "Event"
+  },
+  "company": {
+    "title": "What's your company name?",
+    "lead": "This will be the workspace where your team sees metrics. You can change it later.",
+    "placeholder": "Acme Inc.",
+    "submit": "Create"
+  },
+  "install": {
+    "title": "Install the agent",
+    "lead": "Without the agent no events are collected. You can install it later — takes ~2 minutes.",
+    "macos_note": "10.15+",
+    "windows_note": "10/11",
+    "vscode_note": "marketplace",
+    "extras": "There's also a browser extension and git-hooks — see <a>docs</a>.",
+    "skip": "I'll install later",
+    "done": "Done"
+  },
+  "invite": {
+    "title": "Invite your team",
+    "lead": "Send an invite by email or generate a link to share directly.",
+    "tab_link": "Link (10 seats)",
+    "tab_email": "Email (1 seat)",
+    "email_placeholder": "teammate@example.com",
+    "send": "Send invite",
+    "sent_ok": "Email sent. If it doesn't arrive within 5 minutes — check Spam.",
+    "generate": "Generate invite link",
+    "copied": "Copied!",
+    "copy": "Copy",
+    "url_note": "Valid for 7 days. Up to 10 signups. Revoke in Team → Members."
+  },
+  "event": {
+    "title_waiting": "Waiting for the first event…",
+    "lead_waiting": "Open your editor and code for a minute or two. As soon as the agent sends an event, the dashboard will come alive.",
+    "polling_note": "polling /v1/me/onboarding-status every 5s",
+    "troubleshoot_title": "No events? Check:",
+    "ts_tauri": "Tauri agent is running (icon in menu-bar / system-tray)",
+    "ts_vscode": "VS Code extension is active — open any <code>.ts</code> file",
+    "ts_browser": "Browser extension is on — switch to ChatGPT / Claude",
+    "open_empty": "Open empty dashboard",
+    "title_received": "Event received!",
+    "lead_received": "Agent works. Opening dashboard…"
+  }
+}

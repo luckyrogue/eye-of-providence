@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { Trans, useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from "@eop/ui";
 import { Eye, Lock } from "lucide-react";
 import {
@@ -21,6 +22,7 @@ interface FormValues {
 }
 
 export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
+  const { t } = useTranslation(["auth", "errors"]);
   const [mode, setMode] = useState<Mode>("login");
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
         ? apiRegister(values.email, values.password, values.displayName, inviteCode || undefined)
         : apiLogin(values.email, values.password);
     const r = await runToast(promise, {
-      error: mode === "register" ? "Регистрация не удалась" : "Не удалось войти",
+      error: mode === "register" ? t("errors:register_failed") : t("errors:auth_failed"),
     });
     if (r) onAuth(r);
   }
@@ -75,13 +77,11 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
       <div className="mx-auto max-w-xl pt-12 pb-6 text-center reveal">
         <span className="eyebrow">Eye of Providence</span>
         <h1 className="display-head text-5xl md:text-6xl mt-3">
-          <em>{mode === "register" ? "Создай" : "Войди"}.</em>
+          <em>{mode === "register" ? t("auth:title_register") : t("auth:title_login")}.</em>
           <br />
-          Отслеживай.
+          {t("auth:subtitle")}
         </h1>
-        <p className="mt-4 text-sm text-muted-foreground max-w-sm mx-auto">
-          Сколько ты пишешь сам, а сколько — с AI. Privacy-by-design.
-        </p>
+        <p className="mt-4 text-sm text-muted-foreground max-w-sm mx-auto">{t("auth:lead")}</p>
       </div>
       <Card className="max-w-md mx-auto card-hover reveal reveal-delay-2">
         <CardHeader>
@@ -89,17 +89,21 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
             <Eye className="h-6 w-6 text-primary-foreground" />
           </div>
           <CardTitle className="text-center font-display tracking-tight">
-            {mode === "register" ? "Регистрация" : "Вход"}
+            {mode === "register" ? t("auth:card_register") : t("auth:card_login")}
           </CardTitle>
           <CardDescription className="text-center">
             {invitePreview ? (
-              <>Тебя пригласили в команду <strong>{invitePreview.team_name}</strong>. Создай аккаунт, чтобы присоединиться.</>
+              <Trans
+                i18nKey="auth:desc_invited"
+                values={{ team: invitePreview.team_name }}
+                components={{ strong: <strong /> }}
+              />
             ) : authConfig?.is_first_user ? (
-              "Ты первый пользователь — станешь super_admin."
+              t("auth:desc_first_user")
             ) : mode === "register" ? (
-              "Создай аккаунт, чтобы отслеживать AI-активность"
+              t("auth:desc_register")
             ) : (
-              "Войди в свой аккаунт"
+              t("auth:desc_login")
             )}
           </CardDescription>
         </CardHeader>
@@ -109,10 +113,16 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
               <div className="flex items-start gap-2">
                 <Lock className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
                 <div className="space-y-1">
-                  <div className="font-medium text-amber-700 dark:text-amber-300">Регистрация по приглашению</div>
+                  <div className="font-medium text-amber-700 dark:text-amber-300">
+                    {t("auth:invite_only_title")}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Открытая регистрация выключена. Попроси у участника команды invite-ссылку вида
-                    <code className="mx-1 rounded bg-secondary px-1 text-[11px]">?invite=...</code>.
+                    <Trans
+                      i18nKey="auth:invite_only_text"
+                      components={{
+                        code: <code className="mx-1 rounded bg-secondary px-1 text-[11px]" />,
+                      }}
+                    />
                   </p>
                 </div>
               </div>
@@ -122,41 +132,53 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
             {mode === "register" && !registrationBlocked && (
               <Input
-                label="Имя"
-                placeholder="Темирлан"
+                label={t("auth:field_name")}
+                placeholder={t("auth:field_name_placeholder")}
                 autoComplete="name"
                 error={errors.displayName?.message}
                 {...register("displayName", {
-                  required: "имя обязательно",
-                  maxLength: { value: 64, message: "максимум 64 символа" },
+                  required: t("auth:validation_name_required"),
+                  maxLength: { value: 64, message: t("auth:validation_name_max") },
                 })}
               />
             )}
             {(!registrationBlocked || mode === "login") && (
               <>
                 <Input
-                  label="Email"
+                  label={t("auth:field_email")}
                   type="email"
                   autoComplete="email"
                   placeholder="you@example.com"
                   error={errors.email?.message}
                   {...register("email", {
-                    required: "email обязателен",
-                    pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "невалидный email" },
+                    required: t("auth:validation_email_required"),
+                    pattern: {
+                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                      message: t("auth:validation_email_invalid"),
+                    },
                   })}
                 />
                 <Input
-                  label={mode === "register" ? "Пароль (≥ 8 символов)" : "Пароль"}
+                  label={
+                    mode === "register" ? t("auth:field_password_register") : t("auth:field_password")
+                  }
                   type="password"
                   autoComplete={mode === "register" ? "new-password" : "current-password"}
                   error={errors.password?.message}
                   {...register("password", {
-                    required: "пароль обязателен",
-                    minLength: { value: mode === "register" ? 8 : 1, message: "минимум 8 символов" },
+                    required: t("auth:validation_password_required"),
+                    minLength: {
+                      value: mode === "register" ? 8 : 1,
+                      message: t("auth:validation_password_min"),
+                    },
                   })}
                 />
                 <Button type="submit" disabled={isSubmitting} className="w-full">
-                  {isSubmitting ? "..." : mode === "register" ? "Создать аккаунт" : "Войти"}
+                  {isSubmitting
+                    ? "..."
+                    : mode === "register"
+                      ? t("auth:submit_register")
+                      : t("auth:submit_login")}
                 </Button>
               </>
             )}
@@ -166,7 +188,7 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
             onClick={() => setMode(mode === "register" ? "login" : "register")}
             className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            {mode === "register" ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться"}
+            {mode === "register" ? t("auth:switch_to_login") : t("auth:switch_to_register")}
           </button>
 
           {mode === "login" && (
@@ -174,7 +196,7 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
               href="/forgot-password"
               className="block w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              Забыли пароль?
+              {t("auth:forgot_password")}
             </a>
           )}
         </CardContent>

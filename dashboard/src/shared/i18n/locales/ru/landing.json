@@ -1,0 +1,15 @@
+{
+  "tagline": "Eye of Providence",
+  "hero_title": "Сколько ты пишешь сам, а сколько — с <em>AI</em>",
+  "hero_lead": "Privacy-by-design productivity dashboard для команд, использующих AI-coders. Видишь всех. Не палишь содержимое.",
+  "cta_signup": "Создать аккаунт",
+  "cta_login": "Войти",
+  "features": {
+    "multivendor_title": "Multi-vendor",
+    "multivendor_text": "Cursor, Copilot, Claude Code, ChatGPT — мы видим все. Они видят только себя.",
+    "privacy_title": "Privacy-first",
+    "privacy_text": "Категории + метрики времени, не содержимое. Локальные хеши, on-device аггрегация.",
+    "team_title": "Team-aware",
+    "team_text": "Дашборд для tech lead'а: где AI ускоряет, где замедляет, где review зашкаливает."
+  }
+}

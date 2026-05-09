@@ -1,0 +1,28 @@
+{
+  "app": {
+    "name": "Eye of Providence",
+    "tagline": "Manual vs AI · live"
+  },
+  "nav": {
+    "dashboard": "Дашборд",
+    "team": "Команда",
+    "settings": "Баптаулар",
+    "admin": "Admin"
+  },
+  "actions": {
+    "save": "Сақтау",
+    "cancel": "Бас тарту",
+    "delete": "Жою",
+    "create": "Құру",
+    "continue": "Жалғастыру",
+    "back": "Артқа",
+    "skip": "Өткізіп жіберу",
+    "loading": "Жүктелуде…",
+    "logout": "Шығу"
+  },
+  "settings": {
+    "title": "Баптаулар",
+    "language": "Интерфейс тілі",
+    "timezone": "Уақыт белдеуі"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "owner_limit": "In beta, one user can own only one company",
+  "beta_full": "Beta program is full",
+  "invite_invalid": "Invite is invalid or expired",
+  "team_create_failed": "Failed to create company",
+  "invite_create_failed": "Failed to create invite",
+  "auth_failed": "Login failed",
+  "register_failed": "Registration failed",
+  "reset_password_failed": "Password reset failed",
+  "reset_email_failed": "Failed to send email",
+  "generic": "Something went wrong"
+}

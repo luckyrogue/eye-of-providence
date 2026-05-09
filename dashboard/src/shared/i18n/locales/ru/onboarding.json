@@ -1,0 +1,52 @@
+{
+  "eyebrow": "Welcome aboard",
+  "heading": "Let's set up <em>your company</em>.",
+  "lead": "Четыре шага, ~5 минут. Любой шаг можно пропустить и вернуться позже.",
+  "steps": {
+    "company": "Компания",
+    "install": "Агент",
+    "invite": "Команда",
+    "event": "Событие"
+  },
+  "company": {
+    "title": "Как называется ваша компания?",
+    "lead": "Это будет workspace, в котором ваша команда увидит метрики. Можно изменить позже.",
+    "placeholder": "Acme Inc.",
+    "submit": "Создать"
+  },
+  "install": {
+    "title": "Установите агент",
+    "lead": "Без агента события не будут собираться. Можно установить позже — установка займёт ~2 минуты.",
+    "macos_note": "10.15+",
+    "windows_note": "10/11",
+    "vscode_note": "marketplace",
+    "extras": "Также есть browser extension и git-hooks — детали в <a>документации</a>.",
+    "skip": "Установлю позже",
+    "done": "Готово"
+  },
+  "invite": {
+    "title": "Пригласите команду",
+    "lead": "Вышлите приглашение на email или сгенерируйте ссылку, чтобы поделиться ей напрямую.",
+    "tab_link": "Ссылка (10 мест)",
+    "tab_email": "Email (1 место)",
+    "email_placeholder": "teammate@example.com",
+    "send": "Отправить приглашение",
+    "sent_ok": "Письмо отправлено. Если в течение 5 минут не пришло — проверь папку «Спам».",
+    "generate": "Сгенерировать invite-ссылку",
+    "copied": "Скопировано!",
+    "copy": "Скопировать",
+    "url_note": "Действительна 7 дней. До 10 регистраций. Отозвать в Команда → Участники."
+  },
+  "event": {
+    "title_waiting": "Жду первое событие…",
+    "lead_waiting": "Откройте редактор и попишите минуту-две. Как только агент отправит событие, дашборд оживёт.",
+    "polling_note": "polling /v1/me/onboarding-status каждые 5 сек",
+    "troubleshoot_title": "Не идут события? Проверь:",
+    "ts_tauri": "Tauri-агент запущен (иконка в menu-bar / system-tray)",
+    "ts_vscode": "VS Code extension активирован — открой любой <code>.ts</code> файл",
+    "ts_browser": "Browser extension включён — переключись на ChatGPT / Claude",
+    "open_empty": "Открыть пустой дашборд",
+    "title_received": "Событие получено!",
+    "lead_received": "Агент работает. Открываю дашборд…"
+  }
+}
