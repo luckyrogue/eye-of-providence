@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite build --watch"
+    "dev": "vite build --watch",
+    "install:hint": "echo 'Build first → load `dist/` (НЕ корневую папку) в chrome://extensions Developer mode → Load unpacked.'"
   },
   "dependencies": {
     "@eop/ui": "workspace:*",
