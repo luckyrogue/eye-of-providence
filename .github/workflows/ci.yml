@@ -43,7 +43,7 @@ jobs:
       docker: ${{ steps.filter.outputs.docker }}
       ci: ${{ steps.filter.outputs.ci }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with: { persist-credentials: false }
       - id: filter
         uses: dorny/paths-filter@v3
