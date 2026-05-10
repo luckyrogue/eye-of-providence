@@ -59,7 +59,10 @@ export default defineConfig({
         "cd ../backend && EOP_HTTP_ADDR=:8080 EOP_ENV=development EOP_INVITE_ONLY=false EOP_ENABLE_DEV_TOKEN=true EOP_ALLOWED_ORIGINS=http://localhost:4173 EOP_AUTO_MIGRATE=true EOP_JWT_SECRET=e2e_test_secret_at_least_32_chars_xx EOP_POSTGRES_DSN=postgres://eop:eop_dev@localhost:5432/eop?sslmode=disable EOP_CLICKHOUSE_DSN=clickhouse://eop:eop_dev@localhost:9000/eop EOP_REDIS_ADDR=localhost:6379 EOP_REPORTS_CRON_SEC=0 go run ./cmd/api",
       url: `http://localhost:${PORT_BACKEND}/healthz`,
       timeout: 120_000,
-      reuseExistingServer: !CI,
+      // Reuse если backend/dashboard уже запущены (CI workflow стартует
+      // backend сам; local — playwright поднимает). HEAD-проверка перед
+      // спавном идемпотентна и для prod-grade CI safe'ée чем `!CI`.
+      reuseExistingServer: true,
       stdout: "pipe",
       stderr: "pipe",
     },
@@ -68,7 +71,10 @@ export default defineConfig({
         "cd ../dashboard && VITE_BACKEND_URL=http://localhost:8080 pnpm preview --host 127.0.0.1 --port 4173 --strictPort",
       url: `http://localhost:${PORT_DASHBOARD}`,
       timeout: 60_000,
-      reuseExistingServer: !CI,
+      // Reuse если backend/dashboard уже запущены (CI workflow стартует
+      // backend сам; local — playwright поднимает). HEAD-проверка перед
+      // спавном идемпотентна и для prod-grade CI safe'ée чем `!CI`.
+      reuseExistingServer: true,
       stdout: "pipe",
       stderr: "pipe",
     },

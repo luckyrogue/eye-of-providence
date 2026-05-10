@@ -43,12 +43,14 @@ FROM node:22-alpine AS dashboard-builder
 WORKDIR /repo
 RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
 
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* tsconfig.base.json ./
 COPY ui/package.json ui/
+COPY i18n/package.json i18n/
 COPY dashboard/package.json dashboard/
 RUN pnpm install --frozen-lockfile
 
 COPY ui ui
+COPY i18n i18n
 COPY dashboard dashboard
 
 # В combined-режиме фронт ходит относительно — на тот же хост
