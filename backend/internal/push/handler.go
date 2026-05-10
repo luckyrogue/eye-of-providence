@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
 // JWTSecret поле для middleware. Добавляется к Service field-set чтобы
@@ -26,7 +27,7 @@ func RegisterRoutes(app *fiber.App, c SvcConfig) {
 func vapidKeyHandler(s *Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if s.VAPIDPublicKey == "" {
-			return c.Status(503).JSON(fiber.Map{"error": "push not configured"})
+			return httperr.Unavailable(c, "push_not_configured", "push not configured")
 		}
 		return c.JSON(fiber.Map{"key": s.VAPIDPublicKey, "subject": s.VAPIDSubject})
 	}
@@ -36,11 +37,11 @@ func listHandler(s *Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		uid, err := userID(c)
 		if err != nil {
-			return c.Status(401).JSON(fiber.Map{"error": "invalid subject"})
+			return httperr.Unauthorized(c, "invalid_subject", "invalid subject")
 		}
 		subs, err := s.List(c.Context(), uid)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
+			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{"subscriptions": subs})
 	}
@@ -50,7 +51,7 @@ func subscribeHandler(s *Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		uid, err := userID(c)
 		if err != nil {
-			return c.Status(401).JSON(fiber.Map{"error": "invalid subject"})
+			return httperr.Unauthorized(c, "invalid_subject", "invalid subject")
 		}
 		var req struct {
 			Endpoint string `json:"endpoint"`
@@ -60,14 +61,14 @@ func subscribeHandler(s *Service) fiber.Handler {
 			} `json:"keys"`
 		}
 		if err := c.BodyParser(&req); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+			return httperr.BadRequest(c, "invalid_body", "invalid body")
 		}
 		ua := c.Get("User-Agent")
 		if len(ua) > 256 {
 			ua = ua[:256]
 		}
 		if err := s.Subscribe(c.Context(), uid, req.Endpoint, req.Keys.P256dh, req.Keys.Auth, ua); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+			return httperr.BadRequest(c, "subscribe_failed", err.Error())
 		}
 		return c.JSON(fiber.Map{"status": "ok"})
 	}
@@ -77,20 +78,20 @@ func unsubscribeHandler(s *Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		uid, err := userID(c)
 		if err != nil {
-			return c.Status(401).JSON(fiber.Map{"error": "invalid subject"})
+			return httperr.Unauthorized(c, "invalid_subject", "invalid subject")
 		}
 		var req struct {
 			Endpoint string `json:"endpoint"`
 		}
 		if err := c.BodyParser(&req); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+			return httperr.BadRequest(c, "invalid_body", "invalid body")
 		}
 		ok, err := s.Unsubscribe(c.Context(), uid, req.Endpoint)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
+			return httperr.Internal(c)
 		}
 		if !ok {
-			return c.Status(404).JSON(fiber.Map{"error": "not found"})
+			return httperr.NotFound(c, "subscription_not_found", "subscription not found")
 		}
 		return c.JSON(fiber.Map{"status": "ok"})
 	}

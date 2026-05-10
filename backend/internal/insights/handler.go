@@ -10,6 +10,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
@@ -72,7 +73,7 @@ func insightsHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
 		})
 		if err := g.Wait(); err != nil {
 			logger.Error("insights fan-out failed", zap.Error(err))
-			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
+			return httperr.Internal(c)
 		}
 
 		out := Generate(Inputs{

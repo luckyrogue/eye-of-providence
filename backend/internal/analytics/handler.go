@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
@@ -24,7 +25,7 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 		events, err := st.ListRecent(c.Context(), claims.UserID, limit)
 		if err != nil {
 			logger.Error("list recent failed", zap.Error(err))
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "query failed"})
+			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{"events": events, "count": len(events)})
 	})
@@ -39,7 +40,7 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 		cells, err := st.LanguageBreakdown(c.Context(), claims.UserID, since)
 		if err != nil {
 			logger.Error("language breakdown failed", zap.Error(err))
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "query failed"})
+			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{"days": days, "cells": cells})
 	})
@@ -55,7 +56,7 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 		points, err := st.DailyTrend(c.Context(), claims.UserID, since, tz)
 		if err != nil {
 			logger.Error("trend failed", zap.Error(err))
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "query failed"})
+			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{"days": days, "points": points})
 	})
@@ -71,7 +72,7 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 		cells, err := st.Heatmap(c.Context(), claims.UserID, since, tz)
 		if err != nil {
 			logger.Error("heatmap failed", zap.Error(err))
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "query failed"})
+			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{"days": days, "cells": cells})
 	})
@@ -86,7 +87,7 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 		agg, err := st.AggregateByCategory(c.Context(), claims.UserID, since)
 		if err != nil {
 			logger.Error("aggregate failed", zap.Error(err))
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "query failed"})
+			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{"days": days, "categories": agg})
 	})

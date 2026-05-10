@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/metrics"
 	"github.com/eye-of-providence/backend/internal/store"
 )
@@ -33,16 +34,20 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 	g.Post("/ingest", auth.RequireScope("write:ingest", "admin"), func(c *fiber.Ctx) error {
 		claims := auth.ClaimsFromCtx(c)
 		if claims.UserID == "" {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing subject"})
+			return httperr.Unauthorized(c, "missing_subject", "missing subject")
 		}
 		var req request
 		if err := c.BodyParser(&req); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid body"})
+			return httperr.BadRequest(c, "invalid_body", "invalid body")
 		}
 		if len(req.Events) > maxEventsPerBatch {
-			return c.Status(fiber.StatusRequestEntityTooLarge).JSON(fiber.Map{
-				"error":     "too many events in one batch",
-				"max_batch": maxEventsPerBatch,
+			return httperr.Send(c, httperr.ProblemDetails{
+				Status: fiber.StatusRequestEntityTooLarge,
+				Code:   "batch_too_large",
+				Detail: "too many events in one batch",
+				Extensions: map[string]any{
+					"max_batch": maxEventsPerBatch,
+				},
 			})
 		}
 
@@ -67,7 +72,7 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 			if err := st.Insert(c.Context(), valid); err != nil {
 				metrics.IngestErrors.Inc()
 				logger.Error("store insert failed", zap.Error(err), zap.Int("count", len(valid)))
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "insert failed"})
+				return httperr.Internal(c)
 			}
 		}
 

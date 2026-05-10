@@ -22,6 +22,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
@@ -57,7 +58,7 @@ func eventsHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
 		events, err := st.ListRecent(c.Context(), claims.UserID, limit)
 		if err != nil {
 			logger.Error("public events failed", zap.Error(err))
-			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
+			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{
 			"events": events,
@@ -75,7 +76,7 @@ func summaryHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
 		agg, err := st.AggregateByCategory(c.Context(), claims.UserID, since)
 		if err != nil {
 			logger.Error("public summary failed", zap.Error(err))
-			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
+			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{
 			"days":       days,
@@ -93,7 +94,7 @@ func languagesHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
 		cells, err := st.LanguageBreakdown(c.Context(), claims.UserID, since)
 		if err != nil {
 			logger.Error("public langs failed", zap.Error(err))
-			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
+			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{
 			"days":  days,
@@ -112,7 +113,7 @@ func trendHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
 		points, err := st.DailyTrend(c.Context(), claims.UserID, since, tz)
 		if err != nil {
 			logger.Error("public trend failed", zap.Error(err))
-			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
+			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{
 			"days":   days,

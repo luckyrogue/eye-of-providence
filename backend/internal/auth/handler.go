@@ -10,6 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
+
+	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
 const tokenTTL = 14 * 24 * time.Hour
@@ -46,16 +48,16 @@ func RegisterRoutes(app *fiber.App, s Service) {
 		got := c.Query("state")
 		want := c.Cookies("eop_oauth_state")
 		if got == "" || got != want {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "state mismatch"})
+			return httperr.BadRequest(c, "state_mismatch", "state mismatch")
 		}
 		code := c.Query("code")
 		if code == "" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing code"})
+			return httperr.BadRequest(c, "missing_code", "missing code")
 		}
 		user, err := s.GitHub.Exchange(c.Context(), code)
 		if err != nil {
 			s.Logger.Warn("github exchange failed", zap.Error(err))
-			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "oauth exchange failed"})
+			return httperr.BadGateway(c, "oauth_exchange_failed", "oauth exchange failed")
 		}
 		// Детерминированный UUID на основе github user.id — позволяет
 		// ClickHouse user_id оставаться UUID-типизированным.
@@ -65,15 +67,13 @@ func RegisterRoutes(app *fiber.App, s Service) {
 		// — JWT не выпускаем, иначе клиент получает токен на несуществующий аккаунт.
 		if err := s.Users.Upsert(c.Context(), userUUID, user.Email, user.Login); err != nil {
 			s.Logger.Warn("github user upsert failed", zap.Error(err))
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
-				"error": "could not link github account (email may already be in use)",
-			})
+			return httperr.Conflict(c, "github_link_failed", "could not link github account (email may already be in use)")
 		}
 		tv, _ := TokenVersion(c.Context(), s.Pool, userUUID)
 		tok, err := IssueJWT(s.JWTSecret, userUUID.String(), user.Email, "github", tv, tokenTTL)
 		if err != nil {
 			s.Logger.Error("issue jwt failed", zap.Error(err))
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "auth failed"})
+			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{"token": tok, "user_id": userUUID.String(), "github_login": user.Login})
 	})
@@ -90,7 +90,7 @@ func registerDevToken(g fiber.Router, s Service) {
 		} else {
 			parsed, err := uuid.Parse(userIDStr)
 			if err != nil {
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "user_id must be uuid"})
+				return httperr.BadRequest(c, "invalid_user_id", "user_id must be uuid")
 			}
 			userID = parsed
 		}
@@ -102,7 +102,7 @@ func registerDevToken(g fiber.Router, s Service) {
 		tok, err := IssueJWT(s.JWTSecret, userID.String(), email, "dev", tv, tokenTTL)
 		if err != nil {
 			s.Logger.Error("issue jwt failed", zap.Error(err))
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "auth failed"})
+			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{"token": tok, "user_id": userID.String()})
 	})

@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
 // Service — config для PR-comment endpoint.
@@ -42,20 +43,20 @@ func postHandler(s Service) fiber.Handler {
 		claims := auth.ClaimsFromCtx(c)
 		uid, err := uuid.Parse(claims.UserID)
 		if err != nil {
-			return c.Status(401).JSON(fiber.Map{"error": "invalid subject"})
+			return httperr.Unauthorized(c, "invalid_subject", "invalid subject")
 		}
 		var req request
 		if err := c.BodyParser(&req); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+			return httperr.BadRequest(c, "invalid_body", "invalid body")
 		}
 		if err := validate(req); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+			return httperr.BadRequest(c, "invalid_request", err.Error())
 		}
 
 		agg, err := AggregateBySHA(c.Context(), s.Pool, uid, req.SHAs)
 		if err != nil {
 			s.Logger.Error("pr-comment aggregate failed", zap.Error(err))
-			return c.Status(500).JSON(fiber.Map{"error": "aggregate failed"})
+			return httperr.Internal(c)
 		}
 
 		comment := FormatComment(agg, s.DashboardURL)
@@ -66,13 +67,17 @@ func postHandler(s Service) fiber.Handler {
 				zap.Error(err))
 			var pe *PostError
 			if errors.As(err, &pe) {
-				return c.Status(502).JSON(fiber.Map{
-					"error":           "provider rejected",
-					"provider_status": pe.Status,
-					"provider_body":   pe.Body,
+				return httperr.Send(c, httperr.ProblemDetails{
+					Status: fiber.StatusBadGateway,
+					Code:   "provider_rejected",
+					Detail: "provider rejected comment",
+					Extensions: map[string]any{
+						"provider_status": pe.Status,
+						"provider_body":   pe.Body,
+					},
 				})
 			}
-			return c.Status(502).JSON(fiber.Map{"error": "provider request failed"})
+			return httperr.BadGateway(c, "provider_request_failed", "provider request failed")
 		}
 
 		return c.JSON(fiber.Map{
