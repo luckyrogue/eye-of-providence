@@ -146,10 +146,19 @@ func main() {
 		return c.JSON(metrics.Snapshot())
 	})
 
+	// e2eBypass — true только в non-production окружении с явным
+	// X-E2E-Test: 1 заголовком. Защищает прод от bypass'а через header
+	// spoofing (production hard-fails на этой проверке). В CI E2E suite
+	// шлёт header автоматически (см. e2e/helpers/api.ts).
+	e2eBypass := func(c *fiber.Ctx) bool {
+		return cfg.Env != "production" && c.Get("X-E2E-Test") == "1"
+	}
+
 	// Rate-limit на чувствительные auth endpoints (10 req / min / IP).
 	authLimiter := limiter.New(limiter.Config{
 		Max:        10,
 		Expiration: 1 * time.Minute,
+		Next:       e2eBypass,
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.IP()
 		},
@@ -168,6 +177,7 @@ func main() {
 	app.Use("/v1/", limiter.New(limiter.Config{
 		Max:        120,
 		Expiration: 1 * time.Minute,
+		Next:       e2eBypass,
 		KeyGenerator: func(c *fiber.Ctx) string {
 			h := c.Get("Authorization")
 			if h != "" {
