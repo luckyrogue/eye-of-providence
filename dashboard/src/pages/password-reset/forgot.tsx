@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from "@eop/ui";
 import { Mail } from "lucide-react";
 import { forgotPassword } from "../../entities/user";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
+import { forgotPasswordSchema, type ForgotPasswordValues } from "../../shared/lib/schemas";
 
 export function ForgotPasswordRoute() {
   const { t } = useTranslation(["auth", "errors"]);
@@ -15,7 +17,11 @@ export function ForgotPasswordRoute() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<{ email: string }>();
+  } = useForm<ForgotPasswordValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: "" },
+  });
+  const tr = (msg?: string) => (msg ? t(msg as never) : undefined);
 
   async function onSubmit(values: { email: string }) {
     const ok = await runToast(forgotPassword(values.email), {
@@ -50,14 +56,8 @@ export function ForgotPasswordRoute() {
                   type="email"
                   autoComplete="email"
                   placeholder="you@example.com"
-                  error={errors.email?.message}
-                  {...register("email", {
-                    required: t("auth:validation_email_required"),
-                    pattern: {
-                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                      message: t("auth:validation_email_invalid"),
-                    },
-                  })}
+                  error={tr(errors.email?.message)}
+                  {...register("email")}
                 />
                 <Button type="submit" disabled={isSubmitting} className="w-full">
                   {isSubmitting ? "..." : t("auth:forgot_submit")}

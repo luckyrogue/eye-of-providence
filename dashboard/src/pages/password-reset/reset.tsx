@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from "@eop/ui";
 import { CheckCircle2, Lock } from "lucide-react";
 import { resetPassword } from "../../entities/user";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
+import { resetPasswordSchema, type ResetPasswordValues } from "../../shared/lib/schemas";
 
 export function ResetPasswordRoute() {
   const { t } = useTranslation(["auth", "errors"]);
@@ -18,11 +20,13 @@ export function ResetPasswordRoute() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    watch,
-  } = useForm<{ password: string; password2: string }>();
+  } = useForm<ResetPasswordValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { password: "", confirmPassword: "" },
+  });
+  const tr = (msg?: string) => (msg ? t(msg as never) : undefined);
 
-  async function onSubmit(values: { password: string; password2: string }) {
-    if (values.password !== values.password2) return;
+  async function onSubmit(values: ResetPasswordValues) {
     const ok = await runToast(resetPassword(token, values.password), {
       error: t("errors:reset_password_failed"),
     });
@@ -81,25 +85,15 @@ export function ResetPasswordRoute() {
                   label={t("auth:reset_field_password")}
                   type="password"
                   autoComplete="new-password"
-                  error={errors.password?.message}
-                  {...register("password", {
-                    required: t("auth:validation_password_required"),
-                    minLength: { value: 8, message: t("auth:validation_password_min") },
-                  })}
+                  error={tr(errors.password?.message)}
+                  {...register("password")}
                 />
                 <Input
                   label={t("auth:reset_field_password2")}
                   type="password"
                   autoComplete="new-password"
-                  error={
-                    errors.password2?.message ||
-                    (watch("password2") && watch("password") !== watch("password2")
-                      ? t("auth:reset_passwords_mismatch")
-                      : undefined)
-                  }
-                  {...register("password2", {
-                    required: t("auth:validation_password_required"),
-                  })}
+                  error={tr(errors.confirmPassword?.message)}
+                  {...register("confirmPassword")}
                 />
                 <Button type="submit" disabled={isSubmitting} className="w-full">
                   {isSubmitting ? "..." : t("auth:reset_submit")}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Trans, useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from "@eop/ui";
 import { Eye, Lock } from "lucide-react";
@@ -12,9 +13,12 @@ import {
 } from "../../entities/user";
 import { previewInvite, type InvitePreview } from "../../entities/team";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
+import { loginSchema, registerSchema } from "../../shared/lib/schemas";
 
 type Mode = "login" | "register";
 
+// Union-type: login form НЕ имеет displayName, register — имеет. Resolver
+// переключается per-mode внизу.
 interface FormValues {
   email: string;
   password: string;
@@ -35,7 +39,12 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: { email: "", password: "", displayName: "" },
+    resolver: zodResolver(mode === "register" ? registerSchema : loginSchema),
   });
+
+  // tr — переводит i18n-key из zod errors. Schemas хранят key'и (не строки),
+  // чтобы один schema работал во всех 4 локалях.
+  const tr = (msg?: string) => (msg ? t(msg as never) : undefined);
 
   useEffect(() => {
     fetchAuthConfig().then((cfg) => {
@@ -135,11 +144,8 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
                 label={t("auth:field_name")}
                 placeholder={t("auth:field_name_placeholder")}
                 autoComplete="name"
-                error={errors.displayName?.message}
-                {...register("displayName", {
-                  required: t("auth:validation_name_required"),
-                  maxLength: { value: 64, message: t("auth:validation_name_max") },
-                })}
+                error={tr(errors.displayName?.message)}
+                {...register("displayName")}
               />
             )}
             {(!registrationBlocked || mode === "login") && (
@@ -149,14 +155,8 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
                   type="email"
                   autoComplete="email"
                   placeholder="you@example.com"
-                  error={errors.email?.message}
-                  {...register("email", {
-                    required: t("auth:validation_email_required"),
-                    pattern: {
-                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                      message: t("auth:validation_email_invalid"),
-                    },
-                  })}
+                  error={tr(errors.email?.message)}
+                  {...register("email")}
                 />
                 <Input
                   label={
@@ -164,14 +164,8 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
                   }
                   type="password"
                   autoComplete={mode === "register" ? "new-password" : "current-password"}
-                  error={errors.password?.message}
-                  {...register("password", {
-                    required: t("auth:validation_password_required"),
-                    minLength: {
-                      value: mode === "register" ? 8 : 1,
-                      message: t("auth:validation_password_min"),
-                    },
-                  })}
+                  error={tr(errors.password?.message)}
+                  {...register("password")}
                 />
                 <Button type="submit" disabled={isSubmitting} className="w-full">
                   {isSubmitting
