@@ -454,7 +454,7 @@ export interface paths {
                     "application/json": {
                         /** Format: uri */
                         url: string;
-                        events: ("commit.ingested" | "report.generated")[];
+                        events: ("commit.ingested" | "report.generated" | "anomaly.detected")[];
                         /**
                          * @description Payload shape: `raw` — наш {event, data, sent_at} с HMAC.
                          *     `slack` — Slack Block Kit для incoming-webhook URLs.
@@ -810,7 +810,7 @@ export interface components {
             id?: string;
             /** Format: uri */
             url?: string;
-            events?: ("commit.ingested" | "report.generated")[];
+            events?: ("commit.ingested" | "report.generated" | "anomaly.detected")[];
             /** @enum {string} */
             format?: "raw" | "slack";
             active?: boolean;

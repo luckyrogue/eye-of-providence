@@ -34,11 +34,13 @@ import (
 const (
 	EventCommitIngested  = "commit.ingested"
 	EventReportGenerated = "report.generated"
+	EventAnomalyDetected = "anomaly.detected"
 )
 
 var validEvents = map[string]bool{
 	EventCommitIngested:  true,
 	EventReportGenerated: true,
+	EventAnomalyDetected: true,
 }
 
 // Webhook — DB row, без plaintext secret'а (получается ровно раз при create).

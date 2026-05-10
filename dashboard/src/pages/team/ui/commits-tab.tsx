@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "@eop/ui";
 import { useTeamCommits, type Commit } from "../../../entities/team";
 import { formatDate } from "../../../shared/lib/tz";
+import { renderMessageWithLinks } from "../../../shared/lib/task-refs";
 
 export function CommitsTab({ teamID, tz }: { teamID: string; tz: string }) {
   const { t } = useTranslation("app");
@@ -36,7 +37,9 @@ export function CommitsTab({ teamID, tz }: { teamID: string; tz: string }) {
               <td className="py-2 px-3 font-mono text-xs whitespace-nowrap">{formatDate(c.authored_at, tz)}</td>
               <td className="py-2 px-3">{c.author}</td>
               <td className="py-2 px-3 font-mono text-xs">{c.sha.slice(0, 7)}</td>
-              <td className="py-2 px-3 max-w-md truncate">{c.message}</td>
+              <td className="py-2 px-3 max-w-md truncate">
+                <CommitMessage message={c.message} />
+              </td>
               <td className="py-2 px-3 text-right tabular-nums text-xs">
                 <span className="text-green-600">+{c.lines_added}</span>{" "}
                 <span className="text-red-600">-{c.lines_removed}</span>
@@ -49,5 +52,29 @@ export function CommitsTab({ teamID, tz }: { teamID: string; tz: string }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+// CommitMessage — render с linkified ClickUp task refs (CU-xxx, #xxx).
+function CommitMessage({ message }: { message: string }) {
+  const segments = renderMessageWithLinks(message);
+  return (
+    <>
+      {segments.map((s, i) =>
+        s.kind === "ref" && s.ref ? (
+          <a
+            key={i}
+            href={s.ref.url}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="text-primary hover:underline font-mono"
+          >
+            {s.value}
+          </a>
+        ) : (
+          <span key={i}>{s.value}</span>
+        ),
+      )}
+    </>
   );
 }

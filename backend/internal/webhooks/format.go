@@ -86,6 +86,22 @@ func marshalSlack(event string, payload any) ([]byte, error) {
 			fields = append(fields, slackField("Period", period))
 		}
 
+	case EventAnomalyDetected:
+		kind, _ := data["kind"].(string)
+		category, _ := data["category"].(string)
+		z := numField(data, "z_score")
+		yesterdayMS := numField(data, "yesterday_ms")
+		baselineMS := numField(data, "baseline_ms")
+		emoji, label := anomalyHeader(kind)
+		headerText = emoji + " " + label
+		yHrs := float64(yesterdayMS) / 3600000
+		bHrs := float64(baselineMS) / 3600000
+		summaryText = fmt.Sprintf("Yesterday: %.1fh · baseline: %.1fh", yHrs, bHrs)
+		if category != "" {
+			fields = append(fields, slackField("Category", "`"+category+"`"))
+		}
+		fields = append(fields, slackField("Z-score", fmt.Sprintf("%.2f", float64(z)/1)))
+
 	default:
 		// Unknown event — отправляем generic notification, чтобы Slack хоть
 		// что-то показал.
@@ -117,6 +133,29 @@ func marshalSlack(event string, payload any) ([]byte, error) {
 		"text":   strings.TrimSpace(headerText + " — " + summaryText),
 		"blocks": blocks,
 	})
+}
+
+// anomalyHeader — emoji + label per anomaly kind. Compatible с Kind values
+// из internal/anomaly/detector.go (но не импортируем тот pkg чтобы избежать
+// import cycle — webhooks → anomaly → webhooks).
+func anomalyHeader(kind string) (emoji, label string) {
+	switch kind {
+	case "ai_high":
+		return ":rocket:", "Unusually high AI usage"
+	case "ai_low":
+		return ":turtle:", "AI usage dipped"
+	case "manual_high":
+		return ":hammer_and_wrench:", "High manual coding day"
+	case "manual_low":
+		return ":zzz:", "Manual coding dipped"
+	case "refactor_high":
+		return ":sparkles:", "Lots of refactoring"
+	case "activity_high":
+		return ":chart_with_upwards_trend:", "Productivity spike"
+	case "activity_low":
+		return ":warning:", "Activity dropped"
+	}
+	return ":bell:", "Anomaly detected"
 }
 
 func slackField(label, value string) map[string]any {

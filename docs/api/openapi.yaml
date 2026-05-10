@@ -266,7 +266,7 @@ paths:
                   type: array
                   items:
                     type: string
-                    enum: ["commit.ingested", "report.generated"]
+                    enum: ["commit.ingested", "report.generated", "anomaly.detected"]
                 format:
                   type: string
                   enum: [raw, slack]
@@ -480,7 +480,7 @@ components:
         url: { type: string, format: uri }
         events:
           type: array
-          items: { type: string, enum: ["commit.ingested", "report.generated"] }
+          items: { type: string, enum: ["commit.ingested", "report.generated", "anomaly.detected"] }
         format: { type: string, enum: [raw, slack] }
         active: { type: boolean }
         last_delivery_at: { type: string, format: date-time, nullable: true }

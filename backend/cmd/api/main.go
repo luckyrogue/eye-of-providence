@@ -23,6 +23,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/analytics"
+	"github.com/eye-of-providence/backend/internal/anomaly"
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/config"
 	"github.com/eye-of-providence/backend/internal/ingest"
@@ -172,12 +173,14 @@ func main() {
 	})
 
 	mail := chooseMailer(cfg, log)
-	// hooksDispatcher — interface (nil safe): commits-ingest проверяет
-	// `if s.Webhooks != nil` через nil-interface check. Чтобы typed-nil
-	// gotcha не сработала, оставляем zero value interface{} если pool nil.
+	// hookSvc — concrete *webhooks.Service. Удовлетворяет двум интерфейсам:
+	// teams.WebhookDispatcher и anomaly.Dispatcher (одна Dispatch-сигнатура).
+	// Если pgPool == nil (in-memory), hookSvc остаётся nil → consumers
+	// видят nil-interface и пропускают dispatch.
+	var hookSvc *webhooks.Service
 	var hooksDispatcher teams.WebhookDispatcher
 	if pgPool != nil {
-		hookSvc := webhooks.New(pgPool, log)
+		hookSvc = webhooks.New(pgPool, log)
 		webhooks.RegisterRoutes(app, hookSvc, cfg.JWTSecret, pgPool)
 		hooksDispatcher = hookSvc
 	}
@@ -232,6 +235,26 @@ func main() {
 			cron.Run(rootCtx)
 		}()
 		log.Info("reports cron started", zap.Int("interval_sec", cfg.ReportsCronSec))
+	}
+
+	// Anomaly detection cron — daily Z-score check, доставка через webhooks.
+	// hookSvc satisfies anomaly.Dispatcher (та же Dispatch-сигнатура).
+	if hookSvc != nil {
+		anomalyCron := &anomaly.Cron{
+			Interval:   24 * time.Hour,
+			EventStore: eventStore,
+			Webhooks:   hookSvc,
+			Logger:     log,
+		}
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Error("anomaly cron panicked", zap.Any("recover", r))
+				}
+			}()
+			anomalyCron.Run(rootCtx)
+		}()
+		log.Info("anomaly cron started", zap.Duration("interval", 24*time.Hour))
 	}
 
 	// SIGTERM/SIGINT → graceful shutdown.
