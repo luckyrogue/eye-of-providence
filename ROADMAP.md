@@ -13,9 +13,10 @@
 - ✅ Multi-tenant team management, invite-flow, RBAC
 - ✅ Beta-лимит 3 компании
 - ✅ Landing page
-- ⚠️ Агенты (Tauri / VS Code / browser ext) — на 30-60% готовности
+- ✅ Агенты — code-side hardened (MV3 race fix, Tauri pause+GC, VSCode multi-window dedup, retry queues). Distribution в marketplace остаётся внешним блокером.
 - ⚠️ Attribution алгоритм — primitive (paste size + AI domains)
-- ❌ Тесты, observability, billing, transactional emails
+- ✅ Тесты (backend 42.5%), observability (logs+histograms), transactional emails (Resend)
+- ❌ Billing — отложен до выхода из беты
 
 **Главные риски на год:**
 1. Агенты не работают надёжно → дашборд пустой → нет ценности → нет апгрейда
@@ -28,26 +29,27 @@
 ## Q1 — Foundation (июнь-август 2026)
 
 > **Тема: продукт перестаёт ломаться без оператора.**
+>
+> **Статус (2026-05-10): закрыт раньше срока, осталось 2 пункта. Можно переходить к Q2.**
 
 ### Фичи (пользовательский путь)
 
-- **Агенты до production-quality** — самый важный пункт квартала.
-  - Tauri desktop: macOS code-signing + notarization, Windows MSI, autoupdate, надёжный idle-detection, retry queue для оффлайна.
-  - VS Code extension: публикация в marketplace, накапливание Copilot Accept events, корректная обработка multi-window.
-  - Browser extension: Chrome Web Store + Firefox AMO, fix MV3 background-worker гонок.
-  - 2-3 недели на каждый. **Без этого дашборд пустой.**
-- **Onboarding wizard** после регистрации: 4 шага «Создай команду → установи агент → пригласи людей → отправь первое событие». Сейчас новый owner видит белый экран.
-- **Transactional emails** (Resend / Postmark): invite, password reset, weekly report digest, alert на инвайт-лимит. Must-have для team-продукта.
-- **Constraint: 1 owner = 1 company.** В бете один пользователь может быть `owner` только в одной компании. В других — может состоять как `member` через invite. Это упрощает onboarding и предотвращает «одного человека-фабрику воркспейсов» в early days.
+- ✅ **Агенты до production-quality** — code-side готов:
+  - ✅ Tauri: pause flag (UI+tray), SQLite GC (>7 дней), idle-detection, retry queue
+  - ✅ VS Code: multi-window dedup (focused-window-only)
+  - ✅ Browser extension: MV3 service-worker state в chrome.storage.session, retry queue с exponential backoff
+  - ⚠️ **Distribution в marketplace** — внешний блокер. См. `docs/agents-publishing.md`. Требует Apple Dev $99/год, Chrome Web Store $5, MS Partner / VS Code Azure DevOps publisher.
+- ✅ **Onboarding wizard** после регистрации (4 шага: company → install → invite → event)
+- ✅ **Transactional emails** (Resend): invite, password reset
+- ✅ **Constraint: 1 owner = 1 company** через `pg_advisory_xact_lock` + 1-owner-per-user invariant
 - ~~Billing scaffolding через Stripe~~ — **отложено до выхода из беты**. Пока остаёмся полностью free для founding companies.
 
 ### Tech debt
 
-- **Тесты**. Сейчас покрытие околонулевое. Цель Q1: **40% line coverage в `backend/`**.
-  - Integration-тесты на auth flow, ingest pipeline, team RBAC, beta-limit.
-  - E2E на dashboard через Playwright (login → dashboard → invite → second user joins).
-- **Observability — минимум**. Structured logs (zap) в stdout, Uptime Kuma для public status, ручной grep по логам Dokploy. **Sentry осознанно откладываем** до первых платящих — пока 3 founding companies, владелец сам читает логи.
-- **DB миграции с down-сценариями**. Сейчас только up. Для production rollback — блокер.
+- ✅ **Тесты**: backend coverage **42.5%** (цель была 40%). 30+ integration-тестов на teams/auth/admin/password-reset/members/projects/commits/invites.
+- ❌ **E2E Playwright** на dashboard (login → dashboard → invite → second user joins) — единственный незакрытый Q1-пункт.
+- ✅ **Observability**: zap structured logs в stdout, /metrics с histograms (request + CH read/write), Uptime Kuma docs. Sentry отложен.
+- ✅ **DB миграции с down-сценариями**: переход на golang-migrate с pgx/v5 driver, все миграции имеют up+down.
 
 ### Метрика квартала
 
@@ -72,10 +74,10 @@ DAU > 10, activation rate (signup → первый event в течение 24h) 
 
 ### Tech debt
 
-- **Refactor backend в clean packages.** `teams/handler.go` сейчас 800 строк, всё в одном файле. Разбить на `Service` / `Repo` / `HTTPHandler`. Разлочит парную разработку.
-- **OpenAPI spec + типизированный клиент** для frontend (`orval` / `openapi-typescript`). Сейчас руками поддерживается `api.ts` — будет источник багов.
-- **ClickHouse query benchmarks + индексы.** На 10M событий в день текущие запросы сложатся. Профилировать сейчас, не когда сложится. Materialized views для daily/weekly aggregates.
-- **Frontend: react-query + react-router.** Сейчас локальные `useState` + кастомный роутер по `pathname`. На масштабе придётся переписывать.
+- ✅ **Refactor backend в clean packages** (сделано раньше срока): `teams/handler.go` 1397 LoC → 8 доменных файлов (auth/password_reset/teams/members/invites/projects/commits/admin).
+- ✅ **Frontend: react-query + react-router** (сделано раньше срока): @tanstack/react-query 5.x, react-router-dom 6.30, FSD-структура (app/pages/widgets/entities/shared).
+- ❌ **OpenAPI spec + типизированный клиент** для frontend (`orval` / `openapi-typescript`). Сейчас руками поддерживается `entities/*/api/*.ts` — будет источник багов.
+- ❌ **ClickHouse query benchmarks + индексы.** На 10M событий в день текущие запросы сложатся. Профилировать сейчас, не когда сложится. Materialized views для daily/weekly aggregates.
 
 ### Метрика квартала
 
@@ -157,8 +159,9 @@ MRR > $5k, NRR > 110%, ≥1 enterprise (>$500/mo) customer.
 
 | Тема | Q1 | Q2 | Q3 | Q4 |
 |---|---|---|---|---|
-| **Privacy/Security** | secrets audit, rate limiting (без Sentry — пока stdout-логи Dokploy) | Penetration test (3rd party), Sentry / similar | SOC2 prep + Vanta | SOC2 Type 1 audit |
-| **Документация** | README + setup + agent install guides | API docs (OpenAPI auto-gen) | User docs site (mintlify) | Enterprise / SOC2 docs |
+| **Privacy/Security** | ✅ secrets audit, rate limiting, CodeQL/trivy/gitleaks SAST, 4 алерта закрыты | Penetration test (3rd party), Sentry / similar | SOC2 prep + Vanta | SOC2 Type 1 audit |
+| **Документация** | ✅ docs/agents-publishing.md, ✅ Uptime Kuma setup. README + setup guides — частично | API docs (OpenAPI auto-gen) | User docs site (mintlify) | Enterprise / SOC2 docs |
+| **i18n** | ✅ RU/EN/KK/ES (433 keys × 4 локали, 100% parity) | — | — | — |
 | **Команда** | соло | +1 frontend (contractor or full-time) | +1 backend | +1 DevRel/marketing |
 | **Метрики** | DAU, signups, activation | MRR (≥1), retention W2/W4 | MRR ≥ $1k, conversion ≥ 5% | MRR ≥ $5k, NRR ≥ 110% |
 
@@ -168,18 +171,18 @@ MRR > $5k, NRR > 110%, ≥1 enterprise (>$500/mo) customer.
 
 В порядке убывания приоритета:
 
-1. **Test coverage**: 0% → 40% (Q1) → 60% (Q2) → 70% (Q3+)
-2. **Observability**: нет → Sentry + Grafana (Q1) → SLO dashboards (Q3)
-3. **CI/CD**: одиночный pipeline → staging + preview deploys (Q3)
-4. **DB migrations**: only up → up+down (Q1) → schema versioning (Q4)
+1. ✅ **Test coverage**: 0% → **42.5%** (Q1, цель 40% выполнена) → 60% (Q2) → 70% (Q3+)
+2. **Observability**: ✅ stdout+histograms+Uptime Kuma (Q1) → Sentry + Grafana (Q2) → SLO dashboards (Q3)
+3. **CI/CD**: ✅ reusable workflows + path-filters + SAST (Q1) → staging + preview deploys (Q3)
+4. ✅ **DB migrations**: only up → up+down (Q1, golang-migrate с pgx/v5) → schema versioning (Q4)
 5. **Secrets**: `.env` → Doppler/Vault (Q3)
 6. **Error handling**: ad-hoc → typed errors + structured response (Q2)
-7. **Frontend**: vanilla useState → react-query/router/zod (Q3)
+7. ✅ **Frontend**: vanilla useState → react-query + react-router-dom + react-hook-form (Q1, FSD structure)
 8. **No event sourcing/audit trail** для team actions (Q4)
 9. **ClickHouse perf**: not benchmarked → materialized views + partitioning (Q2-Q4)
 10. **No mobile** (Q3)
 11. **Single region** (Q4)
-12. **Manual deploy of agents**: Tauri autoupdate + signed builds (Q1)
+12. **Manual deploy of agents**: Tauri autoupdate + signed builds — ⚠️ release pipeline есть, signing требует Apple/MS аккаунтов (Q1)
 
 ---
 
@@ -200,12 +203,34 @@ MRR > $5k, NRR > 110%, ≥1 enterprise (>$500/mo) customer.
 
 - ❌ Свой LLM / generative features (Gemini хватает)
 - ❌ On-prem deployment с поддержкой kubernetes-versions <1.28
-- ❌ Локализация (только русский + английский)
 - ❌ Mobile native attribution (iOS / Android coding-tracking — слишком nichе)
 - ❌ Code review automation (это competitive с Greptile/Coderabbit, не наша битва)
 - ❌ Свой billing engine (Stripe всегда)
 - ❌ Кастомный dashboarding для customers (BI-export через API)
 
+> ~~Локализация (только RU + EN)~~ — изменено: i18n охватывает RU/EN/KK/ES (4 локали × 433 ключа, 100% parity).
+
 ---
 
-_Последнее обновление: 2026-05-08. Ревью раз в квартал._
+_Последнее обновление: 2026-05-10. Ревью раз в квартал._
+
+---
+
+## Q1 retro (на 2026-05-10, до формального старта Q1)
+
+Quarter ahead-of-schedule. Из 11 крупных пунктов Q1 закрыто 9, два (E2E Playwright, marketplace distribution) висят. Дополнительно сделано вне плана:
+
+- i18n × 4 локали (RU/EN/KK/ES) — изначально планировался RU+EN
+- Backend refactor (был Q2)
+- Frontend на react-query + react-router (был Q3)
+- Tech-lead CI pipeline (reusable workflows + path-filters + SAST/secret/CVE сканеры)
+
+**Backlog Q2 (по приоритету):**
+1. Attribution v2 — Copilot Accept event, Cursor Apply, Claude Code hook (real moat)
+2. Insights, не данные — narrative-вместо-графиков
+3. Public API + webhooks — снимает страх vendor lock-in
+4. OpenAPI spec + типизированный клиент — последний source-of-bugs в frontend
+5. ClickHouse benchmarks + materialized views — pre-emptive перед 10M событий/день
+6. Slack integration — самый дешёвый retention loop
+7. Sentry-or-similar — first paying customer trigger
+8. Penetration test (3rd party) — pre-Q3 SOC2 prep
