@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"errors"
+	"math"
 	"net/http"
 	"os"
 	"os/signal"
@@ -355,7 +356,7 @@ func envIntOr(key string, fallback int32) int32 {
 		return fallback
 	}
 	n, err := strconv.Atoi(v)
-	if err != nil || n <= 0 {
+	if err != nil || n <= 0 || n > math.MaxInt32 {
 		return fallback
 	}
 	return int32(n)

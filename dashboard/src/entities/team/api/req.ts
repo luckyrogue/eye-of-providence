@@ -43,51 +43,56 @@ export const createTeam = (name: string) => {
   return http.post<CreateTeamRes>("/v1/teams", body).then((r) => r.data);
 };
 
+// encodeURIComponent на user-provided path params: invite-code приходит из
+// URL ?invite=, teamID/userID — из click/URL. CodeQL js/client-side-request-forgery
+// flag'ит template-strings без encoding.
+const enc = encodeURIComponent;
+
 export const updateTeam = (teamID: string, name: string) => {
   const body: UpdateTeamReq = { name };
-  return http.patch(`/v1/teams/${teamID}`, body).then(() => undefined);
+  return http.patch(`/v1/teams/${enc(teamID)}`, body).then(() => undefined);
 };
 
 export const deleteTeam = (teamID: string) =>
-  http.delete(`/v1/teams/${teamID}`).then(() => undefined);
+  http.delete(`/v1/teams/${enc(teamID)}`).then(() => undefined);
 
 export const listMembers = (teamID: string) =>
-  http.get<ListMembersRes>(`/v1/teams/${teamID}/members`).then((r) => r.data.members ?? []);
+  http.get<ListMembersRes>(`/v1/teams/${enc(teamID)}/members`).then((r) => r.data.members ?? []);
 
 export const teamSummary = (teamID: string) =>
-  http.get<TeamSummaryRes>(`/v1/teams/${teamID}/summary`).then((r) => r.data.members ?? []);
+  http.get<TeamSummaryRes>(`/v1/teams/${enc(teamID)}/summary`).then((r) => r.data.members ?? []);
 
 export const updateMemberRole = (teamID: string, userID: string, role: string) => {
   const body: UpdateMemberRoleReq = { role };
-  return http.patch(`/v1/teams/${teamID}/members/${userID}`, body).then(() => undefined);
+  return http.patch(`/v1/teams/${enc(teamID)}/members/${enc(userID)}`, body).then(() => undefined);
 };
 
 export const removeMember = (teamID: string, userID: string) =>
-  http.delete(`/v1/teams/${teamID}/members/${userID}`).then(() => undefined);
+  http.delete(`/v1/teams/${enc(teamID)}/members/${enc(userID)}`).then(() => undefined);
 
 export const createInvite = (teamID: string, email?: string) => {
   const body = email ? { email } : undefined;
   return http
-    .post<CreateInviteRes>(`/v1/teams/${teamID}/invites`, body)
+    .post<CreateInviteRes>(`/v1/teams/${enc(teamID)}/invites`, body)
     .then((r) => r.data);
 };
 
 export const previewInvite = (code: string) =>
-  http.get<InvitePreview>(`/v1/invites/${code}`).then((r) => r.data);
+  http.get<InvitePreview>(`/v1/invites/${enc(code)}`).then((r) => r.data);
 
 export const acceptInvite = (code: string) =>
-  http.post(`/v1/invites/${code}/accept`).then(() => undefined);
+  http.post(`/v1/invites/${enc(code)}/accept`).then(() => undefined);
 
 export const listProjects = (teamID: string) =>
-  http.get<ListProjectsRes>(`/v1/teams/${teamID}/projects`).then((r) => r.data.projects ?? []);
+  http.get<ListProjectsRes>(`/v1/teams/${enc(teamID)}/projects`).then((r) => r.data.projects ?? []);
 
 export const createProject = (teamID: string, name: string, repoURL: string) => {
   const body: CreateProjectReq = { name, repo_url: repoURL };
-  return http.post<Project>(`/v1/teams/${teamID}/projects`, body).then((r) => r.data);
+  return http.post<Project>(`/v1/teams/${enc(teamID)}/projects`, body).then((r) => r.data);
 };
 
 export const listTeamCommits = (teamID: string) =>
-  http.get<ListCommitsRes>(`/v1/teams/${teamID}/commits`).then((r) => r.data.commits ?? []);
+  http.get<ListCommitsRes>(`/v1/teams/${enc(teamID)}/commits`).then((r) => r.data.commits ?? []);
 
 // --- Query hooks ---
 

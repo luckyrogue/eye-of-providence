@@ -29,8 +29,9 @@ export function useAuth() {
     localStorage.setItem(KEY, r.user_id);
     if (r.display_name) localStorage.setItem("eop_display_name", r.display_name);
     // useSyncExternalStore слушает `storage` event только cross-tab.
-    // Same-tab — диспатчим вручную.
-    window.dispatchEvent(new StorageEvent("storage", { key: KEY }));
+    // Same-tab — диспатчим вручную (generic Event достаточно — listener
+    // не читает поля из event-объекта).
+    window.dispatchEvent(new Event("storage"));
   }, []);
 
   const logout = useCallback(() => {
@@ -38,7 +39,7 @@ export function useAuth() {
       const k = localStorage.key(i);
       if (k && k.startsWith("eop_")) localStorage.removeItem(k);
     }
-    window.dispatchEvent(new StorageEvent("storage", { key: KEY }));
+    window.dispatchEvent(new Event("storage"));
   }, []);
 
   return { userId, isAuthed: !!userId, setAuth, logout };
