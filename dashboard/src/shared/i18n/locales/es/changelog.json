@@ -1,0 +1,15 @@
+{
+  "eyebrow": "Actualizaciones",
+  "title": "Novedades",
+  "lead": "Cambios recientes en Eye of Providence. Auto-generado desde el historial de git.",
+  "empty": "Vacío por ahora.",
+  "error": "No se pudo cargar el changelog. Intenta refrescar la página.",
+  "breaking": "BREAKING",
+  "type": {
+    "feat": "Función",
+    "fix": "Fix",
+    "perf": "Perf",
+    "refactor": "Refactor",
+    "docs": "Docs"
+  }
+}

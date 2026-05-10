@@ -1,0 +1,15 @@
+{
+  "eyebrow": "Updates",
+  "title": "What's new",
+  "lead": "Recent changes in Eye of Providence. Auto-generated from git history.",
+  "empty": "Nothing yet.",
+  "error": "Couldn't load changelog. Try refreshing the page.",
+  "breaking": "BREAKING",
+  "type": {
+    "feat": "Feature",
+    "fix": "Fix",
+    "perf": "Perf",
+    "refactor": "Refactor",
+    "docs": "Docs"
+  }
+}

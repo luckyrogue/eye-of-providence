@@ -1,0 +1,616 @@
+{
+  "generated_at": "2026-05-10T12:20:13Z",
+  "entries": [
+    {
+      "hash": "fab0785",
+      "date": "2026-05-10",
+      "type": "feat",
+      "scope": "auth",
+      "summary": "preserve destination across login через ?redirect= в URL"
+    },
+    {
+      "hash": "f89145f",
+      "date": "2026-05-10",
+      "type": "fix",
+      "scope": "security",
+      "summary": "close 4 code-scanning alerts"
+    },
+    {
+      "hash": "e2e04fd",
+      "date": "2026-05-10",
+      "type": "feat",
+      "scope": "public-api",
+      "summary": "UI для tokens/webhooks + OpenAPI spec + TS-генерация"
+    },
+    {
+      "hash": "cb70c28",
+      "date": "2026-05-10",
+      "type": "fix",
+      "scope": "select",
+      "summary": "update select component to use full width and apply additional className prop for better styling flexibility"
+    },
+    {
+      "hash": "bbbf1b1",
+      "date": "2026-05-10",
+      "type": "docs",
+      "scope": "roadmap",
+      "summary": "Q1 retro + Q2 prep — отметить done, обновить backlog"
+    },
+    {
+      "hash": "b8c1507",
+      "date": "2026-05-10",
+      "type": "fix",
+      "scope": "webhooks",
+      "summary": "correct comment spelling from 'cancelled' to 'canceled'"
+    },
+    {
+      "hash": "9a7338a",
+      "date": "2026-05-10",
+      "type": "fix",
+      "scope": "onboarding",
+      "summary": "invalidate teams cache after createTeam"
+    },
+    {
+      "hash": "96a9246",
+      "date": "2026-05-10",
+      "type": "fix",
+      "scope": "logo-strip",
+      "summary": "replace GitHub icon with GitBranch in logo strip component"
+    },
+    {
+      "hash": "8cebbd2",
+      "date": "2026-05-10",
+      "type": "feat",
+      "scope": "insights",
+      "summary": "narrative-карточки на dashboard вместо сырых графиков"
+    },
+    {
+      "hash": "671d1d5",
+      "date": "2026-05-10",
+      "type": "feat",
+      "scope": "agents",
+      "summary": "production hardening — MV3 race fix, Tauri pause+GC, VSCode dedup, release pipeline"
+    },
+    {
+      "hash": "576e01c",
+      "date": "2026-05-10",
+      "type": "perf",
+      "scope": "clickhouse",
+      "summary": "events_hourly_agg materialized view — 3-7× speedup на hot queries"
+    },
+    {
+      "hash": "4859a99",
+      "date": "2026-05-10",
+      "type": "fix",
+      "scope": "deps",
+      "summary": "partial revert of dependabot bump 217b5c3 — restore frontend builds"
+    },
+    {
+      "hash": "30fbedf",
+      "date": "2026-05-10",
+      "type": "feat",
+      "scope": "attribution-v2",
+      "summary": "Cursor detection + burst heuristic + Claude Code hook"
+    },
+    {
+      "hash": "2f85324",
+      "date": "2026-05-10",
+      "type": "feat",
+      "scope": "webhooks",
+      "summary": "outbound HMAC-signed event delivery (Q2 Phase B)"
+    },
+    {
+      "hash": "264b5a0",
+      "date": "2026-05-10",
+      "type": "feat",
+      "scope": "slack",
+      "summary": "payload format адаптер для Slack incoming-webhook"
+    },
+    {
+      "hash": "027b79f",
+      "date": "2026-05-10",
+      "type": "feat",
+      "scope": "public-api",
+      "summary": "API tokens (eop_*) + read-only export endpoints"
+    },
+    {
+      "hash": "f9b7c37",
+      "date": "2026-05-09",
+      "type": "feat",
+      "scope": "mail",
+      "summary": "transactional emails (Resend) — invites + password reset"
+    },
+    {
+      "hash": "ef008b7",
+      "date": "2026-05-09",
+      "type": "fix",
+      "scope": "security",
+      "summary": "close 7 trivy CRITICALs — fiber CVE + alpine apk upgrade"
+    },
+    {
+      "hash": "e131192",
+      "date": "2026-05-09",
+      "type": "feat",
+      "scope": "onboarding",
+      "summary": "wizard 4-step flow + server-driven status"
+    },
+    {
+      "hash": "dfdff7e",
+      "date": "2026-05-09",
+      "type": "feat",
+      "scope": "observability",
+      "summary": "histograms (request + CH read/write) + Uptime Kuma docs"
+    },
+    {
+      "hash": "de2bcb4",
+      "date": "2026-05-09",
+      "type": "feat",
+      "scope": "i18n",
+      "summary": "finish admin — subscription modal + payments (4 locales)"
+    },
+    {
+      "hash": "a773263",
+      "date": "2026-05-09",
+      "type": "fix",
+      "scope": "i18n",
+      "summary": "translate remaining brand/feature strings — 100% покрытие"
+    },
+    {
+      "hash": "a2ccd91",
+      "date": "2026-05-09",
+      "type": "feat",
+      "scope": "i18n",
+      "summary": "translate team-detail tabs + admin pages (4 locales)"
+    },
+    {
+      "hash": "9667f2a",
+      "date": "2026-05-09",
+      "type": "fix",
+      "summary": "update domain to eop.rysdavletov.org (combined image, single domain)"
+    },
+    {
+      "hash": "8534192",
+      "date": "2026-05-09",
+      "type": "feat",
+      "scope": "backend",
+      "summary": "switch migrations to golang-migrate + add down support"
+    },
+    {
+      "hash": "84f2593",
+      "date": "2026-05-09",
+      "type": "fix",
+      "scope": "migrate",
+      "summary": "force MergeTree engine для CH schema_migrations"
+    },
+    {
+      "hash": "6635667",
+      "date": "2026-05-09",
+      "type": "feat",
+      "scope": "i18n",
+      "summary": "translate landing page (10 components, 4 locales)"
+    },
+    {
+      "hash": "61c91a5",
+      "date": "2026-05-09",
+      "type": "fix",
+      "scope": "i18n",
+      "summary": "full audit — settings/heatmap/plan-badge + 5 leak fixes"
+    },
+    {
+      "hash": "61c71d9",
+      "date": "2026-05-09",
+      "type": "fix",
+      "scope": "migrate",
+      "summary": "switch to pgx/v5 driver — fixes prod 'SSL is not enabled on the server'"
+    },
+    {
+      "hash": "5bf0d78",
+      "date": "2026-05-09",
+      "type": "docs",
+      "scope": "env",
+      "summary": "document Resend mail vars in .env.example + PRODUCTION.md"
+    },
+    {
+      "hash": "57d2b10",
+      "date": "2026-05-09",
+      "type": "feat",
+      "scope": "i18n",
+      "summary": "backend locale storage + email шаблоны на 4 языках"
+    },
+    {
+      "hash": "4f1bf33",
+      "date": "2026-05-09",
+      "type": "feat",
+      "scope": "teams",
+      "summary": "UX-полировка 1-owner-1-company constraint"
+    },
+    {
+      "hash": "3d0a90e",
+      "date": "2026-05-09",
+      "type": "refactor",
+      "scope": "teams",
+      "summary": "split 1397-LoC handler.go into 8 domain files"
+    },
+    {
+      "hash": "2dcc5f2",
+      "date": "2026-05-09",
+      "type": "feat",
+      "scope": "i18n",
+      "summary": "multi-language support — ru / en / kk / es (auth + onboarding + settings)"
+    },
+    {
+      "hash": "2c3162f",
+      "date": "2026-05-09",
+      "type": "feat",
+      "scope": "i18n",
+      "summary": "translate AppLayout + dashboard + teams + beta-banner"
+    },
+    {
+      "hash": "f9dbe61",
+      "date": "2026-05-08",
+      "type": "refactor",
+      "scope": "frontend",
+      "summary": "full migration to react-query hooks + shared UI"
+    },
+    {
+      "hash": "df4c34d",
+      "date": "2026-05-08",
+      "type": "fix",
+      "scope": "auth",
+      "summary": "register public auth routes before protected /v1 groups"
+    },
+    {
+      "hash": "da372a5",
+      "date": "2026-05-08",
+      "type": "refactor",
+      "scope": "frontend",
+      "summary": "full FSD layout + lazy routes + a11y fixes"
+    },
+    {
+      "hash": "ca52efd",
+      "date": "2026-05-08",
+      "type": "docs",
+      "summary": "add 12-month roadmap (Jun 2026 - May 2027)"
+    },
+    {
+      "hash": "c049dcc",
+      "date": "2026-05-08",
+      "type": "fix",
+      "scope": "security",
+      "summary": "JWT revocation, OAuth verified-email, CH cleanup (audit batch 2)"
+    },
+    {
+      "hash": "b44ce91",
+      "date": "2026-05-08",
+      "type": "fix",
+      "scope": "security+correctness",
+      "summary": "apply audit findings batch 1"
+    },
+    {
+      "hash": "b28b446",
+      "date": "2026-05-08",
+      "type": "feat",
+      "scope": "dashboard",
+      "summary": "premium typography and hover micro-animations"
+    },
+    {
+      "hash": "b0c9c5e",
+      "date": "2026-05-08",
+      "type": "refactor",
+      "scope": "frontend",
+      "summary": "axios + module-per-domain api/ + createBrowserRouter"
+    },
+    {
+      "hash": "ac43b09",
+      "date": "2026-05-08",
+      "type": "fix",
+      "scope": "backend,devops",
+      "summary": "close audit findings — N+1, JWT, migrate race, prod hardening"
+    },
+    {
+      "hash": "a8d988a",
+      "date": "2026-05-08",
+      "type": "fix",
+      "scope": "docker",
+      "summary": "remove HEALTHCHECK to stop swarm restart-loop on slow startup"
+    },
+    {
+      "hash": "97e00f6",
+      "date": "2026-05-08",
+      "type": "refactor",
+      "scope": "frontend",
+      "summary": "organize files into folders + split Onboarding/Teams (in progress)"
+    },
+    {
+      "hash": "878696c",
+      "date": "2026-05-08",
+      "type": "refactor",
+      "scope": "api",
+      "summary": "collocate TanStack hooks with their requests"
+    },
+    {
+      "hash": "829eb64",
+      "date": "2026-05-08",
+      "type": "feat",
+      "summary": "company self-service + 3-company beta limit"
+    },
+    {
+      "hash": "6fd369e",
+      "date": "2026-05-08",
+      "type": "refactor",
+      "scope": "frontend",
+      "summary": "split Admin and Landing into folders, all files \u003c300 LoC"
+    },
+    {
+      "hash": "678ae4e",
+      "date": "2026-05-08",
+      "type": "feat",
+      "summary": "super_admin panel + 1-owner-per-user constraint"
+    },
+    {
+      "hash": "6380e63",
+      "date": "2026-05-08",
+      "type": "feat",
+      "scope": "frontend",
+      "summary": "react-router + react-query + shared UI components"
+    },
+    {
+      "hash": "53194a9",
+      "date": "2026-05-08",
+      "type": "refactor",
+      "scope": "frontend",
+      "summary": "kebab-case + tsconfig strictness + settings on hooks"
+    },
+    {
+      "hash": "4e7bac0",
+      "date": "2026-05-08",
+      "type": "feat",
+      "scope": "dashboard",
+      "summary": "public marketing landing page"
+    },
+    {
+      "hash": "39e0303",
+      "date": "2026-05-08",
+      "type": "feat",
+      "scope": "billing",
+      "summary": "manual subscription activation by super_admin"
+    },
+    {
+      "hash": "18f1495",
+      "date": "2026-05-08",
+      "type": "feat",
+      "scope": "dashboard",
+      "summary": "onboarding wizard for new owners"
+    },
+    {
+      "hash": "b5d86b1",
+      "date": "2026-05-06",
+      "type": "fix",
+      "scope": "agent",
+      "summary": "add check_local_api_port flag to preflight"
+    },
+    {
+      "hash": "a6d6ce7",
+      "date": "2026-05-06",
+      "type": "fix",
+      "scope": "deploy",
+      "summary": "restore api.Dockerfile"
+    },
+    {
+      "hash": "7f9bbf5",
+      "date": "2026-05-06",
+      "type": "fix",
+      "scope": "dashboard",
+      "summary": "update BASE URL assignment to use logical OR operator"
+    },
+    {
+      "hash": "3c7d46e",
+      "date": "2026-05-06",
+      "type": "feat",
+      "summary": "production-readiness pass"
+    },
+    {
+      "hash": "1f0cf70",
+      "date": "2026-05-06",
+      "type": "fix",
+      "scope": "docker",
+      "summary": "add root Dockerfile.prod and .dockerignore for Dokploy build context"
+    },
+    {
+      "hash": "f1c6aa8",
+      "date": "2026-05-05",
+      "type": "feat",
+      "scope": "teams",
+      "summary": "auth + multi-team + invites + projects + commits"
+    },
+    {
+      "hash": "e6b2f0e",
+      "date": "2026-05-05",
+      "type": "fix",
+      "scope": "dashboard",
+      "summary": "скрывать header (логотип + nav) когда пользователь не авторизован"
+    },
+    {
+      "hash": "d08d644",
+      "date": "2026-05-05",
+      "type": "fix",
+      "scope": "dashboard",
+      "summary": "inline Caddyfile в Dockerfile (убрал отдельный файл)"
+    },
+    {
+      "hash": "a1b95ba",
+      "date": "2026-05-05",
+      "type": "feat",
+      "scope": "auth",
+      "summary": "invite-only режим (по умолчанию)"
+    },
+    {
+      "hash": "7f2c8b8",
+      "date": "2026-05-05",
+      "type": "fix",
+      "scope": "agent",
+      "summary": "unblock tauri dev — own request-line strings, add placeholder icon"
+    },
+    {
+      "hash": "72b10f5",
+      "date": "2026-05-05",
+      "type": "fix",
+      "scope": "deploy",
+      "summary": "Dockerfiles в корне репо для удобства Dokploy"
+    },
+    {
+      "hash": "4529cf2",
+      "date": "2026-05-05",
+      "type": "feat",
+      "scope": "deploy",
+      "summary": "Dokploy-ready Dockerfiles, removed Fly.io artifacts"
+    },
+    {
+      "hash": "26d467d",
+      "date": "2026-05-05",
+      "type": "feat",
+      "scope": "dev",
+      "summary": "docker-compose.dev.yml — весь стек локально с hot-reload"
+    },
+    {
+      "hash": "fed071a",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "phase-6",
+      "summary": "real ClickHouse + Postgres persistence + heatmap"
+    },
+    {
+      "hash": "fb5efd5",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "reports",
+      "summary": "красивее и понятнее — emoji, structure, smart empty-state"
+    },
+    {
+      "hash": "f713a79",
+      "date": "2026-05-04",
+      "type": "fix",
+      "scope": "fly",
+      "summary": "setup.sh accepts secrets via env vars (no interactive prompts)"
+    },
+    {
+      "hash": "de7c4d4",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "phase-3",
+      "summary": "vscode extension + claude code hooks + attribution v1"
+    },
+    {
+      "hash": "de0987e",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "config",
+      "summary": "support PORT env var (Render/Heroku convention)"
+    },
+    {
+      "hash": "b9935e5",
+      "date": "2026-05-04",
+      "type": "docs",
+      "scope": "plan",
+      "summary": "close stale Phase 0 items in PLAN.md"
+    },
+    {
+      "hash": "a3b0d83",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "phase-6.5",
+      "summary": "heatmap UI + per-language card + weekly cron"
+    },
+    {
+      "hash": "993c89e",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "phase-1",
+      "summary": "vertical slice end-to-end"
+    },
+    {
+      "hash": "97ecebb",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "deploy",
+      "summary": "scripts для одной команды redeploy api/dashboard"
+    },
+    {
+      "hash": "78bb348",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "dashboard",
+      "summary": "enhance UI with improved button accessibility and timezone formatting"
+    },
+    {
+      "hash": "7129706",
+      "date": "2026-05-04",
+      "type": "fix",
+      "scope": "cors",
+      "summary": "make AllowOrigins env-driven (EOP_ALLOWED_ORIGINS)"
+    },
+    {
+      "hash": "6690405",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "dashboard",
+      "summary": "RU UI + redesign + timezone selector"
+    },
+    {
+      "hash": "50fcf02",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "analytics",
+      "summary": "tz-aware heatmap + trend (?tz=Europe/Moscow и т.д.)"
+    },
+    {
+      "hash": "4bb15ec",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "phase-5",
+      "summary": "gemini AI reports + dashboard polish"
+    },
+    {
+      "hash": "3e75630",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "preflight",
+      "summary": "startup environment checks + Onboarding UI + doctor script"
+    },
+    {
+      "hash": "3cd3e6b",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "phase-8",
+      "summary": "close remaining MVP gaps"
+    },
+    {
+      "hash": "36e8dc5",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "phase-7",
+      "summary": "production Docker + delete-my-data + settings UI"
+    },
+    {
+      "hash": "21bb7fa",
+      "date": "2026-05-04",
+      "type": "fix",
+      "scope": "cors",
+      "summary": "support wildcard origins (disable credentials when *)"
+    },
+    {
+      "hash": "1639fdc",
+      "date": "2026-05-04",
+      "type": "fix",
+      "scope": "fly",
+      "summary": "replace fly postgres create (managed HA, expensive) with single-node app"
+    },
+    {
+      "hash": "029eddf",
+      "date": "2026-05-04",
+      "type": "feat",
+      "scope": "phase-2",
+      "summary": "browser extension — focus tracking + AI copy detection"
+    }
+  ]
+}

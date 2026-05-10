@@ -1,0 +1,15 @@
+{
+  "eyebrow": "Обновления",
+  "title": "Что нового",
+  "lead": "Что мы поменяли в Eye of Providence в последнее время. Auto-generated из git history.",
+  "empty": "Пока пусто.",
+  "error": "Не удалось загрузить changelog. Попробуй обновить страницу.",
+  "breaking": "BREAKING",
+  "type": {
+    "feat": "Фича",
+    "fix": "Фикс",
+    "perf": "Перф",
+    "refactor": "Рефактор",
+    "docs": "Доки"
+  }
+}

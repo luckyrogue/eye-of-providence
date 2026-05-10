@@ -7,6 +7,7 @@ export function Footer() {
     { href: "#features", label: t("nav.features") },
     { href: "#pricing", label: t("nav.pricing") },
     { href: "#faq", label: t("nav.faq") },
+    { href: "/changelog", label: t("nav.changelog") },
     { href: "/dashboard", label: t("nav.open_dashboard") },
   ];
   const legalLinks = [

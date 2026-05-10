@@ -14,6 +14,9 @@ const ResetPasswordRoute = lazy(() =>
 const OnboardingRoute = lazy(() =>
   import("../pages/onboarding").then((m) => ({ default: m.OnboardingRoute })),
 );
+const ChangelogRoute = lazy(() =>
+  import("../pages/changelog").then((m) => ({ default: m.ChangelogRoute })),
+);
 const DashboardRoute = lazy(() =>
   import("../pages/dashboard").then((m) => ({ default: m.DashboardRoute })),
 );
@@ -43,6 +46,7 @@ export const router = createBrowserRouter([
   { path: "/forgot-password", element: wrap(<ForgotPasswordRoute />) },
   { path: "/reset-password", element: wrap(<ResetPasswordRoute />) },
   { path: "/onboarding", element: wrap(<OnboardingRoute />) },
+  { path: "/changelog", element: wrap(<ChangelogRoute />) },
   {
     element: <AppLayout />,
     children: [

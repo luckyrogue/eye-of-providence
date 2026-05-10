@@ -21,6 +21,7 @@ import enOnboarding from "./locales/en/onboarding.json";
 import enApp from "./locales/en/app.json";
 import enInsights from "./locales/en/insights.json";
 import enDeveloper from "./locales/en/developer.json";
+import enChangelog from "./locales/en/changelog.json";
 
 import ruCommon from "./locales/ru/common.json";
 import ruErrors from "./locales/ru/errors.json";
@@ -30,6 +31,7 @@ import ruOnboarding from "./locales/ru/onboarding.json";
 import ruApp from "./locales/ru/app.json";
 import ruInsights from "./locales/ru/insights.json";
 import ruDeveloper from "./locales/ru/developer.json";
+import ruChangelog from "./locales/ru/changelog.json";
 
 import kkCommon from "./locales/kk/common.json";
 import kkErrors from "./locales/kk/errors.json";
@@ -39,6 +41,7 @@ import kkOnboarding from "./locales/kk/onboarding.json";
 import kkApp from "./locales/kk/app.json";
 import kkInsights from "./locales/kk/insights.json";
 import kkDeveloper from "./locales/kk/developer.json";
+import kkChangelog from "./locales/kk/changelog.json";
 
 import esCommon from "./locales/es/common.json";
 import esErrors from "./locales/es/errors.json";
@@ -48,6 +51,7 @@ import esOnboarding from "./locales/es/onboarding.json";
 import esApp from "./locales/es/app.json";
 import esInsights from "./locales/es/insights.json";
 import esDeveloper from "./locales/es/developer.json";
+import esChangelog from "./locales/es/changelog.json";
 
 export const SUPPORTED_LOCALES = ["ru", "en", "kk", "es"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -62,10 +66,10 @@ export const LOCALE_LABELS: Record<Locale, string> = {
 export const LOCALE_STORAGE_KEY = "eop_locale";
 
 const resources = {
-  en: { common: enCommon, errors: enErrors, auth: enAuth, landing: enLanding, onboarding: enOnboarding, app: enApp, insights: enInsights, developer: enDeveloper },
-  ru: { common: ruCommon, errors: ruErrors, auth: ruAuth, landing: ruLanding, onboarding: ruOnboarding, app: ruApp, insights: ruInsights, developer: ruDeveloper },
-  kk: { common: kkCommon, errors: kkErrors, auth: kkAuth, landing: kkLanding, onboarding: kkOnboarding, app: kkApp, insights: kkInsights, developer: kkDeveloper },
-  es: { common: esCommon, errors: esErrors, auth: esAuth, landing: esLanding, onboarding: esOnboarding, app: esApp, insights: esInsights, developer: esDeveloper },
+  en: { common: enCommon, errors: enErrors, auth: enAuth, landing: enLanding, onboarding: enOnboarding, app: enApp, insights: enInsights, developer: enDeveloper, changelog: enChangelog },
+  ru: { common: ruCommon, errors: ruErrors, auth: ruAuth, landing: ruLanding, onboarding: ruOnboarding, app: ruApp, insights: ruInsights, developer: ruDeveloper, changelog: ruChangelog },
+  kk: { common: kkCommon, errors: kkErrors, auth: kkAuth, landing: kkLanding, onboarding: kkOnboarding, app: kkApp, insights: kkInsights, developer: kkDeveloper, changelog: kkChangelog },
+  es: { common: esCommon, errors: esErrors, auth: esAuth, landing: esLanding, onboarding: esOnboarding, app: esApp, insights: esInsights, developer: esDeveloper, changelog: esChangelog },
 };
 
 // Init возвращает Promise, но мы не await'им — React-Suspense покажет fallback
@@ -80,7 +84,7 @@ i18n
     supportedLngs: SUPPORTED_LOCALES as unknown as string[],
     nonExplicitSupportedLngs: true, // 'ru-RU' → 'ru'
     defaultNS: "common",
-    ns: ["common", "errors", "auth", "landing", "onboarding", "app", "insights", "developer"],
+    ns: ["common", "errors", "auth", "landing", "onboarding", "app", "insights", "developer", "changelog"],
     interpolation: { escapeValue: false }, // React сам escape'ит
     detection: {
       order: ["localStorage", "navigator", "htmlTag"],

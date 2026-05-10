@@ -6,7 +6,8 @@
     "faq": "FAQ",
     "sign_in": "Iniciar sesión",
     "get_started": "Empezar",
-    "open_dashboard": "Abrir panel"
+    "open_dashboard": "Abrir panel",
+    "changelog": "Novedades"
   },
   "hero": {
     "badge": "Beta · 3 founding companies gratis",
@@ -14,7 +15,11 @@
     "lead": "Analítica privacy-first para ingenieros. Rastrea código manual, ayuda de IA y dónde se va tu tiempo — IDE, navegador y CLI.",
     "cta_primary": "Empezar — gratis",
     "cta_secondary": "Ver cómo funciona",
-    "trust": ["Privacy-by-design", "Self-hostable", "Sin tarjeta"]
+    "trust": [
+      "Privacy-by-design",
+      "Self-hostable",
+      "Sin tarjeta"
+    ]
   },
   "logo_strip": {
     "tagline": "Rastreamos cada canal que realmente usas"
@@ -23,12 +28,30 @@
     "eyebrow": "Funciones",
     "heading": "Todo lo necesario para <em>entender</em> tu workflow con IA.",
     "items": [
-      { "title": "Atribución IA vs manual", "desc": "Detecta automáticamente qué viene de Copilot, Cursor, Claude Code, ChatGPT — y qué escribiste tú mismo." },
-      { "title": "Tiempo real de codificación", "desc": "Minutos de foco activo, no tiempo de calendario. Idle, cambio de contexto y lectura se miden por separado." },
-      { "title": "Por idioma y proyecto", "desc": "Heatmaps, desglose por repo y extensión. Ves dónde la IA ayuda y dónde escribes todo a mano." },
-      { "title": "Privacidad desde el diseño", "desc": "Nunca guardamos tus prompts, código ni pantalla. Solo metadatos de eventos. Aloja el stack completo en tu infra si quieres." },
-      { "title": "Reportes con IA", "desc": "Resúmenes semanales y mensuales de Gemini — qué cambió, dónde aceleraste, en qué enfocarte después." },
-      { "title": "Hecho para equipos", "desc": "Equipos invite-only, accesos por rol, desglose por proyecto para engineering managers." }
+      {
+        "title": "Atribución IA vs manual",
+        "desc": "Detecta automáticamente qué viene de Copilot, Cursor, Claude Code, ChatGPT — y qué escribiste tú mismo."
+      },
+      {
+        "title": "Tiempo real de codificación",
+        "desc": "Minutos de foco activo, no tiempo de calendario. Idle, cambio de contexto y lectura se miden por separado."
+      },
+      {
+        "title": "Por idioma y proyecto",
+        "desc": "Heatmaps, desglose por repo y extensión. Ves dónde la IA ayuda y dónde escribes todo a mano."
+      },
+      {
+        "title": "Privacidad desde el diseño",
+        "desc": "Nunca guardamos tus prompts, código ni pantalla. Solo metadatos de eventos. Aloja el stack completo en tu infra si quieres."
+      },
+      {
+        "title": "Reportes con IA",
+        "desc": "Resúmenes semanales y mensuales de Gemini — qué cambió, dónde aceleraste, en qué enfocarte después."
+      },
+      {
+        "title": "Hecho para equipos",
+        "desc": "Equipos invite-only, accesos por rol, desglose por proyecto para engineering managers."
+      }
     ]
   },
   "how": {
@@ -36,10 +59,22 @@
     "heading": "De instalación a insight en <em>menos de cinco minutos</em>.",
     "step_label": "paso {{num}}",
     "items": [
-      { "title": "Instala el agente", "desc": "Un binario en macOS o Windows. Hooks de VS Code y Claude Code vienen como plugins separados." },
-      { "title": "Inicia sesión", "desc": "Email + contraseña o GitHub OAuth. El modo invite-only mantiene tu organización privada." },
-      { "title": "Codifica como siempre", "desc": "El agente clasifica eventos localmente. Solo metadatos salen de tu máquina — nunca código ni prompts." },
-      { "title": "Lee el panel", "desc": "Gráficos en vivo, desglose por idioma, reportes con IA. Cancela y exporta cuando quieras." }
+      {
+        "title": "Instala el agente",
+        "desc": "Un binario en macOS o Windows. Hooks de VS Code y Claude Code vienen como plugins separados."
+      },
+      {
+        "title": "Inicia sesión",
+        "desc": "Email + contraseña o GitHub OAuth. El modo invite-only mantiene tu organización privada."
+      },
+      {
+        "title": "Codifica como siempre",
+        "desc": "El agente clasifica eventos localmente. Solo metadatos salen de tu máquina — nunca código ni prompts."
+      },
+      {
+        "title": "Lee el panel",
+        "desc": "Gráficos en vivo, desglose por idioma, reportes con IA. Cancela y exporta cuando quieras."
+      }
     ]
   },
   "pricing": {
@@ -53,21 +88,40 @@
         "price": "Gratis",
         "period": "para siempre",
         "cta": "Empezar",
-        "features": ["Panel personal", "Hasta 3 proyectos", "30 días de historial", "Reporte IA semanal", "Soporte de comunidad"]
+        "features": [
+          "Panel personal",
+          "Hasta 3 proyectos",
+          "30 días de historial",
+          "Reporte IA semanal",
+          "Soporte de comunidad"
+        ]
       },
       {
         "name": "Empresa fundadora",
         "price": "Gratis",
         "period": "para los 3 primeros",
         "cta": "Reservar plaza",
-        "features": ["Todo lo de Solo", "Miembros ilimitados", "Proyectos ilimitados", "Roles, invitaciones, analítica de miembros", "18 meses de historial", "Línea directa con los founders"]
+        "features": [
+          "Todo lo de Solo",
+          "Miembros ilimitados",
+          "Proyectos ilimitados",
+          "Roles, invitaciones, analítica de miembros",
+          "18 meses de historial",
+          "Línea directa con los founders"
+        ]
       },
       {
         "name": "En tu servidor",
         "price": "Gratis",
         "period": "núcleo abierto",
         "cta": "Leer docs",
-        "features": ["Stack completo en tu infra", "Tus datos en tu infraestructura", "Docker / docker-compose", "Postgres + ClickHouse", "Soporte de comunidad"]
+        "features": [
+          "Stack completo en tu infra",
+          "Tus datos en tu infraestructura",
+          "Docker / docker-compose",
+          "Postgres + ClickHouse",
+          "Soporte de comunidad"
+        ]
       }
     ]
   },
@@ -75,12 +129,30 @@
     "eyebrow": "FAQ",
     "heading": "Respuestas rápidas, <em>antes de que preguntes</em>.",
     "items": [
-      { "q": "¿Qué recoge realmente el agente?", "a": "Solo metadatos: app activa, estado idle/active, tamaño de pegados, extensiones de archivos, nombres de proveedores de IA. Nunca prompts, contenido de código, capturas o teclas." },
-      { "q": "¿Cómo se detecta el uso de IA?", "a": "Múltiples señales — app activa y URL (claude.ai, ChatGPT), eventos de plugin de IDE (Copilot accept, Cursor agent), heurísticas de portapapeles para código pegado de ventanas de IA. Toda la clasificación ocurre en tu máquina." },
-      { "q": "¿Puedo self-host?", "a": "Sí. Backend en Go, panel en React, almacenamiento Postgres + ClickHouse + Redis. Docker compose funciona out-of-the-box. Puedes correr todo el stack en una sola VM." },
-      { "q": "¿Mis datos se venden o se comparten?", "a": "No. No mostramos publicidad, no vendemos agregados, no entrenamos modelos con tus eventos. Si alguna vez cambia, te preguntaríamos primero." },
-      { "q": "¿Y la privacidad del equipo?", "a": "Los admins ven agregados por miembro. No ven prompts, archivos ni contenido individual. Los miembros pueden pausar el rastreo y exportar o eliminar todos sus datos." },
-      { "q": "¿Cuándo termina lo gratis?", "a": "Solo y self-hosted son gratis para siempre. Team eventualmente tendrá tiers de pago — pero durante la beta, todas las funciones de team son gratis sin límite." }
+      {
+        "q": "¿Qué recoge realmente el agente?",
+        "a": "Solo metadatos: app activa, estado idle/active, tamaño de pegados, extensiones de archivos, nombres de proveedores de IA. Nunca prompts, contenido de código, capturas o teclas."
+      },
+      {
+        "q": "¿Cómo se detecta el uso de IA?",
+        "a": "Múltiples señales — app activa y URL (claude.ai, ChatGPT), eventos de plugin de IDE (Copilot accept, Cursor agent), heurísticas de portapapeles para código pegado de ventanas de IA. Toda la clasificación ocurre en tu máquina."
+      },
+      {
+        "q": "¿Puedo self-host?",
+        "a": "Sí. Backend en Go, panel en React, almacenamiento Postgres + ClickHouse + Redis. Docker compose funciona out-of-the-box. Puedes correr todo el stack en una sola VM."
+      },
+      {
+        "q": "¿Mis datos se venden o se comparten?",
+        "a": "No. No mostramos publicidad, no vendemos agregados, no entrenamos modelos con tus eventos. Si alguna vez cambia, te preguntaríamos primero."
+      },
+      {
+        "q": "¿Y la privacidad del equipo?",
+        "a": "Los admins ven agregados por miembro. No ven prompts, archivos ni contenido individual. Los miembros pueden pausar el rastreo y exportar o eliminar todos sus datos."
+      },
+      {
+        "q": "¿Cuándo termina lo gratis?",
+        "a": "Solo y self-hosted son gratis para siempre. Team eventualmente tendrá tiers de pago — pero durante la beta, todas las funciones de team son gratis sin límite."
+      }
     ]
   },
   "cta": {
