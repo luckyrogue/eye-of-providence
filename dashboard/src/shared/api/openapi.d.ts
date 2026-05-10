@@ -582,6 +582,88 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/integrations/pr-comment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post PR/MR comment with AI-attribution breakdown
+         * @description Aggregates ai_lines_pct (weighted by lines_added) над commits указанных
+         *     в `shas`, рендерит markdown comment, постит в GitHub PR через
+         *     `/repos/{repo}/issues/{n}/comments` или GitLab MR через
+         *     `/projects/{repo}/merge_requests/{iid}/notes`.
+         *
+         *     provider_token не сохраняется на стороне EoP — только forward в
+         *     provider API.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        provider: "github" | "gitlab";
+                        /**
+                         * @description Default api.github.com / gitlab.com. Self-hosted
+                         *     GitLab/GitHub Enterprise — указать свой URL.
+                         */
+                        host?: string;
+                        /** @description owner/name */
+                        repo: string;
+                        /** @description GitHub PR / GitLab MR IID */
+                        pr_number: number;
+                        shas: string[];
+                        /** @description GitHub PAT / GitLab PAT */
+                        provider_token: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            posted?: boolean;
+                            aggregate?: components["schemas"]["PRAggregate"];
+                            comment_md?: string;
+                        };
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Provider rejected request */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error?: string;
+                            provider_status?: number;
+                            provider_body?: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/events": {
         parameters: {
             query?: never;
@@ -852,6 +934,15 @@ export interface components {
             category?: string;
             chars?: number;
             ms?: number;
+        };
+        PRAggregate: {
+            total_commits?: number;
+            /** @description commits с ai_lines_pct != null */
+            with_attribution?: number;
+            lines_added?: number;
+            lines_removed?: number;
+            /** @description Weighted-by-lines_added avg AI percent. null если все commits без attribution. */
+            ai_percent?: number | null;
         };
         Error: {
             error?: string;

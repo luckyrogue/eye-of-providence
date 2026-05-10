@@ -42,6 +42,8 @@ tags:
     description: Отправка событий и коммитов
   - name: Public
     description: Read-only data export (BI, dashboards)
+  - name: Integrations
+    description: External integrations (GitHub/GitLab PR-comment, etc.)
 
 paths:
   # --- Auth ---
@@ -331,6 +333,63 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "413": { description: "Batch too large (max 5000)" }
 
+  # --- Integrations ---
+  /v1/integrations/pr-comment:
+    post:
+      tags: [Integrations]
+      summary: Post PR/MR comment with AI-attribution breakdown
+      description: |
+        Aggregates ai_lines_pct (weighted by lines_added) над commits указанных
+        в `shas`, рендерит markdown comment, постит в GitHub PR через
+        `/repos/{repo}/issues/{n}/comments` или GitLab MR через
+        `/projects/{repo}/merge_requests/{iid}/notes`.
+
+        provider_token не сохраняется на стороне EoP — только forward в
+        provider API.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, repo, pr_number, shas, provider_token]
+              properties:
+                provider: { type: string, enum: [github, gitlab] }
+                host:
+                  type: string
+                  description: |
+                    Default api.github.com / gitlab.com. Self-hosted
+                    GitLab/GitHub Enterprise — указать свой URL.
+                repo: { type: string, description: "owner/name" }
+                pr_number: { type: integer, minimum: 1, description: "GitHub PR / GitLab MR IID" }
+                shas:
+                  type: array
+                  items: { type: string }
+                  maxItems: 500
+                provider_token: { type: string, description: "GitHub PAT / GitLab PAT" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posted: { type: boolean }
+                  aggregate: { $ref: "#/components/schemas/PRAggregate" }
+                  comment_md: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "502":
+          description: Provider rejected request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+                  provider_status: { type: integer }
+                  provider_body: { type: string }
+
   # --- Public ---
   /v1/public/events:
     get:
@@ -525,6 +584,18 @@ components:
         category: { type: string }
         chars: { type: integer }
         ms: { type: integer }
+
+    PRAggregate:
+      type: object
+      properties:
+        total_commits: { type: integer }
+        with_attribution: { type: integer, description: "commits с ai_lines_pct != null" }
+        lines_added: { type: integer }
+        lines_removed: { type: integer }
+        ai_percent:
+          type: number
+          nullable: true
+          description: "Weighted-by-lines_added avg AI percent. null если все commits без attribution."
 
     Error:
       type: object

@@ -29,6 +29,7 @@ import (
 	"github.com/eye-of-providence/backend/internal/ingest"
 	"github.com/eye-of-providence/backend/internal/insights"
 	eoplog "github.com/eye-of-providence/backend/internal/log"
+	"github.com/eye-of-providence/backend/internal/prcomment"
 	"github.com/eye-of-providence/backend/internal/publicapi"
 	"github.com/eye-of-providence/backend/internal/mailer"
 	"github.com/eye-of-providence/backend/internal/metrics"
@@ -207,6 +208,14 @@ func main() {
 	analytics.RegisterRoutes(app, eventStore, log, cfg.JWTSecret, pgPool)
 	insights.RegisterRoutes(app, eventStore, log, cfg.JWTSecret, pgPool)
 	publicapi.RegisterRoutes(app, eventStore, log, cfg.JWTSecret, pgPool)
+	if pgPool != nil {
+		prcomment.RegisterRoutes(app, prcomment.Service{
+			Pool:         pgPool,
+			JWTSecret:    cfg.JWTSecret,
+			Logger:       log,
+			DashboardURL: cfg.PublicURL,
+		})
+	}
 
 	gemini := reports.NewGeminiClient(cfg.GeminiAPIKey, "gemini-2.5-flash")
 	reports.RegisterRoutes(app, reports.Service{
