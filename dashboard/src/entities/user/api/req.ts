@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { http } from "../../../shared/api/http";
-import type { AuthConfig, AuthResponse, OnboardingStatus } from "./types";
+import type { AuthConfig, AuthResponse, Insight, OnboardingStatus } from "./types";
 import type { AuthRes, DevTokenRes, MeRes, ProfileRes } from "./res";
 
 // --- Request payload types ---
@@ -23,6 +23,7 @@ export const userKeys = {
   profile: ["me.profile"] as const,
   authConfig: ["auth.config"] as const,
   onboarding: ["me.onboarding"] as const,
+  insights: ["me.insights"] as const,
 };
 
 // --- Auth fetchers ---
@@ -73,6 +74,11 @@ export const fetchProfile = () => http.get<ProfileRes>("/v1/me/").then((r) => r.
 export const fetchOnboardingStatus = () =>
   http.get<OnboardingStatus>("/v1/me/onboarding-status").then((r) => r.data);
 
+export const fetchInsights = (tz?: string) =>
+  http.get<{ insights: Insight[] }>("/v1/me/insights", {
+    params: tz ? { tz } : undefined,
+  }).then((r) => r.data.insights ?? []);
+
 export async function dismissOnboarding(): Promise<void> {
   await http.post("/v1/me/onboarding/dismiss");
 }
@@ -114,6 +120,13 @@ export const useOnboardingStatus = (opts?: { refetchInterval?: number; enabled?:
     refetchInterval: opts?.refetchInterval,
     enabled: opts?.enabled ?? true,
     staleTime: 0,
+  });
+
+export const useInsights = (tz?: string) =>
+  useQuery({
+    queryKey: tz ? [...userKeys.insights, tz] : userKeys.insights,
+    queryFn: () => fetchInsights(tz),
+    staleTime: 5 * 60 * 1000, // 5 минут — narrative-карточки не меняются часто
   });
 
 export function useDismissOnboarding() {

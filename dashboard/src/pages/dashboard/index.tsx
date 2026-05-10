@@ -9,6 +9,7 @@ import { Trend } from "../../shared/ui/charts/trend";
 import { formatDate, formatTime, getTz } from "../../shared/lib/tz";
 import { useRecent, useSummary, useLanguages, useHeatmap, useTrend, useIngestDemo } from "../../entities/event";
 import { useReports, useGenerateReport, type Report } from "../../entities/report";
+import { InsightsWidget } from "../../widgets/insights";
 
 export function DashboardRoute() {
   const { t } = useTranslation("app");
@@ -47,6 +48,8 @@ export function DashboardRoute() {
           <StatTile label={t("dashboard.stat_reports")} value={reportsList.length} hint={t("dashboard.stat_reports_hint")} icon={<FileText className="h-4 w-4 text-amber-500" />} accent="amber" className="reveal reveal-delay-3" />
         </div>
       </div>
+
+      <InsightsWidget />
 
       <Card className="card-hover">
         <CardHeader>

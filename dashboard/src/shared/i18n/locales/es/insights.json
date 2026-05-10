@@ -1,0 +1,21 @@
+{
+  "title": "Insights",
+  "lead": "Lo que notamos sobre tu código esta semana",
+  "empty": "Programa un poco más — los insights suelen aparecer después de 2-3 días laborables.",
+  "ai_trend_up": "El uso de IA ha subido un {{pct}}% respecto a la semana pasada",
+  "ai_trend_down": "El uso de IA ha bajado un {{pct}}% respecto a la semana pasada",
+  "ai_trend_flat": "El uso de IA se mantiene estable semana a semana",
+  "ai_trend_started": "Empezaste a usar IA: {{hours}}h esta semana",
+  "ai_ratio": "El {{pct}}% de tu código fue asistido por IA esta semana",
+  "top_lang": "{{lang}} es tu lenguaje principal en los últimos 30 días",
+  "top_lang_with_pct": "{{lang}} domina: el {{pct}}% de tu tiempo en 30 días",
+  "productive_day": "Tu día más productivo fue el {{day}} ({{hours}}h de código)",
+  "total_activity": "{{hours}}h de código esta semana",
+  "dow_0": "domingo",
+  "dow_1": "lunes",
+  "dow_2": "martes",
+  "dow_3": "miércoles",
+  "dow_4": "jueves",
+  "dow_5": "viernes",
+  "dow_6": "sábado"
+}

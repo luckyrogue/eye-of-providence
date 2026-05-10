@@ -31,4 +31,11 @@ type OnboardingStatus = {
   dismissed: boolean;
 };
 
-export type { Me, Profile, AuthResponse, AuthConfig, OnboardingStatus };
+// Insight — narrative-карточка с i18n key + variables. Frontend резолвит
+// локализованную строку через t(`insights:${key}`, vars).
+type Insight = {
+  key: string;
+  vars?: Record<string, string | number | boolean>;
+};
+
+export type { Me, Profile, AuthResponse, AuthConfig, OnboardingStatus, Insight };
