@@ -2,10 +2,12 @@ package anomaly
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/eye-of-providence/backend/internal/store"
 )
@@ -74,37 +76,55 @@ func (c *Cron) tick(ctx context.Context) {
 	}
 
 	now := time.Now().UTC()
+
+	// Fan-out per-user detection: DailyTrend — самый дорогой call (CH query),
+	// делаем в parallel. SetLimit=8 limits CH connection pool pressure.
+	// Detect() pure-CPU, Webhooks/Push dispatch — async (fire-and-forget).
+	// seen-map требует mutex т.к. читается/пишется из разных goroutines.
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(8)
+	var seenMu sync.Mutex
+
 	for _, uidStr := range users {
-		uid, err := uuid.Parse(uidStr)
-		if err != nil {
-			continue
-		}
-		points, err := c.EventStore.DailyTrend(ctx, uidStr, since, "UTC")
-		if err != nil {
-			c.Logger.Warn("anomaly cron: DailyTrend failed", zap.String("user", uidStr), zap.Error(err))
-			continue
-		}
-		trends := make([]Trend, 0, len(points))
-		for _, p := range points {
-			trends = append(trends, Trend{Date: p.Date, Category: p.Category, MS: p.MS})
-		}
-		anomalies := Detect(MakeInputs(trends, now))
-		for _, a := range anomalies {
-			key := uidStr + "|" + a.Date + "|" + string(a.Kind)
-			if c.seen[key] {
-				continue
+		g.Go(func() error {
+			uid, err := uuid.Parse(uidStr)
+			if err != nil {
+				return nil
 			}
-			c.seen[key] = true
-			c.Webhooks.Dispatch(uid, EventName, a)
-			if c.Push != nil {
-				c.Push.SendToUser(uid, pushPayloadFor(a))
+			points, err := c.EventStore.DailyTrend(gctx, uidStr, since, "UTC")
+			if err != nil {
+				c.Logger.Warn("anomaly cron: DailyTrend failed", zap.String("user", uidStr), zap.Error(err))
+				return nil
 			}
-			c.Logger.Info("anomaly fired",
-				zap.String("user", uidStr),
-				zap.String("kind", string(a.Kind)),
-				zap.Float64("z", a.ZScore))
-		}
+			trends := make([]Trend, 0, len(points))
+			for _, p := range points {
+				trends = append(trends, Trend{Date: p.Date, Category: p.Category, MS: p.MS})
+			}
+			anomalies := Detect(MakeInputs(trends, now))
+			for _, a := range anomalies {
+				key := uidStr + "|" + a.Date + "|" + string(a.Kind)
+				seenMu.Lock()
+				dup := c.seen[key]
+				if !dup {
+					c.seen[key] = true
+				}
+				seenMu.Unlock()
+				if dup {
+					continue
+				}
+				c.Webhooks.Dispatch(uid, EventName, a)
+				if c.Push != nil {
+					c.Push.SendToUser(uid, pushPayloadFor(a))
+				}
+				c.Logger.Info("anomaly fired",
+					zap.String("user", uidStr),
+					zap.String("kind", string(a.Kind)),
+					zap.Float64("z", a.ZScore))
+			}
+			return nil
+		})
 	}
+	_ = g.Wait()
 
 	// GC seen-map: удаляем entries старше 7 дней (по date в key).
 	cutoff := now.AddDate(0, 0, -7).Format("2006-01-02")

@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 // Subscription — DB row для UI listing (без auth/p256dh — секреты для send'а).
@@ -141,9 +142,18 @@ func (s *Service) sendSync(userID uuid.UUID, payload any) {
 	if err != nil {
 		return
 	}
+	// Fan-out: per-device push в parallel. Limit=4 — typical user 1-3
+	// devices, но чтобы избежать spawn'а N горутин если кто-то залип на
+	// 10+ devices.
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(4)
 	for _, t := range targets {
-		s.deliver(ctx, t.id, t.endpoint, t.p256dh, t.auth, body)
+		g.Go(func() error {
+			s.deliver(gctx, t.id, t.endpoint, t.p256dh, t.auth, body)
+			return nil
+		})
 	}
+	_ = g.Wait()
 }
 
 // deliver — single push. Обрабатывает 404/410 как "subscription gone" — удаляем.

@@ -1,11 +1,13 @@
 package insights
 
 import (
+	"context"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/store"
@@ -26,27 +28,50 @@ func insightsHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
 		last30 := now.Add(-30 * 24 * time.Hour)
 		tz := c.Query("tz", "UTC")
 
-		// Parallel-сборка: 4 query, выполняем sequentially т.к. CH connection
-		// pool serializes. Объединение в горутины не даст значимого выигрыша
-		// при <5 запросах.
-		aggLast, err := st.AggregateByCategory(c.Context(), claims.UserID, last7)
-		if err != nil {
-			logger.Error("agg last failed", zap.Error(err))
-			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
-		}
-		aggPrev, err := aggregateRange(c, st, claims.UserID, prev7, last7)
-		if err != nil {
-			logger.Error("agg prev failed", zap.Error(err))
-			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
-		}
-		langs, err := st.LanguageBreakdown(c.Context(), claims.UserID, last30)
-		if err != nil {
-			logger.Error("langs failed", zap.Error(err))
-			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
-		}
-		trend, err := st.DailyTrend(c.Context(), claims.UserID, last7, tz)
-		if err != nil {
-			logger.Error("trend failed", zap.Error(err))
+		// Fan-out: 4 independent queries в parallel. ClickHouse driver
+		// поддерживает multiple connections (default pool=10), wall-clock
+		// время = max(query_i) вместо sum. На typical CH Cloud это ~2-3×
+		// speedup для insights endpoint.
+		var (
+			aggLast, aggPrev map[string]uint64
+			langs            []store.LangCell
+			trend            []store.TrendPoint
+		)
+		g, gctx := errgroup.WithContext(c.Context())
+		g.Go(func() error {
+			v, err := st.AggregateByCategory(gctx, claims.UserID, last7)
+			if err != nil {
+				return err
+			}
+			aggLast = v
+			return nil
+		})
+		g.Go(func() error {
+			v, err := aggregateRangeCtx(gctx, st, claims.UserID, prev7, last7)
+			if err != nil {
+				return err
+			}
+			aggPrev = v
+			return nil
+		})
+		g.Go(func() error {
+			v, err := st.LanguageBreakdown(gctx, claims.UserID, last30)
+			if err != nil {
+				return err
+			}
+			langs = v
+			return nil
+		})
+		g.Go(func() error {
+			v, err := st.DailyTrend(gctx, claims.UserID, last7, tz)
+			if err != nil {
+				return err
+			}
+			trend = v
+			return nil
+		})
+		if err := g.Wait(); err != nil {
+			logger.Error("insights fan-out failed", zap.Error(err))
 			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
 		}
 
@@ -60,16 +85,33 @@ func insightsHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
 	}
 }
 
-// aggregateRange — AggregateByCategory с верхней границей (для prev7d).
+// aggregateRangeCtx — AggregateByCategory с верхней границей (для prev7d).
 // EventStore не имеет range-варианта, поэтому вычисляем как diff:
-// agg(prev7) = agg(since=prev7) - agg(since=last7).
-func aggregateRange(c *fiber.Ctx, st store.EventStore, userID string, since, until time.Time) (map[string]uint64, error) {
-	full, err := st.AggregateByCategory(c.Context(), userID, since)
-	if err != nil {
-		return nil, err
-	}
-	tail, err := st.AggregateByCategory(c.Context(), userID, until)
-	if err != nil {
+//
+//	agg(prev7) = agg(since=prev7) - agg(since=last7)
+//
+// Внутри две CH queries — fan-out parallel чтобы wall-clock = max(2) вместо
+// sum.
+func aggregateRangeCtx(ctx context.Context, st store.EventStore, userID string, since, until time.Time) (map[string]uint64, error) {
+	var full, tail map[string]uint64
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		v, err := st.AggregateByCategory(gctx, userID, since)
+		if err != nil {
+			return err
+		}
+		full = v
+		return nil
+	})
+	g.Go(func() error {
+		v, err := st.AggregateByCategory(gctx, userID, until)
+		if err != nil {
+			return err
+		}
+		tail = v
+		return nil
+	})
+	if err := g.Wait(); err != nil {
 		return nil, err
 	}
 	out := make(map[string]uint64, len(full))

@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 // Известные event types. Constant'ы т.к. они часть public contract.
@@ -192,9 +193,21 @@ func (s *Service) dispatchSync(userID uuid.UUID, event string, payload any) {
 		targets = append(targets, t)
 	}
 
+	// Fan-out parallel delivery: каждый target — отдельная goroutine.
+	// errgroup с SetLimit(8) bounds concurrency — типичный user имеет 1-2
+	// webhooks, но enterprise team может иметь N штук; не хотим spawn'ить
+	// unbounded если N большое + не хотим блокировать одну slow delivery
+	// другие. Errors мы игнорируем (logged inside deliver), но errgroup
+	// нужен для Wait().
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(8)
 	for _, t := range targets {
-		s.deliver(ctx, t.id, t.url, t.secret, t.format, event, payload)
+		g.Go(func() error {
+			s.deliver(gctx, t.id, t.url, t.secret, t.format, event, payload)
+			return nil
+		})
 	}
+	_ = g.Wait()
 }
 
 // deliver — одна доставка с retry. Backoff 1s/3s/9s на 5xx или network.
