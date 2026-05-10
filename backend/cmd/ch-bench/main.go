@@ -28,6 +28,12 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	users := flag.Int("users", 10, "synthetic users")
 	days := flag.Int("days", 30, "days of history")
 	perDay := flag.Int("events-per-user-per-day", 1000, "events/user/day")
@@ -36,20 +42,20 @@ func main() {
 
 	dsn := os.Getenv("EOP_CH_DSN")
 	if dsn == "" {
-		log.Fatal("EOP_CH_DSN required")
+		return fmt.Errorf("EOP_CH_DSN required")
 	}
 
 	if err := migrate.RunClickHouse(context.Background(), dsn); err != nil {
-		log.Fatalf("migrate: %v", err)
+		return fmt.Errorf("migrate: %w", err)
 	}
 
 	opts, err := clickhouse.ParseDSN(dsn)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	conn, err := clickhouse.Open(opts)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer conn.Close()
 
@@ -63,7 +69,7 @@ func main() {
 
 	if !*skipSeed {
 		if err := seed(conn, uids, *days, *perDay); err != nil {
-			log.Fatalf("seed: %v", err)
+			return fmt.Errorf("seed: %w", err)
 		}
 		// Force MV catch-up + flush merges. SummingMergeTree merge'ит в
 		// background; OPTIMIZE FINAL ускоряет для бенчмарка чтобы измерять
@@ -110,6 +116,7 @@ func main() {
 			fmtDur(latencies[len(latencies)-1]),
 			len(latencies))
 	}
+	return nil
 }
 
 func seed(conn driver.Conn, uids []uuid.UUID, days, perDay int) error {
@@ -170,7 +177,11 @@ func bench(conn driver.Conn, query string, uid uuid.UUID, since time.Time, runs 
 		for rows.Next() {
 			// drain
 		}
-		rows.Close()
+		if err := rows.Close(); err != nil {
+			log.Printf("close rows: %v", err)
+			out[i] = -1
+			continue
+		}
 		out[i] = time.Since(start)
 	}
 	// insertion sort — runs малое число
