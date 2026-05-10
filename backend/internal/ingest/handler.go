@@ -28,7 +28,9 @@ const maxEventsPerBatch = 5000
 func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwtSecret string, pool *pgxpool.Pool) {
 	g := app.Group("/v1", auth.Middleware(jwtSecret, pool))
 
-	g.Post("/ingest", func(c *fiber.Ctx) error {
+	// JWT (dashboard/agent session) — full access. API token — нужен
+	// scope=write:ingest или admin. read-only token не может ingestить.
+	g.Post("/ingest", auth.RequireScope("write:ingest", "admin"), func(c *fiber.Ctx) error {
 		claims := auth.ClaimsFromCtx(c)
 		if claims.UserID == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing subject"})

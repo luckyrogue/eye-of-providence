@@ -28,6 +28,7 @@ import (
 	"github.com/eye-of-providence/backend/internal/ingest"
 	"github.com/eye-of-providence/backend/internal/insights"
 	eoplog "github.com/eye-of-providence/backend/internal/log"
+	"github.com/eye-of-providence/backend/internal/publicapi"
 	"github.com/eye-of-providence/backend/internal/mailer"
 	"github.com/eye-of-providence/backend/internal/metrics"
 	"github.com/eye-of-providence/backend/internal/migrate"
@@ -191,6 +192,7 @@ func main() {
 	ingest.RegisterRoutes(app, eventStore, log, cfg.JWTSecret, pgPool)
 	analytics.RegisterRoutes(app, eventStore, log, cfg.JWTSecret, pgPool)
 	insights.RegisterRoutes(app, eventStore, log, cfg.JWTSecret, pgPool)
+	publicapi.RegisterRoutes(app, eventStore, log, cfg.JWTSecret, pgPool)
 
 	gemini := reports.NewGeminiClient(cfg.GeminiAPIKey, "gemini-2.5-flash")
 	reports.RegisterRoutes(app, reports.Service{

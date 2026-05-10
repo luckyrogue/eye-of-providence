@@ -67,6 +67,13 @@ func RegisterMeRoutes(app *fiber.App, s MeService) {
 	g.Post("/onboarding/dismiss", onboardingDismissHandler(s))
 	g.Patch("/locale", localeHandler(s))
 
+	// API tokens — для public API. Все CRUD требуют JWT (RequireScope не
+	// применяется т.к. ScopeFromCtx вернёт "" для JWT — full access).
+	// API token нельзя использовать для управления API tokens (anti-bootstrap).
+	g.Get("/tokens", listTokensHandler(s))
+	g.Post("/tokens", createTokenHandler(s))
+	g.Delete("/tokens/:id", revokeTokenHandler(s))
+
 	g.Delete("/data", func(c *fiber.Ctx) error {
 		claims := ClaimsFromCtx(c)
 
