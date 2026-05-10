@@ -2,7 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { http } from "../../../shared/api/http";
-import type { AuthConfig, AuthResponse, Insight, OnboardingStatus } from "./types";
+import type {
+  APIToken,
+  AuthConfig,
+  AuthResponse,
+  CreateAPITokenRes,
+  Insight,
+  OnboardingStatus,
+} from "./types";
 import type { AuthRes, DevTokenRes, MeRes, ProfileRes } from "./res";
 
 // --- Request payload types ---
@@ -24,6 +31,7 @@ export const userKeys = {
   authConfig: ["auth.config"] as const,
   onboarding: ["me.onboarding"] as const,
   insights: ["me.insights"] as const,
+  tokens: ["me.tokens"] as const,
 };
 
 // --- Auth fetchers ---
@@ -97,6 +105,19 @@ export async function resetPassword(token: string, password: string): Promise<vo
   await http.post("/v1/auth/reset-password", { token, password });
 }
 
+// --- API tokens (public-API auth) ---
+
+export const fetchTokens = () =>
+  http.get<{ tokens: APIToken[] }>("/v1/me/tokens").then((r) => r.data.tokens ?? []);
+
+export const createAPIToken = (name: string, scope: APIToken["scope"], ttlDays: number) =>
+  http
+    .post<CreateAPITokenRes>("/v1/me/tokens", { name, scope, ttl_days: ttlDays })
+    .then((r) => r.data);
+
+export const revokeAPIToken = (id: string) =>
+  http.delete(`/v1/me/tokens/${encodeURIComponent(id)}`).then(() => undefined);
+
 export async function deleteMyData(): Promise<void> {
   await http.delete("/v1/me/data");
   localStorage.removeItem("eop_token");
@@ -128,6 +149,26 @@ export const useInsights = (tz?: string) =>
     queryFn: () => fetchInsights(tz),
     staleTime: 5 * 60 * 1000, // 5 минут — narrative-карточки не меняются часто
   });
+
+export const useTokens = () =>
+  useQuery({ queryKey: userKeys.tokens, queryFn: fetchTokens });
+
+export function useCreateToken() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ name, scope, ttlDays }: { name: string; scope: APIToken["scope"]; ttlDays: number }) =>
+      createAPIToken(name, scope, ttlDays),
+    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.tokens }),
+  });
+}
+
+export function useRevokeToken() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: revokeAPIToken,
+    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.tokens }),
+  });
+}
 
 export function useDismissOnboarding() {
   const qc = useQueryClient();

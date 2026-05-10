@@ -1,0 +1,547 @@
+openapi: 3.1.0
+info:
+  title: Eye of Providence API
+  version: "1.0.0"
+  description: |
+    Public-facing endpoints для интеграций (BI, custom dashboards, CI batchers,
+    third-party clients).
+
+    Покрытие: auth + me + public read API + ingest. Внутренние admin endpoints
+    не документированы — стабильность не гарантирована. Контракт для public
+    API: backward-compatible до v2.
+
+    Auth:
+      - JWT (Bearer eyJ...) — выдаётся /v1/auth/login или /v1/auth/register.
+      - API token (Bearer eop_<48 hex>) — long-lived, scope-based.
+        Создание/revoke через /v1/me/tokens.
+
+    Scopes:
+      - read         — только чтение (events, summary, languages, trend, insights)
+      - write:ingest — POST /v1/ingest
+      - admin        — full account access
+
+  contact:
+    name: Eye of Providence
+    url: https://eop.rysdavletov.org
+
+servers:
+  - url: https://eop.rysdavletov.org/api
+    description: Production
+  - url: http://localhost:8080
+    description: Local dev
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+    description: Регистрация / login / password reset
+  - name: Me
+    description: Текущий пользователь, profile, tokens, webhooks
+  - name: Ingest
+    description: Отправка событий и коммитов
+  - name: Public
+    description: Read-only data export (BI, dashboards)
+
+paths:
+  # --- Auth ---
+  /v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Регистрация
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, display_name]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                display_name: { type: string, maxLength: 64 }
+                invite_code: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login по email+password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Запрос на password reset (email)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { email: { type: string, format: email } }
+      responses:
+        "200":
+          description: |
+            Всегда 200, чтобы не палить наличие email'а в системе. Если email
+            существует — отправлено письмо с reset-токеном.
+
+  /v1/auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Применить reset-токен
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, minLength: 8 }
+      responses:
+        "200": { description: OK }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/auth/config:
+    get:
+      tags: [Auth]
+      summary: Public auth config (invite-only? first-user bootstrap?)
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invite_only: { type: boolean }
+                  is_first_user: { type: boolean }
+
+  # --- Me ---
+  /v1/me:
+    get:
+      tags: [Me]
+      summary: Профиль текущего пользователя
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+
+  /v1/me/insights:
+    get:
+      tags: [Me]
+      summary: Narrative-инсайты (key + i18n vars)
+      parameters:
+        - in: query
+          name: tz
+          schema: { type: string, default: "UTC" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  insights:
+                    type: array
+                    items: { $ref: "#/components/schemas/Insight" }
+
+  /v1/me/tokens:
+    get:
+      tags: [Me]
+      summary: Список API tokens (без plaintext)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tokens:
+                    type: array
+                    items: { $ref: "#/components/schemas/APIToken" }
+    post:
+      tags: [Me]
+      summary: Создать API token (plaintext возвращается ровно раз)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 64 }
+                scope:
+                  type: string
+                  enum: [read, "write:ingest", admin]
+                  default: read
+                ttl_days: { type: integer, minimum: 0, maximum: 365, default: 0 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string, description: "Plaintext, ровно раз" }
+                  metadata: { $ref: "#/components/schemas/APIToken" }
+
+  /v1/me/tokens/{id}:
+    delete:
+      tags: [Me]
+      summary: Revoke API token (soft-delete)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/me/webhooks/:
+    get:
+      tags: [Me]
+      summary: Список webhook subscriptions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  webhooks:
+                    type: array
+                    items: { $ref: "#/components/schemas/Webhook" }
+    post:
+      tags: [Me]
+      summary: Создать webhook (HMAC secret возвращается ровно раз)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, events]
+              properties:
+                url: { type: string, format: uri, maxLength: 2048 }
+                events:
+                  type: array
+                  items:
+                    type: string
+                    enum: ["commit.ingested", "report.generated"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  secret: { type: string, description: "HMAC secret, ровно раз" }
+                  webhook: { $ref: "#/components/schemas/Webhook" }
+
+  /v1/me/webhooks/{id}:
+    delete:
+      tags: [Me]
+      summary: Удалить webhook
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # --- Ingest ---
+  /v1/ingest:
+    post:
+      tags: [Ingest]
+      summary: Отправить batch событий
+      description: |
+        API token: требуется scope `write:ingest` или `admin`. JWT — full access.
+        Max 5000 events за один batch.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                events:
+                  type: array
+                  maxItems: 5000
+                  items: { $ref: "#/components/schemas/Event" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted: { type: integer }
+                  rejected: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "413": { description: "Batch too large (max 5000)" }
+
+  # --- Public ---
+  /v1/public/events:
+    get:
+      tags: [Public]
+      summary: Recent events (paginated)
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 100 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items: { $ref: "#/components/schemas/Event" }
+                  count: { type: integer }
+                  limit: { type: integer }
+
+  /v1/public/summary:
+    get:
+      tags: [Public]
+      summary: Aggregate by category за период
+      parameters:
+        - in: query
+          name: days
+          schema: { type: integer, minimum: 1, maximum: 365, default: 7 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  days: { type: integer }
+                  since: { type: string, format: date-time }
+                  categories:
+                    type: object
+                    additionalProperties: { type: integer, description: "duration_ms" }
+
+  /v1/public/languages:
+    get:
+      tags: [Public]
+      summary: Language breakdown
+      parameters:
+        - in: query
+          name: days
+          schema: { type: integer, minimum: 1, maximum: 365, default: 30 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  days: { type: integer }
+                  cells:
+                    type: array
+                    items: { $ref: "#/components/schemas/LangCell" }
+
+  /v1/public/trend:
+    get:
+      tags: [Public]
+      summary: Daily trend
+      parameters:
+        - in: query
+          name: days
+          schema: { type: integer, minimum: 1, maximum: 365, default: 30 }
+        - in: query
+          name: tz
+          schema: { type: string, default: "UTC" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  days: { type: integer }
+                  tz: { type: string }
+                  points:
+                    type: array
+                    items: { $ref: "#/components/schemas/TrendPoint" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: "JWT or eop_<token>"
+
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        token: { type: string, description: "JWT" }
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        team_id: { type: string, format: uuid, nullable: true }
+
+    Me:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        provider: { type: string, enum: [github, google, dev, password, api] }
+        display_name: { type: string }
+        github_login: { type: string }
+        global_role: { type: string, enum: [user, super_admin] }
+        locale: { type: string, enum: [ru, en, kk, es] }
+
+    Insight:
+      type: object
+      required: [key]
+      properties:
+        key:
+          type: string
+          description: |
+            i18n key. Possible: ai_trend_up, ai_trend_down, ai_trend_flat,
+            ai_trend_started, ai_ratio, top_lang, productive_day, total_activity.
+        vars:
+          type: object
+          additionalProperties: true
+
+    APIToken:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        scope: { type: string, enum: [read, "write:ingest", admin] }
+        prefix: { type: string, description: "First 8 chars (eop_xxx)" }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time, nullable: true }
+        last_used_at: { type: string, format: date-time, nullable: true }
+
+    Webhook:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, format: uri }
+        events:
+          type: array
+          items: { type: string, enum: ["commit.ingested", "report.generated"] }
+        active: { type: boolean }
+        last_delivery_at: { type: string, format: date-time, nullable: true }
+        last_status:
+          type: integer
+          nullable: true
+          description: "HTTP status code, -1 = network error"
+        created_at: { type: string, format: date-time }
+
+    Event:
+      type: object
+      required: [app_bundle, source, category]
+      properties:
+        ts: { type: string, format: date-time }
+        app_bundle: { type: string, description: "e.g. com.microsoft.VSCode" }
+        source: { type: string, enum: [os, browser, ide, cli] }
+        category:
+          type: string
+          enum: [idle, manual, ai, reading, refactor, other]
+        ai_provider:
+          type: string
+          description: "copilot | cursor | claude-code | openai | anthropic | ..."
+        ai_channel: { type: string, enum: [inline, chat, agent] }
+        file_lang: { type: string }
+        duration_ms: { type: integer, minimum: 0 }
+        chars_in: { type: integer, minimum: 0 }
+        lines_added: { type: integer, minimum: 0 }
+        lines_removed: { type: integer, minimum: 0 }
+
+    LangCell:
+      type: object
+      properties:
+        lang: { type: string }
+        category: { type: string }
+        chars: { type: integer }
+        ms: { type: integer }
+
+    TrendPoint:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        category: { type: string }
+        chars: { type: integer }
+        ms: { type: integer }
+
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        request_id: { type: string }
+
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json: { schema: { $ref: "#/components/schemas/Error" } }
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json: { schema: { $ref: "#/components/schemas/Error" } }
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json: { schema: { $ref: "#/components/schemas/Error" } }
+    NotFound:
+      description: Not Found
+      content:
+        application/json: { schema: { $ref: "#/components/schemas/Error" } }
+    Conflict:
+      description: Conflict
+      content:
+        application/json: { schema: { $ref: "#/components/schemas/Error" } }

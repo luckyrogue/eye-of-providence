@@ -10,6 +10,8 @@ import { useProfile, useDeleteMyData, updateLocale } from "../../entities/user";
 import { getTz, setTz, UNIQUE_TIMEZONES } from "../../shared/lib/tz";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
 import { LOCALE_LABELS, SUPPORTED_LOCALES, LOCALE_STORAGE_KEY, type Locale } from "../../shared/i18n";
+import { APITokensWidget } from "../../widgets/api-tokens";
+import { WebhooksWidget } from "../../widgets/webhooks";
 
 export function Settings({ onWiped }: { onWiped: () => void }) {
   const { t, i18n } = useTranslation("common");
@@ -141,6 +143,9 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
           </p>
         </CardContent>
       </Card>
+
+      <APITokensWidget />
+      <WebhooksWidget />
 
       <Card>
         <CardHeader>

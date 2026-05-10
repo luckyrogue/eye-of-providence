@@ -38,4 +38,21 @@ type Insight = {
   vars?: Record<string, string | number | boolean>;
 };
 
-export type { Me, Profile, AuthResponse, AuthConfig, OnboardingStatus, Insight };
+// APIToken — public API token (для интеграций). Plaintext возвращается ровно
+// раз при создании; UI показывает prefix ("eop_a4f3…") после.
+type APIToken = {
+  id: string;
+  name: string;
+  scope: "read" | "write:ingest" | "admin";
+  prefix: string;
+  created_at: string;
+  expires_at?: string | null;
+  last_used_at?: string | null;
+};
+
+type CreateAPITokenRes = {
+  token: string; // plaintext, ровно один раз
+  metadata: APIToken;
+};
+
+export type { Me, Profile, AuthResponse, AuthConfig, OnboardingStatus, Insight, APIToken, CreateAPITokenRes };
