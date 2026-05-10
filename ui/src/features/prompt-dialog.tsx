@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Button } from "./button";
+import { Button } from "../shared/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,8 +7,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "./dialog";
-import { Input } from "./input";
+} from "../shared/ui/dialog";
+import { Input } from "../shared/ui/input";
 
 // PromptDialog — стилизованная замена window.prompt(): модалка с одним
 // текстовым полем + кнопками. Возвращает строку или null (cancel).

@@ -2,7 +2,7 @@
 // `mono` для font-mono отображения.
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "./cn";
+import { cn } from "../lib/cn";
 
 export const badgeVariants = cva(
   "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",

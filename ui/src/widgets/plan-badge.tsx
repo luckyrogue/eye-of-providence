@@ -1,4 +1,4 @@
-import { cn } from "./cn";
+import { cn } from "../shared/lib/cn";
 
 export type Plan = "free" | "pro" | "team" | "enterprise" | string;
 

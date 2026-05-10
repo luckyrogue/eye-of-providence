@@ -8,9 +8,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "./alert-dialog";
-import { buttonVariants } from "./button";
-import { cn } from "./cn";
+} from "../shared/ui/alert-dialog";
+import { buttonVariants } from "../shared/ui/button";
+import { cn } from "../shared/lib/cn";
 
 // ConfirmDialog — модальная замена `confirm()` поверх shadcn AlertDialog.
 // Поддерживает два режима:

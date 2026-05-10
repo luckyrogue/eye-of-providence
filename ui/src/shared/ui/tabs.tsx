@@ -2,7 +2,7 @@
 // Даёт ARIA tablist/tab/tabpanel, roving focus, keyboard nav, aria-selected.
 import * as React from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
-import { cn } from "./cn";
+import { cn } from "../lib/cn";
 
 export const Tabs = TabsPrimitive.Root;
 
