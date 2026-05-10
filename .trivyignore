@@ -1,0 +1,30 @@
+# Trivy ignore file — CVEs which are NOT exploitable in our deployment.
+#
+# Format: one CVE ID per line. Lines starting with # are comments.
+# Justification кратко в комментарии над каждой записью; long-form ниже в
+# файле + в commit message который добавил entry.
+#
+# Review semi-annually: если caddy upstream patches deps, удаляем entry.
+
+# === Caddy transitive deps (image scan) ===
+
+# CVE-2026-30836 — smallstep/certificates v0.30.0-rc3 → fixed в 0.30.0.
+# Vulnerability: "Unauthenticated certificate issuance via SCEP Update Request".
+# Not exploitable у нас:
+#   - Caddyfile: `auto_https off` — Caddy НЕ запускает ACME/SCEP server
+#   - Никакие SCEP endpoints не exposed (мы за reverse-proxy Dokploy с
+#     внешним TLS termination)
+#   - Code path inaccessible снаружи нашего container'а
+# Watch: каddy upstream pinned smallstep@0.30.0-rc3; ждём release с fix'ом.
+CVE-2026-30836
+
+# CVE-2026-33186 — grpc-go v1.79.1 → fixed в 1.79.3.
+# Vulnerability: "google.golang.org/grpc/authz: Authorization bypass due to
+# improper HTTP/2 path validation".
+# Not exploitable у нас:
+#   - Caddy используется только для reverse_proxy на HTTP/1.1 Go API backend
+#   - Никакие gRPC endpoints не exposed (нет caddy.modules.layer4 или
+#     caddy gRPC handler в нашей Caddyfile)
+#   - grpc/authz package не loaded в нашем code path
+# Watch: каddy upstream нужно bump grpc-go → 1.79.3+.
+CVE-2026-33186

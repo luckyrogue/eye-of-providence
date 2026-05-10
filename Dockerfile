@@ -59,7 +59,12 @@ RUN pnpm -F @eop/dashboard build
 ############################
 # Final image: Caddy + Go API
 ############################
-FROM caddy:2-alpine
+# Pinned specific minor (vs floating `2-alpine`) для reproducibility.
+# Bump после review каждого нового minor — см. .trivyignore для CVE waivers
+# (caddy upstream embeds smallstep+grpc-go которые могут содержать not-yet-
+# patched CVEs; whitelist'ятся когда docs показывают что наш config их не
+# exploit'ит).
+FROM caddy:2.11-alpine
 
 # Подтягиваем последние patch-версии apk-пакетов (libcrypto3, libssl3, libxml2,
 # zlib и пр.), даже если base-image отстал на пару дней. Trivy gates на
