@@ -1,11 +1,11 @@
 import { useTranslation } from "react-i18next";
-import { Activity, Brain, Code2, FileText, Github, Sparkles } from "lucide-react";
+import { Activity, Brain, Code2, FileText, GitBranch, Sparkles } from "lucide-react";
 
 const SOURCES = [
   { name: "VS Code", Icon: Code2 },
   { name: "Cursor", Icon: Sparkles },
   { name: "Claude Code", Icon: Brain },
-  { name: "GitHub Copilot", Icon: Github },
+  { name: "GitHub Copilot", Icon: GitBranch },
   { name: "Browser", Icon: Activity },
   { name: "CLI", Icon: FileText },
 ];
