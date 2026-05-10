@@ -122,21 +122,32 @@ func (s *ClickHouseStore) ListRecent(ctx context.Context, userID string, limit i
 	return out, rows.Err()
 }
 
+// dailyAggThreshold — окно после которого читать из events_daily_agg
+// (UTC-day granularity, 24× compression поверх hourly). Для коротких range'ей
+// продолжаем hourly т.к. tz-correct + точнее на edge-cases (вчера/сегодня).
+const dailyAggThreshold = 30 * 24 * time.Hour
+
 func (s *ClickHouseStore) AggregateByCategory(ctx context.Context, userID string, since time.Time) (map[string]uint64, error) {
 	defer metrics.ClickHouseRead.ObserveSince(time.Now())
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, err
 	}
-	// Чтение из events_hourly_agg (materialized view target); raw events
-	// table сохранена для ListRecent. SummingMergeTree держит partial rows
-	// до background merge'а — sum() даёт корректный результат всегда.
-	rows, err := s.conn.Query(ctx, `
-		SELECT category, sum(duration_ms)
-		FROM events_hourly_agg
-		WHERE user_id = ? AND bucket_ts >= ?
-		GROUP BY category
-	`, uid, since)
+	// Smart routing: long-range (≥30d) — daily MV (840× compressed); short-range
+	// — hourly MV (35×). SummingMergeTree держит partial rows до background
+	// merge'а — sum() даёт корректный результат всегда.
+	var query string
+	var arg time.Time
+	if time.Since(since) >= dailyAggThreshold {
+		query = `SELECT category, sum(duration_ms) FROM events_daily_agg
+		         WHERE user_id = ? AND date >= ? GROUP BY category`
+		arg = since.Truncate(24 * time.Hour)
+	} else {
+		query = `SELECT category, sum(duration_ms) FROM events_hourly_agg
+		         WHERE user_id = ? AND bucket_ts >= ? GROUP BY category`
+		arg = since
+	}
+	rows, err := s.conn.Query(ctx, query, uid, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -173,12 +184,19 @@ func (s *ClickHouseStore) AggregateByCategoryBulk(ctx context.Context, userIDs [
 	if len(uids) == 0 {
 		return out, nil
 	}
-	rows, err := s.conn.Query(ctx, `
-		SELECT user_id, category, sum(duration_ms)
-		FROM events_hourly_agg
-		WHERE user_id IN (?) AND bucket_ts >= ?
-		GROUP BY user_id, category
-	`, uids, since)
+	// Same routing logic как в AggregateByCategory: long-range → daily MV.
+	var query string
+	var arg time.Time
+	if time.Since(since) >= dailyAggThreshold {
+		query = `SELECT user_id, category, sum(duration_ms) FROM events_daily_agg
+		         WHERE user_id IN (?) AND date >= ? GROUP BY user_id, category`
+		arg = since.Truncate(24 * time.Hour)
+	} else {
+		query = `SELECT user_id, category, sum(duration_ms) FROM events_hourly_agg
+		         WHERE user_id IN (?) AND bucket_ts >= ? GROUP BY user_id, category`
+		arg = since
+	}
+	rows, err := s.conn.Query(ctx, query, uids, arg)
 	if err != nil {
 		return nil, err
 	}

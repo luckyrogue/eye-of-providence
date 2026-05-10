@@ -76,7 +76,11 @@ func run() error {
 		// merged-state latency.
 		fmt.Println("OPTIMIZE FINAL events_hourly_agg ...")
 		if err := conn.Exec(context.Background(), "OPTIMIZE TABLE events_hourly_agg FINAL"); err != nil {
-			log.Printf("optimize: %v", err)
+			log.Printf("optimize hourly: %v", err)
+		}
+		fmt.Println("OPTIMIZE FINAL events_daily_agg ...")
+		if err := conn.Exec(context.Background(), "OPTIMIZE TABLE events_daily_agg FINAL"); err != nil {
+			log.Printf("optimize daily: %v", err)
 		}
 	}
 
@@ -89,19 +93,23 @@ func run() error {
 	}{
 		{"AggregateByCategory_raw",
 			`SELECT category, sum(duration_ms) FROM events WHERE user_id = ? AND ts >= ? GROUP BY category`},
-		{"AggregateByCategory_mv",
+		{"AggregateByCategory_hourly",
 			`SELECT category, sum(duration_ms) FROM events_hourly_agg WHERE user_id = ? AND bucket_ts >= ? GROUP BY category`},
+		{"AggregateByCategory_daily",
+			`SELECT category, sum(duration_ms) FROM events_daily_agg WHERE user_id = ? AND date >= ? GROUP BY category`},
 		{"DailyTrend_raw",
 			`SELECT toDate(toTimeZone(ts, 'UTC')) AS d, category, sum(chars_in), sum(duration_ms) FROM events WHERE user_id = ? AND ts >= ? GROUP BY d, category`},
-		{"DailyTrend_mv",
+		{"DailyTrend_hourly",
 			`SELECT toDate(toTimeZone(bucket_ts, 'UTC')) AS d, category, sum(chars_in), sum(duration_ms) FROM events_hourly_agg WHERE user_id = ? AND bucket_ts >= ? GROUP BY d, category`},
 		{"LanguageBreakdown_raw",
 			`SELECT file_lang, category, sum(chars_in), sum(duration_ms) FROM events WHERE user_id = ? AND ts >= ? AND file_lang != '' GROUP BY file_lang, category`},
-		{"LanguageBreakdown_mv",
+		{"LanguageBreakdown_hourly",
 			`SELECT file_lang, category, sum(chars_in), sum(duration_ms) FROM events_hourly_agg WHERE user_id = ? AND bucket_ts >= ? AND file_lang != '' GROUP BY file_lang, category`},
+		{"LanguageBreakdown_daily",
+			`SELECT file_lang, category, sum(chars_in), sum(duration_ms) FROM events_daily_agg WHERE user_id = ? AND date >= ? AND file_lang != '' GROUP BY file_lang, category`},
 		{"Heatmap_raw",
 			`SELECT toDayOfWeek(toTimeZone(ts, 'UTC')) AS d, toHour(toTimeZone(ts, 'UTC')) AS h, category, sum(duration_ms) FROM events WHERE user_id = ? AND ts >= ? GROUP BY d, h, category`},
-		{"Heatmap_mv",
+		{"Heatmap_hourly",
 			`SELECT toDayOfWeek(toTimeZone(bucket_ts, 'UTC')) AS d, toHour(toTimeZone(bucket_ts, 'UTC')) AS h, category, sum(duration_ms) FROM events_hourly_agg WHERE user_id = ? AND bucket_ts >= ? GROUP BY d, h, category`},
 	}
 

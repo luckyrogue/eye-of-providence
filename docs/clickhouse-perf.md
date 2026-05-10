@@ -2,28 +2,35 @@
 
 Materialized view + SummingMergeTree target table для всех hot read queries.
 
-## Architecture
+## Architecture (cascading 3-tier)
 
 ```
-              events (raw)                 events_hourly_agg
-              ──────────────              ────────────────────
-              ts DateTime64(3)            bucket_ts DateTime
-              user_id UUID         ──┐    user_id UUID
-              category Enum8         │    category Enum8
-              file_lang LCS          │    file_lang LCS
-              duration_ms UInt32     │    duration_ms UInt64    ← sum
-              chars_in UInt32        ├──→ chars_in UInt64       ← sum
-              lines_added UInt32     │    lines_added UInt64    ← sum
-              lines_removed UInt32   │    lines_removed UInt64  ← sum
-              ...                    │    event_count UInt64    ← count
-                                     │
-                              events_hourly_mv
-                              (MATERIALIZED VIEW)
-                                  GROUP BY (
-                                    toStartOfHour(ts),
-                                    user_id, category, file_lang
-                                  )
+   events (raw)            events_hourly_agg              events_daily_agg
+   ────────────             ─────────────────              ─────────────────
+   ts DateTime64(3)        bucket_ts DateTime           date Date
+   user_id UUID    ──┐     user_id UUID         ──┐     user_id UUID
+   category        ──│──→  category               │     category
+   file_lang       ──│──→  file_lang             ─│──→  file_lang
+   duration_ms     ──│──→  duration_ms (sum)      │     duration_ms (sum)
+   chars_in        ──│──→  chars_in (sum)         │     chars_in (sum)
+   lines_*         ──│──→  lines_* (sum)          │     lines_* (sum)
+   ...               │     event_count (sum)      │     event_count (sum)
+                     │                            │
+              events_hourly_mv             events_daily_mv
+                  GROUP BY                     GROUP BY
+                  toStartOfHour(ts)            toDate(bucket_ts)
+                  + user/cat/lang              + user/cat/lang
 ```
+
+**Routing logic (store/clickhouse.go):**
+
+| Query | since < 30d | since ≥ 30d |
+|---|---|---|
+| `AggregateByCategory` | hourly | **daily** |
+| `AggregateByCategoryBulk` | hourly | **daily** |
+| `DailyTrend` | hourly (tz-correct) | hourly |
+| `LanguageBreakdown` | hourly | hourly |
+| `Heatmap` | hourly (toDayOfWeek/Hour требует) | hourly |
 
 - **events** остаётся raw для `ListRecent` (UI table) и forensics. TTL 18 мес.
 - **events_hourly_agg** — `SummingMergeTree` агрегирует rows с одинаковым
@@ -33,25 +40,27 @@ Materialized view + SummingMergeTree target table для всех hot read queri
   пишет в target. Только новые inserts; для backfill — отдельный INSERT INTO
   в migration 003.
 
-## Reduction
+## Reduction (cumulative)
 
-100 active users × 24 hours × 6 categories × ~20 langs = ~290K rows/day в MV
-vs 10M raw events/day = **~35× compression** при равной precision (часовая
-granularity для всех queries — DailyTrend/Heatmap/Lang/Aggregate).
+100 active users × N rows/day:
+- **events** (raw): ~10M/day (real prod scale)
+- **events_hourly_agg**: 24 × 6 cat × ~20 lang × 100 users = ~290K/day → **35× vs raw**
+- **events_daily_agg**: 1 × 6 × ~20 × 100 = ~12K/day → **24× vs hourly = 840× vs raw**
 
 ## Benchmark (10 users × 30 days × 10K events = 3M events)
 
 Local CH 24, MacBook Pro M1, 1 thread. Query × 5 runs:
 
-| Query                  | events (raw) | events_hourly_agg (MV) | Speedup |
-|------------------------|--------------|------------------------|---------|
-| AggregateByCategory    | 8 ms median  | 3 ms median            | 2.7×    |
-| DailyTrend             | 7 ms median  | 2 ms median            | 3.5×    |
-| LanguageBreakdown      | 7 ms median  | 2 ms median            | 3.5×    |
-| Heatmap                | 7 ms median  | 1 ms median            | 7×      |
+| Query                  | raw         | hourly       | daily          |
+|------------------------|-------------|--------------|----------------|
+| AggregateByCategory    | 4 ms median, 14 ms p95 | 1 ms / 8 ms p95 | **1 ms / 1 ms p95** ⭐ |
+| LanguageBreakdown      | 6 ms median | 2 ms median  | **1 ms median** ⭐ |
+| DailyTrend             | 5 ms median | 2 ms median  | (n/a — tz-sensitive) |
+| Heatmap                | 4 ms median | 1 ms median  | (n/a — нужен hourly) |
 
-P95 latency reduction ещё сильнее: 18-20 ms → 2-7 ms (3-10×). На 10M-events/day
-ожидается линейный рост raw query, MV остаётся ~constant в hourly buckets.
+**Daily MV** наиболее стабилен на p95 (~1ms константа vs hourly 8ms p95).
+На 30M-events/day ожидается ещё больший gap — daily читает 30 dates × N users
+× 6 cat × 20 langs ~ 3.6K rows vs hourly 86K rows.
 
 ## Run benchmark
 
