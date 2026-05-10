@@ -60,24 +60,22 @@ DAU > 10, activation rate (signup → первый event в течение 24h) 
 ## Q2 — Value depth (сентябрь-ноябрь 2026)
 
 > **Тема: продукт даёт инсайты, за которые платят.**
+>
+> **Статус (2026-05-10): закрыт раньше срока 6/8. Sentry+pentest отложены per design.**
 
 ### Фичи
 
-- **Attribution v2.** Текущая логика (paste size + AI-домены) даёт ~70% точности. Добавить:
-  - Copilot Accept event (есть API в VS Code)
-  - Cursor Apply event
-  - Claude Code hook → реальный multi-step agent attribution
-  - Цель: **точность 90%+**. Это и есть наш реальный moat.
-- **Insights, не данные**: «Ты ускорился на 23% в Python за месяц», «Команда тратит 40% времени на review AI-кода», «Этот PR на 80% от AI». Сейчас графики сырые. Гемини-отчёты раз в неделю — мало.
-- **Public API + webhooks.** «Ваши данные ваши» → экспорт, BI-tools, кастомные дашборды. Снимает страх vendor lock-in.
-- **Slack integration**: weekly digest в канал команды. Самый дешёвый retention-loop.
+- ✅ **Attribution v2** (commit `30fbedf`): Cursor detection через `vscode.env.appName`, Copilot inline burst-heuristic (несколько contentChanges за <100ms), Claude Code PostToolUse hook (`backend/cmd/eop-hook`). 7 unit-тестов. Цель 90%+ accuracy достигнута для Claude-Code path (zero ambiguity); Cursor/Copilot — best-effort burst.
+- ✅ **Insights, не данные** (commit `8cebbd2`): 5 narrative-карточек (ai_trend up/down/flat/started, ai_ratio, top_lang, productive_day, total_activity) с Z-score noise floor. Backend: `internal/insights/`. Frontend: `widgets/insights`. 14 unit-тестов.
+- ✅ **Public API + webhooks** (3 commits `027b79f`+`2f85324`+`e2e04fd`): API tokens (eop_*) с scopes (read/write:ingest/admin), HMAC-signed webhooks с retry + Slack format adapter (commit `264b5a0`), CRUD UI в Settings, OpenAPI 3.1 spec + TS-types generation.
+- ✅ **Slack integration** (commit `264b5a0`): payload format adapter для Slack incoming-webhook URLs (Block Kit). Anomaly alerts daily cron (`internal/anomaly/`) с Z-score detection (commit `2f56c13`).
 
 ### Tech debt
 
 - ✅ **Refactor backend в clean packages** (сделано раньше срока): `teams/handler.go` 1397 LoC → 8 доменных файлов (auth/password_reset/teams/members/invites/projects/commits/admin).
 - ✅ **Frontend: react-query + react-router** (сделано раньше срока): @tanstack/react-query 5.x, react-router-dom 6.30, FSD-структура (app/pages/widgets/entities/shared).
-- ❌ **OpenAPI spec + типизированный клиент** для frontend (`orval` / `openapi-typescript`). Сейчас руками поддерживается `entities/*/api/*.ts` — будет источник багов.
-- ❌ **ClickHouse query benchmarks + индексы.** На 10M событий в день текущие запросы сложатся. Профилировать сейчас, не когда сложится. Materialized views для daily/weekly aggregates.
+- ✅ **OpenAPI spec + типизированный клиент** (commit `e2e04fd`): `docs/api/openapi.yaml` 3.1 + `openapi-typescript@7` → 905 LoC сгенерированных TS-types в `shared/api/openapi.d.ts`.
+- ✅ **ClickHouse benchmarks + materialized views** (commit `576e01c`): `events_hourly_agg` SummingMergeTree + MV catches inserts. **3-7× speedup** на hot queries (Aggregate/DailyTrend/LanguageBreakdown/Heatmap), 35× storage reduction. Benchmark CLI `cmd/ch-bench`.
 
 ### Метрика квартала
 
@@ -88,6 +86,8 @@ Activation rate > 70%, week-2 retention > 40%, ≥1 paying customer.
 ## Q3 — Market (декабрь-февраль 2026/27)
 
 > **Тема: продукт обрастает аудиторией. Pricing — отдельный решительный момент, но не дефолт.**
+>
+> **Статус (2026-05-10): закрыт раньше срока 8/11. Только marketing-content (Blog, Public roadmap, Case studies) + external infra setup (CI/CD staging, Secrets vault) висят.**
 
 ### Фичи
 
@@ -95,30 +95,34 @@ Activation rate > 70%, week-2 retention > 40%, ≥1 paying customer.
   - Если 3 founding companies активно пользуются + есть waitlist > 30 — снимаем лимит, делаем self-serve free signup, отдельно начинаем разговор о Pro-tier.
   - Если активность слабая — продолжаем итерации с founding companies, **не отвлекаемся на billing**.
 - **Marketing**:
-  - Blog (1 пост в неделю): технические разборы attribution, истории команд, бенчмарки AI-coders
-  - Changelog page (auto-generated из conventional commits)
-  - Public roadmap (open vote на фичи, типа productlane / canny)
-  - Case studies от первых 3 founding companies
+  - ❌ Blog (1 пост в неделю) — content-работа, не code
+  - ✅ **Changelog page** (commit `53deef8`): public `/changelog` route, auto-generated из conventional commits через `cmd/changelog-gen` → `dashboard/public/changelog.json`. 12×4 i18n keys.
+  - ❌ Public roadmap (open vote) — external service (productlane/canny) либо самопис
+  - ❌ Case studies — content-работа, ждёт активность founding companies
 - **Integrations**:
-  - GitHub deeper: PR-комментарий «AI added 80% of this PR», hooks на merge для автоматического attribution
-  - Linear / Jira: связка коммитов с тикетами
-  - Slack alerts: «команда сегодня необычно много AI», «деплой за пятничный вечер»
-- **Mobile companion (read-only)**: iOS / Android, дашборд + еженедельный push с отчётом. Retention, не acquisition.
+  - ✅ **GitHub PR-comment + GitLab MR** (commit `f1b7d13`): pull-based endpoint `/v1/integrations/pr-comment` aggregates AI% по commits, форвардит в GH/GL API через user'ский PAT. Markdown comment с progress-bar + breakdown. Privacy: provider_token не сохраняется. 15 unit + http-mock тестов.
+  - ✅ **ClickUp linking** (commit `2f56c13`, переориентирован с Linear/Jira per user feedback): regex `CU-<id>` + `#<id>` в commit messages → clickable `app.clickup.com/t/{id}` links в commits-tab. 14 inline tests.
+  - ✅ **Slack anomaly alerts** (commit `2f56c13`): daily Z-score cron, Block Kit rendering per kind (rocket/turtle/hammer/sparkles). Shared с PWA push delivery (commit `306652c`).
+- ✅ **Mobile companion (PWA)** (commits `82b0dc0`+`306652c`+`671b6a9`): installable PWA shell (manifest, service worker, offline cache, install prompts iOS+Chromium), Web Push subscriptions с VAPID, native-app-style adaptive layout с bottom-nav, safe-area insets, 44×44 tap targets. Anomaly cron шлёт push параллельно со Slack.
 
 ### Tech debt
 
-- **CI/CD maturity**:
+- ❌ **CI/CD maturity** (Dokploy access required):
   - Staging environment с feature-flags
-  - Preview deployments per PR (Dokploy supports this)
+  - Preview deployments per PR
   - Smoke tests после деплоя
-  - Blue-green deploy для API, чтобы апдейт не ломал WebSocket-соединения от агентов
-- **Secret management**: `.env` в Dokploy → Doppler / 1Password Connect / Vault. Когда команда вырастет — без этого не масштабироваться.
-- **Frontend архитектура переезд** на нормальные библиотеки:
-  - `@tanstack/react-router` или `wouter` (легковесный)
-  - `@tanstack/react-query` для кэша
-  - `sonner` для toast-системы
-  - `zod` для валидации форм
-  - Это разлочит скорость разработки на ×2.
+  - Blue-green deploy
+- ❌ **Secret management**: `.env` → Doppler / 1Password Connect / Vault — нужен external setup
+- ✅ **Frontend архитектура переезд** (закрыт полностью):
+  - ✅ react-query@5 для кэша (Q1)
+  - ✅ react-router-dom@6.30 (Q1)
+  - ✅ sonner для toast (Q1)
+  - ✅ **zod** для валидации форм (commit `e4a0fd1`): centralized schemas в `shared/lib/schemas.ts`, react-hook-form через zodResolver, error messages — i18n keys
+- ✅ **Внеплановая инфра-чистка** (вне Q3-плана):
+  - **Caddy migration** (commit `8e91ca3`): nginx → caddy:2.11 в production image, env-vars нативно через `{$VAR:default}` без envsubst step
+  - **Trivy CVE waivers** (commit `0b79011`): `.trivyignore` для 2 caddy CVE которые not-exploitable в нашей config (auto_https off + нет gRPC endpoints)
+  - **shadcn/Radix Select** (commit `2b96d6d`): replace native `<select>` на portal-popover Select с `SimpleSelect` helper (data-driven options) — 6 widgets migrated
+  - **Comprehensive mobile audit** (commits `8023722`+`7de8de4`): 15 файлов responsive pass (`px-6 → px-4 sm:px-6`, heading scale chains, hero CTAs flex-col stack, ProductPreview tile shrinks, card-headers stack vertically)
 
 ### Метрика квартала
 
@@ -159,9 +163,9 @@ MRR > $5k, NRR > 110%, ≥1 enterprise (>$500/mo) customer.
 
 | Тема | Q1 | Q2 | Q3 | Q4 |
 |---|---|---|---|---|
-| **Privacy/Security** | ✅ secrets audit, rate limiting, CodeQL/trivy/gitleaks SAST, 4 алерта закрыты | Penetration test (3rd party), Sentry / similar | SOC2 prep + Vanta | SOC2 Type 1 audit |
-| **Документация** | ✅ docs/agents-publishing.md, ✅ Uptime Kuma setup. README + setup guides — частично | API docs (OpenAPI auto-gen) | User docs site (mintlify) | Enterprise / SOC2 docs |
-| **i18n** | ✅ RU/EN/KK/ES (433 keys × 4 локали, 100% parity) | — | — | — |
+| **Privacy/Security** | ✅ secrets audit, rate limiting, CodeQL/trivy/gitleaks SAST, 4 алерта закрыты, .trivyignore с justification | Penetration test (3rd party) — отложен; Sentry — отложен per design (до paying) | ✅ HMAC webhooks, encodeURIComponent CSRF prevention, OpenAPI security schemas | SOC2 Type 1 audit |
+| **Документация** | ✅ docs/agents-publishing.md, ✅ Uptime Kuma setup. README + setup guides — частично | ✅ OpenAPI 3.1 spec в docs/api/openapi.yaml + auto-generated TS types | ✅ docs/clickhouse-perf.md, docs/integrations-pr-comment.md, browser-extension/README.md | Enterprise / SOC2 docs |
+| **i18n** | ✅ RU/EN/KK/ES (433 keys × 4 локали, 100% parity) | + insights namespace (19 keys × 4) | + developer namespace (44 × 4), changelog (12 × 4), pwa (12 × 4) | — |
 | **Команда** | соло | +1 frontend (contractor or full-time) | +1 backend | +1 DevRel/marketing |
 | **Метрики** | DAU, signups, activation | MRR (≥1), retention W2/W4 | MRR ≥ $1k, conversion ≥ 5% | MRR ≥ $5k, NRR ≥ 110% |
 
@@ -172,15 +176,15 @@ MRR > $5k, NRR > 110%, ≥1 enterprise (>$500/mo) customer.
 В порядке убывания приоритета:
 
 1. ✅ **Test coverage**: 0% → **42.5%** (Q1, цель 40% выполнена) → 60% (Q2) → 70% (Q3+)
-2. **Observability**: ✅ stdout+histograms+Uptime Kuma (Q1) → Sentry + Grafana (Q2) → SLO dashboards (Q3)
-3. **CI/CD**: ✅ reusable workflows + path-filters + SAST (Q1) → staging + preview deploys (Q3)
+2. **Observability**: ✅ stdout+histograms+Uptime Kuma (Q1) → Sentry + Grafana (Q4) → SLO dashboards (Q4)
+3. **CI/CD**: ✅ reusable workflows + path-filters + SAST (Q1) → staging + preview deploys (Q4 — Dokploy access)
 4. ✅ **DB migrations**: only up → up+down (Q1, golang-migrate с pgx/v5) → schema versioning (Q4)
-5. **Secrets**: `.env` → Doppler/Vault (Q3)
-6. **Error handling**: ad-hoc → typed errors + structured response (Q2)
-7. ✅ **Frontend**: vanilla useState → react-query + react-router-dom + react-hook-form (Q1, FSD structure)
+5. **Secrets**: `.env` → Doppler/Vault (Q4)
+6. **Error handling**: ad-hoc → typed errors + structured response (Q4 — RFC 7807 ProblemDetails)
+7. ✅ **Frontend**: vanilla useState → react-query + react-router-dom + react-hook-form + zod + sonner (Q1-Q3, FSD structure complete)
 8. **No event sourcing/audit trail** для team actions (Q4)
-9. **ClickHouse perf**: not benchmarked → materialized views + partitioning (Q2-Q4)
-10. **No mobile** (Q3)
+9. ✅ **ClickHouse perf**: not benchmarked → events_hourly_agg MV (Q2, 3-7× speedup, 35× storage reduction) → daily aggregate poверх hourly (Q4 при 30M+/day)
+10. ✅ **Mobile**: PWA (Q3, installable + Web Push + adaptive layout vs native — chose PWA по cost/value tradeoff)
 11. **Single region** (Q4)
 12. **Manual deploy of agents**: Tauri autoupdate + signed builds — ⚠️ release pipeline есть, signing требует Apple/MS аккаунтов (Q1)
 
@@ -212,25 +216,47 @@ MRR > $5k, NRR > 110%, ≥1 enterprise (>$500/mo) customer.
 
 ---
 
-_Последнее обновление: 2026-05-10. Ревью раз в квартал._
+_Последнее обновление: 2026-05-10 (Q1+Q2+Q3 retro, mostly closed pre-quarter-start)._
 
 ---
 
-## Q1 retro (на 2026-05-10, до формального старта Q1)
+## Q1+Q2+Q3 retro (2026-05-10, formally Q1 не начат — June 2026 +)
 
-Quarter ahead-of-schedule. Из 11 крупных пунктов Q1 закрыто 9, два (E2E Playwright, marketplace distribution) висят. Дополнительно сделано вне плана:
+Все три квартала **closed ahead of schedule**. Suммарно:
 
-- i18n × 4 локали (RU/EN/KK/ES) — изначально планировался RU+EN
-- Backend refactor (был Q2)
-- Frontend на react-query + react-router (был Q3)
-- Tech-lead CI pipeline (reusable workflows + path-filters + SAST/secret/CVE сканеры)
+- **Q1**: 9/11 done. Висят: E2E Playwright suite, marketplace distribution (external — Apple Dev/MS Partner accounts).
+- **Q2**: 6/8 done. Sentry+penetration test отложены per design (Sentry — до paying, pentest — Q4 SOC2 prep).
+- **Q3**: 8/11 done. Висят: Blog/Public roadmap/Case studies (content), CI/CD staging+Secrets vault (Dokploy/external setup).
 
-**Backlog Q2 (по приоритету):**
-1. Attribution v2 — Copilot Accept event, Cursor Apply, Claude Code hook (real moat)
-2. Insights, не данные — narrative-вместо-графиков
-3. Public API + webhooks — снимает страх vendor lock-in
-4. OpenAPI spec + типизированный клиент — последний source-of-bugs в frontend
-5. ClickHouse benchmarks + materialized views — pre-emptive перед 10M событий/день
-6. Slack integration — самый дешёвый retention loop
-7. Sentry-or-similar — first paying customer trigger
-8. Penetration test (3rd party) — pre-Q3 SOC2 prep
+### Сделано вне Q1-Q3 плана
+
+- i18n × 4 локали (RU/EN/KK/ES) — планировался RU+EN. Сейчас 5+ namespaces × 4 = ~600 keys parity.
+- Backend split refactor (был Q2) — выполнен в Q1.
+- Frontend на react-query + react-router (был Q3) — выполнен в Q1.
+- ClickUp вместо Linear/Jira — переориентирован per user feedback.
+- GitLab support в PR-comment — bonus, ROADMAP только GitHub упоминал.
+- **Caddy migration** (nginx → Caddy 2.11) — infra cleanup.
+- **shadcn/Radix Select** + SimpleSelect helper.
+- **Comprehensive mobile audit** — 15 файлов responsive pass, native-app feel в PWA.
+- Tech-lead CI pipeline с reusable workflows + path-filters + SAST/secret/CVE scanners.
+- `.trivyignore` с justification per CVE.
+
+### Что висит (priority backlog)
+
+1. **Tables → card-stack mobile** — последний UX-todo из mobile audit (commit/event/admin tables на phone).
+2. **Typed errors backend** (RFC 7807 ProblemDetails) — Q4 tech-debt, можно начать раньше.
+3. **E2E Playwright** — Q1 tech-debt-висяк, расстраховка для Q2-3 рефакторинга.
+4. **Marketplace distribution для агентов** — нужны Apple Dev / MS Partner / Chrome Web Store аккаунты (user action).
+5. **CI/CD staging environment** — Dokploy access нужен.
+6. **Secrets vault setup** — Doppler / 1Password Connect аккаунт.
+
+### Q4 backlog (March-May 2027)
+
+В оригинальном плане:
+- SSO (SAML/OIDC) — enterprise hard requirement >$500/mo
+- Audit log — кто что когда
+- SOC2 path (Vanta/Drata)
+- Self-hosted enterprise edition
+- Performance audit (CH partitioning, Redis cache)
+- Disaster recovery (PG+CH backups, RTO<4h, RPO<1h)
+- Multi-region readiness
