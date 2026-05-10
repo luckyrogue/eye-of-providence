@@ -65,10 +65,10 @@ export function Teams({ tz }: { tz: string }) {
       {beta.data && beta.data.limit > 0 && <BetaBanner beta={beta.data} />}
 
       <Card className="card-hover">
-        <CardHeader className="flex-row items-center justify-between">
-          <div>
+        <CardHeader className="flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <CardTitle className="flex items-center gap-2 font-display tracking-tight">
-              <Users className="h-4 w-4" /> {t("app:teams.title")}
+              <Users className="h-4 w-4 shrink-0" /> {t("app:teams.title")}
             </CardTitle>
             <CardDescription>{t("app:teams.lead")}</CardDescription>
           </div>
@@ -76,6 +76,7 @@ export function Teams({ tz }: { tz: string }) {
             size="sm"
             onClick={() => setNewTeamOpen(true)}
             disabled={createTeam.isPending || betaFull || ownerBlocked}
+            className="w-full sm:w-auto shrink-0"
             title={
               ownerBlocked
                 ? t("app:teams.blocked_owner")

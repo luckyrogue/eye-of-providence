@@ -25,8 +25,8 @@ export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; t
 
   return (
     <Card className="card-hover">
-      <CardHeader className="flex-row items-center justify-between">
-        <div>
+      <CardHeader className="flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <CardTitle className="font-display tracking-tight">{team.name}</CardTitle>
             <PlanBadge
@@ -41,7 +41,7 @@ export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; t
             {note ? ` · ${note}` : ""}
           </CardDescription>
         </div>
-        <TabBar className="justify-end">
+        <TabBar className="justify-start lg:justify-end overflow-x-auto -mx-1 px-1">
           <Tab active={tab === "members"} onClick={() => setTab("members")} icon={<Users className="h-3.5 w-3.5" />}>
             {t("team_detail.tabs.members")}
           </Tab>

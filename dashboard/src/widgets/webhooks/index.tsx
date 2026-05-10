@@ -59,15 +59,15 @@ export function WebhooksWidget() {
 
   return (
     <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4">
-        <div>
+      <CardHeader className="flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <WebhookIcon className="h-4 w-4 text-muted-foreground" />
+            <WebhookIcon className="h-4 w-4 text-muted-foreground shrink-0" />
             <CardTitle>{t("webhooks_title")}</CardTitle>
           </div>
           <CardDescription className="mt-1">{t("webhooks_lead")}</CardDescription>
         </div>
-        <Button size="sm" onClick={() => setShowCreate(true)}>
+        <Button size="sm" onClick={() => setShowCreate(true)} className="w-full sm:w-auto shrink-0">
           <Plus className="h-3.5 w-3.5 mr-1" />
           {t("webhooks_create")}
         </Button>

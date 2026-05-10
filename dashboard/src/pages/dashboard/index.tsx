@@ -85,19 +85,19 @@ export function DashboardRoute() {
       </div>
 
       <Card className="card-hover">
-        <CardHeader className="flex-row items-center justify-between">
-          <div>
+        <CardHeader className="flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <CardTitle className="flex items-center gap-2 font-display tracking-tight">
-              <Sparkles className="h-4 w-4 text-purple-500" />
+              <Sparkles className="h-4 w-4 text-purple-500 shrink-0" />
               {t("dashboard.report_title")}
             </CardTitle>
             <CardDescription>{t("dashboard.report_lead")}</CardDescription>
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => genReport.mutate("weekly")} disabled={genReport.isPending}>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button size="sm" onClick={() => genReport.mutate("weekly")} disabled={genReport.isPending} className="flex-1 sm:flex-initial">
               {genReport.isPending ? "..." : t("dashboard.report_create_weekly")}
             </Button>
-            <Button size="sm" variant="outline" onClick={() => genReport.mutate("monthly")} disabled={genReport.isPending}>
+            <Button size="sm" variant="outline" onClick={() => genReport.mutate("monthly")} disabled={genReport.isPending} className="flex-1 sm:flex-initial">
               {t("dashboard.report_create_monthly")}
             </Button>
           </div>
