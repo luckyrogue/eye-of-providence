@@ -51,10 +51,22 @@
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Mobile: убираем синюю tap-highlight рамку на iOS Safari + Android Chrome —
+       визуально дёшево, отвлекает в native-app feel'е после install PWA. */
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground font-sans;
     font-feature-settings: "ss01", "cv11";
+    /* Запретим pull-to-refresh + overscroll bounce на мобиле — мешают
+       sticky-header'у в standalone PWA mode. */
+    overscroll-behavior-y: none;
+  }
+  /* Buttons / interactive elements в native-PWA должны иметь touch-action:
+     manipulation чтобы убрать 300ms tap-delay на старых браузерах + дёшево
+     помочь ARIA. */
+  button, a, [role="button"] {
+    touch-action: manipulation;
   }
 }
 

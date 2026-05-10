@@ -7,7 +7,8 @@
     "dashboard": "Panel",
     "team": "Equipo",
     "settings": "Configuración",
-    "admin": "Admin"
+    "admin": "Admin",
+    "bottom": "Navegación inferior"
   },
   "actions": {
     "save": "Guardar",
@@ -47,7 +48,15 @@
     "delete_failed": "No se pudo eliminar"
   },
   "heatmap": {
-    "days": ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"],
+    "days": [
+      "Dom",
+      "Lun",
+      "Mar",
+      "Mié",
+      "Jue",
+      "Vie",
+      "Sáb"
+    ],
     "total": "total",
     "minutes_short": "min",
     "hover_hint": "Pasa el cursor por una celda para ver detalles."
