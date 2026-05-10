@@ -35,6 +35,7 @@ import (
 	"github.com/eye-of-providence/backend/internal/reports"
 	"github.com/eye-of-providence/backend/internal/store"
 	"github.com/eye-of-providence/backend/internal/teams"
+	"github.com/eye-of-providence/backend/internal/webhooks"
 )
 
 func main() {
@@ -171,6 +172,15 @@ func main() {
 	})
 
 	mail := chooseMailer(cfg, log)
+	// hooksDispatcher — interface (nil safe): commits-ingest проверяет
+	// `if s.Webhooks != nil` через nil-interface check. Чтобы typed-nil
+	// gotcha не сработала, оставляем zero value interface{} если pool nil.
+	var hooksDispatcher teams.WebhookDispatcher
+	if pgPool != nil {
+		hookSvc := webhooks.New(pgPool, log)
+		webhooks.RegisterRoutes(app, hookSvc, cfg.JWTSecret, pgPool)
+		hooksDispatcher = hookSvc
+	}
 	teams.EventStore = eventStore
 	teams.RegisterRoutes(app, teams.Service{
 		Pool:          pgPool,
@@ -180,6 +190,7 @@ func main() {
 		BetaTeamLimit: cfg.BetaTeamLimit,
 		Mailer:        mail,
 		PublicURL:     cfg.PublicURL,
+		Webhooks:      hooksDispatcher,
 	})
 
 	// Protected routes — навешивают auth middleware на весь /v1.

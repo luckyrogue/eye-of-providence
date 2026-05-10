@@ -2,11 +2,20 @@
 package teams
 
 import (
+	"context"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
+
+// WebhookDispatcher — interface для outbound delivery. Inject'ится в Service
+// при construction, nil — webhook integration выключена. Pkg `webhooks` в
+// backend/internal реализует эту interface; объявлена тут чтобы избежать
+// import cycle teams → webhooks → teams.
+type WebhookDispatcher interface {
+	Dispatch(userID uuid.UUID, event string, payload any)
+}
 
 type commitReq struct {
 	ProjectID    string `json:"project_id"`
@@ -48,7 +57,7 @@ func (s Service) handleIngestCommit(c *fiber.Ctx) error {
 	if err != nil {
 		authoredAt = time.Now().UTC()
 	}
-	_, err = s.Pool.Exec(c.Context(), `
+	tag, err := s.Pool.Exec(c.Context(), `
 		INSERT INTO commits (project_id, team_id, user_id, sha, message, branch,
 		                     files_changed, lines_added, lines_removed, ai_lines_pct, authored_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -58,7 +67,30 @@ func (s Service) handleIngestCommit(c *fiber.Ctx) error {
 	if err != nil {
 		return s.internalErr(c, err)
 	}
+	// Webhook firing только на новый INSERT (ON CONFLICT возвращает
+	// RowsAffected=0). Идемпотентность ingest'а сохраняется на receiver-side.
+	if tag.RowsAffected() > 0 && s.Webhooks != nil {
+		dispatchCommitWebhook(c.Context(), s, uid, projID, *teamID, req, authoredAt)
+	}
 	return c.JSON(fiber.Map{"ok": true})
+}
+
+// dispatchCommitWebhook — формирует payload и шлёт через injected
+// dispatcher. Не блокирует: dispatcher.Dispatch fire-and-forget.
+func dispatchCommitWebhook(ctx context.Context, s Service, userID, projectID, teamID uuid.UUID, req commitReq, authoredAt time.Time) {
+	_ = ctx // payload в reverse — может пригодиться для future enrichment
+	s.Webhooks.Dispatch(userID, "commit.ingested", map[string]any{
+		"user_id":       userID,
+		"project_id":    projectID,
+		"team_id":       teamID,
+		"sha":           req.SHA,
+		"message":       req.Message,
+		"branch":        req.Branch,
+		"files_changed": req.FilesChanged,
+		"lines_added":   req.LinesAdded,
+		"lines_removed": req.LinesRemoved,
+		"authored_at":   authoredAt.UTC().Format(time.RFC3339),
+	})
 }
 
 func (s Service) handleProjectCommits(c *fiber.Ctx) error {

@@ -93,7 +93,8 @@ type Service struct {
 	InviteOnly    bool // регистрация только по invite (первый user всегда может — bootstrap)
 	BetaTeamLimit int  // 0 = без лимита, иначе — максимум команд для бета-программы
 	Mailer        mailer.Mailer
-	PublicURL     string // base URL дашборда для invite-ссылок в письме
+	PublicURL     string            // base URL дашборда для invite-ссылок в письме
+	Webhooks      WebhookDispatcher // nil — webhook delivery выключена (in-memory mode)
 }
 
 // internalErr — единая точка для 500-ответов. Логируем полный текст,
