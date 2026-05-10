@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -38,6 +39,7 @@ import (
 	"github.com/eye-of-providence/backend/internal/metrics"
 	"github.com/eye-of-providence/backend/internal/migrate"
 	"github.com/eye-of-providence/backend/internal/reports"
+	"github.com/eye-of-providence/backend/internal/sso"
 	"github.com/eye-of-providence/backend/internal/store"
 	"github.com/eye-of-providence/backend/internal/teams"
 	"github.com/eye-of-providence/backend/internal/webhooks"
@@ -234,6 +236,23 @@ func main() {
 			Logger:       log,
 			DashboardURL: cfg.PublicURL,
 		})
+	}
+
+	// SSO (OIDC) — public callback endpoints + admin CRUD под team_id.
+	// Disabled полностью если pgPool nil (in-memory dev mode).
+	if pgPool != nil {
+		ssoRegistry := sso.NewRegistry(pgPool, strings.TrimRight(cfg.PublicURL, "/")+"/api/v1/sso/oidc/callback")
+		sso.RegisterRoutes(app, sso.Service{
+			Pool:      pgPool,
+			Registry:  ssoRegistry,
+			Logger:    log,
+			JWTSecret: cfg.JWTSecret,
+			PublicURL: strings.TrimRight(cfg.PublicURL, "/"),
+		})
+		ssoAdmin := sso.AdminService{Pool: pgPool, Registry: ssoRegistry, Logger: log}
+		// /v1/teams/:id/sso/* — admin endpoints. Защищены auth middleware
+		// глобальным /v1 group'ом, role-check внутри handler'ов.
+		ssoAdmin.RegisterAdminRoutes(app.Group("/v1/teams/:id/sso", auth.Middleware(cfg.JWTSecret, pgPool)))
 	}
 
 	// Web Push (PWA notifications) — endpoints всегда зарегистрированы; если
