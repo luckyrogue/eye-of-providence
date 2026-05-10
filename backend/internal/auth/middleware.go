@@ -6,6 +6,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
 const (
@@ -27,18 +29,18 @@ func Middleware(secret string, pool *pgxpool.Pool) fiber.Handler {
 		header := c.Get("Authorization")
 		// Case-insensitive Bearer — некоторые клиенты шлют lowercase.
 		if len(header) < 7 || !strings.EqualFold(header[:7], "Bearer ") {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing bearer token"})
+			return httperr.Unauthorized(c, "missing_bearer", "missing bearer token")
 		}
 		token := strings.TrimSpace(header[7:])
 
 		// API token — eop_xxx.
 		if strings.HasPrefix(token, tokenPrefix) {
 			if pool == nil {
-				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "api tokens require database"})
+				return httperr.Unauthorized(c, "db_required", "api tokens require database")
 			}
 			userID, scope, err := VerifyAPIToken(c.Context(), pool, token)
 			if err != nil {
-				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token"})
+				return httperr.Unauthorized(c, "invalid_token", "invalid token")
 			}
 			c.Locals(ctxClaimsKey, &Claims{UserID: userID.String(), Provider: "api"})
 			c.Locals(ctxTokenScopeKey, scope)
@@ -48,16 +50,16 @@ func Middleware(secret string, pool *pgxpool.Pool) fiber.Handler {
 		// JWT path.
 		claims, err := ParseJWT(secret, token)
 		if err != nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token"})
+			return httperr.Unauthorized(c, "invalid_token", "invalid token")
 		}
 		if pool != nil {
 			uid, err := uuid.Parse(claims.UserID)
 			if err != nil {
-				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token subject"})
+				return httperr.Unauthorized(c, "invalid_subject", "invalid token subject")
 			}
 			dbTV, dbErr := TokenVersion(c.Context(), pool, uid)
 			if dbErr != nil || dbTV != claims.TokenVersion {
-				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "session invalidated"})
+				return httperr.Unauthorized(c, "session_invalidated", "session invalidated")
 			}
 		}
 		c.Locals(ctxClaimsKey, claims)
@@ -89,10 +91,14 @@ func RequireScope(allowed ...string) fiber.Handler {
 		if scope == "admin" || allowedMap[scope] {
 			return c.Next()
 		}
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error":          "token scope insufficient",
-			"required_scope": allowed,
-			"actual_scope":   scope,
+		return httperr.Send(c, httperr.ProblemDetails{
+			Status: fiber.StatusForbidden,
+			Code:   "scope_insufficient",
+			Detail: "token scope insufficient",
+			Extensions: map[string]any{
+				"required_scope": allowed,
+				"actual_scope":   scope,
+			},
 		})
 	}
 }

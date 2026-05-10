@@ -44,6 +44,32 @@ type ProblemDetails struct {
 	// Error — alias of Detail для backward-compat со старыми consumers
 	// которые читали `error` поле. Новый код предпочитает Detail+Code.
 	Error string `json:"error,omitempty"`
+	// Extensions — arbitrary дополнительные поля per RFC 7807 §3.2.
+	// Используется когда нужно вернуть structured-data (e.g. provider_status,
+	// required_scope, code_reason). Marshaled inline через custom MarshalJSON.
+	Extensions map[string]any `json:"-"`
+}
+
+// MarshalJSON — сериализуем struct fields + Extensions inline на верхний
+// уровень (per RFC 7807 — extension fields соседствуют с standard ones).
+func (p ProblemDetails) MarshalJSON() ([]byte, error) {
+	type alias ProblemDetails
+	base, err := json.Marshal(alias(p))
+	if err != nil {
+		return nil, err
+	}
+	if len(p.Extensions) == 0 {
+		return base, nil
+	}
+	// Re-marshal merge через map.
+	var m map[string]any
+	if err := json.Unmarshal(base, &m); err != nil {
+		return nil, err
+	}
+	for k, v := range p.Extensions {
+		m[k] = v
+	}
+	return json.Marshal(m)
 }
 
 const (

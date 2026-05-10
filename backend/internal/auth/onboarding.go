@@ -4,6 +4,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+
+	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
 // onboardingStatus — то, что фронт показывает в wizard'е и что лежит
@@ -19,7 +21,7 @@ func onboardingStatusHandler(s MeService) fiber.Handler {
 		claims := ClaimsFromCtx(c)
 		uid, err := uuid.Parse(claims.UserID)
 		if err != nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token subject"})
+			return httperr.Unauthorized(c, "invalid_subject", "invalid token subject")
 		}
 
 		out := onboardingStatus{}
@@ -64,19 +66,16 @@ func localeHandler(s MeService) fiber.Handler {
 		claims := ClaimsFromCtx(c)
 		uid, err := uuid.Parse(claims.UserID)
 		if err != nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token subject"})
+			return httperr.Unauthorized(c, "invalid_subject", "invalid token subject")
 		}
 		var req struct {
 			Locale string `json:"locale"`
 		}
 		if err := c.BodyParser(&req); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid body"})
+			return httperr.BadRequest(c, "invalid_body", "invalid body")
 		}
 		if !supportedLocales[req.Locale] {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "unsupported locale",
-				"code":  "invalid_locale",
-			})
+			return httperr.BadRequest(c, "invalid_locale", "unsupported locale")
 		}
 		if s.Pool == nil {
 			return c.JSON(fiber.Map{"locale": req.Locale})
@@ -85,7 +84,7 @@ func localeHandler(s MeService) fiber.Handler {
 			`UPDATE users SET locale = $1 WHERE id = $2`, req.Locale, uid,
 		); err != nil {
 			s.Logger.Warn("locale update failed", zap.Error(err))
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to save"})
+			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{"locale": req.Locale})
 	}
@@ -96,7 +95,7 @@ func onboardingDismissHandler(s MeService) fiber.Handler {
 		claims := ClaimsFromCtx(c)
 		uid, err := uuid.Parse(claims.UserID)
 		if err != nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token subject"})
+			return httperr.Unauthorized(c, "invalid_subject", "invalid token subject")
 		}
 		if s.Pool == nil {
 			// Без БД нечего сохранять; возвращаем ok, фронт переключит state локально.
@@ -107,7 +106,7 @@ func onboardingDismissHandler(s MeService) fiber.Handler {
 			`UPDATE users SET onboarding_dismissed_at = COALESCE(onboarding_dismissed_at, now()) WHERE id = $1`, uid,
 		); err != nil {
 			s.Logger.Warn("onboarding dismiss failed", zap.Error(err))
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to save"})
+			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{"status": "ok"})
 	}
