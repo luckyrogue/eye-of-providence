@@ -455,6 +455,13 @@ export interface paths {
                         /** Format: uri */
                         url: string;
                         events: ("commit.ingested" | "report.generated")[];
+                        /**
+                         * @description Payload shape: `raw` — наш {event, data, sent_at} с HMAC.
+                         *     `slack` — Slack Block Kit для incoming-webhook URLs.
+                         * @default raw
+                         * @enum {string}
+                         */
+                        format?: "raw" | "slack";
                     };
                 };
             };
@@ -804,6 +811,8 @@ export interface components {
             /** Format: uri */
             url?: string;
             events?: ("commit.ingested" | "report.generated")[];
+            /** @enum {string} */
+            format?: "raw" | "slack";
             active?: boolean;
             /** Format: date-time */
             last_delivery_at?: string | null;

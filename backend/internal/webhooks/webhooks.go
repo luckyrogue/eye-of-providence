@@ -18,7 +18,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -47,6 +46,7 @@ type Webhook struct {
 	ID             uuid.UUID  `json:"id"`
 	URL            string     `json:"url"`
 	Events         []string   `json:"events"`
+	Format         string     `json:"format"` // "raw" | "slack"
 	Active         bool       `json:"active"`
 	LastDeliveryAt *time.Time `json:"last_delivery_at,omitempty"`
 	LastStatus     *int       `json:"last_status,omitempty"`
@@ -71,7 +71,8 @@ func New(pool *pgxpool.Pool, logger *zap.Logger) *Service {
 
 // CreateWebhook — INSERT с генерёным secret'ом. Возвращает (plaintext_secret, row).
 // Plaintext secret отдаётся ровно один раз (caller должен показать в UI).
-func (s *Service) Create(ctx context.Context, userID uuid.UUID, url string, events []string) (string, Webhook, error) {
+// format пустой → "raw".
+func (s *Service) Create(ctx context.Context, userID uuid.UUID, url string, events []string, format string) (string, Webhook, error) {
 	url = strings.TrimSpace(url)
 	if !strings.HasPrefix(url, "https://") && !strings.HasPrefix(url, "http://") {
 		return "", Webhook{}, errors.New("url must be http(s)://")
@@ -87,6 +88,12 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, url string, even
 	if len(events) == 0 {
 		return "", Webhook{}, errors.New("at least one event required")
 	}
+	if format == "" {
+		format = string(FormatRaw)
+	}
+	if !validFormat(format) {
+		return "", Webhook{}, fmt.Errorf("unknown format: %s", format)
+	}
 
 	secret, err := generateSecret()
 	if err != nil {
@@ -97,13 +104,14 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, url string, even
 		ID:     uuid.New(),
 		URL:    url,
 		Events: events,
+		Format: format,
 		Active: true,
 	}
 	err = s.Pool.QueryRow(ctx, `
-		INSERT INTO webhooks (id, user_id, url, secret, events)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO webhooks (id, user_id, url, secret, events, format)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING created_at`,
-		out.ID, userID, url, secret, events,
+		out.ID, userID, url, secret, events, format,
 	).Scan(&out.CreatedAt)
 	if err != nil {
 		return "", Webhook{}, err
@@ -114,7 +122,7 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, url string, even
 // List — active webhooks пользователя.
 func (s *Service) List(ctx context.Context, userID uuid.UUID) ([]Webhook, error) {
 	rows, err := s.Pool.Query(ctx, `
-		SELECT id, url, events, active, last_delivery_at, last_status, created_at
+		SELECT id, url, events, format, active, last_delivery_at, last_status, created_at
 		FROM webhooks WHERE user_id = $1 ORDER BY created_at DESC`, userID)
 	if err != nil {
 		return nil, err
@@ -123,7 +131,7 @@ func (s *Service) List(ctx context.Context, userID uuid.UUID) ([]Webhook, error)
 	out := []Webhook{}
 	for rows.Next() {
 		var w Webhook
-		if err := rows.Scan(&w.ID, &w.URL, &w.Events, &w.Active, &w.LastDeliveryAt, &w.LastStatus, &w.CreatedAt); err != nil {
+		if err := rows.Scan(&w.ID, &w.URL, &w.Events, &w.Format, &w.Active, &w.LastDeliveryAt, &w.LastStatus, &w.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, w)
@@ -159,7 +167,7 @@ func (s *Service) dispatchSync(userID uuid.UUID, event string, payload any) {
 	defer cancel()
 
 	rows, err := s.Pool.Query(ctx, `
-		SELECT id, url, secret FROM webhooks
+		SELECT id, url, secret, format FROM webhooks
 		WHERE user_id = $1 AND active = true AND $2 = ANY(events)`, userID, event)
 	if err != nil {
 		s.Logger.Error("webhook lookup failed", zap.Error(err))
@@ -171,30 +179,28 @@ func (s *Service) dispatchSync(userID uuid.UUID, event string, payload any) {
 		id     uuid.UUID
 		url    string
 		secret string
+		format string
 	}
 	targets := []target{}
 	for rows.Next() {
 		var t target
-		if err := rows.Scan(&t.id, &t.url, &t.secret); err != nil {
+		if err := rows.Scan(&t.id, &t.url, &t.secret, &t.format); err != nil {
 			continue
 		}
 		targets = append(targets, t)
 	}
 
 	for _, t := range targets {
-		s.deliver(ctx, t.id, t.url, t.secret, event, payload)
+		s.deliver(ctx, t.id, t.url, t.secret, t.format, event, payload)
 	}
 }
 
 // deliver — одна доставка с retry. Backoff 1s/3s/9s на 5xx или network.
-func (s *Service) deliver(ctx context.Context, id uuid.UUID, url, secret, event string, payload any) {
-	body, err := json.Marshal(map[string]any{
-		"event":   event,
-		"data":    payload,
-		"sent_at": time.Now().UTC().Format(time.RFC3339),
-	})
+// format = "raw" → канонический JSON; "slack" → Slack Block Kit payload.
+func (s *Service) deliver(ctx context.Context, id uuid.UUID, url, secret, format, event string, payload any) {
+	body, err := formatPayload(Format(format), event, payload)
 	if err != nil {
-		s.Logger.Error("marshal payload", zap.Error(err))
+		s.Logger.Error("format payload", zap.String("format", format), zap.Error(err))
 		return
 	}
 	sig := signPayload(secret, body)
@@ -285,9 +291,9 @@ func generateSecret() (string, error) {
 func (s *Service) Get(ctx context.Context, userID, id uuid.UUID) (*Webhook, error) {
 	var w Webhook
 	err := s.Pool.QueryRow(ctx, `
-		SELECT id, url, events, active, last_delivery_at, last_status, created_at
+		SELECT id, url, events, format, active, last_delivery_at, last_status, created_at
 		FROM webhooks WHERE id = $1 AND user_id = $2`, id, userID,
-	).Scan(&w.ID, &w.URL, &w.Events, &w.Active, &w.LastDeliveryAt, &w.LastStatus, &w.CreatedAt)
+	).Scan(&w.ID, &w.URL, &w.Events, &w.Format, &w.Active, &w.LastDeliveryAt, &w.LastStatus, &w.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

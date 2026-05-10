@@ -6,11 +6,12 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Button, Card, CardContent, CardDescription, CardHeader, CardTitle,
-  Input, Modal, useConfirm,
+  Input, Modal, Select, useConfirm,
 } from "@eop/ui";
 import { Copy, Plus, Trash2, Webhook as WebhookIcon } from "lucide-react";
 import {
-  useWebhooks, useCreateWebhook, useDeleteWebhook, type Webhook, type WebhookEvent,
+  useWebhooks, useCreateWebhook, useDeleteWebhook,
+  type Webhook, type WebhookEvent, type WebhookFormat,
 } from "../../entities/webhook";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
 
@@ -28,6 +29,7 @@ export function WebhooksWidget() {
   const [showSecret, setShowSecret] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [events, setEvents] = useState<WebhookEvent[]>(["commit.ingested"]);
+  const [format, setFormat] = useState<WebhookFormat>("raw");
 
   function toggleEvent(e: WebhookEvent) {
     setEvents((prev) => (prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e]));
@@ -35,12 +37,13 @@ export function WebhooksWidget() {
 
   async function submitCreate() {
     if (!url.trim() || events.length === 0) return;
-    const r = await runToast(create.mutateAsync({ url: url.trim(), events }), {});
+    const r = await runToast(create.mutateAsync({ url: url.trim(), events, format }), {});
     if (r) {
       setShowSecret(r.secret);
       setShowCreate(false);
       setUrl("");
       setEvents(["commit.ingested"]);
+      setFormat("raw");
     }
   }
 
@@ -94,6 +97,20 @@ export function WebhooksWidget() {
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder={t("webhooks_url_placeholder")}
               />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">{t("webhooks_format")}</label>
+              <Select
+                value={format}
+                onChange={(e) => setFormat(e.target.value as WebhookFormat)}
+                className="w-full px-3 py-2 text-sm"
+              >
+                <option value="raw">{t("webhooks_format_raw")}</option>
+                <option value="slack">{t("webhooks_format_slack")}</option>
+              </Select>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {format === "slack" ? t("webhooks_format_slack_hint") : t("webhooks_format_raw_hint")}
+              </p>
             </div>
             <div>
               <label className="text-xs text-muted-foreground">{t("webhooks_events")}</label>
@@ -154,7 +171,14 @@ function WebhookRow({ hook, onDelete }: { hook: Webhook; onDelete: () => void })
   return (
     <li className="flex items-center justify-between py-3 gap-4">
       <div className="min-w-0 flex-1">
-        <div className="font-mono text-xs truncate">{hook.url}</div>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs truncate">{hook.url}</span>
+          {hook.format === "slack" && (
+            <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400">
+              slack
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           {hook.events.map((e) => (
             <span key={e} className="text-[11px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted">

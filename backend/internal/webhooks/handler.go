@@ -52,11 +52,12 @@ func createHandler(svc *Service) fiber.Handler {
 		var req struct {
 			URL    string   `json:"url"`
 			Events []string `json:"events"`
+			Format string   `json:"format"`
 		}
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
 		}
-		secret, hook, err := svc.Create(c.Context(), uid, req.URL, req.Events)
+		secret, hook, err := svc.Create(c.Context(), uid, req.URL, req.Events, req.Format)
 		if err != nil {
 			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 		}

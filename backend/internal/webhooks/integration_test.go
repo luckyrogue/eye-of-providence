@@ -63,7 +63,7 @@ func TestCreateWebhook_BadURL(t *testing.T) {
 	uid := makeUser(t, pool)
 	logger, _ := zap.NewDevelopment()
 	svc := New(pool, logger)
-	_, _, err := svc.Create(context.Background(), uid, "ftp://x", []string{EventCommitIngested})
+	_, _, err := svc.Create(context.Background(), uid, "ftp://x", []string{EventCommitIngested}, "")
 	if err == nil {
 		t.Error("expected error for non-http URL")
 	}
@@ -73,7 +73,7 @@ func TestCreateWebhook_InvalidEvent(t *testing.T) {
 	pool := setupDB(t)
 	uid := makeUser(t, pool)
 	svc := New(pool, zap.NewNop())
-	_, _, err := svc.Create(context.Background(), uid, "https://example.com/h", []string{"random.event"})
+	_, _, err := svc.Create(context.Background(), uid, "https://example.com/h", []string{"random.event"}, "")
 	if err == nil {
 		t.Error("expected error for unknown event")
 	}
@@ -84,7 +84,7 @@ func TestCreateAndList(t *testing.T) {
 	uid := makeUser(t, pool)
 	svc := New(pool, zap.NewNop())
 	secret, hook, err := svc.Create(context.Background(), uid, "https://example.com/h",
-		[]string{EventCommitIngested, EventReportGenerated})
+		[]string{EventCommitIngested, EventReportGenerated}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ func TestDispatch_HappyPath(t *testing.T) {
 	defer server.Close()
 
 	svc := New(pool, zap.NewNop())
-	secret, _, err := svc.Create(context.Background(), uid, server.URL, []string{EventCommitIngested})
+	secret, _, err := svc.Create(context.Background(), uid, server.URL, []string{EventCommitIngested}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func TestDispatch_OnlyMatchingEvents(t *testing.T) {
 	defer server.Close()
 
 	svc := New(pool, zap.NewNop())
-	_, _, err := svc.Create(context.Background(), uid, server.URL, []string{EventReportGenerated})
+	_, _, err := svc.Create(context.Background(), uid, server.URL, []string{EventReportGenerated}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +205,7 @@ func TestDispatch_5xxRetry(t *testing.T) {
 	svc := New(pool, zap.NewNop())
 	// fast HTTP timeout чтобы тест не висел
 	svc.HTTPClient = &http.Client{Timeout: 1 * time.Second}
-	_, _, err := svc.Create(context.Background(), uid, server.URL, []string{EventCommitIngested})
+	_, _, err := svc.Create(context.Background(), uid, server.URL, []string{EventCommitIngested}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,12 +234,58 @@ func TestDispatch_5xxRetry(t *testing.T) {
 	}
 }
 
+func TestDispatch_SlackFormat(t *testing.T) {
+	pool := setupDB(t)
+	uid := makeUser(t, pool)
+
+	var (
+		gotMu   sync.Mutex
+		gotBody []byte
+	)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMu.Lock()
+		defer gotMu.Unlock()
+		gotBody, _ = io.ReadAll(r.Body)
+		w.WriteHeader(200)
+	}))
+	defer server.Close()
+
+	svc := New(pool, zap.NewNop())
+	_, _, err := svc.Create(context.Background(), uid, server.URL, []string{EventCommitIngested}, "slack")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	svc.dispatchSync(uid, EventCommitIngested, map[string]any{
+		"sha":     "abc1234567",
+		"message": "fix bug",
+		"branch":  "main",
+	})
+
+	gotMu.Lock()
+	defer gotMu.Unlock()
+	var payload map[string]any
+	if err := json.Unmarshal(gotBody, &payload); err != nil {
+		t.Fatalf("body not JSON: %s", string(gotBody))
+	}
+	// Slack contract: верхний уровень — text + blocks, без event/data.
+	if _, ok := payload["text"]; !ok {
+		t.Error("Slack payload missing text")
+	}
+	if _, ok := payload["blocks"]; !ok {
+		t.Error("Slack payload missing blocks")
+	}
+	if _, ok := payload["event"]; ok {
+		t.Error("Slack payload should not have event field (raw shape leaked)")
+	}
+}
+
 func TestDelete_OtherUser(t *testing.T) {
 	pool := setupDB(t)
 	uid1 := makeUser(t, pool)
 	uid2 := makeUser(t, pool)
 	svc := New(pool, zap.NewNop())
-	_, hook, _ := svc.Create(context.Background(), uid1, "https://example.com/h", []string{EventCommitIngested})
+	_, hook, _ := svc.Create(context.Background(), uid1, "https://example.com/h", []string{EventCommitIngested}, "")
 	ok, err := svc.Delete(context.Background(), uid2, hook.ID)
 	if err != nil {
 		t.Fatal(err)

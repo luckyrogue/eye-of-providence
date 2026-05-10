@@ -267,6 +267,13 @@ paths:
                   items:
                     type: string
                     enum: ["commit.ingested", "report.generated"]
+                format:
+                  type: string
+                  enum: [raw, slack]
+                  default: raw
+                  description: |
+                    Payload shape: `raw` — наш {event, data, sent_at} с HMAC.
+                    `slack` — Slack Block Kit для incoming-webhook URLs.
       responses:
         "200":
           description: OK
@@ -474,6 +481,7 @@ components:
         events:
           type: array
           items: { type: string, enum: ["commit.ingested", "report.generated"] }
+        format: { type: string, enum: [raw, slack] }
         active: { type: boolean }
         last_delivery_at: { type: string, format: date-time, nullable: true }
         last_status:

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { http } from "../../../shared/api/http";
-import type { CreateWebhookRes, Webhook, WebhookEvent } from "./types";
+import type { CreateWebhookRes, Webhook, WebhookEvent, WebhookFormat } from "./types";
 
 export const webhookKeys = {
   list: ["me.webhooks"] as const,
@@ -9,9 +9,9 @@ export const webhookKeys = {
 export const fetchWebhooks = () =>
   http.get<{ webhooks: Webhook[] }>("/v1/me/webhooks/").then((r) => r.data.webhooks ?? []);
 
-export const createWebhook = (url: string, events: WebhookEvent[]) =>
+export const createWebhook = (url: string, events: WebhookEvent[], format: WebhookFormat) =>
   http
-    .post<CreateWebhookRes>("/v1/me/webhooks/", { url, events })
+    .post<CreateWebhookRes>("/v1/me/webhooks/", { url, events, format })
     .then((r) => r.data);
 
 export const deleteWebhook = (id: string) =>
@@ -23,7 +23,8 @@ export const useWebhooks = () =>
 export function useCreateWebhook() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ url, events }: { url: string; events: WebhookEvent[] }) => createWebhook(url, events),
+    mutationFn: ({ url, events, format }: { url: string; events: WebhookEvent[]; format: WebhookFormat }) =>
+      createWebhook(url, events, format),
     onSuccess: () => qc.invalidateQueries({ queryKey: webhookKeys.list }),
   });
 }

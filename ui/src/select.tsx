@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import { forwardRef, type SelectHTMLAttributes } from "react";
 import { cn } from "./cn";
 
@@ -9,17 +10,23 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, mono, className, children, ...props }, ref) => {
     const sel = (
-      <select
-        ref={ref}
-        className={cn(
-          "rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary",
-          mono && "font-mono",
-          className,
-        )}
-        {...props}
-      >
-        {children}
-      </select>
+      <div className="relative inline-block">
+        <select
+          ref={ref}
+          className={cn(
+            "appearance-none rounded-md border bg-background px-2 py-1.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary",
+            mono && "font-mono",
+            className,
+          )}
+          {...props}
+        >
+          {children}
+        </select>
+        <ChevronDown
+          aria-hidden="true"
+          className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+        />
+      </div>
     );
     if (!label) return sel;
     return (
