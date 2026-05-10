@@ -56,7 +56,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "cd ../backend && EOP_HTTP_ADDR=:8080 EOP_ENV=development EOP_INVITE_ONLY=false EOP_ENABLE_DEV_TOKEN=true EOP_ALLOWED_ORIGINS=http://localhost:4173 EOP_AUTO_MIGRATE=true EOP_JWT_SECRET=e2e_test_secret_at_least_32_chars_xx EOP_POSTGRES_DSN=postgres://eop:eop_dev@localhost:5432/eop?sslmode=disable EOP_CLICKHOUSE_DSN=clickhouse://eop:eop_dev@localhost:9000/eop EOP_REDIS_ADDR=localhost:6379 EOP_REPORTS_CRON_SEC=0 go run ./cmd/api",
+        "cd ../backend && EOP_HTTP_ADDR=:8080 EOP_ENV=development EOP_INVITE_ONLY=false EOP_ENABLE_DEV_TOKEN=true EOP_ALLOWED_ORIGINS=http://localhost:4173 EOP_AUTO_MIGRATE=true EOP_JWT_SECRET=e2e_test_secret_at_least_32_chars_xx EOP_POSTGRES_DSN=postgres://eop:eop_dev@localhost:5432/eop?sslmode=disable EOP_CLICKHOUSE_DSN=clickhouse://eop:eop_dev@localhost:9000/eop EOP_REDIS_ADDR=localhost:6379 EOP_REPORTS_CRON_SEC=0 EOP_BETA_TEAM_LIMIT=0 go run ./cmd/api",
       url: `http://localhost:${PORT_BACKEND}/healthz`,
       timeout: 120_000,
       // Reuse если backend/dashboard уже запущены (CI workflow стартует

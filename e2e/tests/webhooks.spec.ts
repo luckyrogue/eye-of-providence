@@ -18,7 +18,7 @@ test.describe("webhooks", () => {
       body: JSON.stringify({
         url: "https://webhook.test.local/receive",
         events: ["commit.ingested"],
-        format: "json",
+        format: "raw",
       }),
     });
     expect(r.secret).toMatch(/^[a-f0-9]{32,}$/);
@@ -54,7 +54,7 @@ test.describe("webhooks", () => {
         body: JSON.stringify({
           url: "not-a-url",
           events: ["commit.ingested"],
-          format: "json",
+          format: "raw",
         }),
       });
       throw new Error("expected to throw");

@@ -85,6 +85,8 @@ jobs:
           EOP_CLICKHOUSE_DSN: clickhouse://eop:eop_dev@localhost:9000/eop
           EOP_REDIS_ADDR: localhost:6379
           EOP_REPORTS_CRON_SEC: "0"
+          # 0 = без лимита; default 3 ломает teams.spec где создаём >3 команд
+          EOP_BETA_TEAM_LIMIT: "0"
         working-directory: backend
         run: |
           go run ./cmd/api > ../e2e-backend.log 2>&1 &
