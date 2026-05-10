@@ -111,6 +111,21 @@ jobs:
       needs.changes.outputs.ci == 'true'
     uses: ./.github/workflows/_agent-rust.yml
 
+  # E2E: запускаем когда backend ИЛИ frontend ИЛИ CI меняются. На main —
+  # всегда (post-merge insurance). Параллельно с docker (независимые).
+  e2e:
+    name: e2e
+    needs: [changes, backend, frontend]
+    if: |
+      always() && !cancelled() &&
+      (needs.backend.result == 'success' || needs.backend.result == 'skipped') &&
+      (needs.frontend.result == 'success' || needs.frontend.result == 'skipped') &&
+      (needs.changes.outputs.backend == 'true' ||
+       needs.changes.outputs.frontend == 'true' ||
+       needs.changes.outputs.ci == 'true' ||
+       github.ref == 'refs/heads/main')
+    uses: ./.github/workflows/_e2e.yml
+
   # Docker: на PR — build-only (load), на main — push в GHCR.
   # Запускаем только если backend+frontend+security прошли (или skipped).
   docker:

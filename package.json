@@ -10,12 +10,21 @@
     "dashboard:build": "pnpm -F @eop/dashboard build",
     "extension:dev": "pnpm -F @eop/browser-extension dev",
     "extension:build": "pnpm -F @eop/browser-extension build",
-    "lint": "pnpm -r --parallel lint || true",
+    "lint": "pnpm -r --parallel lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d",
     "infra:down": "docker compose -f infra/docker-compose.yml down",
+    "e2e:install": "pnpm -F @eop/e2e exec playwright install --with-deps chromium",
+    "e2e:test": "pnpm -F @eop/e2e test",
+    "e2e:ui": "pnpm -F @eop/e2e test:ui",
+    "e2e:report": "pnpm -F @eop/e2e report",
     "backend:ingest": "cd backend && go run ./cmd/ingest",
     "backend:auth": "cd backend && go run ./cmd/auth",
     "backend:reports": "cd backend && go run ./cmd/reports",
     "proto:gen": "cd proto && buf generate"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
   }
 }

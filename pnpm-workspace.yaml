@@ -2,5 +2,7 @@ packages:
   - "agent"
   - "browser-extension"
   - "dashboard"
+  - "e2e"
+  - "i18n"
   - "ide-vscode"
   - "ui"
