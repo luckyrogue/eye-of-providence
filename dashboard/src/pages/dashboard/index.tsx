@@ -10,6 +10,7 @@ import { formatDate, formatTime, getTz } from "../../shared/lib/tz";
 import { useRecent, useSummary, useLanguages, useHeatmap, useTrend, useIngestDemo } from "../../entities/event";
 import { useReports, useGenerateReport, type Report } from "../../entities/report";
 import { InsightsWidget } from "../../widgets/insights";
+import { InstallPWA } from "../../widgets/install-pwa";
 
 export function DashboardRoute() {
   const { t } = useTranslation("app");
@@ -49,6 +50,7 @@ export function DashboardRoute() {
         </div>
       </div>
 
+      <InstallPWA />
       <InsightsWidget />
 
       <Card className="card-hover">

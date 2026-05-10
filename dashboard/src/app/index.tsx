@@ -9,6 +9,9 @@ import "../shared/i18n"; // side-effect: инициализирует i18next д
 import { ErrorBoundary } from "./error-boundary";
 import { queryClient } from "../shared/config/query-client";
 import { router } from "./router";
+import { registerSW } from "../shared/lib/pwa";
+
+registerSW();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
