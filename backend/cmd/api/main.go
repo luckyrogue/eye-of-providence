@@ -27,6 +27,7 @@ import (
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/cache"
 	"github.com/eye-of-providence/backend/internal/config"
+	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/ingest"
 	"github.com/eye-of-providence/backend/internal/insights"
 	eoplog "github.com/eye-of-providence/backend/internal/log"
@@ -151,7 +152,7 @@ func main() {
 			return c.IP()
 		},
 		LimitReached: func(c *fiber.Ctx) error {
-			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "too many requests"})
+			return httperr.TooManyRequests(c, "rate_limited", "too many requests")
 		},
 	})
 	app.Use("/v1/auth/login", authLimiter)
@@ -173,7 +174,7 @@ func main() {
 			return "ip:" + c.IP()
 		},
 		LimitReached: func(c *fiber.Ctx) error {
-			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "too many requests"})
+			return httperr.TooManyRequests(c, "rate_limited", "too many requests")
 		},
 	}))
 

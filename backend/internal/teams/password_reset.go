@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/mailer"
 )
 
@@ -90,27 +91,27 @@ func (s Service) handleForgotPassword(c *fiber.Ctx) error {
 // На успех bumpит token_version → старые сессии становятся невалидными.
 func (s Service) handleResetPassword(c *fiber.Ctx) error {
 	if s.Pool == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "auth requires postgres"})
+		return httperr.Unavailable(c, "db_required", "auth requires postgres")
 	}
 	var req struct {
 		Token    string `json:"token"`
 		Password string `json:"password"`
 	}
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+		return httperr.BadRequest(c, "invalid_body", "invalid body")
 	}
 	if !validatePassword(req.Password) {
-		return c.Status(400).JSON(fiber.Map{"error": "password must be 8..256 chars"})
+		return httperr.BadRequest(c, "invalid_password", "password must be 8..256 chars")
 	}
 	if req.Token == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "missing token"})
+		return httperr.BadRequest(c, "missing_token", "missing token")
 	}
 
 	hash := hashResetToken(req.Token)
 	uid, err := consumeResetToken(c.Context(), s.Pool, hash)
 	if err != nil {
 		// Валидно отдаём общую формулировку — не помогаем перебирать токены.
-		return c.Status(400).JSON(fiber.Map{"error": "invalid or expired reset token"})
+		return httperr.BadRequest(c, "reset_token_invalid", "invalid or expired reset token")
 	}
 
 	newHash, err := auth.HashPassword(req.Password)

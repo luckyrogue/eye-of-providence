@@ -7,6 +7,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+
+	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
 type projectReq struct {
@@ -18,10 +20,10 @@ func (s Service) handleListProjects(c *fiber.Ctx) error {
 	uid := userID(c)
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "bad team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "bad team id")
 	}
 	if _, ok := s.teamRole(c.Context(), uid, teamID); !ok {
-		return c.Status(403).JSON(fiber.Map{"error": "not a team member"})
+		return httperr.Forbidden(c, "not_member", "not a team member")
 	}
 	rows, err := s.Pool.Query(c.Context(), `
 		SELECT id, COALESCE(name, repo_url, ''), repo_url, lang_primary, created_at
@@ -52,19 +54,19 @@ func (s Service) handleCreateProject(c *fiber.Ctx) error {
 	uid := userID(c)
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "bad team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "bad team id")
 	}
 	role, ok := s.teamRole(c.Context(), uid, teamID)
 	if !ok || (role != "owner" && role != "admin") {
-		return c.Status(403).JSON(fiber.Map{"error": "только owner/admin могут создавать проекты"})
+		return httperr.Forbidden(c, "role_insufficient", "only owner/admin can create projects")
 	}
 	var req projectReq
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+		return httperr.BadRequest(c, "invalid_body", "invalid body")
 	}
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" || len(req.Name) > maxProjectNameLen {
-		return c.Status(400).JSON(fiber.Map{"error": "name 1..200 chars"})
+		return httperr.BadRequest(c, "invalid_project_name", "name must be 1..200 chars")
 	}
 	id := uuid.New()
 	rootHash := req.RepoURL

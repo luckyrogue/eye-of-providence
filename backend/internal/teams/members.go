@@ -9,16 +9,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+
+	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
 func (s Service) handleListMembers(c *fiber.Ctx) error {
 	uid := userID(c)
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "bad team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "bad team id")
 	}
 	if _, ok := s.teamRole(c.Context(), uid, teamID); !ok {
-		return c.Status(403).JSON(fiber.Map{"error": "not a team member"})
+		return httperr.Forbidden(c, "not_member", "not a team member")
 	}
 	rows, err := s.Pool.Query(c.Context(), `
 		SELECT u.id, u.email, COALESCE(u.display_name, u.email), tm.role, tm.joined_at
@@ -60,10 +62,10 @@ func (s Service) handleTeamSummary(c *fiber.Ctx) error {
 	uid := userID(c)
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "bad team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "bad team id")
 	}
 	if _, ok := s.teamRole(c.Context(), uid, teamID); !ok {
-		return c.Status(403).JSON(fiber.Map{"error": "not a team member"})
+		return httperr.Forbidden(c, "not_member", "not a team member")
 	}
 	rows, err := s.Pool.Query(c.Context(), `
 		SELECT u.id, COALESCE(u.display_name, u.email)
@@ -125,23 +127,23 @@ func (s Service) handleUpdateMemberRole(c *fiber.Ctx) error {
 	uid := userID(c)
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "invalid team id")
 	}
 	targetUID, err := uuid.Parse(c.Params("user_id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid user id"})
+		return httperr.BadRequest(c, "invalid_user_id", "invalid user id")
 	}
 	role, ok := s.teamRole(c.Context(), uid, teamID)
 	if !ok || role != "owner" {
-		return c.Status(403).JSON(fiber.Map{"error": "только владелец может менять роли"})
+		return httperr.Forbidden(c, "owner_required", "only owner can change roles")
 	}
 	var req updateMemberRoleReq
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+		return httperr.BadRequest(c, "invalid_body", "invalid body")
 	}
 	newRole := strings.ToLower(strings.TrimSpace(req.Role))
 	if newRole != "owner" && newRole != "admin" && newRole != "member" {
-		return c.Status(400).JSON(fiber.Map{"error": "role must be owner | admin | member"})
+		return httperr.BadRequest(c, "invalid_role", "role must be owner | admin | member")
 	}
 	// Если назначаем нового owner — проверка что target не owner'ит другую команду
 	// (1-owner-per-user invariant). Super_admin обходит.
@@ -151,10 +153,7 @@ func (s Service) handleUpdateMemberRole(c *fiber.Ctx) error {
 			"SELECT count(*) FROM team_members WHERE user_id=$1 AND role='owner' AND team_id<>$2",
 			targetUID, teamID).Scan(&existingOwned)
 		if existingOwned > 0 {
-			return c.Status(409).JSON(fiber.Map{
-				"error": "пользователь уже владелец другой компании — в бете 1 owner = 1 company",
-				"code":  "owner_limit",
-			})
+			return httperr.Conflict(c, "owner_limit", "user already owns another company — beta limits to 1 owner = 1 company")
 		}
 	}
 	// Если owner понижает себя — не должен быть последним.
@@ -162,7 +161,7 @@ func (s Service) handleUpdateMemberRole(c *fiber.Ctx) error {
 		var ownerCount int
 		_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM team_members WHERE team_id=$1 AND role='owner'", teamID).Scan(&ownerCount)
 		if ownerCount <= 1 {
-			return c.Status(409).JSON(fiber.Map{"error": "нельзя понизить последнего владельца — назначь другого сначала"})
+			return httperr.Conflict(c, "last_owner", "cannot demote last owner — assign another first")
 		}
 	}
 	if _, err := s.Pool.Exec(c.Context(),
@@ -177,15 +176,15 @@ func (s Service) handleRemoveMember(c *fiber.Ctx) error {
 	uid := userID(c)
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "invalid team id")
 	}
 	targetUID, err := uuid.Parse(c.Params("user_id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid user id"})
+		return httperr.BadRequest(c, "invalid_user_id", "invalid user id")
 	}
 	role, ok := s.teamRole(c.Context(), uid, teamID)
 	if !ok || (role != "owner" && role != "admin") {
-		return c.Status(403).JSON(fiber.Map{"error": "только владелец или админ могут удалять участников"})
+		return httperr.Forbidden(c, "role_insufficient", "only owner/admin can remove members")
 	}
 	// Нельзя удалить последнего владельца (включая случай "владелец сам себя").
 	var targetRole string
@@ -196,12 +195,12 @@ func (s Service) handleRemoveMember(c *fiber.Ctx) error {
 		var ownerCount int
 		_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM team_members WHERE team_id=$1 AND role='owner'", teamID).Scan(&ownerCount)
 		if ownerCount <= 1 {
-			return c.Status(409).JSON(fiber.Map{"error": "нельзя удалить последнего владельца"})
+			return httperr.Conflict(c, "last_owner", "cannot remove last owner")
 		}
 	}
 	// Admin не может удалять owner'а.
 	if role == "admin" && targetRole == "owner" {
-		return c.Status(403).JSON(fiber.Map{"error": "админ не может удалить владельца"})
+		return httperr.Forbidden(c, "admin_cant_remove_owner", "admin cannot remove owner")
 	}
 	if _, err := s.Pool.Exec(c.Context(),
 		"DELETE FROM team_members WHERE team_id=$1 AND user_id=$2",

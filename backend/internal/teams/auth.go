@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
 // --- Public auth config (для UI) ---
@@ -35,26 +36,26 @@ type registerReq struct {
 
 func (s Service) handleRegister(c *fiber.Ctx) error {
 	if s.Pool == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "auth requires postgres"})
+		return httperr.Unavailable(c, "db_required", "auth requires postgres")
 	}
 	var req registerReq
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+		return httperr.BadRequest(c, "invalid_body", "invalid body")
 	}
 	email, ok := validateEmail(req.Email)
 	if !ok {
-		return c.Status(400).JSON(fiber.Map{"error": "valid email required"})
+		return httperr.BadRequest(c, "invalid_email", "valid email required")
 	}
 	req.Email = email
 	if !validatePassword(req.Password) {
-		return c.Status(400).JSON(fiber.Map{"error": "password 8..256 chars"})
+		return httperr.BadRequest(c, "invalid_password", "password must be 8..256 chars")
 	}
 	if req.DisplayName == "" {
 		req.DisplayName = req.Email
 	}
 	dn, ok := validateDisplayName(req.DisplayName)
 	if !ok {
-		return c.Status(400).JSON(fiber.Map{"error": "display_name 1..64 chars, no newlines"})
+		return httperr.BadRequest(c, "invalid_display_name", "display_name 1..64 chars, no newlines")
 	}
 	req.DisplayName = dn
 
@@ -66,17 +67,17 @@ func (s Service) handleRegister(c *fiber.Ctx) error {
 
 	if s.InviteOnly && !isFirstUser {
 		if req.InviteCode == nil || *req.InviteCode == "" {
-			return c.Status(403).JSON(fiber.Map{"error": "регистрация только по приглашению"})
+			return httperr.Forbidden(c, "invite_required", "registration is invite-only")
 		}
 		// Проверяем валидность ДО создания юзера
 		if _, err := s.findInvite(c.Context(), *req.InviteCode); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "приглашение невалидно или устарело"})
+			return httperr.BadRequest(c, "invite_invalid", "invite invalid or expired")
 		}
 	}
 
 	user, err := auth.CreateUser(c.Context(), s.Pool, req.Email, req.DisplayName, req.Password, nil)
 	if err != nil {
-		return c.Status(409).JSON(fiber.Map{"error": "email уже занят (или ошибка БД)"})
+		return httperr.Conflict(c, "email_taken", "email already taken (or DB error)")
 	}
 
 	if isFirstUser {
@@ -115,21 +116,21 @@ type loginReq struct {
 
 func (s Service) handleLogin(c *fiber.Ctx) error {
 	if s.Pool == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "auth requires postgres"})
+		return httperr.Unavailable(c, "db_required", "auth requires postgres")
 	}
 	var req loginReq
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+		return httperr.BadRequest(c, "invalid_body", "invalid body")
 	}
 	email, ok := validateEmail(req.Email)
 	if !ok || !validatePassword(req.Password) {
 		// Не подсказываем, что именно не так — это login surface.
-		return c.Status(401).JSON(fiber.Map{"error": "invalid email or password"})
+		return httperr.Unauthorized(c, "invalid_credentials", "invalid email or password")
 	}
 	req.Email = email
 	user, err := auth.FindUserByEmail(c.Context(), s.Pool, req.Email)
 	if err != nil || !auth.VerifyPassword(user.PasswordHash, req.Password) {
-		return c.Status(401).JSON(fiber.Map{"error": "invalid email or password"})
+		return httperr.Unauthorized(c, "invalid_credentials", "invalid email or password")
 	}
 	tv, _ := auth.TokenVersion(c.Context(), s.Pool, user.ID)
 	tok, err := auth.IssueJWT(s.JWTSecret, user.ID.String(), user.Email, "password", tv, tokenTTL)

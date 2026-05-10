@@ -7,6 +7,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+
+	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
 // WebhookDispatcher — interface для outbound delivery. Inject'ится в Service
@@ -33,11 +35,11 @@ func (s Service) handleIngestCommit(c *fiber.Ctx) error {
 	uid := userID(c)
 	var req commitReq
 	if err := c.BodyParser(&req); err != nil || req.SHA == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "sha required"})
+		return httperr.BadRequest(c, "sha_required", "sha required")
 	}
 	projID, err := uuid.Parse(req.ProjectID)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "bad project_id"})
+		return httperr.BadRequest(c, "invalid_project_id", "bad project_id")
 	}
 	// Достаём team_id проекта и проверяем что юзер в этой команде.
 	// Если team_id IS NULL (проект осиротел после удаления команды) — отказываем,
@@ -45,13 +47,13 @@ func (s Service) handleIngestCommit(c *fiber.Ctx) error {
 	var teamID *uuid.UUID
 	if err := s.Pool.QueryRow(c.Context(),
 		"SELECT team_id FROM projects WHERE id=$1", projID).Scan(&teamID); err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "project not found"})
+		return httperr.NotFound(c, "project_not_found", "project not found")
 	}
 	if teamID == nil {
-		return c.Status(410).JSON(fiber.Map{"error": "project orphaned (team deleted)"})
+		return httperr.Gone(c, "project_orphaned", "project orphaned (team deleted)")
 	}
 	if _, ok := s.teamRole(c.Context(), uid, *teamID); !ok {
-		return c.Status(403).JSON(fiber.Map{"error": "not a team member"})
+		return httperr.Forbidden(c, "not_member", "not a team member")
 	}
 	authoredAt, err := time.Parse(time.RFC3339, req.AuthoredAt)
 	if err != nil {
@@ -97,14 +99,14 @@ func (s Service) handleProjectCommits(c *fiber.Ctx) error {
 	uid := userID(c)
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "bad team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "bad team id")
 	}
 	if _, ok := s.teamRole(c.Context(), uid, teamID); !ok {
-		return c.Status(403).JSON(fiber.Map{"error": "not a team member"})
+		return httperr.Forbidden(c, "not_member", "not a team member")
 	}
 	projID, err := uuid.Parse(c.Params("project_id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "bad project id"})
+		return httperr.BadRequest(c, "invalid_project_id", "bad project id")
 	}
 	return s.queryCommits(c, `WHERE c.project_id = $1 AND c.team_id = $2 ORDER BY c.authored_at DESC LIMIT 100`, projID, teamID)
 }
@@ -113,10 +115,10 @@ func (s Service) handleTeamCommits(c *fiber.Ctx) error {
 	uid := userID(c)
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "bad team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "bad team id")
 	}
 	if _, ok := s.teamRole(c.Context(), uid, teamID); !ok {
-		return c.Status(403).JSON(fiber.Map{"error": "not a team member"})
+		return httperr.Forbidden(c, "not_member", "not a team member")
 	}
 	return s.queryCommits(c, `WHERE c.team_id = $1 ORDER BY c.authored_at DESC LIMIT 100`, teamID)
 }

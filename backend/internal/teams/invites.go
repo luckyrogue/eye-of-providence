@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/mailer"
 )
 
@@ -58,11 +59,11 @@ func (s Service) handleCreateInvite(c *fiber.Ctx) error {
 	uid := userID(c)
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "bad team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "bad team id")
 	}
 	role, ok := s.teamRole(c.Context(), uid, teamID)
 	if !ok || (role != "owner" && role != "admin") {
-		return c.Status(403).JSON(fiber.Map{"error": "только owner/admin могут создавать invites"})
+		return httperr.Forbidden(c, "role_insufficient", "only owner/admin can create invites")
 	}
 
 	// Optional payload: {"email": "..."}. Без email — link-only (как раньше).
@@ -74,7 +75,7 @@ func (s Service) handleCreateInvite(c *fiber.Ctx) error {
 	if req.Email != "" {
 		clean, ok := validateEmail(req.Email)
 		if !ok {
-			return c.Status(400).JSON(fiber.Map{"error": "невалидный email"})
+			return httperr.BadRequest(c, "invalid_email", "invalid email")
 		}
 		// Email-invite — только 1 use (линк не должен переисполь­зоваться).
 		emailPtr = &clean
@@ -142,7 +143,7 @@ func (s Service) sendInviteEmail(ctx context.Context, teamID, inviterID uuid.UUI
 func (s Service) handleInvitePreview(c *fiber.Ctx) error {
 	inv, err := s.findInvite(c.Context(), c.Params("code"))
 	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "invalid or expired invite"})
+		return httperr.NotFound(c, "invite_invalid", "invalid or expired invite")
 	}
 	var teamName string
 	_ = s.Pool.QueryRow(c.Context(), "SELECT name FROM teams WHERE id=$1", inv.TeamID).Scan(&teamName)
@@ -160,7 +161,7 @@ func (s Service) handleInviteAccept(c *fiber.Ctx) error {
 	// consumeInvite атомарно проверяет лимиты и инкрементирует use_count.
 	teamID, err := s.consumeInvite(c.Context(), c.Params("code"), uid)
 	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "invalid or expired invite"})
+		return httperr.NotFound(c, "invite_invalid", "invalid or expired invite")
 	}
 	if err := s.addMember(c.Context(), teamID, uid, "member"); err != nil {
 		return s.internalErr(c, err)

@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
@@ -33,7 +34,7 @@ func adminListPagination(c *fiber.Ctx) (limit, offset int) {
 // requireSuperAdmin — guard для super_admin handler'ов. Возвращает true если пускаем.
 func (s Service) requireSuperAdmin(c *fiber.Ctx) bool {
 	if !s.isSuperAdmin(c) {
-		_ = c.Status(403).JSON(fiber.Map{"error": "super_admin only"})
+		_ = httperr.Forbidden(c, "super_admin_required", "super_admin only")
 		return false
 	}
 	return true
@@ -43,7 +44,7 @@ func (s Service) requireSuperAdmin(c *fiber.Ctx) bool {
 
 func (s Service) handleAdminListAllTeams(c *fiber.Ctx) error {
 	if !s.isSuperAdmin(c) {
-		return c.Status(403).JSON(fiber.Map{"error": "super_admin only"})
+		return httperr.Forbidden(c, "super_admin_required", "super_admin only")
 	}
 	limit, offset := adminListPagination(c)
 	rows, err := s.Pool.Query(c.Context(), `
@@ -84,7 +85,7 @@ func (s Service) handleAdminListAllTeams(c *fiber.Ctx) error {
 
 func (s Service) handleAdminListAllUsers(c *fiber.Ctx) error {
 	if !s.isSuperAdmin(c) {
-		return c.Status(403).JSON(fiber.Map{"error": "super_admin only"})
+		return httperr.Forbidden(c, "super_admin_required", "super_admin only")
 	}
 	limit, offset := adminListPagination(c)
 	rows, err := s.Pool.Query(c.Context(), `
@@ -140,7 +141,7 @@ func (s Service) handleAdminDeleteTeam(c *fiber.Ctx) error {
 	}
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "invalid team id")
 	}
 	if _, err := s.Pool.Exec(c.Context(), "DELETE FROM teams WHERE id=$1", teamID); err != nil {
 		return s.internalErr(c, err)
@@ -154,11 +155,11 @@ func (s Service) handleAdminDeleteUser(c *fiber.Ctx) error {
 	}
 	uid, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid user id"})
+		return httperr.BadRequest(c, "invalid_user_id", "invalid user id")
 	}
 	// Запрет на самоудаление, чтобы super_admin не остался без аккаунта.
 	if uid == userID(c) {
-		return c.Status(409).JSON(fiber.Map{"error": "cannot delete yourself"})
+		return httperr.Conflict(c, "cannot_delete_self", "cannot delete yourself")
 	}
 	// Защита: не оставить систему без хотя бы одного super_admin'а.
 	var role string
@@ -168,7 +169,7 @@ func (s Service) handleAdminDeleteUser(c *fiber.Ctx) error {
 		_ = s.Pool.QueryRow(c.Context(),
 			"SELECT count(*) FROM users WHERE global_role='super_admin'").Scan(&count)
 		if count <= 1 {
-			return c.Status(409).JSON(fiber.Map{"error": "cannot delete last super_admin"})
+			return httperr.Conflict(c, "last_super_admin", "cannot delete last super_admin")
 		}
 	}
 	// ClickHouse cleanup ДО Postgres-удаления — после удаления users-row мы потеряем
@@ -198,20 +199,20 @@ func (s Service) handleAdminUpdateUser(c *fiber.Ctx) error {
 	}
 	uid, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid user id"})
+		return httperr.BadRequest(c, "invalid_user_id", "invalid user id")
 	}
 	var req adminUpdateUserReq
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+		return httperr.BadRequest(c, "invalid_body", "invalid body")
 	}
 	if req.GlobalRole != nil {
 		role := strings.ToLower(strings.TrimSpace(*req.GlobalRole))
 		if role != "user" && role != "super_admin" {
-			return c.Status(400).JSON(fiber.Map{"error": "global_role must be user | super_admin"})
+			return httperr.BadRequest(c, "invalid_global_role", "global_role must be user | super_admin")
 		}
 		// Запрет понизить себя — иначе можно ребутнуть систему без super_admin'а.
 		if uid == userID(c) && role != "super_admin" {
-			return c.Status(409).JSON(fiber.Map{"error": "cannot demote yourself"})
+			return httperr.Conflict(c, "cannot_demote_self", "cannot demote yourself")
 		}
 		if _, err := s.Pool.Exec(c.Context(),
 			"UPDATE users SET global_role=$1 WHERE id=$2", role, uid); err != nil {
@@ -224,7 +225,7 @@ func (s Service) handleAdminUpdateUser(c *fiber.Ctx) error {
 	if req.DisplayName != nil {
 		dn, ok := validateDisplayName(*req.DisplayName)
 		if !ok {
-			return c.Status(400).JSON(fiber.Map{"error": "display_name 1..64 chars, no newlines"})
+			return httperr.BadRequest(c, "invalid_display_name", "display_name 1..64 chars, no newlines")
 		}
 		if _, err := s.Pool.Exec(c.Context(),
 			"UPDATE users SET display_name=$1 WHERE id=$2", dn, uid); err != nil {
@@ -247,26 +248,26 @@ func (s Service) handleAdminAddMember(c *fiber.Ctx) error {
 	}
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "invalid team id")
 	}
 	var req adminAddMemberReq
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+		return httperr.BadRequest(c, "invalid_body", "invalid body")
 	}
 	email, ok := validateEmail(req.Email)
 	if !ok {
-		return c.Status(400).JSON(fiber.Map{"error": "valid email required"})
+		return httperr.BadRequest(c, "invalid_email", "valid email required")
 	}
 	role := strings.ToLower(strings.TrimSpace(req.Role))
 	if role == "" {
 		role = "member"
 	}
 	if role != "owner" && role != "admin" && role != "member" {
-		return c.Status(400).JSON(fiber.Map{"error": "role must be owner | admin | member"})
+		return httperr.BadRequest(c, "invalid_role", "role must be owner | admin | member")
 	}
 	user, err := auth.FindUserByEmail(c.Context(), s.Pool, email)
 	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "user with this email not found"})
+		return httperr.NotFound(c, "user_not_found", "user with this email not found")
 	}
 	// Защита 1-owner invariant: super_admin может назначить owner'а на любую команду,
 	// но не на ту, где этот юзер уже owner какой-то другой команды.
@@ -276,10 +277,7 @@ func (s Service) handleAdminAddMember(c *fiber.Ctx) error {
 			"SELECT count(*) FROM team_members WHERE user_id=$1 AND role='owner' AND team_id<>$2",
 			user.ID, teamID).Scan(&existingOwned)
 		if existingOwned > 0 {
-			return c.Status(409).JSON(fiber.Map{
-				"error": "пользователь уже владелец другой компании",
-				"code":  "owner_limit",
-			})
+			return httperr.Conflict(c, "owner_limit", "user already owns another company")
 		}
 	}
 	// UPSERT — если юзер уже member, обновим роль (вместо silent no-op).
@@ -315,11 +313,11 @@ func (s Service) handleSetSubscription(c *fiber.Ctx) error {
 	}
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "invalid team id")
 	}
 	var req setSubscriptionReq
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+		return httperr.BadRequest(c, "invalid_body", "invalid body")
 	}
 
 	// Вся валидация — ДО tx.Begin, чтобы плохой запрос не открывал idle txn slot
@@ -328,7 +326,7 @@ func (s Service) handleSetSubscription(c *fiber.Ctx) error {
 	if req.Plan != nil {
 		planNorm = strings.ToLower(strings.TrimSpace(*req.Plan))
 		if planNorm != "free" && planNorm != "pro" && planNorm != "team" && planNorm != "enterprise" {
-			return c.Status(400).JSON(fiber.Map{"error": "plan must be free | pro | team | enterprise"})
+			return httperr.BadRequest(c, "invalid_plan", "plan must be free | pro | team | enterprise")
 		}
 	}
 	var untilTS *time.Time
@@ -339,7 +337,7 @@ func (s Service) handleSetSubscription(c *fiber.Ctx) error {
 		} else {
 			ts, err := time.Parse(time.RFC3339, *req.Until)
 			if err != nil {
-				return c.Status(400).JSON(fiber.Map{"error": "until must be ISO8601 (RFC3339)"})
+				return httperr.BadRequest(c, "invalid_until", "until must be ISO8601 (RFC3339)")
 			}
 			untilTS = &ts
 		}
@@ -347,11 +345,11 @@ func (s Service) handleSetSubscription(c *fiber.Ctx) error {
 	var coversUntil *time.Time
 	if req.Payment != nil {
 		if req.Payment.AmountCents <= 0 {
-			return c.Status(400).JSON(fiber.Map{"error": "payment.amount_cents must be > 0 if payment is set"})
+			return httperr.BadRequest(c, "invalid_payment_amount", "payment.amount_cents must be > 0 if payment is set")
 		}
 		ts, err := time.Parse(time.RFC3339, req.Payment.CoversUntil)
 		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "payment.covers_until must be ISO8601"})
+			return httperr.BadRequest(c, "invalid_covers_until", "payment.covers_until must be ISO8601")
 		}
 		coversUntil = &ts
 	}
@@ -427,7 +425,7 @@ func (s Service) handleListPayments(c *fiber.Ctx) error {
 	}
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "invalid team id")
 	}
 	rows, err := s.Pool.Query(c.Context(), `
 		SELECT id, amount_cents, currency, method, note, covers_until, paid_at, recorded_by

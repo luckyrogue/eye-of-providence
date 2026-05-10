@@ -8,6 +8,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+
+	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
 type teamRow struct {
@@ -48,11 +50,11 @@ func (s Service) handleCreateTeam(c *fiber.Ctx) error {
 	uid := userID(c)
 	var req createTeamReq
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+		return httperr.BadRequest(c, "invalid_body", "invalid body")
 	}
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" || len(req.Name) > maxTeamNameLen {
-		return c.Status(400).JSON(fiber.Map{"error": "name 1..100 chars"})
+		return httperr.BadRequest(c, "invalid_team_name", "name must be 1..100 chars")
 	}
 	isSuper := s.isSuperAdmin(c)
 
@@ -76,10 +78,7 @@ func (s Service) handleCreateTeam(c *fiber.Ctx) error {
 			return s.internalErr(c, err)
 		}
 		if ownedCount > 0 {
-			return c.Status(403).JSON(fiber.Map{
-				"error": "ты уже владелец компании — в бете 1 owner = 1 company",
-				"code":  "owner_limit",
-			})
+			return httperr.Forbidden(c, "owner_limit", "already an owner — beta limits to 1 owner = 1 company")
 		}
 	}
 	// Beta-лимит: всего N команд в системе. Super_admin обходит.
@@ -89,10 +88,7 @@ func (s Service) handleCreateTeam(c *fiber.Ctx) error {
 			return s.internalErr(c, err)
 		}
 		if teamCount >= s.BetaTeamLimit {
-			return c.Status(403).JSON(fiber.Map{
-				"error": "beta full: free tier limited to " + strconv.Itoa(s.BetaTeamLimit) + " companies",
-				"code":  "beta_full",
-			})
+			return httperr.Forbidden(c, "beta_full", "beta full: free tier limited to "+strconv.Itoa(s.BetaTeamLimit)+" companies")
 		}
 	}
 
@@ -117,16 +113,16 @@ func (s Service) handleTeamDetail(c *fiber.Ctx) error {
 	uid := userID(c)
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "bad team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "bad team id")
 	}
 	role, ok := s.teamRole(c.Context(), uid, teamID)
 	if !ok {
-		return c.Status(403).JSON(fiber.Map{"error": "not a team member"})
+		return httperr.Forbidden(c, "not_member", "not a team member")
 	}
 	var name string
 	if err := s.Pool.QueryRow(c.Context(),
 		"SELECT name FROM teams WHERE id=$1", teamID).Scan(&name); err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "team not found"})
+		return httperr.NotFound(c, "team_not_found", "team not found")
 	}
 	return c.JSON(fiber.Map{"id": teamID, "name": name, "role": role})
 }
@@ -141,20 +137,20 @@ func (s Service) handleUpdateTeam(c *fiber.Ctx) error {
 	uid := userID(c)
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "invalid team id")
 	}
 	role, ok := s.teamRole(c.Context(), uid, teamID)
 	if !ok || role != "owner" {
-		return c.Status(403).JSON(fiber.Map{"error": "только владелец может изменять команду"})
+		return httperr.Forbidden(c, "owner_required", "only owner can modify team")
 	}
 	var req updateTeamReq
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid body"})
+		return httperr.BadRequest(c, "invalid_body", "invalid body")
 	}
 	if req.Name != nil {
 		name := strings.TrimSpace(*req.Name)
 		if name == "" || len(name) > maxTeamNameLen {
-			return c.Status(400).JSON(fiber.Map{"error": "name 1..100 chars"})
+			return httperr.BadRequest(c, "invalid_team_name", "name must be 1..100 chars")
 		}
 		if _, err := s.Pool.Exec(c.Context(), "UPDATE teams SET name=$1 WHERE id=$2", name, teamID); err != nil {
 			return s.internalErr(c, err)
@@ -167,11 +163,11 @@ func (s Service) handleDeleteTeam(c *fiber.Ctx) error {
 	uid := userID(c)
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid team id"})
+		return httperr.BadRequest(c, "invalid_team_id", "invalid team id")
 	}
 	role, ok := s.teamRole(c.Context(), uid, teamID)
 	if !ok || role != "owner" {
-		return c.Status(403).JSON(fiber.Map{"error": "только владелец может удалять команду"})
+		return httperr.Forbidden(c, "owner_required", "only owner can delete team")
 	}
 	// Каскад через FK ON DELETE CASCADE удалит team_members, projects, invites, commits.
 	if _, err := s.Pool.Exec(c.Context(), "DELETE FROM teams WHERE id=$1", teamID); err != nil {

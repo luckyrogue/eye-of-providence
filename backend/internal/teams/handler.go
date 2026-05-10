@@ -34,6 +34,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/mailer"
 )
 
@@ -98,7 +99,7 @@ type Service struct {
 }
 
 // internalErr — единая точка для 500-ответов. Логируем полный текст,
-// клиенту отдаём generic message + request_id для корреляции.
+// клиенту отдаём generic message + request_id для корреляции (через httperr).
 func (s Service) internalErr(c *fiber.Ctx, err error) error {
 	rid, _ := c.Locals("requestid").(string)
 	s.Logger.Error("internal error",
@@ -107,7 +108,7 @@ func (s Service) internalErr(c *fiber.Ctx, err error) error {
 		zap.String("rid", rid),
 		zap.Error(err),
 	)
-	return c.Status(500).JSON(fiber.Map{"error": "internal error", "request_id": rid})
+	return httperr.Internal(c)
 }
 
 // --- Routes ---
