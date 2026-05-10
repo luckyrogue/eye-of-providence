@@ -11,7 +11,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Button, Card, CardContent, CardDescription, CardHeader, CardTitle,
-  Input, Modal, Select, useConfirm,
+  Input, Modal, SimpleSelect, useConfirm,
 } from "@eop/ui";
 import { Copy, KeyRound, Plus, Trash2 } from "lucide-react";
 import {
@@ -101,11 +101,16 @@ export function APITokensWidget() {
             </div>
             <div>
               <label className="text-xs text-muted-foreground">{t("tokens_scope")}</label>
-              <Select value={scope} onChange={(e) => setScope(e.target.value as APIToken["scope"])} className="w-full px-3 py-2 text-sm">
-                <option value="read">{t("tokens_scope_read")}</option>
-                <option value="write:ingest">{t("tokens_scope_write_ingest")}</option>
-                <option value="admin">{t("tokens_scope_admin")}</option>
-              </Select>
+              <SimpleSelect
+                value={scope}
+                onValueChange={(v) => setScope(v as APIToken["scope"])}
+                triggerClassName="w-full"
+                options={[
+                  { value: "read", label: t("tokens_scope_read") },
+                  { value: "write:ingest", label: t("tokens_scope_write_ingest") },
+                  { value: "admin", label: t("tokens_scope_admin") },
+                ]}
+              />
             </div>
             <div>
               <label className="text-xs text-muted-foreground">{t("tokens_ttl")}</label>

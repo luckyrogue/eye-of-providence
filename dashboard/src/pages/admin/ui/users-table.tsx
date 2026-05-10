@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, Select, useConfirm } from "@eop/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, SimpleSelect, useConfirm } from "@eop/ui";
 import { Trash2 } from "lucide-react";
 import { useAdminDeleteUser, useAdminUpdateUser, type AdminUser } from "../../../entities/admin";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
@@ -69,16 +69,16 @@ export function UsersTable({ users, tz }: { users: AdminUser[]; tz: string }) {
                     <td className="py-2 px-3 font-mono text-xs">{u.email}</td>
                     <td className="py-2 px-3">{u.display_name}</td>
                     <td className="py-2 px-3">
-                      <Select
-                        mono
+                      <SimpleSelect
                         value={u.global_role}
-                        onChange={(e) => setRole(u.id, e.target.value)}
+                        onValueChange={(v) => setRole(u.id, v)}
                         disabled={update.isPending}
-                        className="px-2 py-0.5 text-xs"
-                      >
-                        <option value="user">{t("admin.users_role_user")}</option>
-                        <option value="super_admin">{t("admin.users_role_super_admin")}</option>
-                      </Select>
+                        triggerClassName="h-8 w-36 font-mono text-xs"
+                        options={[
+                          { value: "user", label: t("admin.users_role_user") },
+                          { value: "super_admin", label: t("admin.users_role_super_admin") },
+                        ]}
+                      />
                     </td>
                     <td className="py-2 px-3 text-right tabular-nums">{u.teams_count ?? 0}</td>
                     <td className="py-2 px-3 text-xs text-muted-foreground">{formatDate(u.created_at, tz)}</td>

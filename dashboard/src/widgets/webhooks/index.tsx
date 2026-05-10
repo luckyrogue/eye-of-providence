@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Button, Card, CardContent, CardDescription, CardHeader, CardTitle,
-  Input, Modal, Select, useConfirm,
+  Input, Modal, SimpleSelect, useConfirm,
 } from "@eop/ui";
 import { Copy, Plus, Trash2, Webhook as WebhookIcon } from "lucide-react";
 import {
@@ -100,14 +100,15 @@ export function WebhooksWidget() {
             </div>
             <div>
               <label className="text-xs text-muted-foreground">{t("webhooks_format")}</label>
-              <Select
+              <SimpleSelect
                 value={format}
-                onChange={(e) => setFormat(e.target.value as WebhookFormat)}
-                className="w-full px-3 py-2 text-sm"
-              >
-                <option value="raw">{t("webhooks_format_raw")}</option>
-                <option value="slack">{t("webhooks_format_slack")}</option>
-              </Select>
+                onValueChange={(v) => setFormat(v as WebhookFormat)}
+                triggerClassName="w-full"
+                options={[
+                  { value: "raw", label: t("webhooks_format_raw") },
+                  { value: "slack", label: t("webhooks_format_slack") },
+                ]}
+              />
               <p className="mt-1 text-[11px] text-muted-foreground">
                 {format === "slack" ? t("webhooks_format_slack_hint") : t("webhooks_format_raw_hint")}
               </p>

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { Button, Eyebrow, Input, Modal, Select, useConfirm } from "@eop/ui";
+import { Button, Eyebrow, Input, Modal, SimpleSelect, useConfirm } from "@eop/ui";
 import {
   useAdminPayments,
   useAdminSetSubscription,
@@ -130,12 +130,22 @@ export function SubscriptionModal({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Select label={t("app:admin.subscription_plan_label")} mono {...register("plan")} className="w-full px-3 py-2">
-            <option value="free">free</option>
-            <option value="pro">pro</option>
-            <option value="team">team</option>
-            <option value="enterprise">enterprise</option>
-          </Select>
+          <div className="space-y-1">
+            <label className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
+              {t("app:admin.subscription_plan_label")}
+            </label>
+            <SimpleSelect
+              value={plan}
+              onValueChange={(v) => setValue("plan", v as SubscriptionForm["plan"], { shouldDirty: true })}
+              triggerClassName="w-full font-mono"
+              options={[
+                { value: "free", label: "free" },
+                { value: "pro", label: "pro" },
+                { value: "team", label: "team" },
+                { value: "enterprise", label: "enterprise" },
+              ]}
+            />
+          </div>
           <div className="space-y-1">
             <label className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
               {t("app:admin.subscription_until_label")}

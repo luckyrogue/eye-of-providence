@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   Button,
   Card, CardContent, CardDescription, CardHeader, CardTitle,
-  DangerZone, Select, useConfirm,
+  DangerZone, SimpleSelect, useConfirm,
 } from "@eop/ui";
 import { Globe, Languages, Shield, Trash2, User } from "lucide-react";
 import { useProfile, useDeleteMyData, updateLocale } from "../../entities/user";
@@ -108,17 +108,12 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
           </div>
         </CardHeader>
         <CardContent>
-          <Select
+          <SimpleSelect
             value={locale}
-            onChange={(e) => changeLocale(e.target.value as Locale)}
-            className="w-full max-w-sm px-3 py-2 text-sm"
-          >
-            {SUPPORTED_LOCALES.map((code) => (
-              <option key={code} value={code}>
-                {LOCALE_LABELS[code]}
-              </option>
-            ))}
-          </Select>
+            onValueChange={(v) => changeLocale(v as Locale)}
+            triggerClassName="w-full max-w-sm"
+            options={SUPPORTED_LOCALES.map((code) => ({ value: code, label: LOCALE_LABELS[code] }))}
+          />
         </CardContent>
       </Card>
 
@@ -131,14 +126,17 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
           <CardDescription>{t("settings.timezone_lead")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Select value={tz} onChange={(e) => changeTz(e.target.value)} className="w-full max-w-sm px-3 py-2 text-sm">
-            {!UNIQUE_TIMEZONES.find((t) => t.value === tz) && (
-              <option value={tz}>{t("settings.timezone_current", { tz })}</option>
-            )}
-            {UNIQUE_TIMEZONES.map((tzo) => (
-              <option key={tzo.value} value={tzo.value}>{tzo.label}</option>
-            ))}
-          </Select>
+          <SimpleSelect
+            value={tz}
+            onValueChange={changeTz}
+            triggerClassName="w-full max-w-sm"
+            options={[
+              ...(UNIQUE_TIMEZONES.find((x) => x.value === tz)
+                ? []
+                : [{ value: tz, label: t("settings.timezone_current", { tz }) }]),
+              ...UNIQUE_TIMEZONES.map((tzo) => ({ value: tzo.value, label: tzo.label })),
+            ]}
+          />
           <p className="mt-2 text-xs text-muted-foreground">
             {t("settings.timezone_now")} <span className="font-mono">{tz}</span>
           </p>

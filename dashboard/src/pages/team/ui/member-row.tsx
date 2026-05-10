@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Avatar, Select, useConfirm } from "@eop/ui";
+import { Avatar, SimpleSelect, useConfirm } from "@eop/ui";
 import { Brain, UserMinus } from "lucide-react";
 import { useUpdateMemberRole, useRemoveMember, type MemberStat, type TeamMember } from "../../../entities/team";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
@@ -68,17 +68,17 @@ export function MemberRow({
           </div>
         )}
         {canChangeRole ? (
-          <Select
-            mono
+          <SimpleSelect
             value={member.role}
+            onValueChange={changeRole}
             disabled={busy}
-            onChange={(e) => changeRole(e.target.value)}
-            className="px-2 py-1 text-xs"
-          >
-            <option value="owner">{t("team_detail.role.owner")}</option>
-            <option value="admin">{t("team_detail.role.admin")}</option>
-            <option value="member">{t("team_detail.role.member")}</option>
-          </Select>
+            triggerClassName="h-8 w-32 font-mono text-xs"
+            options={[
+              { value: "owner", label: t("team_detail.role.owner") },
+              { value: "admin", label: t("team_detail.role.admin") },
+              { value: "member", label: t("team_detail.role.member") },
+            ]}
+          />
         ) : (
           <span className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
             {t(`team_detail.role.${member.role}` as const, { defaultValue: member.role })}

@@ -12,7 +12,18 @@ export { PageHeader } from "./page-header";
 export { Skeleton, SkeletonText, SkeletonTable } from "./skeleton";
 export { Avatar } from "./avatar";
 export { Badge, type BadgeTone } from "./badge";
-export { Select } from "./select";
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectSeparator,
+  SimpleSelect,
+  type SimpleSelectOption,
+} from "./select";
 export { ConfirmDialog, ConfirmProvider, useConfirm } from "./confirm-dialog";
 export { PromptDialog } from "./prompt-dialog";
 export { DangerZone } from "./danger-zone";
