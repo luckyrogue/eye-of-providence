@@ -24,10 +24,10 @@ func FormatComment(agg Aggregate, dashboardURL string) string {
 	}
 
 	if agg.AIPercentWeighted == nil {
-		b.WriteString(fmt.Sprintf(
+		fmt.Fprintf(&b,
 			"_%d commits found, but no AI-attribution data yet._ Install the EoP agent to track AI vs manual coding time:\n\n",
 			agg.TotalCommits,
-		))
+		)
 		b.WriteString("- macOS / Windows desktop: https://eop.rysdavletov.org/downloads\n")
 		b.WriteString("- VS Code marketplace: search \"Eye of Providence\"\n")
 		b.WriteString("- Claude Code hook: `eop-hook` (see docs)\n")
@@ -36,16 +36,16 @@ func FormatComment(agg Aggregate, dashboardURL string) string {
 
 	pct := *agg.AIPercentWeighted
 	bar := progressBar(pct)
-	b.WriteString(fmt.Sprintf("**AI-assisted: %.0f%%** %s\n\n", pct, bar))
+	fmt.Fprintf(&b, "**AI-assisted: %.0f%%** %s\n\n", pct, bar)
 
 	b.WriteString("| Metric | Value |\n")
 	b.WriteString("|---|---|\n")
-	b.WriteString(fmt.Sprintf("| Commits | %d (with attribution: %d) |\n", agg.TotalCommits, agg.WithAttribution))
-	b.WriteString(fmt.Sprintf("| Lines added | +%d |\n", agg.LinesAdded))
-	b.WriteString(fmt.Sprintf("| Lines removed | -%d |\n", agg.LinesRemoved))
+	fmt.Fprintf(&b, "| Commits | %d (with attribution: %d) |\n", agg.TotalCommits, agg.WithAttribution)
+	fmt.Fprintf(&b, "| Lines added | +%d |\n", agg.LinesAdded)
+	fmt.Fprintf(&b, "| Lines removed | -%d |\n", agg.LinesRemoved)
 
 	if dashboardURL != "" {
-		b.WriteString(fmt.Sprintf("\n[View team breakdown →](%s)\n", dashboardURL))
+		fmt.Fprintf(&b, "\n[View team breakdown →](%s)\n", dashboardURL)
 	}
 	return b.String()
 }

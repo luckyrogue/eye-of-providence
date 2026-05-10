@@ -3,5 +3,12 @@
   "hint": "Añade Eye of Providence a tu pantalla de inicio — dashboard al alcance, notificaciones próximamente.",
   "ios_hint": "En iOS",
   "install": " pulsa Share → Add to Home Screen.",
-  "dismiss": "Instalar:Ocultar"
+  "dismiss": "Instalar:Ocultar",
+  "push_title": "Notificaciones push",
+  "push_lead": "Recibe informes semanales y alertas de anomalías en tu dispositivo.",
+  "enable": "Activar",
+  "add_device": "Añadir dispositivo",
+  "disable": "Desactivar",
+  "disable_confirm": "¿Desactivar notificaciones?",
+  "permission_denied": "El navegador bloqueó las notificaciones push. Actívalas en la configuración del sitio."
 }

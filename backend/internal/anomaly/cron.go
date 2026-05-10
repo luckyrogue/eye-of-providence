@@ -16,19 +16,25 @@ type Dispatcher interface {
 	Dispatch(userID uuid.UUID, event string, payload any)
 }
 
+// PushSender — Web Push delivery (PWA). Optional, nil → push не шлётся.
+// Push дублирует Slack для retention loop'а (юзер видит OS-уровневое
+// уведомление без открытия Slack).
+type PushSender interface {
+	SendToUser(userID uuid.UUID, payload any)
+}
+
 // EventName — webhook event'а. Должен быть зарегистрирован в
 // internal/webhooks/webhooks.go validEvents для доставки.
 const EventName = "anomaly.detected"
 
 // Cron — daily anomaly checker. Раз в Interval тикает: для каждого active
-// user'а fetch'ит DailyTrend(15 days), детектит, отправляет через Dispatcher.
-//
-// Граничит с reports/cron.go (тот же активность-cycle), но live в отдельном
-// пакете чтобы избежать import cycle и cleanly tested.
+// user'а fetch'ит DailyTrend(15 days), детектит, отправляет через Dispatcher
+// + опционально через PushSender.
 type Cron struct {
 	Interval   time.Duration
 	EventStore store.EventStore
 	Webhooks   Dispatcher
+	Push       PushSender // optional
 	Logger     *zap.Logger
 	// dedup: userID+anomaly.Date+anomaly.Kind → не шлём одну и ту же аномалию
 	// дважды если cron tick'ает несколько раз в день.
@@ -90,6 +96,9 @@ func (c *Cron) tick(ctx context.Context) {
 			}
 			c.seen[key] = true
 			c.Webhooks.Dispatch(uid, EventName, a)
+			if c.Push != nil {
+				c.Push.SendToUser(uid, pushPayloadFor(a))
+			}
 			c.Logger.Info("anomaly fired",
 				zap.String("user", uidStr),
 				zap.String("kind", string(a.Kind)),
@@ -106,6 +115,74 @@ func (c *Cron) tick(ctx context.Context) {
 			delete(c.seen, key)
 		}
 	}
+}
+
+// pushPayloadFor — формирует push.Payload (но не импортируем тот pkg —
+// возвращаем generic map чтобы избежать import cycle anomaly → push). Service
+// SendToUser принимает any → JSON-marshal.
+func pushPayloadFor(a Anomaly) any {
+	titles := map[Kind]string{
+		KindAIHigh:       "AI usage spike",
+		KindAILow:        "AI usage dip",
+		KindManualHigh:   "Manual coding spike",
+		KindManualLow:    "Manual coding dip",
+		KindRefactorHigh: "Refactoring day",
+		KindActivityHigh: "Productivity spike",
+		KindActivityLow:  "Activity dropped",
+	}
+	title, ok := titles[a.Kind]
+	if !ok {
+		title = "Coding anomaly"
+	}
+	yHrs := float64(a.YesterdayMS) / 3600000
+	bHrs := float64(a.BaselineMS) / 3600000
+	return map[string]any{
+		"title": title,
+		"body":  fmtAnomalyBody(yHrs, bHrs, a.Category),
+		"url":   "/dashboard",
+		"tag":   "anomaly." + string(a.Kind), // dedupe push'ей одного типа
+	}
+}
+
+func fmtAnomalyBody(yHrs, bHrs float64, category string) string {
+	// "AI 5.2h vs 1.1h baseline" — короткий single-line под Lock-screen.
+	return formatHours(yHrs) + " vs " + formatHours(bHrs) + " baseline (" + category + ")"
+}
+
+func formatHours(h float64) string {
+	if h < 1 {
+		min := int(h*60 + 0.5)
+		return itoa(min) + "min"
+	}
+	tenths := int(h*10 + 0.5)
+	whole := tenths / 10
+	frac := tenths % 10
+	if frac == 0 {
+		return itoa(whole) + "h"
+	}
+	return itoa(whole) + "." + itoa(frac) + "h"
+}
+
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	neg := n < 0
+	if neg {
+		n = -n
+	}
+	buf := [20]byte{}
+	i := len(buf)
+	for n > 0 {
+		i--
+		buf[i] = byte('0' + n%10)
+		n /= 10
+	}
+	if neg {
+		i--
+		buf[i] = '-'
+	}
+	return string(buf[i:])
 }
 
 // splitN — лёгкий split без import strings, чтобы tests могли быть

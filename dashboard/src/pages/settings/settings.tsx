@@ -12,6 +12,7 @@ import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
 import { LOCALE_LABELS, SUPPORTED_LOCALES, LOCALE_STORAGE_KEY, type Locale } from "../../shared/i18n";
 import { APITokensWidget } from "../../widgets/api-tokens";
 import { WebhooksWidget } from "../../widgets/webhooks";
+import { PushNotificationsWidget } from "../../widgets/push-notifications";
 
 export function Settings({ onWiped }: { onWiped: () => void }) {
   const { t, i18n } = useTranslation("common");
@@ -144,6 +145,7 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
         </CardContent>
       </Card>
 
+      <PushNotificationsWidget />
       <APITokensWidget />
       <WebhooksWidget />
 

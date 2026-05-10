@@ -31,6 +31,7 @@ import (
 	eoplog "github.com/eye-of-providence/backend/internal/log"
 	"github.com/eye-of-providence/backend/internal/prcomment"
 	"github.com/eye-of-providence/backend/internal/publicapi"
+	"github.com/eye-of-providence/backend/internal/push"
 	"github.com/eye-of-providence/backend/internal/mailer"
 	"github.com/eye-of-providence/backend/internal/metrics"
 	"github.com/eye-of-providence/backend/internal/migrate"
@@ -217,6 +218,21 @@ func main() {
 		})
 	}
 
+	// Web Push (PWA notifications) — endpoints всегда зарегистрированы; если
+	// VAPID keys пусты, vapid-key handler вернёт 503 "not configured".
+	var pushSvc *push.Service
+	if pgPool != nil {
+		pushSvc = &push.Service{
+			Pool:            pgPool,
+			Logger:          log,
+			VAPIDPublicKey:  cfg.VAPIDPublicKey,
+			VAPIDPrivateKey: cfg.VAPIDPrivateKey,
+			VAPIDSubject:    cfg.VAPIDSubject,
+		}
+		push.RegisterRoutes(app, push.SvcConfig{Service: pushSvc, JWTSecret: cfg.JWTSecret})
+	}
+	_ = pushSvc // hooked в anomaly cron ниже
+
 	gemini := reports.NewGeminiClient(cfg.GeminiAPIKey, "gemini-2.5-flash")
 	reports.RegisterRoutes(app, reports.Service{
 		Store:      reportStore,
@@ -246,13 +262,20 @@ func main() {
 		log.Info("reports cron started", zap.Int("interval_sec", cfg.ReportsCronSec))
 	}
 
-	// Anomaly detection cron — daily Z-score check, доставка через webhooks.
-	// hookSvc satisfies anomaly.Dispatcher (та же Dispatch-сигнатура).
+	// Anomaly detection cron — daily Z-score check, доставка через webhooks
+	// + Web Push (если VAPID настроен). hookSvc и pushSvc оба satisfy
+	// соответствующие interface'ы через идентичную Dispatch/SendToUser
+	// сигнатуру.
 	if hookSvc != nil {
+		var pushOpt anomaly.PushSender
+		if pushSvc != nil && cfg.VAPIDPublicKey != "" {
+			pushOpt = pushSvc
+		}
 		anomalyCron := &anomaly.Cron{
 			Interval:   24 * time.Hour,
 			EventStore: eventStore,
 			Webhooks:   hookSvc,
+			Push:       pushOpt,
 			Logger:     log,
 		}
 		go func() {

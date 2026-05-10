@@ -3,5 +3,12 @@
   "hint": "Add Eye of Providence to your home screen — dashboard at a tap, plus notifications (soon).",
   "ios_hint": "On iOS",
   "install": " tap Share → Add to Home Screen.",
-  "dismiss": "Install:Dismiss"
+  "dismiss": "Install:Dismiss",
+  "push_title": "Push notifications",
+  "push_lead": "Get weekly report and anomaly alerts as native OS notifications.",
+  "enable": "Enable",
+  "add_device": "Add device",
+  "disable": "Disable",
+  "disable_confirm": "Disable notifications?",
+  "permission_denied": "Browser blocked push notifications. Enable them in site settings."
 }

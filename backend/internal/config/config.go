@@ -31,6 +31,12 @@ type Config struct {
 	ResendAPIKey    string // если пустой — Mailer = Noop (только лог, без HTTP-вызовов)
 	MailFrom        string // RFC-5322 from-address: `Eye of Providence <noreply@app.example.com>`
 	PublicURL       string // base URL дашборда для ссылок в email'ах
+	// Web Push (PWA notifications) — VAPID ECDSA P-256 keypair. Генерируется
+	// один раз через `cmd/vapid-gen`. Если public/private пусты — push
+	// endpoints возвращают 503 "push not configured".
+	VAPIDPublicKey  string
+	VAPIDPrivateKey string
+	VAPIDSubject    string // RFC 8292: "mailto:admin@..." or app URL
 }
 
 func FromEnv() Config {
@@ -56,6 +62,9 @@ func FromEnv() Config {
 		ResendAPIKey:    os.Getenv("EOP_RESEND_API_KEY"),
 		MailFrom:        getenv("EOP_MAIL_FROM", "Eye of Providence <noreply@example.com>"),
 		PublicURL:       getenv("EOP_PUBLIC_URL", "http://localhost:5173"),
+		VAPIDPublicKey:  os.Getenv("EOP_VAPID_PUBLIC_KEY"),
+		VAPIDPrivateKey: os.Getenv("EOP_VAPID_PRIVATE_KEY"),
+		VAPIDSubject:    getenv("EOP_VAPID_SUBJECT", "mailto:admin@example.com"),
 	}
 }
 
