@@ -25,6 +25,7 @@ func TestRegisterRoutes_DevTokenDisabledIsNotRouted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("app.Test failed: %v", err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404 with dev-token disabled, got %d", resp.StatusCode)
 	}
@@ -47,6 +48,7 @@ func TestRegisterRoutes_DevTokenEnabledIsRouted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("app.Test failed: %v", err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusNotFound {
 		t.Fatalf("expected dev-token route to exist when enabled, got 404")
 	}
