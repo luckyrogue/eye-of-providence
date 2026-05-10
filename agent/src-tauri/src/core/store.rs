@@ -128,4 +128,18 @@ impl LocalStore {
         let n: i64 = conn.query_row("SELECT COUNT(*) FROM event_buffer", [], |r| r.get(0))?;
         Ok(n)
     }
+
+    /// gc — удаляет события старше `older_than_secs` секунд. Защита от
+    /// бесконечного роста SQLite если backend недоступен длительное время
+    /// (offline > week → ~360k events × 5s polling = пара GB локально).
+    /// Возвращает количество удалённых строк.
+    pub fn gc(&self, older_than_secs: i64) -> Result<usize> {
+        let conn = self.conn.lock().unwrap();
+        let cutoff = chrono::Utc::now().timestamp() - older_than_secs;
+        let n = conn.execute(
+            "DELETE FROM event_buffer WHERE created_at < ?1",
+            params![cutoff],
+        )?;
+        Ok(n)
+    }
 }

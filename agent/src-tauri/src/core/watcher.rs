@@ -1,5 +1,6 @@
 // Watcher loop: каждые 5 сек спрашивает PlatformWatcher, пишет focus events в LocalStore.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -7,11 +8,27 @@ use super::event::{Category, Event};
 use super::store::LocalStore;
 use crate::platform::PlatformWatcher;
 
+/// PauseFlag — общий флаг для всего агента: tray-кнопка "Pause tracking" поднимает
+/// его, watcher и ingest pump читают и приостанавливают работу. Atomic — потому что
+/// читается из разных tokio-задач без локов.
+#[derive(Clone, Default)]
+pub struct PauseFlag(pub Arc<AtomicBool>);
+
+impl PauseFlag {
+    pub fn paused(&self) -> bool {
+        self.0.load(Ordering::Relaxed)
+    }
+    pub fn set(&self, v: bool) {
+        self.0.store(v, Ordering::Relaxed);
+    }
+}
+
 pub fn spawn(
     store: Arc<LocalStore>,
     watcher: Arc<dyn PlatformWatcher>,
     poll_interval: Duration,
     idle_threshold_secs: u32,
+    pause: PauseFlag,
 ) -> tauri::async_runtime::JoinHandle<()> {
     tauri::async_runtime::spawn(async move {
         let mut last_app: Option<String> = None;
@@ -19,6 +36,14 @@ pub fn spawn(
 
         loop {
             tokio::time::sleep(poll_interval).await;
+            if pause.paused() {
+                // Финализируем текущий focus, дальше тихо ждём resume.
+                if let Some(app) = last_app.take() {
+                    flush_focus(&store, &app, accumulated_ms);
+                    accumulated_ms = 0;
+                }
+                continue;
+            }
 
             let idle = watcher.idle_seconds();
             let current = watcher.current_app();

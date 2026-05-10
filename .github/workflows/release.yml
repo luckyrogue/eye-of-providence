@@ -1,0 +1,162 @@
+# Release pipeline — собирает агенты под все платформы, прикрепляет к GH Release.
+#
+# Trigger:
+#   - tag push v0.x.y (semver) → automatic
+#   - workflow_dispatch с input version → manual (для тестов)
+#
+# Что собираем:
+#   - macOS Tauri .dmg (universal: x86_64 + aarch64)
+#   - Windows Tauri .msi
+#   - Linux Tauri .AppImage
+#   - VS Code .vsix
+#   - Browser extension .zip (Chrome) + signed .xpi для Firefox (если cert настроен)
+#
+# Code-signing/notarization — в отдельных secrets (см. SECURITY.md):
+#   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
+#   APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID — для notarytool.
+#   WINDOWS_CERTIFICATE, WINDOWS_CERTIFICATE_PASSWORD — для signtool.
+#   Если secrets пусты — Tauri build делает unsigned binary (warning при первом
+#   запуске, но работает локально для dogfooding).
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Tag for manual release (e.g. v0.0.1-test)"
+        required: true
+        type: string
+
+permissions:
+  contents: write # для создания GH Release + загрузки assets
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # --- Tauri agent: matrix per OS ---
+  tauri:
+    name: tauri / ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            args: "--target aarch64-apple-darwin"
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            args: "--target x86_64-apple-darwin"
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            args: ""
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            args: ""
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: agent/src-tauri
+
+      # Linux — Tauri зависит от webkit2gtk + libsoup3
+      - if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build Tauri (signed if secrets set)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          # macOS code-signing + notarization
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows code-signing
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        with:
+          projectPath: agent
+          args: ${{ matrix.args }}
+          tagName: ${{ github.ref_name || inputs.version }}
+          releaseName: "Eye of Providence ${{ github.ref_name || inputs.version }}"
+          releaseDraft: true
+          prerelease: false
+
+  # --- VS Code .vsix ---
+  vscode:
+    name: vscode / vsix
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F eop-vscode compile
+      - name: Package .vsix
+        working-directory: ide-vscode
+        run: |
+          npm i -g @vscode/vsce
+          vsce package --no-dependencies -o eop-vscode.vsix
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name || inputs.version }}
+          draft: true
+          files: ide-vscode/eop-vscode.vsix
+
+  # --- Browser extension .zip (Chrome Web Store / unsigned distribution) ---
+  browser-ext:
+    name: browser-ext / zip
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @eop/browser-extension build
+      - name: Package zip
+        working-directory: browser-extension
+        run: |
+          cd dist && zip -r ../eop-browser-extension.zip .
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name || inputs.version }}
+          draft: true
+          files: browser-extension/eop-browser-extension.zip

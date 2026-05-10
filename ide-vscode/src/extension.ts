@@ -86,6 +86,10 @@ function flushFocus() {
 
 function onChange(e: vscode.TextDocumentChangeEvent) {
   if (e.document.uri.scheme !== "file") return;
+  // Multi-window dedup: VS Code broadcastит onDidChangeTextDocument во все
+  // окна, где открыт документ. Считает событие только окно, у которого OS-фокус
+  // (изменения user'а пришли через keyboard в одном конкретном окне).
+  if (!vscode.window.state.focused) return;
   const lang = e.document.languageId;
   const threshold = getPasteThreshold();
 
@@ -149,6 +153,13 @@ function addToBucket(
 }
 
 async function flushAll(verbose: boolean) {
+  // Multi-window dedup для periodic flush: только focused окно делает
+  // network-call. Если фокус потерян (например, юзер ушёл в браузер) —
+  // ждём, пока фокус вернётся, потом всё ещё накопленное в buckets улетит.
+  // Manual flush (verbose=true) от пользователя — не блокируем focus-check.
+  if (!verbose && !vscode.window.state.focused) {
+    return;
+  }
   if (buckets.size === 0) {
     if (verbose) vscode.window.showInformationMessage("Eye of Providence: nothing to flush");
     return;

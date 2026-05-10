@@ -13,12 +13,13 @@ use crate::core::ingest::{Ingest, IngestConfig};
 use crate::core::local_api;
 use crate::core::preflight::{self, CheckResult, PreflightInput};
 use crate::core::store::LocalStore;
-use crate::core::watcher;
+use crate::core::watcher::{self, PauseFlag};
 
 struct AgentState {
     store: Arc<LocalStore>,
     data_dir: std::path::PathBuf,
     local_api_port: u16,
+    pause: PauseFlag,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -35,6 +36,8 @@ pub fn run() {
             pending_count,
             check_accessibility,
             preflight_run,
+            set_paused,
+            is_paused,
         ])
         .setup(|app| {
             // Tray
@@ -53,7 +56,10 @@ pub fn run() {
                         }
                     }
                     "pause" => {
-                        tracing::info!("pause tracking (todo: actual toggle)");
+                        let st = app.state::<AgentState>();
+                        let new_state = !st.pause.paused();
+                        st.pause.set(new_state);
+                        tracing::info!(paused = new_state, "tray pause toggle");
                     }
                     "quit" => app.exit(0),
                     _ => {}
@@ -70,10 +76,12 @@ pub fn run() {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(7373);
+            let pause = PauseFlag::default();
             app.manage(AgentState {
                 store: store.clone(),
                 data_dir: data_dir.clone(),
                 local_api_port,
+                pause: pause.clone(),
             });
 
             // Preflight на старте — пишем в лог, дальше UI запросит сам через команду.
@@ -127,7 +135,29 @@ pub fn run() {
 
             // Watcher loop — каждые 5с опрашивает PlatformWatcher.
             let platform = platform::build();
-            watcher::spawn(store.clone(), platform, Duration::from_secs(5), 90);
+            watcher::spawn(
+                store.clone(),
+                platform,
+                Duration::from_secs(5),
+                90,
+                pause.clone(),
+            );
+
+            // GC loop — раз в час чистим события старше 7 дней. Защита от
+            // бесконечного роста SQLite при долгом offline.
+            let gc_store = store.clone();
+            tauri::async_runtime::spawn(async move {
+                let interval = Duration::from_secs(3600);
+                let max_age_secs: i64 = 7 * 24 * 3600;
+                loop {
+                    tokio::time::sleep(interval).await;
+                    match gc_store.gc(max_age_secs) {
+                        Ok(0) => {}
+                        Ok(n) => tracing::info!(deleted = n, "store gc — события старше 7d"),
+                        Err(err) => tracing::warn!(error = %err, "store gc failed"),
+                    }
+                }
+            });
 
             // Ingest pump (только если есть конфиг).
             if let Ok(base_url) = std::env::var("EOP_BACKEND_URL") {
@@ -178,6 +208,19 @@ fn check_accessibility() -> bool {
     {
         true
     }
+}
+
+/// set_paused — UI или tray ставит на паузу/возобновляет трекинг.
+#[tauri::command]
+fn set_paused(paused: bool, state: tauri::State<'_, AgentState>) {
+    state.pause.set(paused);
+    tracing::info!(paused, "tracking pause via UI");
+}
+
+/// is_paused — UI читает текущее состояние при mount.
+#[tauri::command]
+fn is_paused(state: tauri::State<'_, AgentState>) -> bool {
+    state.pause.paused()
 }
 
 /// Запустить preflight по требованию UI (Onboarding screen).

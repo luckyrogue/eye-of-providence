@@ -1,4 +1,6 @@
 // Backend client. Token и backend URL живут в chrome.storage.local.
+// ingest() возвращает success-flag — caller сам решает что делать с failed batch'ем
+// (re-queue в persistent storage для retry).
 
 const DEFAULT_BACKEND = "https://eop.rysdavletov.org/api";
 
@@ -35,11 +37,19 @@ export async function fetchDevToken(backend = DEFAULT_BACKEND): Promise<string> 
   return data.token;
 }
 
-export async function ingest(events: EventPayload[]): Promise<void> {
+export type IngestResult =
+  | { kind: "ok" }
+  | { kind: "no-token" } // не настроено — не retry
+  | { kind: "client-error"; status: number } // 4xx, кроме 401/429 — drop, batch битый
+  | { kind: "retry-later" }; // 5xx, network, 401, 429
+
+// ingest — отправляет batch. Возвращает результат: caller на retry-later должен
+// сложить batch в persistent retry queue и попробовать позже.
+export async function ingest(events: EventPayload[]): Promise<IngestResult> {
   const { token, backend } = await getConfig();
   if (!token) {
     console.debug("[eop] no token, skipping ingest of", events.length, "events");
-    return;
+    return { kind: "no-token" };
   }
   try {
     const res = await fetch(`${backend}/v1/ingest`, {
@@ -47,10 +57,21 @@ export async function ingest(events: EventPayload[]): Promise<void> {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ events }),
     });
-    if (!res.ok) {
-      console.warn("[eop] ingest failed", res.status);
+    if (res.ok) return { kind: "ok" };
+
+    // 401 — токен истёк / отозван. retry-later чтобы юзер мог обновить токен.
+    // 429 — rate limit. retry-later.
+    // 5xx — server-side. retry-later.
+    if (res.status === 401 || res.status === 429 || res.status >= 500) {
+      console.warn("[eop] ingest retry-later", res.status);
+      return { kind: "retry-later" };
     }
+    // 4xx (400, 413, и т.п.) — данные битые, retry бесполезен. Дроп.
+    console.warn("[eop] ingest client-error, dropping batch", res.status);
+    return { kind: "client-error", status: res.status };
   } catch (err) {
-    console.warn("[eop] ingest error", err);
+    // Network error — retry.
+    console.warn("[eop] ingest network error", err);
+    return { kind: "retry-later" };
   }
 }
