@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Tabs, TabsList, TabsTrigger } from "@eop/ui";
 import { Onboarding } from "./Onboarding";
 
 type Tab = "status" | "setup";
@@ -44,20 +44,12 @@ export default function App() {
             <h1 className="text-2xl font-semibold tracking-tight">Eye of Providence</h1>
             <p className="text-sm text-muted-foreground">desktop agent</p>
           </div>
-          <nav className="flex gap-2 text-sm">
-            <button
-              onClick={() => setTab("status")}
-              className={`rounded-md px-3 py-1 ${tab === "status" ? "bg-secondary" : "text-muted-foreground"}`}
-            >
-              Status
-            </button>
-            <button
-              onClick={() => setTab("setup")}
-              className={`rounded-md px-3 py-1 ${tab === "setup" ? "bg-secondary" : "text-muted-foreground"}`}
-            >
-              Setup{hasIssues ? " ●" : ""}
-            </button>
-          </nav>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+            <TabsList>
+              <TabsTrigger value="status">Status</TabsTrigger>
+              <TabsTrigger value="setup">Setup{hasIssues ? " ●" : ""}</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </header>
 
         {tab === "setup" ? (

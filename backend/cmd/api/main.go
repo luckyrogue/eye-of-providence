@@ -25,6 +25,7 @@ import (
 	"github.com/eye-of-providence/backend/internal/analytics"
 	"github.com/eye-of-providence/backend/internal/anomaly"
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/cache"
 	"github.com/eye-of-providence/backend/internal/config"
 	"github.com/eye-of-providence/backend/internal/ingest"
 	"github.com/eye-of-providence/backend/internal/insights"
@@ -81,6 +82,22 @@ func main() {
 
 	eventStore := chooseEventStore(cfg, log)
 	defer eventStore.Close()
+
+	// Cache layer — оборачиваем CH-store в Redis-cached decorator если Redis
+	// reachable. На failure (Redis down) — продолжаем без cache (degraded
+	// performance, но functional).
+	if cfg.RedisAddr != "" {
+		cacheCtx, ccancel := context.WithTimeout(rootCtx, 3*time.Second)
+		c, err := cache.New(cacheCtx, cfg.RedisAddr)
+		ccancel()
+		if err != nil {
+			log.Warn("cache: redis unreachable, continuing without cache", zap.Error(err))
+		} else {
+			log.Info("cache: redis ready, wrapping event store")
+			eventStore = store.NewCached(eventStore, c, log)
+			defer c.Close()
+		}
+	}
 
 	reportStore := chooseReportStore(log, pgPool)
 

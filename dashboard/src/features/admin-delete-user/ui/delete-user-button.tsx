@@ -1,9 +1,8 @@
 import { useTranslation } from "react-i18next";
-import { useConfirm } from "@eop/ui";
+import { IconButton, useConfirm } from "@eop/ui";
 import { Trash2 } from "lucide-react";
 import { useAdminDeleteUser } from "../../../entities/admin";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-import { IconButton } from "../../../shared/ui/icon-button";
 
 export function DeleteUserButton({ userID, email }: { userID: string; email: string }) {
   const { t } = useTranslation("app");

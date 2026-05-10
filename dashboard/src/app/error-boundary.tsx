@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Button } from "@eop/ui";
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };
@@ -34,21 +35,17 @@ export class ErrorBoundary extends Component<Props, State> {
               {this.state.error.message}
             </pre>
             <div className="flex gap-2">
-              <button
-                onClick={() => location.reload()}
-                className="rounded-md bg-primary text-primary-foreground px-3 py-1.5 text-sm"
-              >
-                Обновить
-              </button>
-              <button
+              <Button size="sm" onClick={() => location.reload()}>Обновить</Button>
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => {
                   this.reset();
                   location.assign("/");
                 }}
-                className="rounded-md border px-3 py-1.5 text-sm"
               >
                 На главную
-              </button>
+              </Button>
             </div>
           </div>
         </div>

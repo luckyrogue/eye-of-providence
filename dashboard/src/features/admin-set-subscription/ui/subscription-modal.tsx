@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { Button, Eyebrow, Input, Modal, SimpleSelect, useConfirm } from "@eop/ui";
+import { Button, Dialog, DialogContent, Eyebrow, Input, SimpleSelect, useConfirm } from "@eop/ui";
 import {
   useAdminPayments,
   useAdminSetSubscription,
@@ -100,7 +100,8 @@ export function SubscriptionModal({
   const recordPayment = watch("recordPayment");
 
   return (
-    <Modal open={!!team} onClose={onClose}>
+    <Dialog open={!!team} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
       <form onSubmit={handleSubmit(onSave)} className="p-6 space-y-5">
         <div>
           <Eyebrow>{t("app:admin.subscription_eyebrow")}</Eyebrow>
@@ -136,24 +137,30 @@ export function SubscriptionModal({
             />
             <div className="flex gap-1.5 pt-1">
               {[1, 3, 6, 12].map((m) => (
-                <button
+                <Button
                   key={m}
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => quickExtend(m)}
-                  className="text-[11px] font-mono text-muted-foreground hover:text-foreground"
+                  className="text-[11px] font-mono text-muted-foreground hover:text-foreground h-auto px-1.5 py-0.5"
                 >
                   +{m === 12 ? "1y" : `${m}m`}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
         </div>
 
-        <Input
-          label={t("app:admin.subscription_note_label")}
-          placeholder={t("app:admin.subscription_note_placeholder")}
-          {...register("note")}
-        />
+        <div className="space-y-1">
+          <label className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
+            {t("app:admin.subscription_note_label")}
+          </label>
+          <Input
+            placeholder={t("app:admin.subscription_note_placeholder")}
+            {...register("note")}
+          />
+        </div>
 
         {plan !== "free" && (
           <SubscriptionPaymentFields register={register} enabled={recordPayment} />
@@ -181,6 +188,7 @@ export function SubscriptionModal({
 
         <SubscriptionPaymentsList payments={payments.data ?? []} tz={tz} />
       </form>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 }

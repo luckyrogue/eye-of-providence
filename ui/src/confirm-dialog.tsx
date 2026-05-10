@@ -1,12 +1,24 @@
-import { useState, type ReactNode } from "react";
-import { Button } from "./button";
-import { Modal } from "./modal";
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./alert-dialog";
+import { buttonVariants } from "./button";
+import { cn } from "./cn";
 
-// ConfirmDialog — модальная замена `confirm()` и `prompt()` для confirm-by-typing.
+// ConfirmDialog — модальная замена `confirm()` поверх shadcn AlertDialog.
 // Поддерживает два режима:
-// - simple: просто кнопка confirm/cancel
+// - simple: confirm/cancel
 // - typeToConfirm: юзер должен ввести строку чтобы кнопка стала active —
 //   для destructive-операций ("Введи название чтобы удалить").
+//
+// Используем AlertDialog (а не Dialog) — даёт role="alertdialog" для скрин-ридеров.
 
 export function ConfirmDialog({
   open,
@@ -40,16 +52,20 @@ export function ConfirmDialog({
     setTyped("");
   }
 
-  function handleClose() {
-    setTyped("");
-    onClose();
+  function handleOpenChange(o: boolean) {
+    if (!o) {
+      setTyped("");
+      onClose();
+    }
   }
 
   return (
-    <Modal open={open} onClose={handleClose} className="max-w-md">
-      <div className="p-6 space-y-4">
-        <h3 className="font-display text-xl tracking-tight">{title}</h3>
-        {description && <div className="text-sm text-muted-foreground">{description}</div>}
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          {description && <AlertDialogDescription>{description}</AlertDialogDescription>}
+        </AlertDialogHeader>
         {typeToConfirm && (
           <div className="space-y-1">
             <label className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
@@ -63,20 +79,18 @@ export function ConfirmDialog({
             />
           </div>
         )}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={handleClose} disabled={busy}>
-            {cancelText}
-          </Button>
-          <Button
-            variant={destructive ? "destructive" : "default"}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={busy}>{cancelText}</AlertDialogCancel>
+          <AlertDialogAction
             onClick={handleConfirm}
             disabled={busy || !canConfirm}
+            className={cn(destructive && buttonVariants({ variant: "destructive" }))}
           >
             {busy ? "..." : confirmText}
-          </Button>
-        </div>
-      </div>
-    </Modal>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -84,7 +98,6 @@ export function ConfirmDialog({
 // Использование:
 //   const confirm = useConfirm();
 //   if (await confirm({ title: "Удалить?", destructive: true })) { ... }
-import { createContext, useContext, useCallback, useRef } from "react";
 
 type ConfirmFn = (opts: Omit<Parameters<typeof ConfirmDialog>[0], "open" | "onClose" | "onConfirm" | "busy">) => Promise<boolean>;
 

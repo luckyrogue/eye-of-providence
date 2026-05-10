@@ -6,7 +6,7 @@
 // (display-mode: standalone).
 
 import { useTranslation } from "react-i18next";
-import { Button, Card, CardContent } from "@eop/ui";
+import { Button, Card, CardContent, IconButton } from "@eop/ui";
 import { Download, X } from "lucide-react";
 import { useInstallPrompt } from "../../../shared/lib/pwa";
 
@@ -32,14 +32,9 @@ export function InstallPWA() {
             </Button>
           )}
         </div>
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label={t("dismiss")}
-          className="text-muted-foreground hover:text-foreground transition-colors p-1"
-        >
+        <IconButton title={t("dismiss")} onClick={dismiss}>
           <X className="h-4 w-4" />
-        </button>
+        </IconButton>
       </CardContent>
     </Card>
   );

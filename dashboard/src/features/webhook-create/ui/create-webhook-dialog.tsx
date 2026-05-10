@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Input, Modal, SimpleSelect } from "@eop/ui";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  SecretField,
+  SimpleSelect,
+} from "@eop/ui";
 import {
   ALL_WEBHOOK_EVENTS,
   useCreateWebhook,
@@ -8,7 +18,6 @@ import {
   type WebhookFormat,
 } from "../../../entities/webhook";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-import { SecretField } from "../../../shared/ui/secret-field";
 
 export function CreateWebhookDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation("developer");
@@ -44,9 +53,11 @@ export function CreateWebhookDialog({ open, onClose }: { open: boolean; onClose:
 
   return (
     <>
-      <Modal open={open && !secret} onClose={close} className="max-w-md">
-        <div className="p-6 space-y-4">
-          <h3 className="font-display text-lg">{t("webhooks_create")}</h3>
+      <Dialog open={open && !secret} onOpenChange={(o) => !o && close()}>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader>
+            <DialogTitle>{t("webhooks_create")}</DialogTitle>
+          </DialogHeader>
           <div className="space-y-3">
             <div>
               <label className="text-xs text-muted-foreground">{t("webhooks_url")}</label>
@@ -88,7 +99,7 @@ export function CreateWebhookDialog({ open, onClose }: { open: boolean; onClose:
               </div>
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <DialogFooter>
             <Button variant="ghost" size="sm" onClick={close}>
               {t("tokens_close")}
             </Button>
@@ -99,20 +110,28 @@ export function CreateWebhookDialog({ open, onClose }: { open: boolean; onClose:
             >
               {t("webhooks_create")}
             </Button>
-          </div>
-        </div>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <Modal open={!!secret} onClose={close} className="max-w-lg">
-        <div className="p-6 space-y-4">
-          <h3 className="font-display text-lg">{t("webhooks_secret_title")}</h3>
+      <Dialog open={!!secret} onOpenChange={(o) => !o && close()}>
+        <DialogContent className="max-w-lg p-6">
+          <DialogHeader>
+            <DialogTitle>{t("webhooks_secret_title")}</DialogTitle>
+          </DialogHeader>
           <p className="text-sm text-muted-foreground">{t("webhooks_secret_lead")}</p>
-          {secret && <SecretField value={secret} />}
-          <div className="flex justify-end pt-2">
+          {secret && (
+            <SecretField
+              value={secret}
+              copyLabel={t("tokens_copy")}
+              copiedLabel={t("tokens_copied")}
+            />
+          )}
+          <DialogFooter>
             <Button size="sm" onClick={close}>{t("tokens_close")}</Button>
-          </div>
-        </div>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

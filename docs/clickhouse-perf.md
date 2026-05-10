@@ -84,13 +84,39 @@ real prod scale).
 не залочил background merges. На billions-rows tables — лучше manual chunked
 backfill (по дням / week ranges).
 
-## Future optimization
+## Phase 2: Redis cache (внутри store/cached.go)
 
-Если 30M events/день — ещё рассмотреть:
-- **Daily aggregate table** (events_daily_agg) поверх hourly: `INSERT INTO
-  events_daily_agg SELECT toDate(bucket_ts), ...` для queries с `days=30+`.
-  Дополнительная редукция ~24×.
-- **Per-team aggregate** для team-summary queries (сейчас идёт через
-  AggregateByCategoryBulk над users в команде).
+`CachedEventStore` — decorator поверх EventStore, оборачивает CH-store если
+Redis available (`cfg.RedisAddr` reachable). Per-method TTL'ы:
+
+| Method | TTL | Why |
+|---|---|---|
+| `AggregateByCategory` | 10m | Insights / dashboard summary |
+| `AggregateByCategoryBulk` | 5m | Team summary (multi-user, чаще меняется) |
+| `LanguageBreakdown` | 10m | Languages widget, slow-changing |
+| `DailyTrend` | 5m | Trend chart, active dashboards refresh |
+| `Heatmap` | 10m | Heatmap widget, slow-changing |
+
+Cache key scheme: `eop:cache:{prefix}:{userID}:{params}` — например
+`eop:cache:agg:abc-123:1234567890`. Bulk variant использует sorted comma-
+separated user list для key stability.
+
+Pass-through (NOT cached): `Insert`, `ListRecent` (always-fresh), `ActiveUserIDs`
+(admin), `DeleteUserData` (invalidates user's cached entries via SCAN).
+
+Failure handling:
+- Redis unreachable на startup → continuing without cache (logged)
+- Redis fails mid-request → SET errors logged, GET returns miss (read
+  fallthrough к inner store)
+- 8/8 unit-тестов: hit/miss, per-user/since/tz keys, bulk sort stability,
+  delete invalidation, broken-cache fallthrough
+
+## Phase 3 (future): partitioning + projections
+
+Если 30M+ events/день — ещё рассмотреть:
+- **ClickHouse partitioning** по `customer_id` (или region) для multi-tenant
+  isolation + per-tenant retention policies.
 - **Projections on events_hourly_agg** для альтернативных sort orders (е.г.
   `ORDER BY (file_lang, bucket_ts)` для cross-user lang stats).
+- **Per-team aggregate** для team-summary queries (сейчас идёт через
+  AggregateByCategoryBulk над users в команде).

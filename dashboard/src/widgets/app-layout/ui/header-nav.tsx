@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
+import { Button, IconButton } from "@eop/ui";
 import { Activity, Eye, LogOut, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import { NavItem } from "./nav-item";
 
@@ -35,21 +36,21 @@ export function HeaderNav({ isSuperAdmin, onLogout }: { isSuperAdmin: boolean; o
             </NavItem>
           )}
           <span className="mx-2 h-5 w-px bg-border" />
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onLogout}
-            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-muted-foreground hover:bg-secondary"
+            className="text-muted-foreground hover:bg-secondary"
           >
-            <LogOut className="h-4 w-4" /> {t("actions.logout")}
-          </button>
+            <LogOut className="h-4 w-4 mr-1.5" /> {t("actions.logout")}
+          </Button>
         </nav>
 
-        <button
-          onClick={onLogout}
-          aria-label={t("actions.logout")}
-          className="md:hidden flex items-center justify-center h-11 w-11 rounded-md text-muted-foreground hover:bg-secondary active:bg-secondary/70 transition-colors"
-        >
-          <LogOut className="h-5 w-5" />
-        </button>
+        <div className="md:hidden">
+          <IconButton title={t("actions.logout")} onClick={onLogout}>
+            <LogOut className="h-5 w-5" />
+          </IconButton>
+        </div>
       </div>
     </header>
   );

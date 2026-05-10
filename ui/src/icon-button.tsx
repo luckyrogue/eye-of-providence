@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "@eop/ui";
+import { cn } from "./cn";
 
 // Generic иконочная кнопка. `title` обязателен — он же используется как
 // aria-label, чтобы скрин-ридер озвучивал назначение (иначе кнопка читается

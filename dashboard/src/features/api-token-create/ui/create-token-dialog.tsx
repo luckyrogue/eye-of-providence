@@ -1,9 +1,18 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Input, Modal, SimpleSelect } from "@eop/ui";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  SecretField,
+  SimpleSelect,
+} from "@eop/ui";
 import { useCreateToken, type APIToken } from "../../../entities/user";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-import { SecretField } from "../../../shared/ui/secret-field";
 
 // CreateTokenDialog — модалка с двумя стадиями: форма → отображение plaintext
 // secret'а ровно один раз. Plaintext доступен ТОЛЬКО на момент создания
@@ -38,9 +47,11 @@ export function CreateTokenDialog({ open, onClose }: { open: boolean; onClose: (
 
   return (
     <>
-      <Modal open={open && !secret} onClose={close} className="max-w-md">
-        <div className="p-6 space-y-4">
-          <h3 className="font-display text-lg">{t("tokens_create")}</h3>
+      <Dialog open={open && !secret} onOpenChange={(o) => !o && close()}>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader>
+            <DialogTitle>{t("tokens_create")}</DialogTitle>
+          </DialogHeader>
           <div className="space-y-3">
             <div>
               <label className="text-xs text-muted-foreground">{t("tokens_name")}</label>
@@ -75,26 +86,34 @@ export function CreateTokenDialog({ open, onClose }: { open: boolean; onClose: (
               />
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <DialogFooter>
             <Button variant="ghost" size="sm" onClick={close}>
               {t("tokens_close")}
             </Button>
             <Button size="sm" onClick={submit} disabled={!name.trim() || create.isPending}>
               {t("tokens_create")}
             </Button>
-          </div>
-        </div>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <Modal open={!!secret} onClose={close} className="max-w-lg">
-        <div className="p-6 space-y-4">
-          <h3 className="font-display text-lg">{t("tokens_show_warning")}</h3>
-          {secret && <SecretField value={secret} />}
-          <div className="flex justify-end pt-2">
+      <Dialog open={!!secret} onOpenChange={(o) => !o && close()}>
+        <DialogContent className="max-w-lg p-6">
+          <DialogHeader>
+            <DialogTitle>{t("tokens_show_warning")}</DialogTitle>
+          </DialogHeader>
+          {secret && (
+            <SecretField
+              value={secret}
+              copyLabel={t("tokens_copy")}
+              copiedLabel={t("tokens_copied")}
+            />
+          )}
+          <DialogFooter>
             <Button size="sm" onClick={close}>{t("tokens_close")}</Button>
-          </div>
-        </div>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
