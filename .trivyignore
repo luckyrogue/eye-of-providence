@@ -28,3 +28,22 @@ CVE-2026-30836
 #   - grpc/authz package не loaded в нашем code path
 # Watch: каddy upstream нужно bump grpc-go → 1.79.3+.
 CVE-2026-33186
+
+# === Tauri agent transitive deps (Cargo.lock fs scan) ===
+
+# GHSA-wrw7-89jp-8q8g — glib 0.18.5 → fixed в 0.20.0.
+# Vulnerability: GVariant deserialization can be tricked into infinite loop /
+# excessive memory allocation на crafted GVariant input.
+# Not exploitable у нас:
+#   - glib приходит транзитивно через webkit2gtk@2.0.2 → gtk@0.18 → gdk@0.18
+#     (Linux-only Tauri build path); macOS/Windows builds НЕ используют glib
+#     (там WKWebView / WebView2)
+#   - GVariant input — internal IPC между webkit процессами в Tauri Linux
+#     deployment. Не attacker-controlled (web content sandbox'ится через
+#     WebKit's site-isolation; не доходит до GVariant API)
+#   - Bump до glib@0.20 заблокирован gtk-rs ecosystem 0.18 (webkit2gtk@2.0.2
+#     pinned); требует major upgrade всего gtk/wry/gdk stack — отдельный
+#     sprint
+# Watch: tauri-rs 2.x roadmap обещает gtk-rs 0.20 в каком-то релизе; remove
+# entry когда наша Cargo.lock pickup'ит обновлённую gtk-rs.
+GHSA-wrw7-89jp-8q8g
