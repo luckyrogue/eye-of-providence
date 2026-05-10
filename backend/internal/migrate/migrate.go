@@ -93,15 +93,24 @@ func toPgx5DSN(dsn string) string {
 // ensureCHMigrationsEngine — добавляет `x-migrations-table-engine=MergeTree`
 // в CH DSN если не задан. Нужно для CH Cloud Shared databases (default
 // TinyLog запрещён). MergeTree в Cloud автоматически реплицируется.
+//
+// Также включает `x-multi-statement=true` чтобы migration .sql могла
+// содержать несколько statement'ов через `;` (CREATE TABLE + CREATE
+// MATERIALIZED VIEW + INSERT в одном файле).
 func ensureCHMigrationsEngine(dsn string) string {
-	if strings.Contains(dsn, "x-migrations-table-engine=") {
-		return dsn
+	addParam := func(s, key, value string) string {
+		if strings.Contains(s, key+"=") {
+			return s
+		}
+		sep := "?"
+		if strings.Contains(s, "?") {
+			sep = "&"
+		}
+		return s + sep + key + "=" + value
 	}
-	sep := "?"
-	if strings.Contains(dsn, "?") {
-		sep = "&"
-	}
-	return dsn + sep + "x-migrations-table-engine=MergeTree"
+	dsn = addParam(dsn, "x-migrations-table-engine", "MergeTree")
+	dsn = addParam(dsn, "x-multi-statement", "true")
+	return dsn
 }
 
 // RunPostgres — auto-migrate on API startup. No-op if dsn пустой.

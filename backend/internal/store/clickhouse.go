@@ -128,10 +128,13 @@ func (s *ClickHouseStore) AggregateByCategory(ctx context.Context, userID string
 	if err != nil {
 		return nil, err
 	}
+	// Чтение из events_hourly_agg (materialized view target); raw events
+	// table сохранена для ListRecent. SummingMergeTree держит partial rows
+	// до background merge'а — sum() даёт корректный результат всегда.
 	rows, err := s.conn.Query(ctx, `
 		SELECT category, sum(duration_ms)
-		FROM events
-		WHERE user_id = ? AND ts >= ?
+		FROM events_hourly_agg
+		WHERE user_id = ? AND bucket_ts >= ?
 		GROUP BY category
 	`, uid, since)
 	if err != nil {
@@ -172,8 +175,8 @@ func (s *ClickHouseStore) AggregateByCategoryBulk(ctx context.Context, userIDs [
 	}
 	rows, err := s.conn.Query(ctx, `
 		SELECT user_id, category, sum(duration_ms)
-		FROM events
-		WHERE user_id IN (?) AND ts >= ?
+		FROM events_hourly_agg
+		WHERE user_id IN (?) AND bucket_ts >= ?
 		GROUP BY user_id, category
 	`, uids, since)
 	if err != nil {
@@ -205,12 +208,12 @@ func (s *ClickHouseStore) Heatmap(ctx context.Context, userID string, since time
 		tz = "UTC"
 	}
 	rows, err := s.conn.Query(ctx, `
-		SELECT toDayOfWeek(toTimeZone(ts, ?)) AS dow,
-		       toHour(toTimeZone(ts, ?)) AS hour,
+		SELECT toDayOfWeek(toTimeZone(bucket_ts, ?)) AS dow,
+		       toHour(toTimeZone(bucket_ts, ?)) AS hour,
 		       category,
 		       sum(duration_ms) AS ms
-		FROM events
-		WHERE user_id = ? AND ts >= ?
+		FROM events_hourly_agg
+		WHERE user_id = ? AND bucket_ts >= ?
 		GROUP BY dow, hour, category
 	`, tz, tz, uid, since)
 	if err != nil {
@@ -240,8 +243,8 @@ func (s *ClickHouseStore) LanguageBreakdown(ctx context.Context, userID string, 
 	}
 	rows, err := s.conn.Query(ctx, `
 		SELECT file_lang, category, sum(chars_in), sum(duration_ms)
-		FROM events
-		WHERE user_id = ? AND ts >= ? AND file_lang != ''
+		FROM events_hourly_agg
+		WHERE user_id = ? AND bucket_ts >= ? AND file_lang != ''
 		GROUP BY file_lang, category
 	`, uid, since)
 	if err != nil {
@@ -262,7 +265,7 @@ func (s *ClickHouseStore) LanguageBreakdown(ctx context.Context, userID string, 
 
 func (s *ClickHouseStore) ActiveUserIDs(ctx context.Context, since time.Time) ([]string, error) {
 	rows, err := s.conn.Query(ctx, `
-		SELECT DISTINCT user_id FROM events WHERE ts >= ?
+		SELECT DISTINCT user_id FROM events_hourly_agg WHERE bucket_ts >= ?
 	`, since)
 	if err != nil {
 		return nil, err
@@ -289,9 +292,9 @@ func (s *ClickHouseStore) DailyTrend(ctx context.Context, userID string, since t
 		tz = "UTC"
 	}
 	rows, err := s.conn.Query(ctx, `
-		SELECT toDate(toTimeZone(ts, ?)) AS d, category, sum(chars_in), sum(duration_ms)
-		FROM events
-		WHERE user_id = ? AND ts >= ?
+		SELECT toDate(toTimeZone(bucket_ts, ?)) AS d, category, sum(chars_in), sum(duration_ms)
+		FROM events_hourly_agg
+		WHERE user_id = ? AND bucket_ts >= ?
 		GROUP BY d, category
 		ORDER BY d, category
 	`, tz, uid, since)
