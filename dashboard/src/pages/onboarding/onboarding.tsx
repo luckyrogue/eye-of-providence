@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import { Eyebrow, Stepper } from "@eop/ui";
-import { createInvite, createTeam } from "../../entities/team";
+import { createInvite, createTeam, teamsKeys } from "../../entities/team";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
 import { CompanyStep } from "./ui/company-step";
 import { InstallStep } from "./ui/install-step";
@@ -31,6 +32,7 @@ export function Onboarding({
   const [inviteEmailSent, setInviteEmailSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const runToast = useMutationToast();
+  const qc = useQueryClient();
 
   const stepDefs = [
     { key: "company", label: t("onboarding:steps.company") },
@@ -51,6 +53,10 @@ export function Onboarding({
     if (r) {
       setTeamID(r.id);
       localStorage.setItem("eop_team", r.id);
+      // Invalidate teams cache: AppLayout читает useTeams() для решения "редиректить
+      // ли на /onboarding из-за пустых команд". Без invalidation остаётся stale empty.
+      qc.invalidateQueries({ queryKey: teamsKeys.list });
+      qc.invalidateQueries({ queryKey: teamsKeys.beta });
       setStep("install");
     }
   }
