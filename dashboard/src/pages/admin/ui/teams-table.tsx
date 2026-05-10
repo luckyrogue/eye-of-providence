@@ -1,13 +1,13 @@
 import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, PlanBadge, useConfirm } from "@eop/ui";
-import { CreditCard, Trash2, UserPlus } from "lucide-react";
-import { useAdminDeleteTeam, type AdminTeam, type AdminUser } from "../../../entities/admin";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, PlanBadge } from "@eop/ui";
+import { CreditCard, UserPlus } from "lucide-react";
+import type { AdminTeam, AdminUser } from "../../../entities/admin";
+import { AddMemberRow } from "../../../features/admin-add-team-member";
+import { DeleteTeamButton } from "../../../features/admin-delete-team";
+import { SubscriptionModal } from "../../../features/admin-set-subscription";
 import { formatDate } from "../../../shared/lib/tz";
-import { IconButton } from "./icon-button";
-import { AddMemberRow } from "./add-member-row";
-import { SubscriptionModal } from "./subscription-modal";
+import { IconButton } from "../../../shared/ui/icon-button";
 
 export function TeamsTable({
   teams,
@@ -19,36 +19,8 @@ export function TeamsTable({
   tz: string;
 }) {
   const { t } = useTranslation(["app", "common"]);
-  const deleteTeam = useAdminDeleteTeam();
-  const runToast = useMutationToast();
-  const confirm = useConfirm();
   const [adding, setAdding] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"member" | "admin" | "owner">("member");
   const [subTeam, setSubTeam] = useState<AdminTeam | null>(null);
-
-  async function destroy(teamID: string, name: string) {
-    const ok = await confirm({
-      title: t("admin.team_delete_confirm_title", { name, defaultValue: `Delete "${name}"?` }),
-      description: t("admin.team_delete_confirm_lead", {
-        defaultValue: "Will erase all members, projects, invites, commit history. Irreversible.",
-      }),
-      typeToConfirm: name,
-      destructive: true,
-      confirmText: t("team_detail.settings_danger_confirm"),
-    });
-    if (!ok) return;
-    await runToast(deleteTeam.mutateAsync(teamID), {
-      success: t("admin.team_deleted", { defaultValue: "Team deleted" }),
-      error: t("admin.team_delete_failed", { defaultValue: "Failed to delete" }),
-    });
-  }
-
-  function resetAdd() {
-    setAdding(null);
-    setEmail("");
-    setRole("member");
-  }
 
   return (
     <>
@@ -58,7 +30,10 @@ export function TeamsTable({
             {t("admin.all_teams_title", { defaultValue: "All companies" })}
           </CardTitle>
           <CardDescription>
-            {t("admin.all_teams_lead", { count: teams.length, defaultValue: `${teams.length} companies in the system` })}
+            {t("admin.all_teams_lead", {
+              count: teams.length,
+              defaultValue: `${teams.length} companies in the system`,
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -110,13 +85,7 @@ export function TeamsTable({
                             >
                               <UserPlus className="h-3.5 w-3.5" />
                             </IconButton>
-                            <IconButton
-                              danger
-                              title={t("admin.team_delete_btn", { defaultValue: "Delete company" })}
-                              onClick={() => destroy(team.id, team.name)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </IconButton>
+                            <DeleteTeamButton teamID={team.id} name={team.name} />
                           </div>
                         </td>
                       </tr>
@@ -124,12 +93,8 @@ export function TeamsTable({
                         <AddMemberRow
                           teamID={team.id}
                           users={users}
-                          email={email}
-                          setEmail={setEmail}
-                          role={role}
-                          setRole={setRole}
-                          onCancel={resetAdd}
-                          onAdded={resetAdd}
+                          onCancel={() => setAdding(null)}
+                          onAdded={() => setAdding(null)}
                         />
                       )}
                     </Fragment>

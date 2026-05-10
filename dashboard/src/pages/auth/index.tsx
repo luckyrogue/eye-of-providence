@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Auth } from "./auth";
-import { useAuth } from "../../shared/hooks/use-auth";
+import { useAuth } from "../../entities/session";
 import { readRedirect } from "../../shared/lib/redirect";
 
 export function AuthRoute({ mode }: { mode: "login" | "register" }) {

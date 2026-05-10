@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Skeleton } from "@eop/ui";
 import { Onboarding } from "./onboarding";
-import { useAuth } from "../../shared/hooks/use-auth";
+import { useAuth } from "../../entities/session";
 import { useTeams } from "../../entities/team";
 import { useDismissOnboarding, useOnboardingStatus } from "../../entities/user";
 import { buildLoginURL } from "../../shared/lib/redirect";

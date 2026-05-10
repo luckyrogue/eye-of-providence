@@ -4,28 +4,24 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Eyebrow, Stepper } from "@eop/ui";
 import { createInvite, createTeam, teamsKeys } from "../../entities/team";
 import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
+import { SESSION_KEYS } from "../../shared/lib/session-storage";
+import { ONBOARDING_STEPS, type OnboardingStep } from "./model/steps";
 import { CompanyStep } from "./ui/company-step";
+import { EventStep } from "./ui/event-step";
 import { InstallStep } from "./ui/install-step";
 import { InviteStep } from "./ui/invite-step";
-import { EventStep } from "./ui/event-step";
-
-// Порядок шагов из ROADMAP.md:
-//   создай команду → установи агент → пригласи людей → первое событие.
-// install идёт ПЕРЕД invite, потому что приглашённые поставят агент сами,
-// а владелец должен убедиться что у него самого всё работает первым.
-type Step = "company" | "install" | "invite" | "event";
 
 export function Onboarding({
   initialStep,
   initialTeamID,
   onFinish,
 }: {
-  initialStep: Step;
+  initialStep: OnboardingStep;
   initialTeamID: string | null;
   onFinish: () => void;
 }) {
   const { t } = useTranslation(["onboarding", "errors"]);
-  const [step, setStep] = useState<Step>(initialStep);
+  const [step, setStep] = useState<OnboardingStep>(initialStep);
   const [teamID, setTeamID] = useState<string | null>(initialTeamID);
   const [teamName, setTeamName] = useState("");
   const [inviteCode, setInviteCode] = useState<string | null>(null);
@@ -34,12 +30,7 @@ export function Onboarding({
   const runToast = useMutationToast();
   const qc = useQueryClient();
 
-  const stepDefs = [
-    { key: "company", label: t("onboarding:steps.company") },
-    { key: "install", label: t("onboarding:steps.install") },
-    { key: "invite", label: t("onboarding:steps.invite") },
-    { key: "event", label: t("onboarding:steps.event") },
-  ];
+  const stepDefs = ONBOARDING_STEPS.map((s) => ({ key: s.id, label: t(s.i18nKey) }));
 
   const inviteUrl = inviteCode ? `${window.location.origin}/?invite=${inviteCode}` : "";
 
@@ -52,7 +43,7 @@ export function Onboarding({
     setBusy(false);
     if (r) {
       setTeamID(r.id);
-      localStorage.setItem("eop_team", r.id);
+      localStorage.setItem(SESSION_KEYS.team, r.id);
       // Invalidate teams cache: AppLayout читает useTeams() для решения "редиректить
       // ли на /onboarding из-за пустых команд". Без invalidation остаётся stale empty.
       qc.invalidateQueries({ queryKey: teamsKeys.list });

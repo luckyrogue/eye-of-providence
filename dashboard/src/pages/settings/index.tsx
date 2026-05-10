@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Settings } from "./settings";
-import { useAuth } from "../../shared/hooks/use-auth";
+import { useAuth } from "../../entities/session";
 
 export function SettingsRoute() {
   const { logout } = useAuth();

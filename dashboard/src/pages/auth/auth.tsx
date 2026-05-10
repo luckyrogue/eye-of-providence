@@ -1,50 +1,21 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Trans, useTranslation } from "react-i18next";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from "@eop/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Eye, Lock } from "lucide-react";
-import {
-  register as apiRegister,
-  login as apiLogin,
-  fetchAuthConfig,
-  type AuthResponse,
-  type AuthConfig,
-} from "../../entities/user";
-import { previewInvite, type InvitePreview } from "../../entities/team";
-import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
-import { loginSchema, registerSchema } from "../../shared/lib/schemas";
+import { fetchAuthConfig, type AuthConfig, type AuthResponse } from "../../entities/user";
+import { LoginForm } from "../../features/auth-login";
+import { RegisterForm } from "../../features/auth-register";
+import { useInvitePreview } from "./model/use-invite-preview";
 
 type Mode = "login" | "register";
 
-// Union-type: login form НЕ имеет displayName, register — имеет. Resolver
-// переключается per-mode внизу.
-interface FormValues {
-  email: string;
-  password: string;
-  displayName: string;
-}
-
+// Auth — page-shell: заголовок, переключатель режима, invite-preview,
+// invite-only баннер. Сами формы — features/auth-login/register.
 export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
-  const { t } = useTranslation(["auth", "errors"]);
+  const { t } = useTranslation("auth");
   const [mode, setMode] = useState<Mode>("login");
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
-  const [invitePreview, setInvitePreview] = useState<InvitePreview | null>(null);
-  const runToast = useMutationToast();
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    defaultValues: { email: "", password: "", displayName: "" },
-    resolver: zodResolver(mode === "register" ? registerSchema : loginSchema),
-  });
-
-  // tr — переводит i18n-key из zod errors. Schemas хранят key'и (не строки),
-  // чтобы один schema работал во всех 4 локалях.
-  const tr = (msg?: string) => (msg ? t(msg as never) : undefined);
+  const { inviteCode, invitePreview } = useInvitePreview();
 
   useEffect(() => {
     fetchAuthConfig().then((cfg) => {
@@ -53,28 +24,10 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
     });
   }, []);
 
+  // Если есть invite — форсируем register.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("invite");
-    if (code) {
-      setInviteCode(code);
-      setMode("register");
-      previewInvite(code).then(setInvitePreview).catch(() => {
-        // Тостим, состояние не блочим — юзер всё равно может попробовать.
-      });
-    }
-  }, []);
-
-  async function onSubmit(values: FormValues) {
-    const promise =
-      mode === "register"
-        ? apiRegister(values.email, values.password, values.displayName, inviteCode || undefined)
-        : apiLogin(values.email, values.password);
-    const r = await runToast(promise, {
-      error: mode === "register" ? t("errors:register_failed") : t("errors:auth_failed"),
-    });
-    if (r) onAuth(r);
-  }
+    if (inviteCode) setMode("register");
+  }, [inviteCode]);
 
   const registrationBlocked = !!(
     authConfig?.invite_only && !authConfig.is_first_user && !inviteCode
@@ -86,11 +39,11 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
       <div className="mx-auto max-w-xl pt-8 sm:pt-12 pb-6 text-center reveal">
         <span className="eyebrow">Eye of Providence</span>
         <h1 className="display-head text-3xl sm:text-4xl md:text-5xl lg:text-6xl mt-3">
-          <em>{mode === "register" ? t("auth:title_register") : t("auth:title_login")}.</em>
+          <em>{mode === "register" ? t("title_register") : t("title_login")}.</em>
           <br />
-          {t("auth:subtitle")}
+          {t("subtitle")}
         </h1>
-        <p className="mt-4 text-sm text-muted-foreground max-w-sm mx-auto">{t("auth:lead")}</p>
+        <p className="mt-4 text-sm text-muted-foreground max-w-sm mx-auto">{t("lead")}</p>
       </div>
       <Card className="max-w-md mx-auto card-hover reveal reveal-delay-2">
         <CardHeader>
@@ -98,7 +51,7 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
             <Eye className="h-6 w-6 text-primary-foreground" />
           </div>
           <CardTitle className="text-center font-display tracking-tight">
-            {mode === "register" ? t("auth:card_register") : t("auth:card_login")}
+            {mode === "register" ? t("card_register") : t("card_login")}
           </CardTitle>
           <CardDescription className="text-center">
             {invitePreview ? (
@@ -108,11 +61,11 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
                 components={{ strong: <strong /> }}
               />
             ) : authConfig?.is_first_user ? (
-              t("auth:desc_first_user")
+              t("desc_first_user")
             ) : mode === "register" ? (
-              t("auth:desc_register")
+              t("desc_register")
             ) : (
-              t("auth:desc_login")
+              t("desc_login")
             )}
           </CardDescription>
         </CardHeader>
@@ -123,7 +76,7 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
                 <Lock className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
                 <div className="space-y-1">
                   <div className="font-medium text-amber-700 dark:text-amber-300">
-                    {t("auth:invite_only_title")}
+                    {t("invite_only_title")}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     <Trans
@@ -138,51 +91,16 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-            {mode === "register" && !registrationBlocked && (
-              <Input
-                label={t("auth:field_name")}
-                placeholder={t("auth:field_name_placeholder")}
-                autoComplete="name"
-                error={tr(errors.displayName?.message)}
-                {...register("displayName")}
-              />
-            )}
-            {(!registrationBlocked || mode === "login") && (
-              <>
-                <Input
-                  label={t("auth:field_email")}
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  error={tr(errors.email?.message)}
-                  {...register("email")}
-                />
-                <Input
-                  label={
-                    mode === "register" ? t("auth:field_password_register") : t("auth:field_password")
-                  }
-                  type="password"
-                  autoComplete={mode === "register" ? "new-password" : "current-password"}
-                  error={tr(errors.password?.message)}
-                  {...register("password")}
-                />
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                  {isSubmitting
-                    ? "..."
-                    : mode === "register"
-                      ? t("auth:submit_register")
-                      : t("auth:submit_login")}
-                </Button>
-              </>
-            )}
-          </form>
+          {!registrationBlocked && mode === "register" && (
+            <RegisterForm inviteCode={inviteCode} onSuccess={onAuth} />
+          )}
+          {mode === "login" && <LoginForm onSuccess={onAuth} />}
 
           <button
             onClick={() => setMode(mode === "register" ? "login" : "register")}
             className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            {mode === "register" ? t("auth:switch_to_login") : t("auth:switch_to_register")}
+            {mode === "register" ? t("switch_to_login") : t("switch_to_register")}
           </button>
 
           {mode === "login" && (
@@ -190,7 +108,7 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
               href="/forgot-password"
               className="block w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              {t("auth:forgot_password")}
+              {t("forgot_password")}
             </a>
           )}
         </CardContent>

@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { http } from "../../../shared/api/http";
-import type { CreateWebhookRes, Webhook, WebhookEvent, WebhookFormat } from "./types";
+import type { WebhookEvent, WebhookFormat } from "./types";
+import type { CreateWebhookRes, ListWebhooksRes } from "./res";
 
 export const webhookKeys = {
   list: ["me.webhooks"] as const,
 };
 
 export const fetchWebhooks = () =>
-  http.get<{ webhooks: Webhook[] }>("/v1/me/webhooks/").then((r) => r.data.webhooks ?? []);
+  http.get<ListWebhooksRes>("/v1/me/webhooks/").then((r) => r.data.webhooks ?? []);
 
 export const createWebhook = (url: string, events: WebhookEvent[], format: WebhookFormat) =>
   http

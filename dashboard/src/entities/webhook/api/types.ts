@@ -6,7 +6,7 @@ export type WebhookEvent = "commit.ingested" | "report.generated";
 // slack — Slack Block Kit-совместимый payload (для Slack incoming-webhook).
 export type WebhookFormat = "raw" | "slack";
 
-type Webhook = {
+export type Webhook = {
   id: string;
   url: string;
   events: WebhookEvent[];
@@ -16,10 +16,3 @@ type Webhook = {
   last_status?: number | null;
   created_at: string;
 };
-
-type CreateWebhookRes = {
-  secret: string; // plaintext, ровно один раз
-  webhook: Webhook;
-};
-
-export type { Webhook, CreateWebhookRes };

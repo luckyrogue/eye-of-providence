@@ -1,64 +1,54 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, PromptDialog } from "@eop/ui";
-import { Plus, Users } from "lucide-react";
-import { useTeams, useBetaInfo, useCreateTeam } from "../../entities/team";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
+import { Users } from "lucide-react";
+import { useBetaInfo, useTeams } from "../../entities/team";
 import { useMe } from "../../entities/user";
-import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
+import { CreateTeamButton } from "../../features/team-create";
+import { SESSION_KEYS } from "../../shared/lib/session-storage";
 import { BetaBanner } from "../../widgets/beta-banner";
 import { TeamDetail } from "./ui/team-detail";
 
 export function Teams({ tz }: { tz: string }) {
-  const { t } = useTranslation(["app", "errors", "common"]);
+  const { t } = useTranslation("app");
   const teams = useTeams();
   const beta = useBetaInfo();
   const me = useMe();
-  const createTeam = useCreateTeam();
-  const runToast = useMutationToast();
-  const [activeTeam, setActiveTeam] = useState<string | null>(localStorage.getItem("eop_team"));
-  const [newTeamOpen, setNewTeamOpen] = useState(false);
+  const [activeTeam, setActiveTeam] = useState<string | null>(localStorage.getItem(SESSION_KEYS.team));
 
   const teamsList = teams.data ?? [];
   // 1 owner = 1 company invariant (бэкенд тоже ловит, но UI не должен звать
   // запрос, обречённый на 403). Super_admin исключён.
   const isSuperAdmin = me.data?.global_role === "super_admin";
-  const alreadyOwner = teamsList.some((t) => t.role === "owner");
+  const alreadyOwner = teamsList.some((tt) => tt.role === "owner");
   const ownerBlocked = alreadyOwner && !isSuperAdmin;
 
   // Sync activeTeam с реальным списком: если ничего не выбрано, или выбранная
-  // команда удалена — переключиться на первую доступную. Делаем в effect, не
-  // в render, чтобы не нарушать React contract.
+  // команда удалена — переключиться на первую доступную.
   useEffect(() => {
     if (teamsList.length === 0) return;
-    const exists = activeTeam && teamsList.some((t) => t.id === activeTeam);
+    const exists = activeTeam && teamsList.some((tt) => tt.id === activeTeam);
     if (!exists) {
       const first = teamsList[0].id;
       setActiveTeam(first);
-      localStorage.setItem("eop_team", first);
+      localStorage.setItem(SESSION_KEYS.team, first);
     }
   }, [teamsList, activeTeam]);
 
   function switchTeam(id: string) {
     setActiveTeam(id);
-    localStorage.setItem("eop_team", id);
-  }
-
-  async function onCreateTeam(name: string) {
-    try {
-      const r = await createTeam.mutateAsync(name);
-      runToast(Promise.resolve(r), { success: t("app:teams.created_toast") });
-      switchTeam(r.id);
-      setNewTeamOpen(false);
-    } catch (e) {
-      const code = (e as { code?: string }).code;
-      const errorMsg = code ? t(`errors:${code}`, { defaultValue: t("errors:generic") }) : t("errors:generic");
-      runToast(Promise.reject(new Error(errorMsg)), { error: t("errors:team_create_failed") });
-    }
+    localStorage.setItem(SESSION_KEYS.team, id);
   }
 
   const slotsLeft = beta.data?.slots_remaining ?? -1;
   const betaFull = !!(beta.data?.limit && beta.data.limit > 0 && slotsLeft === 0);
-  const activeT = teamsList.find((t) => t.id === activeTeam);
+  const activeT = teamsList.find((tt) => tt.id === activeTeam);
+
+  const blockedReason = ownerBlocked
+    ? t("teams.blocked_owner")
+    : betaFull
+      ? t("teams.blocked_beta_full")
+      : undefined;
 
   return (
     <div className="space-y-4">
@@ -68,29 +58,20 @@ export function Teams({ tz }: { tz: string }) {
         <CardHeader className="flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="min-w-0 flex-1">
             <CardTitle className="flex items-center gap-2 font-display tracking-tight">
-              <Users className="h-4 w-4 shrink-0" /> {t("app:teams.title")}
+              <Users className="h-4 w-4 shrink-0" /> {t("teams.title")}
             </CardTitle>
-            <CardDescription>{t("app:teams.lead")}</CardDescription>
+            <CardDescription>{t("teams.lead")}</CardDescription>
           </div>
-          <Button
-            size="sm"
-            onClick={() => setNewTeamOpen(true)}
-            disabled={createTeam.isPending || betaFull || ownerBlocked}
+          <CreateTeamButton
+            disabled={betaFull || ownerBlocked}
+            blockedReason={blockedReason}
+            onCreated={switchTeam}
             className="w-full sm:w-auto shrink-0"
-            title={
-              ownerBlocked
-                ? t("app:teams.blocked_owner")
-                : betaFull
-                  ? t("app:teams.blocked_beta_full")
-                  : undefined
-            }
-          >
-            <Plus className="h-3.5 w-3.5 mr-1" /> {t("app:teams.new_team")}
-          </Button>
+          />
         </CardHeader>
         <CardContent>
           {teamsList.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("app:teams.empty")}</p>
+            <p className="text-sm text-muted-foreground">{t("teams.empty")}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {teamsList.map((team) => (
@@ -106,7 +87,7 @@ export function Teams({ tz }: { tz: string }) {
                 >
                   {team.name}
                   <span className="ml-2 font-mono text-[10px] uppercase tracking-widest2 opacity-70">
-                    {t(`app:team_detail.role.${team.role}` as const, { defaultValue: team.role })}
+                    {t(`team_detail.role.${team.role}` as const, { defaultValue: team.role })}
                   </span>
                 </button>
               ))}
@@ -118,18 +99,6 @@ export function Teams({ tz }: { tz: string }) {
       {activeTeam && activeT && (
         <TeamDetail key={activeTeam} teamID={activeTeam} team={activeT} tz={tz} />
       )}
-
-      <PromptDialog
-        open={newTeamOpen}
-        title={t("app:teams.create_dialog_title")}
-        description={t("app:teams.create_dialog_lead")}
-        label={t("app:teams.create_dialog_label")}
-        placeholder={t("app:teams.create_dialog_placeholder")}
-        confirmText={t("common:actions.create")}
-        busy={createTeam.isPending}
-        onClose={() => setNewTeamOpen(false)}
-        onConfirm={onCreateTeam}
-      />
     </div>
   );
 }

@@ -1,29 +1,17 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Button,
-  Card, CardContent, CardDescription, CardHeader, CardTitle,
-  DangerZone, SimpleSelect, useConfirm,
-} from "@eop/ui";
-import { Globe, Languages, Shield, Trash2, User } from "lucide-react";
-import { useProfile, useDeleteMyData, updateLocale } from "../../entities/user";
-import { getTz, setTz, UNIQUE_TIMEZONES } from "../../shared/lib/tz";
-import { useMutationToast } from "../../shared/hooks/use-mutation-toast";
-import { LOCALE_LABELS, SUPPORTED_LOCALES, LOCALE_STORAGE_KEY, type Locale } from "../../shared/i18n";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, DangerZone } from "@eop/ui";
+import { Globe, Languages, Shield, User } from "lucide-react";
+import { useProfile } from "../../entities/user";
+import { DeleteMyDataButton } from "../../features/delete-my-data";
+import { LocaleSelect } from "../../features/locale-switch";
+import { TimezoneSelect } from "../../features/timezone-switch";
 import { APITokensWidget } from "../../widgets/api-tokens";
-import { WebhooksWidget } from "../../widgets/webhooks";
 import { PushNotificationsWidget } from "../../widgets/push-notifications";
+import { WebhooksWidget } from "../../widgets/webhooks";
 
 export function Settings({ onWiped }: { onWiped: () => void }) {
-  const { t, i18n } = useTranslation("common");
+  const { t } = useTranslation("common");
   const profile = useProfile();
-  const deleteData = useDeleteMyData();
-  const runToast = useMutationToast();
-  const confirm = useConfirm();
-  const [tz, setLocalTz] = useState(getTz());
-  const [locale, setLocaleState] = useState<Locale>(
-    (i18n.resolvedLanguage as Locale) || "ru",
-  );
 
   const privacyItems = [
     t("settings.privacy_files"),
@@ -31,36 +19,6 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
     t("settings.privacy_private_windows"),
     t("settings.privacy_clipboard"),
   ];
-
-  function changeLocale(next: Locale) {
-    setLocaleState(next);
-    localStorage.setItem(LOCALE_STORAGE_KEY, next);
-    void i18n.changeLanguage(next);
-    // Best-effort persist на backend, чтобы emails (invite/reset/digest)
-    // приходили на нужном языке. Пропускаем ошибку — locale уже сохранён локально.
-    void updateLocale(next).catch(() => undefined);
-  }
-
-  function changeTz(value: string) {
-    setLocalTz(value);
-    setTz(value);
-  }
-
-  async function destroy() {
-    const ok = await confirm({
-      title: t("settings.danger_confirm_title"),
-      description: t("settings.danger_confirm_lead"),
-      typeToConfirm: profile.data?.email ?? "delete",
-      destructive: true,
-      confirmText: t("settings.danger_confirm_btn"),
-    });
-    if (!ok) return;
-    const r = await runToast(deleteData.mutateAsync(), {
-      success: t("settings.delete_success"),
-      error: t("settings.delete_failed"),
-    });
-    if (r !== null) onWiped();
-  }
 
   return (
     <div className="space-y-4">
@@ -108,12 +66,7 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
           </div>
         </CardHeader>
         <CardContent>
-          <SimpleSelect
-            value={locale}
-            onValueChange={(v) => changeLocale(v as Locale)}
-            triggerClassName="w-full max-w-sm"
-            options={SUPPORTED_LOCALES.map((code) => ({ value: code, label: LOCALE_LABELS[code] }))}
-          />
+          <LocaleSelect />
         </CardContent>
       </Card>
 
@@ -126,20 +79,7 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
           <CardDescription>{t("settings.timezone_lead")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <SimpleSelect
-            value={tz}
-            onValueChange={changeTz}
-            triggerClassName="w-full max-w-sm"
-            options={[
-              ...(UNIQUE_TIMEZONES.find((x) => x.value === tz)
-                ? []
-                : [{ value: tz, label: t("settings.timezone_current", { tz }) }]),
-              ...UNIQUE_TIMEZONES.map((tzo) => ({ value: tzo.value, label: tzo.label })),
-            ]}
-          />
-          <p className="mt-2 text-xs text-muted-foreground">
-            {t("settings.timezone_now")} <span className="font-mono">{tz}</span>
-          </p>
+          <TimezoneSelect />
         </CardContent>
       </Card>
 
@@ -165,11 +105,7 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
       <DangerZone
         title={t("settings.danger_title")}
         description={t("settings.danger_lead")}
-        action={
-          <Button variant="destructive" size="sm" onClick={destroy} disabled={deleteData.isPending}>
-            <Trash2 className="h-3.5 w-3.5 mr-1" /> {t("actions.delete")}
-          </Button>
-        }
+        action={<DeleteMyDataButton onWiped={onWiped} />}
       />
     </div>
   );

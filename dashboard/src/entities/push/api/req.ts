@@ -9,28 +9,19 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { http } from "../../../shared/api/http";
+import type { ListPushSubscriptionsRes, VAPIDInfoRes } from "./res";
 
-type Subscription = {
-  id: string;
-  endpoint: string;
-  user_agent?: string;
-  created_at: string;
-  last_used_at?: string | null;
-};
-
-type VAPIDInfo = { key: string; subject: string };
-
-const pushKeys = {
+export const pushKeys = {
   vapid: ["push.vapid"] as const,
   subscriptions: ["push.subscriptions"] as const,
 };
 
 export const fetchVAPIDKey = () =>
-  http.get<VAPIDInfo>("/v1/me/push/vapid-key").then((r) => r.data);
+  http.get<VAPIDInfoRes>("/v1/me/push/vapid-key").then((r) => r.data);
 
 export const fetchPushSubscriptions = () =>
   http
-    .get<{ subscriptions: Subscription[] }>("/v1/me/push/subscriptions")
+    .get<ListPushSubscriptionsRes>("/v1/me/push/subscriptions")
     .then((r) => r.data.subscriptions ?? []);
 
 export const subscribePush = (sub: PushSubscriptionJSON) =>
@@ -65,5 +56,3 @@ export function useUnsubscribePush() {
     onSuccess: () => qc.invalidateQueries({ queryKey: pushKeys.subscriptions }),
   });
 }
-
-export type { Subscription, VAPIDInfo };

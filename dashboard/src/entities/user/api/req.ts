@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { http } from "../../../shared/api/http";
+import { SESSION_KEYS, clearSession } from "../../../shared/lib/session-storage";
 import type {
   APIToken,
   AuthConfig,
@@ -37,7 +38,7 @@ export const userKeys = {
 // --- Auth fetchers ---
 
 function setToken(token: string) {
-  localStorage.setItem("eop_token", token);
+  localStorage.setItem(SESSION_KEYS.token, token);
 }
 
 export async function register(
@@ -120,8 +121,7 @@ export const revokeAPIToken = (id: string) =>
 
 export async function deleteMyData(): Promise<void> {
   await http.delete("/v1/me/data");
-  localStorage.removeItem("eop_token");
-  localStorage.removeItem("eop_user_id");
+  clearSession();
 }
 
 // --- Hooks ---

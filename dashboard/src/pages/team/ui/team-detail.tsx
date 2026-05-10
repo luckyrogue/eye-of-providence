@@ -1,19 +1,17 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, PlanBadge, Tab, TabBar } from "@eop/ui";
-import { FolderGit2, GitCommit, Settings, Users } from "lucide-react";
 import { useMembers, useTeamSummary, type Team } from "../../../entities/team";
+import { TEAM_DETAIL_TABS, type TeamDetailTabKey } from "../model/team-detail-tabs";
+import { CommitsTab } from "./commits-tab";
 import { MembersTab } from "./members-tab";
 import { ProjectsTab } from "./projects-tab";
-import { CommitsTab } from "./commits-tab";
 import { SettingsTab } from "./settings-tab";
-
-type TabKey = "members" | "projects" | "commits" | "settings";
 
 export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; tz: string }) {
   const { t } = useTranslation(["app", "common"]);
   const role = team.role;
-  const [tab, setTab] = useState<TabKey>("members");
+  const [tab, setTab] = useState<TeamDetailTabKey>("members");
   const members = useMembers(teamID);
   const stats = useTeamSummary(teamID);
   const note = team.subscription_note;
@@ -22,6 +20,8 @@ export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; t
   // i18next plural — _one/_few/_many подбираются автоматически по locale
   // (русский имеет all 3, English только one/many).
   const memberCountLabel = t("team_detail.members_count", { count: memberCount });
+
+  const visibleTabs = TEAM_DETAIL_TABS.filter((it) => !("ownerOnly" in it) || role === "owner");
 
   return (
     <Card className="card-hover">
@@ -42,20 +42,14 @@ export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; t
           </CardDescription>
         </div>
         <TabBar className="justify-start lg:justify-end overflow-x-auto -mx-1 px-1">
-          <Tab active={tab === "members"} onClick={() => setTab("members")} icon={<Users className="h-3.5 w-3.5" />}>
-            {t("team_detail.tabs.members")}
-          </Tab>
-          <Tab active={tab === "projects"} onClick={() => setTab("projects")} icon={<FolderGit2 className="h-3.5 w-3.5" />}>
-            {t("team_detail.tabs.projects")}
-          </Tab>
-          <Tab active={tab === "commits"} onClick={() => setTab("commits")} icon={<GitCommit className="h-3.5 w-3.5" />}>
-            {t("team_detail.tabs.commits")}
-          </Tab>
-          {role === "owner" && (
-            <Tab active={tab === "settings"} onClick={() => setTab("settings")} icon={<Settings className="h-3.5 w-3.5" />}>
-              {t("team_detail.tabs.settings")}
-            </Tab>
-          )}
+          {visibleTabs.map((it) => {
+            const Icon = it.icon;
+            return (
+              <Tab key={it.id} active={tab === it.id} onClick={() => setTab(it.id)} icon={<Icon className="h-3.5 w-3.5" />}>
+                {t(it.i18nKey)}
+              </Tab>
+            );
+          })}
         </TabBar>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -2,15 +2,14 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Eyebrow, Tab, TabBar } from "@eop/ui";
 import { useAdminStats, useAdminTeams, useAdminUsers } from "../../entities/admin";
+import { ADMIN_TABS, type AdminProps, type AdminTabKey } from "./model";
 import { Overview } from "./ui/overview";
 import { TeamsTable } from "./ui/teams-table";
 import { UsersTable } from "./ui/users-table";
 
-type TabKey = "overview" | "teams" | "users";
-
-export function Admin({ tz }: { tz: string }) {
+export function Admin({ tz }: AdminProps) {
   const { t } = useTranslation("app");
-  const [tab, setTab] = useState<TabKey>("overview");
+  const [tab, setTab] = useState<AdminTabKey>("overview");
   const { data: stats } = useAdminStats();
   const { data: teams } = useAdminTeams();
   const { data: users } = useAdminUsers();
@@ -25,15 +24,11 @@ export function Admin({ tz }: { tz: string }) {
           </h2>
         </div>
         <TabBar>
-          <Tab active={tab === "overview"} onClick={() => setTab("overview")}>
-            {t("admin.overview")}
-          </Tab>
-          <Tab active={tab === "teams"} onClick={() => setTab("teams")}>
-            {t("admin.teams")}
-          </Tab>
-          <Tab active={tab === "users"} onClick={() => setTab("users")}>
-            {t("admin.users")}
-          </Tab>
+          {ADMIN_TABS.map((it) => (
+            <Tab key={it.id} active={tab === it.id} onClick={() => setTab(it.id)}>
+              {t(it.i18nKey)}
+            </Tab>
+          ))}
         </TabBar>
       </div>
 

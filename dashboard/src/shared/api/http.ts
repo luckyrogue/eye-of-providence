@@ -1,18 +1,12 @@
 import axios, { AxiosError } from "axios";
+import { clearSession, getToken } from "../lib/session-storage";
 
 const BASE = import.meta.env.VITE_BACKEND_URL || "https://eop-api.rysdavletov.org";
 
 export const AUTH_FAILED_EVENT = "eop:auth-failed";
 
 function emitAuthFailed() {
-  try {
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith("eop_")) localStorage.removeItem(k);
-    }
-  } catch {
-    /* private mode / disabled storage */
-  }
+  clearSession();
   window.dispatchEvent(new CustomEvent(AUTH_FAILED_EVENT));
 }
 
@@ -22,7 +16,7 @@ export const http = axios.create({
 });
 
 http.interceptors.request.use((config) => {
-  const token = localStorage.getItem("eop_token");
+  const token = getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
