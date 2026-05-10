@@ -1,11 +1,3 @@
-import preset from "@eop/ui/tailwind.preset.js";
+import { uiTailwindConfig } from "@eop/ui/tailwind.config.js";
 
-/** @type {import('tailwindcss').Config} */
-export default {
-  presets: [preset],
-  content: [
-    "./index.html",
-    "./src/**/*.{ts,tsx}",
-    "../ui/src/**/*.{ts,tsx}",
-  ],
-};
+export default uiTailwindConfig({ content: ["./index.html", "./src/**/*.{ts,tsx}"] });

@@ -1,0 +1,9 @@
+{
+  "title": "Eye of Providence",
+  "connected": "Conectado a {{host}}.",
+  "flush_now": "Enviar ahora",
+  "logout": "Cerrar sesión",
+  "dev_login_lead": "Inicio de sesión de desarrollo (sin OAuth). Backend predeterminado: <code>{{host}}</code>",
+  "get_token": "Obtener token de desarrollo",
+  "get_token_busy": "…"
+}

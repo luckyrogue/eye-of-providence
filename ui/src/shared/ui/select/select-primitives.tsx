@@ -1,21 +1,9 @@
-// Shadcn-style Select поверх Radix UI. Replace native <select> для consistent
-// styling, keyboard nav, mobile-friendly bottom-sheet feel, и tap-targets ≥44px.
-//
-// API:
-//   <Select value={x} onValueChange={setX}>
-//     <SelectTrigger><SelectValue placeholder="..." /></SelectTrigger>
-//     <SelectContent>
-//       <SelectGroup>
-//         <SelectLabel>Section</SelectLabel>
-//         <SelectItem value="a">A</SelectItem>
-//       </SelectGroup>
-//     </SelectContent>
-//   </Select>
+// Radix Select primitives (shadcn-style).
 
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { forwardRef } from "react";
-import { cn } from "../lib/cn";
+import { cn } from "../../lib/cn";
 
 export const Select = SelectPrimitive.Root;
 export const SelectGroup = SelectPrimitive.Group;
@@ -155,47 +143,3 @@ export const SelectSeparator = forwardRef<
   />
 ));
 SelectSeparator.displayName = "SelectSeparator";
-
-// SimpleSelect — convenience-обёртка для most common case: data-driven options
-// без нужды каждый раз писать Trigger+Value+Content+Item boilerplate.
-//
-// Для react-hook-form передавай через Controller:
-//   <Controller name="plan" control={control} render={({ field }) => (
-//     <SimpleSelect value={field.value} onValueChange={field.onChange} options={...} />
-//   )} />
-export type SimpleSelectOption = {
-  value: string;
-  label: React.ReactNode;
-  disabled?: boolean;
-};
-
-export function SimpleSelect({
-  value,
-  onValueChange,
-  options,
-  placeholder,
-  disabled,
-  triggerClassName,
-}: {
-  value?: string;
-  onValueChange?: (value: string) => void;
-  options: SimpleSelectOption[];
-  placeholder?: string;
-  disabled?: boolean;
-  triggerClassName?: string;
-}) {
-  return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger className={triggerClassName}>
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((o) => (
-          <SelectItem key={o.value} value={o.value} disabled={o.disabled}>
-            {o.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}

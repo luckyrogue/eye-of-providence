@@ -6,12 +6,9 @@
 // Для type-safety: типы ключей подсасываются из ru/common.json (как
 // "канонический" namespace). Остальные локали должны иметь те же ключи.
 //
-// Lazy-load: пока тащим всё через import — namespaces маленькие. Если файлы
-// раздуются (>50 KB), переключимся на i18next-http-backend.
+// Lazy-load: пока тащим всё через import — namespaces маленькие.
 
-import i18n from "i18next";
-import LanguageDetector from "i18next-browser-languagedetector";
-import { initReactI18next } from "react-i18next";
+import { createI18n, LOCALE_LABELS, LOCALE_STORAGE_KEY, SUPPORTED_LOCALES, type Locale } from "@eop/i18n";
 
 import enCommon from "./locales/en/common.json";
 import enErrors from "./locales/en/errors.json";
@@ -57,44 +54,75 @@ import esDeveloper from "./locales/es/developer.json";
 import esChangelog from "./locales/es/changelog.json";
 import esPwa from "./locales/es/pwa.json";
 
-export const SUPPORTED_LOCALES = ["ru", "en", "kk", "es"] as const;
-export type Locale = (typeof SUPPORTED_LOCALES)[number];
-
-export const LOCALE_LABELS: Record<Locale, string> = {
-  ru: "Русский",
-  en: "English",
-  kk: "Қазақша",
-  es: "Español",
-};
-
-export const LOCALE_STORAGE_KEY = "eop_locale";
+export { SUPPORTED_LOCALES, LOCALE_LABELS, LOCALE_STORAGE_KEY, type Locale };
 
 const resources = {
-  en: { common: enCommon, errors: enErrors, auth: enAuth, landing: enLanding, onboarding: enOnboarding, app: enApp, insights: enInsights, developer: enDeveloper, changelog: enChangelog, pwa: enPwa },
-  ru: { common: ruCommon, errors: ruErrors, auth: ruAuth, landing: ruLanding, onboarding: ruOnboarding, app: ruApp, insights: ruInsights, developer: ruDeveloper, changelog: ruChangelog, pwa: ruPwa },
-  kk: { common: kkCommon, errors: kkErrors, auth: kkAuth, landing: kkLanding, onboarding: kkOnboarding, app: kkApp, insights: kkInsights, developer: kkDeveloper, changelog: kkChangelog, pwa: kkPwa },
-  es: { common: esCommon, errors: esErrors, auth: esAuth, landing: esLanding, onboarding: esOnboarding, app: esApp, insights: esInsights, developer: esDeveloper, changelog: esChangelog, pwa: esPwa },
+  en: {
+    common: enCommon,
+    errors: enErrors,
+    auth: enAuth,
+    landing: enLanding,
+    onboarding: enOnboarding,
+    app: enApp,
+    insights: enInsights,
+    developer: enDeveloper,
+    changelog: enChangelog,
+    pwa: enPwa,
+  },
+  ru: {
+    common: ruCommon,
+    errors: ruErrors,
+    auth: ruAuth,
+    landing: ruLanding,
+    onboarding: ruOnboarding,
+    app: ruApp,
+    insights: ruInsights,
+    developer: ruDeveloper,
+    changelog: ruChangelog,
+    pwa: ruPwa,
+  },
+  kk: {
+    common: kkCommon,
+    errors: kkErrors,
+    auth: kkAuth,
+    landing: kkLanding,
+    onboarding: kkOnboarding,
+    app: kkApp,
+    insights: kkInsights,
+    developer: kkDeveloper,
+    changelog: kkChangelog,
+    pwa: kkPwa,
+  },
+  es: {
+    common: esCommon,
+    errors: esErrors,
+    auth: esAuth,
+    landing: esLanding,
+    onboarding: esOnboarding,
+    app: esApp,
+    insights: esInsights,
+    developer: esDeveloper,
+    changelog: esChangelog,
+    pwa: esPwa,
+  },
 };
 
-// Init возвращает Promise, но мы не await'им — React-Suspense покажет fallback
-// пока ресурсы не загружены. Учитывая, что resources уже импортированы статически,
-// init фактически синхронный.
-i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources,
-    fallbackLng: "ru",
-    supportedLngs: SUPPORTED_LOCALES as unknown as string[],
-    nonExplicitSupportedLngs: true, // 'ru-RU' → 'ru'
-    defaultNS: "common",
-    ns: ["common", "errors", "auth", "landing", "onboarding", "app", "insights", "developer", "changelog", "pwa"],
-    interpolation: { escapeValue: false }, // React сам escape'ит
-    detection: {
-      order: ["localStorage", "navigator", "htmlTag"],
-      lookupLocalStorage: LOCALE_STORAGE_KEY,
-      caches: ["localStorage"],
-    },
-  });
+const i18n = createI18n({
+  resources,
+  fallbackLng: "ru",
+  defaultNS: "common",
+  ns: [
+    "common",
+    "errors",
+    "auth",
+    "landing",
+    "onboarding",
+    "app",
+    "insights",
+    "developer",
+    "changelog",
+    "pwa",
+  ],
+});
 
 export default i18n;

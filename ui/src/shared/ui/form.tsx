@@ -140,8 +140,17 @@ export const FormMessage = React.forwardRef<
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, children, ...props }, ref) => {
   const { error, formMessageId } = useFormField();
-  const body = error ? String(error?.message ?? "") : children;
-  if (!body) return null;
+  // Если передали children (например, переведённое сообщение) — используем их,
+  // иначе показываем сырое error.message (ключ zod / текст валидатора).
+  const body =
+    error && (children === undefined || children === null || children === "")
+      ? String(error?.message ?? "")
+      : children !== undefined && children !== null && children !== ""
+        ? children
+        : error
+          ? String(error?.message ?? "")
+          : null;
+  if (body === null || body === undefined || body === "") return null;
   return (
     <p
       ref={ref}

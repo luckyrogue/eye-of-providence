@@ -1,0 +1,9 @@
+{
+  "title": "Eye of Providence",
+  "connected": "Connected to {{host}}.",
+  "flush_now": "Flush now",
+  "logout": "Log out",
+  "dev_login_lead": "Dev login (no OAuth). Default backend: <code>{{host}}</code>",
+  "get_token": "Get dev token",
+  "get_token_busy": "…"
+}

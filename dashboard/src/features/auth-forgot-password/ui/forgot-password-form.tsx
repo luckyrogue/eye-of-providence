@@ -1,16 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
-import {
-  Button,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Input,
-} from "@eop/ui";
+import { Button, Form, InputField } from "@eop/ui";
 import { forgotPassword } from "../../../entities/user";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { forgotPasswordSchema, type ForgotPasswordValues } from "../../../shared/lib/schemas";
@@ -28,26 +19,20 @@ export function ForgotPasswordForm({ onSent }: { onSent: () => void }) {
     const ok = await runToast(forgotPassword(values.email), {
       error: t("errors:reset_email_failed"),
     });
-    // Backend всегда возвращает 200 (privacy by design), даже если email
-    // несуществующий — показываем "проверьте почту" по дизайну.
     if (ok !== undefined) onSent();
   }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-        <FormField
+        <InputField
           control={form.control}
           name="email"
-          render={({ field, fieldState }) => (
-            <FormItem>
-              <FormLabel>{t("auth:field_email")}</FormLabel>
-              <FormControl>
-                <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} />
-              </FormControl>
-              <FormMessage>{tr(fieldState.error?.message)}</FormMessage>
-            </FormItem>
-          )}
+          label={t("auth:field_email")}
+          type="email"
+          autoComplete="email"
+          placeholder="you@example.com"
+          translateError={tr}
         />
         <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
           {form.formState.isSubmitting ? "..." : t("auth:forgot_submit")}

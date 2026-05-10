@@ -3,7 +3,7 @@
 //
 // Privacy: содержимое сообщений НЕ передаётся, только размер и host.
 
-import { aiInfoForHost } from "./ai-domains";
+import { aiInfoForHost } from "../shared/api/ai-domains";
 
 const host = location.host;
 const info = aiInfoForHost(host);
@@ -26,7 +26,7 @@ function onCopy(_event: ClipboardEvent) {
 }
 
 // Эвристика: проверяем ancestor chain на маркеры AI-сообщений.
-// Селекторы подобраны вручную для основных провайдеров. Phase 3 — расширить.
+// Селекторы подобраны вручную для основных провайдеров.
 function isInsideAssistantMessage(node: Node): boolean {
   let el: Element | null = node.nodeType === 1 ? (node as Element) : node.parentElement;
   while (el) {
@@ -44,6 +44,7 @@ function matchesAssistant(el: Element): boolean {
   if (role === "assistant") return true;
   // Generic class hint
   const cls = (el.className || "").toString().toLowerCase();
-  if (cls.includes("assistant") || cls.includes("agent-message") || cls.includes("ai-message")) return true;
+  if (cls.includes("assistant") || cls.includes("agent-message") || cls.includes("ai-message"))
+    return true;
   return false;
 }

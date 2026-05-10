@@ -11,6 +11,7 @@
     "changelog:gen": "cd ../backend && go run ./cmd/changelog-gen --out ../dashboard/public/changelog.json"
   },
   "dependencies": {
+    "@eop/i18n": "workspace:*",
     "@eop/ui": "workspace:*",
     "@hookform/resolvers": "^3",
     "@tanstack/react-query": "^5.100.9",

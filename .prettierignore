@@ -1,0 +1,14 @@
+node_modules/
+**/node_modules/
+**/dist/
+pnpm-lock.yaml
+
+backend/
+ide-vscode/
+proto/
+infra/
+
+**/*.md
+**/*.go
+**/*.rs
+**/*.sql

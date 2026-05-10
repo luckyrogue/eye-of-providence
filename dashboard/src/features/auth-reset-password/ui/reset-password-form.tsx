@@ -1,16 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
-import {
-  Button,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Input,
-} from "@eop/ui";
+import { Button, Form, InputField } from "@eop/ui";
 import { resetPassword } from "../../../entities/user";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { resetPasswordSchema, type ResetPasswordValues } from "../../../shared/lib/schemas";
@@ -34,31 +25,21 @@ export function ResetPasswordForm({ token, onDone }: { token: string; onDone: ()
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-        <FormField
+        <InputField
           control={form.control}
           name="password"
-          render={({ field, fieldState }) => (
-            <FormItem>
-              <FormLabel>{t("auth:reset_field_password")}</FormLabel>
-              <FormControl>
-                <Input type="password" autoComplete="new-password" {...field} />
-              </FormControl>
-              <FormMessage>{tr(fieldState.error?.message)}</FormMessage>
-            </FormItem>
-          )}
+          label={t("auth:reset_field_password")}
+          type="password"
+          autoComplete="new-password"
+          translateError={tr}
         />
-        <FormField
+        <InputField
           control={form.control}
           name="confirmPassword"
-          render={({ field, fieldState }) => (
-            <FormItem>
-              <FormLabel>{t("auth:reset_field_password2")}</FormLabel>
-              <FormControl>
-                <Input type="password" autoComplete="new-password" {...field} />
-              </FormControl>
-              <FormMessage>{tr(fieldState.error?.message)}</FormMessage>
-            </FormItem>
-          )}
+          label={t("auth:reset_field_password2")}
+          type="password"
+          autoComplete="new-password"
+          translateError={tr}
         />
         <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
           {form.formState.isSubmitting ? "..." : t("auth:reset_submit")}

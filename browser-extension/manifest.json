@@ -23,7 +23,7 @@
     "https://eop.rysdavletov.org/api/*"
   ],
   "background": {
-    "service_worker": "src/background.ts",
+    "service_worker": "src/entrypoints/background.ts",
     "type": "module"
   },
   "content_scripts": [
@@ -36,7 +36,7 @@
         "https://copilot.microsoft.com/*",
         "https://www.perplexity.ai/*"
       ],
-      "js": ["src/content.ts"],
+      "js": ["src/entrypoints/content.ts"],
       "run_at": "document_idle"
     }
   ],

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from "@eop/ui";
 import { ArrowRight, Building2, Loader2 } from "lucide-react";
 
 export function CompanyStep({
@@ -24,14 +24,14 @@ export function CompanyStep({
         <CardDescription>{t("company.lead")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <input
+        <Input
           autoFocus
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && !busy && name.trim() && onSubmit()}
           placeholder={t("company.placeholder")}
           maxLength={100}
-          className="w-full rounded-md border bg-background px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full text-base"
         />
         <div className="flex justify-end">
           <Button onClick={onSubmit} disabled={busy || !name.trim()}>

@@ -1,7 +1,5 @@
-// shadcn/ui Input — copy-paste из registry. Голый input без label/hint/error
-// (используй Form/FormField для labelled-варианта с RHF integration).
 import { forwardRef, type InputHTMLAttributes } from "react";
-import { cn } from "../lib/cn";
+import { cn } from "../../lib/cn";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   ({ className, type, ...props }, ref) => {

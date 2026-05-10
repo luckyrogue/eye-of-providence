@@ -1,9 +1,6 @@
-// shadcn/ui Avatar — copy-paste из registry поверх @radix-ui/react-avatar.
-// Поддерживает <AvatarImage src> + <AvatarFallback> (показывается пока image
-// грузится / упал). Для текстового fallback с инициалами используй getInitials.
 import * as React from "react";
 import * as AvatarPrimitive from "@radix-ui/react-avatar";
-import { cn } from "../lib/cn";
+import { cn } from "../../lib/cn";
 
 export const Avatar = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Root>,
@@ -43,15 +40,3 @@ export const AvatarFallback = React.forwardRef<
   />
 ));
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
-
-// Helper: derive initials from a display name (max 2 chars, uppercase).
-export function getInitials(name: string): string {
-  return (
-    name
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((s) => s[0]?.toUpperCase() ?? "")
-      .join("") || "?"
-  );
-}

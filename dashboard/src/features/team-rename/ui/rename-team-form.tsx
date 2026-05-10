@@ -1,14 +1,6 @@
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import {
-  Button,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  Input,
-} from "@eop/ui";
+import { Button, Form, InputField } from "@eop/ui";
 import { useUpdateTeam, type Team } from "../../../entities/team";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 
@@ -37,18 +29,12 @@ export function RenameTeamForm({ team }: { team: Team }) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSave)} className="space-y-2">
-        <FormField
+        <InputField
           control={form.control}
           name="name"
-          rules={{ required: true, maxLength: 100 }}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("app:team_detail.settings_label_name")}</FormLabel>
-              <FormControl>
-                <Input disabled={update.isPending} {...field} />
-              </FormControl>
-            </FormItem>
-          )}
+          label={t("app:team_detail.settings_label_name")}
+          disabled={update.isPending}
+          hideMessage
         />
         <div className="flex justify-end">
           <Button type="submit" size="sm" disabled={update.isPending || !form.formState.isDirty}>

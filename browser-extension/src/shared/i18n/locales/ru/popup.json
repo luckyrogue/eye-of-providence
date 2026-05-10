@@ -1,0 +1,9 @@
+{
+  "title": "Eye of Providence",
+  "connected": "Подключено к {{host}}.",
+  "flush_now": "Отправить сейчас",
+  "logout": "Выйти",
+  "dev_login_lead": "Dev-вход (без OAuth). Backend по умолчанию: <code>{{host}}</code>",
+  "get_token": "Получить dev-токен",
+  "get_token_busy": "…"
+}

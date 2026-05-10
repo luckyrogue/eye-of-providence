@@ -1,31 +1,28 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
+import { preflightRun, type PreflightCheck, type PreflightStatus } from "../shared/api/tauri";
 
-type Status = "ok" | "warn" | "error";
-type Check = {
-  id: string;
-  label: string;
-  status: Status;
-  message: string;
-  action_url?: string;
-  action_label?: string;
-};
-
-const STATUS_DOT: Record<Status, string> = {
+const STATUS_DOT: Record<PreflightStatus, string> = {
   ok: "bg-green-500",
   warn: "bg-amber-500",
   error: "bg-red-500",
 };
 
-const STATUS_LABEL: Record<Status, string> = {
-  ok: "OK",
-  warn: "Warning",
-  error: "Error",
-};
+function badgeLabel(t: (key: string) => string, status: PreflightStatus): string {
+  switch (status) {
+    case "ok":
+      return t("badge_ok");
+    case "warn":
+      return t("badge_warn");
+    case "error":
+      return t("badge_error");
+  }
+}
 
-export function Onboarding() {
-  const [checks, setChecks] = useState<Check[]>([]);
+export function OnboardingPage() {
+  const { t } = useTranslation("agent");
+  const [checks, setChecks] = useState<PreflightCheck[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,8 +30,7 @@ export function Onboarding() {
     setBusy(true);
     setError(null);
     try {
-      const results = await invoke<Check[]>("preflight_run");
-      setChecks(results);
+      setChecks(await preflightRun());
     } catch (e) {
       setError(String(e));
     } finally {
@@ -49,21 +45,26 @@ export function Onboarding() {
   const errors = checks.filter((c) => c.status === "error");
   const warns = checks.filter((c) => c.status === "warn");
 
+  const desc =
+    errors.length > 0
+      ? t("setup_desc_blockers", { errors: errors.length, warnings: warns.length })
+      : warns.length > 0
+        ? t("setup_desc_warns", { count: warns.length })
+        : t("setup_desc_ok");
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Setup checks</CardTitle>
-          <CardDescription>
-            {errors.length > 0
-              ? `${errors.length} blocker(s), ${warns.length} warning(s) — исправь перед использованием`
-              : warns.length > 0
-              ? `Всё работает, но есть ${warns.length} предупреждений`
-              : "Всё готово"}
-          </CardDescription>
+          <CardTitle>{t("setup_title")}</CardTitle>
+          <CardDescription>{desc}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {error && <div className="rounded-md border border-destructive bg-destructive/10 p-2 text-xs text-destructive">{error}</div>}
+          {error && (
+            <div className="rounded-md border border-destructive bg-destructive/10 p-2 text-xs text-destructive">
+              {error}
+            </div>
+          )}
 
           <ul className="space-y-2">
             {checks.map((c) => (
@@ -73,7 +74,9 @@ export function Onboarding() {
                   <div className="flex-1 space-y-1">
                     <div className="flex items-baseline justify-between gap-3">
                       <div className="font-medium text-sm">{c.label}</div>
-                      <span className="text-xs text-muted-foreground uppercase tracking-wide">{STATUS_LABEL[c.status]}</span>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                        {badgeLabel(t, c.status)}
+                      </span>
                     </div>
                     <p className="text-sm text-muted-foreground">{c.message}</p>
                     {c.action_url && (
@@ -83,7 +86,7 @@ export function Onboarding() {
                         rel="noreferrer"
                         className="inline-flex items-center text-xs text-primary hover:underline"
                       >
-                        {c.action_label ?? "Open"} →
+                        {c.action_label ?? t("setup_open")} →
                       </a>
                     )}
                   </div>
@@ -92,14 +95,14 @@ export function Onboarding() {
             ))}
             {checks.length === 0 && !error && (
               <li className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                {busy ? "Checking…" : "Нет результатов"}
+                {busy ? t("setup_list_empty_busy") : t("setup_list_empty")}
               </li>
             )}
           </ul>
 
           <div className="flex gap-2">
             <Button size="sm" onClick={refresh} disabled={busy}>
-              {busy ? "Checking…" : "Re-check"}
+              {busy ? t("setup_recheck_busy") : t("setup_recheck")}
             </Button>
           </div>
         </CardContent>

@@ -6,12 +6,15 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch",
+    "lint": "eslint src",
     "install:hint": "echo 'Build first → load `dist/` (НЕ корневую папку) в chrome://extensions Developer mode → Load unpacked.'"
   },
   "dependencies": {
+    "@eop/i18n": "workspace:*",
     "@eop/ui": "workspace:*",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "react-i18next": "^17.0.7"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0-beta.28",
@@ -20,9 +23,11 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.20",
+    "eslint": "^10.3.0",
     "postcss": "^8.5.14",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.2",
     "vite": "^5.4.21"
   }
 }

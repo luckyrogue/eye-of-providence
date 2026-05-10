@@ -1,9 +1,9 @@
 // Публичный API @eop/ui — FSD-подобная структура внутри пакета:
 //   shared/lib   — утилиты (cn)
-//   shared/ui    — примитивы / shadcn-компоненты
+//   shared/ui    — примитивы / shadcn-компоненты (кластеры: input/, select/, button/, avatar/)
 //   widgets      — композиции из примитивов
 //   features     — сценарии с состоянием (императивные диалоги)
-export { Button, buttonVariants } from "./shared/ui/button";
+export { Button, buttonVariants, IconButton, type ButtonProps } from "./shared/ui/button";
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./shared/ui/card";
 export { cn } from "./shared/lib/cn";
 export { PlanBadge, type Plan } from "./widgets/plan-badge";
@@ -22,7 +22,7 @@ export {
   DialogDescription,
 } from "./shared/ui/dialog";
 export { Stepper, type StepperItem } from "./widgets/stepper";
-export { Input } from "./shared/ui/input";
+export { Input, InputField, RhfTextField, type InputFieldProps } from "./shared/ui/input";
 export { Label } from "./shared/ui/label";
 export {
   Form,
@@ -34,6 +34,7 @@ export {
   FormMessage,
   useFormField,
 } from "./shared/ui/form";
+export { Checkbox } from "./shared/ui/checkbox";
 export { Eyebrow } from "./shared/ui/eyebrow";
 export { PageHeader } from "./widgets/page-header";
 export { Skeleton, SkeletonText, SkeletonTable } from "./shared/ui/skeleton";
@@ -49,7 +50,9 @@ export {
   SelectItem,
   SelectSeparator,
   SimpleSelect,
+  SelectField,
   type SimpleSelectOption,
+  type SelectFieldProps,
 } from "./shared/ui/select";
 export { ConfirmDialog, ConfirmProvider, useConfirm } from "./features/confirm-dialog";
 export {
@@ -68,5 +71,4 @@ export {
 export { PromptDialog } from "./features/prompt-dialog";
 export { DangerZone } from "./widgets/danger-zone";
 export { StatTile, type StatTileAccent } from "./widgets/stat-tile";
-export { IconButton } from "./shared/ui/icon-button";
 export { SecretField } from "./shared/ui/secret-field";

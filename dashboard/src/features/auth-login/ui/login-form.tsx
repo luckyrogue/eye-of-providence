@@ -1,16 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
-import {
-  Button,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Input,
-} from "@eop/ui";
+import { Button, Form, InputField } from "@eop/ui";
 import { login, type AuthResponse } from "../../../entities/user";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { loginSchema, type LoginValues } from "../../../shared/lib/schemas";
@@ -23,8 +14,6 @@ export function LoginForm({ onSuccess }: { onSuccess: (r: AuthResponse) => void 
     resolver: zodResolver(loginSchema),
   });
 
-  // tr — переводит i18n-key из zod errors. Schemas хранят key'и (не строки),
-  // чтобы один schema работал во всех 4 локалях.
   const tr = (msg?: string) => (msg ? t(msg as never) : msg);
 
   async function onSubmit(values: LoginValues) {
@@ -37,31 +26,22 @@ export function LoginForm({ onSuccess }: { onSuccess: (r: AuthResponse) => void 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-        <FormField
+        <InputField
           control={form.control}
           name="email"
-          render={({ field, fieldState }) => (
-            <FormItem>
-              <FormLabel>{t("auth:field_email")}</FormLabel>
-              <FormControl>
-                <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} />
-              </FormControl>
-              <FormMessage>{tr(fieldState.error?.message)}</FormMessage>
-            </FormItem>
-          )}
+          label={t("auth:field_email")}
+          type="email"
+          autoComplete="email"
+          placeholder="you@example.com"
+          translateError={tr}
         />
-        <FormField
+        <InputField
           control={form.control}
           name="password"
-          render={({ field, fieldState }) => (
-            <FormItem>
-              <FormLabel>{t("auth:field_password")}</FormLabel>
-              <FormControl>
-                <Input type="password" autoComplete="current-password" {...field} />
-              </FormControl>
-              <FormMessage>{tr(fieldState.error?.message)}</FormMessage>
-            </FormItem>
-          )}
+          label={t("auth:field_password")}
+          type="password"
+          autoComplete="current-password"
+          translateError={tr}
         />
         <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
           {form.formState.isSubmitting ? "..." : t("auth:submit_login")}

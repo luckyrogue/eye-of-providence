@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Button,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogFooter,
@@ -88,10 +89,10 @@ export function CreateWebhookDialog({ open, onClose }: { open: boolean; onClose:
               <div className="space-y-2 pt-1">
                 {ALL_WEBHOOK_EVENTS.map((e) => (
                   <label key={e} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={events.includes(e)}
-                      onChange={() => toggleEvent(e)}
+                      onCheckedChange={() => toggleEvent(e)}
+                      aria-label={t(`webhooks_event_${e.replace(".", "_")}` as const)}
                     />
                     {t(`webhooks_event_${e.replace(".", "_")}` as const)}
                   </label>

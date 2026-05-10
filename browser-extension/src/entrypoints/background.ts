@@ -8,8 +8,8 @@
 // Privacy: НЕ отправляем заголовки страниц, URL-параметры, содержимое.
 // Только host (для AI mapping) и duration.
 
-import { aiInfoForHost } from "./ai-domains";
-import { ingest, type EventPayload, type IngestResult } from "./api";
+import { aiInfoForHost } from "../shared/api/ai-domains";
+import { ingest, type EventPayload, type IngestResult } from "../shared/api/backend";
 
 type FocusEntry = {
   host: string;
@@ -34,11 +34,13 @@ const STORAGE_KEY = "eop_state";
 
 async function loadState(): Promise<StoredState> {
   const data = await chrome.storage.session.get(STORAGE_KEY);
-  return (data[STORAGE_KEY] as StoredState | undefined) ?? {
-    buffer: [],
-    retryQueue: [],
-    retryAttempts: 0,
-  };
+  return (
+    (data[STORAGE_KEY] as StoredState | undefined) ?? {
+      buffer: [],
+      retryQueue: [],
+      retryAttempts: 0,
+    }
+  );
 }
 
 async function saveState(s: StoredState): Promise<void> {
@@ -120,11 +122,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (msg?.type === "flush-now") {
-    void closeCurrent().then(flush).then(() => sendResponse({ ok: true }));
+    void closeCurrent()
+      .then(flush)
+      .then(() => sendResponse({ ok: true }));
     return true;
   }
   if (msg?.type === "pending-count") {
-    void loadState().then((s) => sendResponse({ buffer: s.buffer.length, retry: s.retryQueue.length }));
+    void loadState().then((s) =>
+      sendResponse({ buffer: s.buffer.length, retry: s.retryQueue.length }),
+    );
     return true;
   }
   return false;
