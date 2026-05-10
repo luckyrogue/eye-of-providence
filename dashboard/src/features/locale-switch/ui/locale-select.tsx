@@ -2,13 +2,16 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SimpleSelect } from "@eop/ui";
 import { updateLocale } from "../../../entities/user";
-import { LOCALE_LABELS, LOCALE_STORAGE_KEY, SUPPORTED_LOCALES, type Locale } from "../../../shared/i18n";
+import {
+  LOCALE_LABELS,
+  LOCALE_STORAGE_KEY,
+  SUPPORTED_LOCALES,
+  type Locale,
+} from "../../../shared/i18n";
 
 export function LocaleSelect() {
   const { i18n } = useTranslation();
-  const [locale, setLocale] = useState<Locale>(
-    (i18n.resolvedLanguage as Locale) || "ru",
-  );
+  const [locale, setLocale] = useState<Locale>((i18n.resolvedLanguage as Locale) || "ru");
 
   function change(next: Locale) {
     setLocale(next);

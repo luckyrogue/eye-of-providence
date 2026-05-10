@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Tabs, TabsList, TabsTrigger } from "@eop/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@eop/ui";
 import { Sparkles } from "lucide-react";
 import { useGenerateReport, type Report } from "../../../entities/report";
 import { Markdown } from "../../../shared/lib/markdown";
@@ -66,7 +76,8 @@ export function ReportsCard({ reports, tz }: { reports: Report[]; tz: string }) 
           <div className="rounded-lg border bg-card/50 p-5">
             <Markdown source={current.body_md} />
             <div className="mt-4 pt-4 border-t text-xs text-muted-foreground">
-              <span className="font-mono">{current.model}</span> · {formatDate(current.generated_at, tz)}
+              <span className="font-mono">{current.model}</span> ·{" "}
+              {formatDate(current.generated_at, tz)}
             </div>
           </div>
         ) : (

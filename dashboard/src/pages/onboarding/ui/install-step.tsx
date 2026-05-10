@@ -2,11 +2,22 @@ import { Trans, useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { ArrowRight, Download, SkipForward } from "lucide-react";
 
-export function InstallStep({ onSkip, onContinue }: { onSkip: () => void; onContinue: () => void }) {
+export function InstallStep({
+  onSkip,
+  onContinue,
+}: {
+  onSkip: () => void;
+  onContinue: () => void;
+}) {
   const { t } = useTranslation("onboarding");
   const platforms = [
     { os: "macOS", file: ".dmg", note: t("install.macos_note"), href: "/downloads/eop-mac.dmg" },
-    { os: "Windows", file: ".msi", note: t("install.windows_note"), href: "/downloads/eop-win.msi" },
+    {
+      os: "Windows",
+      file: ".msi",
+      note: t("install.windows_note"),
+      href: "/downloads/eop-win.msi",
+    },
     {
       os: "VS Code",
       file: "extension",
@@ -45,7 +56,9 @@ export function InstallStep({ onSkip, onContinue }: { onSkip: () => void; onCont
           <p className="text-muted-foreground">
             <Trans
               i18nKey="onboarding:install.extras"
-              components={{ a: <a href="/docs/install" className="underline hover:text-foreground" /> }}
+              components={{
+                a: <a href="/docs/install" className="underline hover:text-foreground" />,
+              }}
             />
           </p>
         </div>

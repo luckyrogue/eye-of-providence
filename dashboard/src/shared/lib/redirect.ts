@@ -7,12 +7,7 @@
 // Validation: path должен быть локальным (`/...`, не `//evil.com`,
 // не `https://...`) и не auth-page (защита от loop'а).
 
-const AUTH_PAGES = new Set([
-  "/login",
-  "/signup",
-  "/forgot-password",
-  "/reset-password",
-]);
+const AUTH_PAGES = new Set(["/login", "/signup", "/forgot-password", "/reset-password"]);
 
 const REDIRECT_PARAM = "redirect";
 

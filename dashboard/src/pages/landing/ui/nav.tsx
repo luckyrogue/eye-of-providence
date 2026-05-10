@@ -25,7 +25,11 @@ export function Nav() {
         </a>
         <nav className="hidden md:flex items-center gap-8 text-sm">
           {navLinks.map((l) => (
-            <a key={l.href} href={l.href} className="text-muted-foreground hover:text-foreground transition-colors">
+            <a
+              key={l.href}
+              href={l.href}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
               {l.label}
             </a>
           ))}

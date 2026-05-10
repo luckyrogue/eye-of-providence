@@ -1,4 +1,4 @@
-import axios, { AxiosError } from "axios";
+import axios, { type AxiosError } from "axios";
 import { clearSession, getToken } from "../lib/session-storage";
 
 const BASE = import.meta.env.VITE_BACKEND_URL || "https://eop-api.rysdavletov.org";

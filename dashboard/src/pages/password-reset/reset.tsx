@@ -25,7 +25,9 @@ export function ResetPasswordRoute() {
         <Card>
           <CardHeader>
             <CardTitle className="text-center">{t("reset_invalid_link")}</CardTitle>
-            <CardDescription className="text-center">{t("reset_invalid_link_lead")}</CardDescription>
+            <CardDescription className="text-center">
+              {t("reset_invalid_link_lead")}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Link to="/forgot-password" className="block text-center text-sm underline">

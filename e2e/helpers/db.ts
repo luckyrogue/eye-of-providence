@@ -11,8 +11,7 @@
 import { execSync } from "node:child_process";
 
 const PG_DSN =
-  process.env.E2E_PG_DSN ||
-  "postgres://eop:eop_dev@localhost:5432/eop?sslmode=disable";
+  process.env.E2E_PG_DSN || "postgres://eop:eop_dev@localhost:5432/eop?sslmode=disable";
 const CH_URL = process.env.E2E_CH_URL || "http://localhost:8123";
 const CH_USER = process.env.E2E_CH_USER || "eop";
 const CH_PASS = process.env.E2E_CH_PASS || "eop_dev";
@@ -38,10 +37,7 @@ export function resetPostgres(): void {
   // Через psql напрямую — pg client'а в e2e package нет (не хотим тащить
   // ещё одну зависимость). docker exec → psql внутри контейнера.
   const sql = `TRUNCATE ${PG_TABLES.join(", ")} CASCADE;`;
-  execSync(
-    `docker exec eop-postgres psql -U eop -d eop -c "${sql}"`,
-    { stdio: "pipe" },
-  );
+  execSync(`docker exec eop-postgres psql -U eop -d eop -c "${sql}"`, { stdio: "pipe" });
 }
 
 export function resetClickHouse(): void {

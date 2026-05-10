@@ -4,7 +4,13 @@ import { Button, IconButton } from "@eop/ui";
 import { Activity, Eye, LogOut, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import { NavItem } from "./nav-item";
 
-export function HeaderNav({ isSuperAdmin, onLogout }: { isSuperAdmin: boolean; onLogout: () => void }) {
+export function HeaderNav({
+  isSuperAdmin,
+  onLogout,
+}: {
+  isSuperAdmin: boolean;
+  onLogout: () => void;
+}) {
   const { t } = useTranslation("common");
   return (
     <header
@@ -27,9 +33,15 @@ export function HeaderNav({ isSuperAdmin, onLogout }: { isSuperAdmin: boolean; o
         </NavLink>
 
         <nav className="hidden md:flex items-center gap-1 text-sm">
-          <NavItem to="/dashboard" icon={<Activity className="h-4 w-4" />}>{t("nav.dashboard")}</NavItem>
-          <NavItem to="/team" icon={<Users className="h-4 w-4" />}>{t("nav.team")}</NavItem>
-          <NavItem to="/settings" icon={<SettingsIcon className="h-4 w-4" />}>{t("nav.settings")}</NavItem>
+          <NavItem to="/dashboard" icon={<Activity className="h-4 w-4" />}>
+            {t("nav.dashboard")}
+          </NavItem>
+          <NavItem to="/team" icon={<Users className="h-4 w-4" />}>
+            {t("nav.team")}
+          </NavItem>
+          <NavItem to="/settings" icon={<SettingsIcon className="h-4 w-4" />}>
+            {t("nav.settings")}
+          </NavItem>
           {isSuperAdmin && (
             <NavItem to="/admin" icon={<Shield className="h-4 w-4" />} accent>
               {t("nav.admin")}

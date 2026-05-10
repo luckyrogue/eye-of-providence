@@ -53,18 +53,13 @@ test.describe("analytics", () => {
     await api.fetch("/v1/ingest", {
       method: "POST",
       body: JSON.stringify({
-        events: [
-          ingestPayload("ai", "typescript"),
-          ingestPayload("ai", "python"),
-        ],
+        events: [ingestPayload("ai", "typescript"), ingestPayload("ai", "python")],
       }),
     });
 
     let cells: unknown[] = [];
     for (let attempt = 0; attempt < 10; attempt++) {
-      const r = await api.fetch<{ cells: unknown[] }>(
-        "/v1/summary/languages?days=30",
-      );
+      const r = await api.fetch<{ cells: unknown[] }>("/v1/summary/languages?days=30");
       if (r.cells.length > 0) {
         cells = r.cells;
         break;
@@ -75,17 +70,13 @@ test.describe("analytics", () => {
   });
 
   test("daily trend returns points array", async ({ api }) => {
-    const r = await api.fetch<{ points: unknown[]; days: number }>(
-      "/v1/trend?days=7",
-    );
+    const r = await api.fetch<{ points: unknown[]; days: number }>("/v1/trend?days=7");
     expect(Array.isArray(r.points)).toBe(true);
     expect(r.days).toBe(7);
   });
 
   test("heatmap returns 7x24 grid cells", async ({ api }) => {
-    const r = await api.fetch<{ cells: unknown[]; days: number }>(
-      "/v1/heatmap?days=7",
-    );
+    const r = await api.fetch<{ cells: unknown[]; days: number }>("/v1/heatmap?days=7");
     expect(Array.isArray(r.cells)).toBe(true);
   });
 

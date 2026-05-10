@@ -14,9 +14,11 @@ export function useInvitePreview() {
     const code = params.get("invite");
     if (!code) return;
     setInviteCode(code);
-    previewInvite(code).then(setInvitePreview).catch(() => {
-      // Best-effort. Не блочим UX — юзер всё равно может попробовать.
-    });
+    previewInvite(code)
+      .then(setInvitePreview)
+      .catch(() => {
+        // Best-effort. Не блочим UX — юзер всё равно может попробовать.
+      });
   }, []);
 
   return { inviteCode, invitePreview };

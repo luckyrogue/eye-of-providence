@@ -99,7 +99,9 @@ export function ConfirmDialog({
 //   const confirm = useConfirm();
 //   if (await confirm({ title: "Удалить?", destructive: true })) { ... }
 
-type ConfirmFn = (opts: Omit<Parameters<typeof ConfirmDialog>[0], "open" | "onClose" | "onConfirm" | "busy">) => Promise<boolean>;
+type ConfirmFn = (
+  opts: Omit<Parameters<typeof ConfirmDialog>[0], "open" | "onClose" | "onConfirm" | "busy">,
+) => Promise<boolean>;
 
 const ConfirmContext = createContext<ConfirmFn | null>(null);
 
@@ -124,12 +126,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     <ConfirmContext.Provider value={confirm}>
       {children}
       {opts && (
-        <ConfirmDialog
-          open
-          onClose={() => close(false)}
-          onConfirm={() => close(true)}
-          {...opts}
-        />
+        <ConfirmDialog open onClose={() => close(false)} onConfirm={() => close(true)} {...opts} />
       )}
     </ConfirmContext.Provider>
   );

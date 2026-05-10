@@ -10,9 +10,7 @@ test.describe("dashboard ui", () => {
   // не редиректнул нас на /onboarding.
   test.beforeEach(async ({ session, api }) => {
     await apiCreateTeam(session.token, uniqueTeamName("ui"));
-    await api
-      .fetch("/v1/me/onboarding/dismiss", { method: "POST" })
-      .catch(() => {});
+    await api.fetch("/v1/me/onboarding/dismiss", { method: "POST" }).catch(() => {});
   });
 
   test("authenticated user lands on /dashboard", async ({ page }) => {
@@ -37,9 +35,7 @@ test.describe("dashboard ui", () => {
     expect(page.url()).toMatch(/settings|login|^http/);
   });
 
-  test("logout via clearing localStorage redirects to login/landing", async ({
-    page,
-  }) => {
+  test("logout via clearing localStorage redirects to login/landing", async ({ page }) => {
     await page.goto("/dashboard");
     await page.evaluate(() => {
       localStorage.removeItem("eop_token");

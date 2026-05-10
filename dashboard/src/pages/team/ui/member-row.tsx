@@ -47,7 +47,7 @@ export function MemberRow({
           <MemberRoleSelect teamID={teamID} userID={member.id} value={member.role} />
         ) : (
           <span className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
-            {t(`team_detail.role.${member.role}` as const, { defaultValue: member.role })}
+            {t(`team_detail.role.${member.role}` as const)}
           </span>
         )}
         {canManage && (

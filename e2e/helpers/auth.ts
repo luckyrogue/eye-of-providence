@@ -77,22 +77,14 @@ export async function uiRegister(
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/имя|display name/i).fill(displayName ?? email.split("@")[0]);
   await page.getByLabel(/пароль|password/i).fill(password);
-  await page
-    .getByRole("button", { name: /зарегистрироваться|register|sign up/i })
-    .click();
+  await page.getByRole("button", { name: /зарегистрироваться|register|sign up/i }).click();
 }
 
-export async function uiLogin(
-  page: Page,
-  email: string,
-  password: string,
-): Promise<void> {
+export async function uiLogin(page: Page, email: string, password: string): Promise<void> {
   await page.goto("/login");
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/пароль|password/i).fill(password);
-  await page
-    .getByRole("button", { name: /войти|login|sign in/i })
-    .click();
+  await page.getByRole("button", { name: /войти|login|sign in/i }).click();
 }
 
 export async function uiLogout(page: Page): Promise<void> {

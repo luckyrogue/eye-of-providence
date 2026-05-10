@@ -22,7 +22,9 @@ export function EmptyState({
         </div>
       )}
       <div className="font-display tracking-tight text-base">{title}</div>
-      {description && <p className="text-sm text-muted-foreground max-w-md mx-auto">{description}</p>}
+      {description && (
+        <p className="text-sm text-muted-foreground max-w-md mx-auto">{description}</p>
+      )}
       {action && <div className="pt-2">{action}</div>}
     </div>
   );

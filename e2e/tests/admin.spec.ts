@@ -18,9 +18,7 @@ function promoteToSuperAdmin(userID: string): void {
 }
 
 test.describe("admin", () => {
-  test("regular user gets super_admin_required on /admin/teams", async ({
-    api,
-  }) => {
+  test("regular user gets super_admin_required on /admin/teams", async ({ api }) => {
     try {
       await api.fetch("/v1/admin/teams");
       throw new Error("expected to throw");
@@ -31,9 +29,7 @@ test.describe("admin", () => {
     }
   });
 
-  test("regular user gets super_admin_required on /admin/users", async ({
-    api,
-  }) => {
+  test("regular user gets super_admin_required on /admin/users", async ({ api }) => {
     try {
       await api.fetch("/v1/admin/users");
       throw new Error("expected to throw");
@@ -66,9 +62,7 @@ test.describe("admin", () => {
     expect(stats.users_total).toBeGreaterThan(0);
   });
 
-  test("super_admin cannot delete themselves (cannot_delete_self)", async ({
-    session,
-  }) => {
+  test("super_admin cannot delete themselves (cannot_delete_self)", async ({ session }) => {
     promoteToSuperAdmin(session.user_id);
     const c = createApiClient(session.token);
     try {

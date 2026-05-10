@@ -91,9 +91,7 @@ test.describe("teams", () => {
     }
   });
 
-  test("invite link flow: create → another user accepts → becomes member", async ({
-    api,
-  }) => {
+  test("invite link flow: create → another user accepts → becomes member", async ({ api }) => {
     const team = await api.fetch<TeamRow>("/v1/teams", {
       method: "POST",
       body: JSON.stringify({ name: uniqueTeamName("invite") }),
@@ -106,10 +104,7 @@ test.describe("teams", () => {
     expect(invite.max_uses).toBe(10);
 
     // Создаём второго юзера и принимаем invite.
-    const newbie = await apiRegister(
-      uniqueEmail("invitee"),
-      "TestPassword123!",
-    );
+    const newbie = await apiRegister(uniqueEmail("invitee"), "TestPassword123!");
     const newbieClient = createApiClient(newbie.token);
     const accepted = await newbieClient.fetch<{ team_id: string }>(
       `/v1/invites/${invite.code}/accept`,
@@ -118,9 +113,7 @@ test.describe("teams", () => {
     expect(accepted.team_id).toBe(team.id);
 
     // Newbie теперь в team.
-    const newbieTeams = await newbieClient.fetch<{ teams: TeamRow[] }>(
-      "/v1/teams",
-    );
+    const newbieTeams = await newbieClient.fetch<{ teams: TeamRow[] }>("/v1/teams");
     const found = newbieTeams.teams.find((t) => t.id === team.id);
     expect(found?.role).toBe("member");
   });

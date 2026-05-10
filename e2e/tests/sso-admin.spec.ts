@@ -15,15 +15,11 @@ test.describe("sso admin", () => {
       method: "POST",
       body: JSON.stringify({ name: uniqueTeamName("sso-empty") }),
     });
-    const r = await api.fetch<{ configured: boolean }>(
-      `/v1/teams/${team.id}/sso`,
-    );
+    const r = await api.fetch<{ configured: boolean }>(`/v1/teams/${team.id}/sso`);
     expect(r.configured).toBe(false);
   });
 
-  test("save oidc config → get returns it (без client_secret)", async ({
-    api,
-  }) => {
+  test("save oidc config → get returns it (без client_secret)", async ({ api }) => {
     const team = await api.fetch<TeamCreate>("/v1/teams", {
       method: "POST",
       body: JSON.stringify({ name: uniqueTeamName("sso-save") }),
@@ -39,10 +35,10 @@ test.describe("sso admin", () => {
       jit_provision: true,
       jit_role: "member",
     };
-    const saved = await api.fetch<{ config: Record<string, unknown> }>(
-      `/v1/teams/${team.id}/sso`,
-      { method: "PUT", body: JSON.stringify(config) },
-    );
+    const saved = await api.fetch<{ config: Record<string, unknown> }>(`/v1/teams/${team.id}/sso`, {
+      method: "PUT",
+      body: JSON.stringify(config),
+    });
     expect(saved.config.provider).toBe("oidc");
     expect(saved.config.has_client_secret).toBe(true);
     expect(saved.config.oidc_client_secret).toBeUndefined();
@@ -57,9 +53,7 @@ test.describe("sso admin", () => {
     expect(fetched.config.oidc_issuer).toBe("https://accounts.example.com");
   });
 
-  test("save без client_secret на новую config → missing_client_secret", async ({
-    api,
-  }) => {
+  test("save без client_secret на новую config → missing_client_secret", async ({ api }) => {
     const team = await api.fetch<TeamCreate>("/v1/teams", {
       method: "POST",
       body: JSON.stringify({ name: uniqueTeamName("sso-no-secret") }),
@@ -120,10 +114,7 @@ test.describe("sso admin", () => {
       body: JSON.stringify({ name: uniqueTeamName("sso-acl") }),
     });
     void session; // owner — нам нужен другой юзер.
-    const outsider = await apiRegister(
-      uniqueEmail("sso-outsider"),
-      "TestPassword123!",
-    );
+    const outsider = await apiRegister(uniqueEmail("sso-outsider"), "TestPassword123!");
     const outClient = createApiClient(outsider.token);
     try {
       await outClient.fetch(`/v1/teams/${team.id}/sso`);
@@ -135,9 +126,7 @@ test.describe("sso admin", () => {
     }
   });
 
-  test("delete removes config (subsequent GET → configured=false)", async ({
-    api,
-  }) => {
+  test("delete removes config (subsequent GET → configured=false)", async ({ api }) => {
     const team = await api.fetch<TeamCreate>("/v1/teams", {
       method: "POST",
       body: JSON.stringify({ name: uniqueTeamName("sso-del") }),
@@ -153,9 +142,7 @@ test.describe("sso admin", () => {
       }),
     });
     await api.fetch(`/v1/teams/${team.id}/sso`, { method: "DELETE" });
-    const after = await api.fetch<{ configured: boolean }>(
-      `/v1/teams/${team.id}/sso`,
-    );
+    const after = await api.fetch<{ configured: boolean }>(`/v1/teams/${team.id}/sso`);
     expect(after.configured).toBe(false);
   });
 });

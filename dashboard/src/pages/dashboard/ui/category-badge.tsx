@@ -6,7 +6,7 @@ export function CategoryBadge({ cat }: { cat: string }) {
   const { t } = useTranslation("app");
   return (
     <Badge variant={CATEGORY_VARIANTS[cat] ?? "default"}>
-      {t(`dashboard.category.${cat}` as const, { defaultValue: cat })}
+      {t(`dashboard.category.${cat}` as const)}
     </Badge>
   );
 }

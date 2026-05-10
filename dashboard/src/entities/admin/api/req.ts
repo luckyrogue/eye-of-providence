@@ -31,11 +31,14 @@ export type SetSubscriptionReq = {
 
 // --- Query keys ---
 
+// Все query keys строятся от общего корня `all`, чтобы инвалидация
+// одного ключа уровня сущности (`admin`) очищала все её вариации.
 export const adminKeys = {
-  stats: ["admin.stats"] as const,
-  teams: ["admin.teams"] as const,
-  users: ["admin.users"] as const,
-  payments: (teamID: string) => ["admin.payments", teamID] as const,
+  all: ["admin"] as const,
+  stats: () => [...adminKeys.all, "stats"] as const,
+  teams: () => [...adminKeys.all, "teams"] as const,
+  users: () => [...adminKeys.all, "users"] as const,
+  payments: (teamID: string) => [...adminKeys.all, "payments", teamID] as const,
 };
 
 // --- Fetchers ---
@@ -74,18 +77,17 @@ export const adminSetSubscription = (teamID: string, payload: SetSubscriptionReq
 
 // --- Query hooks ---
 
-export const useAdminStats = () =>
-  useQuery({ queryKey: adminKeys.stats, queryFn: adminStats });
+export const useAdminStats = () => useQuery({ queryKey: adminKeys.stats(), queryFn: adminStats });
 
 export const useAdminTeams = () =>
-  useQuery({ queryKey: adminKeys.teams, queryFn: adminListTeams });
+  useQuery({ queryKey: adminKeys.teams(), queryFn: adminListTeams });
 
 export const useAdminUsers = () =>
-  useQuery({ queryKey: adminKeys.users, queryFn: adminListUsers });
+  useQuery({ queryKey: adminKeys.users(), queryFn: adminListUsers });
 
 export const useAdminPayments = (teamID: string | null) =>
   useQuery({
-    queryKey: teamID ? adminKeys.payments(teamID) : ["admin.payments.disabled"],
+    queryKey: teamID ? adminKeys.payments(teamID) : [...adminKeys.all, "payments", "disabled"],
     queryFn: () => adminListPayments(teamID!),
     enabled: !!teamID,
   });
@@ -96,10 +98,8 @@ export function useAdminDeleteTeam() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (teamID: string) => adminDeleteTeam(teamID),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: adminKeys.teams });
-      qc.invalidateQueries({ queryKey: adminKeys.stats });
-    },
+    // Удаление команды затрагивает все admin-запросы (teams/stats/payments).
+    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.all }),
   });
 }
 
@@ -107,10 +107,8 @@ export function useAdminDeleteUser() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (userID: string) => adminDeleteUser(userID),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: adminKeys.users });
-      qc.invalidateQueries({ queryKey: adminKeys.stats });
-    },
+    // Удаление user'а каскадно меняет users/stats и потенциально teams.
+    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.all }),
   });
 }
 
@@ -119,7 +117,7 @@ export function useAdminUpdateUser() {
   return useMutation({
     mutationFn: ({ userID, payload }: { userID: string; payload: UpdateUserReq }) =>
       adminUpdateUser(userID, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.users }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.users() }),
   });
 }
 
@@ -128,10 +126,11 @@ export function useAdminAddMember() {
   return useMutation({
     mutationFn: ({ teamID, email, role }: { teamID: string; email: string; role: string }) =>
       adminAddMember(teamID, email, role),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: adminKeys.teams });
-      qc.invalidateQueries({ queryKey: adminKeys.users });
-    },
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: adminKeys.teams() }),
+        qc.invalidateQueries({ queryKey: adminKeys.users() }),
+      ]),
   });
 }
 
@@ -140,9 +139,10 @@ export function useAdminSetSubscription() {
   return useMutation({
     mutationFn: ({ teamID, payload }: { teamID: string; payload: SetSubscriptionReq }) =>
       adminSetSubscription(teamID, payload),
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: adminKeys.teams });
-      qc.invalidateQueries({ queryKey: adminKeys.payments(vars.teamID) });
-    },
+    onSuccess: (_d, vars) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: adminKeys.teams() }),
+        qc.invalidateQueries({ queryKey: adminKeys.payments(vars.teamID) }),
+      ]),
   });
 }

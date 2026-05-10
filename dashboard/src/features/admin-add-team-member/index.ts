@@ -1,1 +1,1 @@
-export { AddMemberRow } from "./ui/add-member-row";
+export { AddMemberForm } from "./ui/add-member-form";

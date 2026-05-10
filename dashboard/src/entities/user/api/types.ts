@@ -55,4 +55,13 @@ type CreateAPITokenRes = {
   metadata: APIToken;
 };
 
-export type { Me, Profile, AuthResponse, AuthConfig, OnboardingStatus, Insight, APIToken, CreateAPITokenRes };
+export type {
+  Me,
+  Profile,
+  AuthResponse,
+  AuthConfig,
+  OnboardingStatus,
+  Insight,
+  APIToken,
+  CreateAPITokenRes,
+};

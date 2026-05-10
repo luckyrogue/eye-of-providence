@@ -11,8 +11,13 @@
   "company": {
     "title": "¿Cómo se llama tu empresa?",
     "lead": "Será el espacio donde tu equipo verá las métricas. Puedes cambiarlo después.",
+    "label": "Nombre de la empresa",
     "placeholder": "Acme Inc.",
-    "submit": "Crear"
+    "submit": "Crear",
+    "errors": {
+      "too_short": "El nombre debe tener al menos 2 caracteres.",
+      "too_long": "El nombre no debe superar los 100 caracteres."
+    }
   },
   "install": {
     "title": "Instala el agente",

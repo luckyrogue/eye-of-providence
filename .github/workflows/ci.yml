@@ -54,6 +54,7 @@ jobs:
             frontend:
               - 'dashboard/**'
               - 'ui/**'
+              - 'i18n/**'
               - 'agent/src/**'
               - 'agent/index.html'
               - 'agent/package.json'
@@ -66,6 +67,9 @@ jobs:
               - 'pnpm-workspace.yaml'
               - 'pnpm-lock.yaml'
               - 'package.json'
+              - 'tsconfig.base.json'
+              - '.prettierrc.json'
+              - '.prettierignore'
             agent_rust:
               - 'agent/src-tauri/**'
             docker:
@@ -73,6 +77,7 @@ jobs:
               - 'backend/**'
               - 'dashboard/**'
               - 'ui/**'
+              - 'i18n/**'
             ci:
               - '.github/**'
 

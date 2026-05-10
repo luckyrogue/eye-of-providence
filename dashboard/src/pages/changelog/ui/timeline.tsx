@@ -22,7 +22,9 @@ export function Timeline({ entries }: { entries: ChangelogEntry[] }) {
         <li key={date}>
           <DateHeading date={date} />
           <ul className="space-y-2 mt-3">
-            {groups.get(date)!.map((e) => <Row key={e.hash} entry={e} />)}
+            {groups.get(date)!.map((e) => (
+              <Row key={e.hash} entry={e} />
+            ))}
           </ul>
         </li>
       ))}

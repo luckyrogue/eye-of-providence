@@ -43,7 +43,9 @@ export function PushNotificationsWidget() {
           <EnablePushButton />
         ) : (
           <ul className="divide-y">
-            {subList.map((s) => <SubscriptionRow key={s.id} sub={s} />)}
+            {subList.map((s) => (
+              <SubscriptionRow key={s.id} sub={s} />
+            ))}
             <li className="pt-3">
               <EnablePushButton variant="ghost" />
             </li>

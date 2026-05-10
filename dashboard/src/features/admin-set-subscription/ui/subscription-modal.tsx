@@ -1,7 +1,17 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
-import { Button, Dialog, DialogContent, Eyebrow, Form, Input, SimpleSelect, useConfirm } from "@eop/ui";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  Eyebrow,
+  Form,
+  Input,
+  SimpleSelect,
+  useConfirm,
+} from "@eop/ui";
 import {
   useAdminPayments,
   useAdminSetSubscription,
@@ -9,7 +19,7 @@ import {
   type SetSubscriptionReq,
 } from "../../../entities/admin";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-import { DEFAULT_SUBSCRIPTION_FORM, type SubscriptionForm } from "../model";
+import { DEFAULT_SUBSCRIPTION_FORM, subscriptionFormSchema, type SubscriptionForm } from "../model";
 import { SubscriptionPaymentFields } from "./payment-fields";
 import { SubscriptionPaymentsList } from "./payments-list";
 
@@ -30,6 +40,7 @@ export function SubscriptionModal({
 
   const form = useForm<SubscriptionForm>({
     defaultValues: DEFAULT_SUBSCRIPTION_FORM,
+    resolver: zodResolver(subscriptionFormSchema),
   });
   const { handleSubmit, watch, setValue, reset, register, control } = form;
 
@@ -117,7 +128,9 @@ export function SubscriptionModal({
                 </label>
                 <SimpleSelect
                   value={plan}
-                  onValueChange={(v) => setValue("plan", v as SubscriptionForm["plan"], { shouldDirty: true })}
+                  onValueChange={(v) =>
+                    setValue("plan", v as SubscriptionForm["plan"], { shouldDirty: true })
+                  }
                   triggerClassName="w-full font-mono"
                   options={[
                     { value: "free", label: "free" },
@@ -153,10 +166,15 @@ export function SubscriptionModal({
               <label className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
                 {t("app:admin.subscription_note_label")}
               </label>
-              <Input placeholder={t("app:admin.subscription_note_placeholder")} {...register("note")} />
+              <Input
+                placeholder={t("app:admin.subscription_note_placeholder")}
+                {...register("note")}
+              />
             </div>
 
-            {plan !== "free" && <SubscriptionPaymentFields control={control} enabled={recordPayment} />}
+            {plan !== "free" && (
+              <SubscriptionPaymentFields control={control} enabled={recordPayment} />
+            )}
 
             <div className="flex items-center justify-between pt-2 border-t">
               <Button

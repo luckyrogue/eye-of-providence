@@ -1,6 +1,6 @@
 import { Controller, type Control } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { Checkbox, Input, SimpleSelect, type SimpleSelectOption } from "@eop/ui";
+import { CheckboxField, Input, SimpleSelect, type SimpleSelectOption } from "@eop/ui";
 import type { SubscriptionForm } from "../model";
 
 const METHOD_OPTIONS: SimpleSelectOption[] = [
@@ -20,19 +20,11 @@ export function SubscriptionPaymentFields({
   const { t } = useTranslation("app");
   return (
     <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
-      <Controller
+      <CheckboxField
         control={control}
         name="recordPayment"
-        render={({ field }) => (
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <Checkbox
-              checked={field.value}
-              onCheckedChange={(v) => field.onChange(v === true)}
-              aria-label={t("admin.payment_record_label")}
-            />
-            {t("admin.payment_record_label")}
-          </label>
-        )}
+        label={t("admin.payment_record_label")}
+        hideMessage
       />
       {enabled && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -89,7 +81,9 @@ export function SubscriptionPaymentFields({
           />
         </div>
       )}
-      <p className="text-[11px] text-muted-foreground font-mono">{t("admin.payment_amount_hint")}</p>
+      <p className="text-[11px] text-muted-foreground font-mono">
+        {t("admin.payment_amount_hint")}
+      </p>
     </div>
   );
 }

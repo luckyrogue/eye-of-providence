@@ -20,7 +20,7 @@ export function Row({ entry }: { entry: ChangelogEntry }) {
             </span>
           )}
           {entry.breaking && (
-            <span className="text-[10px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded bg-red-500/10 text-red-600 dark:text-red-400">
+            <span className="text-[10px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded bg-destructive/10 text-destructive">
               {t("breaking")}
             </span>
           )}

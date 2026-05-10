@@ -18,7 +18,7 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
   const { inviteCode, invitePreview } = useInvitePreview();
 
   useEffect(() => {
-    fetchAuthConfig().then((cfg) => {
+    void fetchAuthConfig().then((cfg) => {
       setAuthConfig(cfg);
       if (cfg.is_first_user) setMode("register");
     });
@@ -30,7 +30,9 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
   }, [inviteCode]);
 
   const registrationBlocked = !!(
-    authConfig?.invite_only && !authConfig.is_first_user && !inviteCode
+    authConfig?.invite_only &&
+    !authConfig.is_first_user &&
+    !inviteCode
   );
 
   return (
@@ -71,13 +73,11 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
         </CardHeader>
         <CardContent className="space-y-3">
           {mode === "register" && registrationBlocked && (
-            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+            <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
               <div className="flex items-start gap-2">
-                <Lock className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <Lock className="h-4 w-4 mt-0.5 text-warning shrink-0" />
                 <div className="space-y-1">
-                  <div className="font-medium text-amber-700 dark:text-amber-300">
-                    {t("invite_only_title")}
-                  </div>
+                  <div className="font-medium text-warning">{t("invite_only_title")}</div>
                   <p className="text-xs text-muted-foreground">
                     <Trans
                       i18nKey="auth:invite_only_text"

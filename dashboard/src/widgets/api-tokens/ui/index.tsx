@@ -6,9 +6,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Button, Card, CardContent, CardDescription, CardHeader, CardTitle,
-} from "@eop/ui";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { KeyRound, Plus } from "lucide-react";
 import { useTokens } from "../../../entities/user";
 import { CreateTokenDialog } from "../../../features/api-token-create";
@@ -41,7 +39,9 @@ export function APITokensWidget() {
           <p className="text-sm text-muted-foreground">{t("tokens_empty")}</p>
         ) : (
           <ul className="divide-y">
-            {tokens.data.map((tok) => <TokenRow key={tok.id} token={tok} />)}
+            {tokens.data.map((tok) => (
+              <TokenRow key={tok.id} token={tok} />
+            ))}
           </ul>
         )}
       </CardContent>

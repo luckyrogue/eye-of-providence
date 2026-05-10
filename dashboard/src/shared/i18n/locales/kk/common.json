@@ -48,15 +48,7 @@
     "delete_failed": "Жою сәтсіз"
   },
   "heatmap": {
-    "days": [
-      "Жс",
-      "Дс",
-      "Сс",
-      "Ср",
-      "Бс",
-      "Жм",
-      "Сб"
-    ],
+    "days": ["Жс", "Дс", "Сс", "Ср", "Бс", "Жм", "Сб"],
     "total": "барлығы",
     "minutes_short": "мин",
     "hover_hint": "Толық ақпарат үшін ұяшыққа меңзерді апарыңыз."
@@ -64,5 +56,22 @@
   "plan_badge": {
     "until": "дейін",
     "expired": "өтті"
+  },
+  "data_table": {
+    "filter": "Сүзгі…",
+    "columns": "Бағандар",
+    "toggle_columns": "Бағандарды көрсету",
+    "no_results": "Нәтиже жоқ.",
+    "loading": "Жүктелуде…",
+    "previous": "Алдыңғы",
+    "next": "Келесі",
+    "first_page": "Бірінші бет",
+    "last_page": "Соңғы бет",
+    "rows_per_page": "Беттегі жолдар",
+    "page_of_total": "{{total}} ішінен {{page}}-бет",
+    "selected_of_total": "{{total}} ішінен {{selected}} жол таңдалды.",
+    "select_all": "Барлығын таңдау",
+    "select_row": "Жолды таңдау",
+    "open_menu": "Мәзірді ашу"
   }
 }

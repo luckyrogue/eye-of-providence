@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { HeatmapCell } from "../../../entities/event";
+
+// Локальный shape вместо импорта из entities/event: shared/* — низший слой FSD.
+type HeatmapCell = { dow: number; hour: number; category: string; ms: number };
 
 export function Heatmap({ cells }: { cells: HeatmapCell[] }) {
   const { t } = useTranslation(["common", "app"]);
@@ -46,11 +48,13 @@ export function Heatmap({ cells }: { cells: HeatmapCell[] }) {
             </span>
             <span>
               {t("common:heatmap.total")}:{" "}
-              <strong>{Math.round(hovered.total / 60)} {minShort}</strong>
+              <strong>
+                {Math.round(hovered.total / 60)} {minShort}
+              </strong>
             </span>
             {hovered.byCat.map(({ cat, ms }) => (
               <span key={cat} className="text-muted-foreground">
-                {t(`app:dashboard.category.${cat}` as const, { defaultValue: cat })}: {Math.round(ms / 60)} {minShort}
+                {t(`app:dashboard.category.${cat}` as const)}: {Math.round(ms / 60)} {minShort}
               </span>
             ))}
           </div>
@@ -79,7 +83,11 @@ function buildGrid(cells: HeatmapCell[]): GridCell[][] {
 }
 
 function DayRow({
-  day, row, max, onHover, onLeave,
+  day,
+  row,
+  max,
+  onHover,
+  onLeave,
 }: {
   day: string;
   row: GridCell[];

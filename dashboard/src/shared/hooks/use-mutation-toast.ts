@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { toast } from "sonner";
+import { toast } from "@eop/ui";
 
 // Хелпер чтобы не дублировать try/catch в каждом mutation вызове.
 //

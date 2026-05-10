@@ -20,6 +20,10 @@
     --accent-foreground: 240 5.9% 10%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
+    --success: 142 71% 36%;
+    --success-foreground: 0 0% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 240 10% 3.9%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
     --ring: 240 5.9% 10%;
@@ -43,6 +47,10 @@
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
+    --success: 142 64% 45%;
+    --success-foreground: 0 0% 98%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 240 10% 3.9%;
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
@@ -69,7 +77,9 @@
   /* Buttons / interactive elements в native-PWA должны иметь touch-action:
      manipulation чтобы убрать 300ms tap-delay на старых браузерах + дёшево
      помочь ARIA. */
-  button, a, [role="button"] {
+  button,
+  a,
+  [role="button"] {
     touch-action: manipulation;
   }
 }
@@ -119,11 +129,21 @@
   .reveal {
     @apply animate-fade-up;
   }
-  .reveal-delay-1 { animation-delay: 60ms; }
-  .reveal-delay-2 { animation-delay: 120ms; }
-  .reveal-delay-3 { animation-delay: 180ms; }
-  .reveal-delay-4 { animation-delay: 240ms; }
-  .reveal-delay-5 { animation-delay: 300ms; }
+  .reveal-delay-1 {
+    animation-delay: 60ms;
+  }
+  .reveal-delay-2 {
+    animation-delay: 120ms;
+  }
+  .reveal-delay-3 {
+    animation-delay: 180ms;
+  }
+  .reveal-delay-4 {
+    animation-delay: 240ms;
+  }
+  .reveal-delay-5 {
+    animation-delay: 300ms;
+  }
 
   /* Sticky-header с blur */
   .header-blur {
@@ -132,10 +152,7 @@
 
   /* Subtle dotted background для Auth-страницы */
   .dot-grid {
-    background-image: radial-gradient(
-      hsl(var(--foreground) / 0.06) 1px,
-      transparent 1px
-    );
+    background-image: radial-gradient(hsl(var(--foreground) / 0.06) 1px, transparent 1px);
     background-size: 24px 24px;
   }
 }

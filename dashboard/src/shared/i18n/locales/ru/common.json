@@ -56,5 +56,22 @@
   "plan_badge": {
     "until": "до",
     "expired": "истёк"
+  },
+  "data_table": {
+    "filter": "Фильтр…",
+    "columns": "Колонки",
+    "toggle_columns": "Видимость колонок",
+    "no_results": "Ничего не найдено.",
+    "loading": "Загрузка…",
+    "previous": "Назад",
+    "next": "Вперёд",
+    "first_page": "Первая страница",
+    "last_page": "Последняя страница",
+    "rows_per_page": "Строк на странице",
+    "page_of_total": "Стр. {{page}} из {{total}}",
+    "selected_of_total": "Выбрано {{selected}} из {{total}}.",
+    "select_all": "Выбрать все",
+    "select_row": "Выбрать строку",
+    "open_menu": "Открыть меню"
   }
 }

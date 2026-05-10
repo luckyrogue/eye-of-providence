@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { toast } from "@eop/ui";
 import { Button, SecretField } from "@eop/ui";
 import { Plus } from "lucide-react";
 import { useCreateInvite } from "../../../entities/team";

@@ -14,9 +14,7 @@ interface OnboardingStatus {
 }
 
 test.describe("onboarding", () => {
-  test("fresh user: teams_count=0, has_event=false, dismissed=false", async ({
-    api,
-  }) => {
+  test("fresh user: teams_count=0, has_event=false, dismissed=false", async ({ api }) => {
     const s = await api.fetch<OnboardingStatus>("/v1/me/onboarding/status");
     expect(s.teams_count).toBe(0);
     expect(s.has_event).toBe(false);
@@ -33,15 +31,9 @@ test.describe("onboarding", () => {
   });
 
   test("dismiss is idempotent (повторный → status ok)", async ({ api }) => {
-    const r1 = await api.fetch<{ status: string }>(
-      "/v1/me/onboarding/dismiss",
-      { method: "POST" },
-    );
+    const r1 = await api.fetch<{ status: string }>("/v1/me/onboarding/dismiss", { method: "POST" });
     expect(r1.status).toBe("ok");
-    const r2 = await api.fetch<{ status: string }>(
-      "/v1/me/onboarding/dismiss",
-      { method: "POST" },
-    );
+    const r2 = await api.fetch<{ status: string }>("/v1/me/onboarding/dismiss", { method: "POST" });
     expect(r2.status).toBe("ok");
     const s = await api.fetch<OnboardingStatus>("/v1/me/onboarding/status");
     expect(s.dismissed).toBe(true);

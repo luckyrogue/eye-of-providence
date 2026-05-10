@@ -1,6 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Tabs, TabsList, TabsTrigger } from "@eop/ui";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@eop/ui";
 import { Users } from "lucide-react";
 import { useBetaInfo, useTeams } from "../../entities/team";
 import { useMe } from "../../entities/user";
@@ -14,9 +23,11 @@ export function Teams({ tz }: { tz: string }) {
   const teams = useTeams();
   const beta = useBetaInfo();
   const me = useMe();
-  const [activeTeam, setActiveTeam] = useState<string | null>(localStorage.getItem(SESSION_KEYS.team));
+  const [activeTeam, setActiveTeam] = useState<string | null>(
+    localStorage.getItem(SESSION_KEYS.team),
+  );
 
-  const teamsList = teams.data ?? [];
+  const teamsList = useMemo(() => teams.data ?? [], [teams.data]);
   // 1 owner = 1 company invariant (бэкенд тоже ловит, но UI не должен звать
   // запрос, обречённый на 403). Super_admin исключён.
   const isSuperAdmin = me.data?.global_role === "super_admin";
@@ -76,10 +87,14 @@ export function Teams({ tz }: { tz: string }) {
             <Tabs value={activeTeam ?? ""} onValueChange={switchTeam}>
               <TabsList className="flex-wrap gap-2">
                 {teamsList.map((team) => (
-                  <TabsTrigger key={team.id} value={team.id} className="border data-[state=active]:border-primary">
+                  <TabsTrigger
+                    key={team.id}
+                    value={team.id}
+                    className="border data-[state=active]:border-primary"
+                  >
                     {team.name}
                     <span className="ml-2 font-mono text-[10px] uppercase tracking-widest2 opacity-70">
-                      {t(`team_detail.role.${team.role}` as const, { defaultValue: team.role })}
+                      {t(`team_detail.role.${team.role}` as const)}
                     </span>
                   </TabsTrigger>
                 ))}

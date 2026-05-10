@@ -17,7 +17,9 @@ export function TokenRow({ token }: { token: APIToken }) {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium text-sm">{token.name}</span>
           <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-muted">{token.prefix}…</code>
-          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{token.scope}</span>
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            {token.scope}
+          </span>
         </div>
         <div className="text-xs text-muted-foreground mt-1">
           {lastUsed} · {expires}

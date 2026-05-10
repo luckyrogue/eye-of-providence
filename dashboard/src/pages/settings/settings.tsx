@@ -97,7 +97,9 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
         </CardHeader>
         <CardContent>
           <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-            {privacyItems.map((s) => <li key={s}>{s}</li>)}
+            {privacyItems.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
           </ul>
         </CardContent>
       </Card>

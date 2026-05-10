@@ -28,7 +28,9 @@ export function Hero() {
             </a>
           </Button>
           <Button asChild size="lg" variant="outline" className="h-11 px-6">
-            <a href="#how" className="flex items-center justify-center">{t("hero.cta_secondary")}</a>
+            <a href="#how" className="flex items-center justify-center">
+              {t("hero.cta_secondary")}
+            </a>
           </Button>
         </div>
         {/* Trust strip: wrap-able grid на mobile */}

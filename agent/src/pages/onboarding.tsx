@@ -4,9 +4,9 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } fro
 import { preflightRun, type PreflightCheck, type PreflightStatus } from "../shared/api/tauri";
 
 const STATUS_DOT: Record<PreflightStatus, string> = {
-  ok: "bg-green-500",
-  warn: "bg-amber-500",
-  error: "bg-red-500",
+  ok: "bg-success",
+  warn: "bg-warning",
+  error: "bg-destructive",
 };
 
 function badgeLabel(t: (key: string) => string, status: PreflightStatus): string {
@@ -39,7 +39,7 @@ export function OnboardingPage() {
   }
 
   useEffect(() => {
-    refresh();
+    void refresh();
   }, []);
 
   const errors = checks.filter((c) => c.status === "error");

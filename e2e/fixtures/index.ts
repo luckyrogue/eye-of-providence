@@ -8,10 +8,7 @@
 //   test("...", async ({ page, session, api }) => { ... });
 
 import { test as baseTest, expect } from "@playwright/test";
-import {
-  createApiClient,
-  type ApiClient,
-} from "../helpers/api.js";
+import { createApiClient, type ApiClient } from "../helpers/api.js";
 import { createSession, type Session } from "../helpers/auth.js";
 
 type Fixtures = {

@@ -12,8 +12,8 @@ export const badgeVariants = cva(
         default: "bg-muted text-muted-foreground border-border",
         blue: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
         purple: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30",
-        amber: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
-        green: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+        amber: "bg-warning/10 text-warning border-warning/30",
+        green: "bg-success/10 text-success border-success/30",
         red: "bg-destructive/10 text-destructive border-destructive/30",
       },
     },
@@ -24,8 +24,7 @@ export const badgeVariants = cva(
 export type BadgeVariant = VariantProps<typeof badgeVariants>["variant"];
 
 interface BadgeProps
-  extends React.HTMLAttributes<HTMLSpanElement>,
-    VariantProps<typeof badgeVariants> {
+  extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {
   mono?: boolean;
 }
 

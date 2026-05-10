@@ -23,7 +23,6 @@ export function Onboarding({
   const { t } = useTranslation(["onboarding", "errors"]);
   const [step, setStep] = useState<OnboardingStep>(initialStep);
   const [teamID, setTeamID] = useState<string | null>(initialTeamID);
-  const [teamName, setTeamName] = useState("");
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [inviteEmailSent, setInviteEmailSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -34,10 +33,10 @@ export function Onboarding({
 
   const inviteUrl = inviteCode ? `${window.location.origin}/?invite=${inviteCode}` : "";
 
-  async function createCompany() {
-    if (!teamName.trim()) return;
+  async function createCompany(name: string) {
+    if (!name.trim()) return;
     setBusy(true);
-    const r = await runToast(createTeam(teamName.trim()), {
+    const r = await runToast(createTeam(name.trim()), {
       error: t("errors:team_create_failed"),
     });
     setBusy(false);
@@ -46,8 +45,7 @@ export function Onboarding({
       localStorage.setItem(SESSION_KEYS.team, r.id);
       // Invalidate teams cache: AppLayout читает useTeams() для решения "редиректить
       // ли на /onboarding из-за пустых команд". Без invalidation остаётся stale empty.
-      qc.invalidateQueries({ queryKey: teamsKeys.list });
-      qc.invalidateQueries({ queryKey: teamsKeys.beta });
+      await qc.invalidateQueries({ queryKey: teamsKeys.all });
       setStep("install");
     }
   }
@@ -66,7 +64,7 @@ export function Onboarding({
   }
 
   function copyInvite() {
-    if (inviteUrl) navigator.clipboard.writeText(inviteUrl);
+    if (inviteUrl) void navigator.clipboard.writeText(inviteUrl);
   }
 
   return (
@@ -85,9 +83,7 @@ export function Onboarding({
         <Stepper steps={stepDefs} current={step} className="max-w-md mx-auto" />
 
         <div className="mt-6">
-          {step === "company" && (
-            <CompanyStep name={teamName} setName={setTeamName} busy={busy} onSubmit={createCompany} />
-          )}
+          {step === "company" && <CompanyStep busy={busy} onSubmit={createCompany} />}
           {step === "install" && (
             <InstallStep onSkip={() => setStep("invite")} onContinue={() => setStep("invite")} />
           )}

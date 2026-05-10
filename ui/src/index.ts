@@ -4,7 +4,14 @@
 //   widgets      — композиции из примитивов
 //   features     — сценарии с состоянием (императивные диалоги)
 export { Button, buttonVariants, IconButton, type ButtonProps } from "./shared/ui/button";
-export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./shared/ui/card";
+export {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "./shared/ui/card";
 export { cn } from "./shared/lib/cn";
 export { PlanBadge, type Plan } from "./widgets/plan-badge";
 export { EmptyState } from "./widgets/empty-state";
@@ -22,7 +29,7 @@ export {
   DialogDescription,
 } from "./shared/ui/dialog";
 export { Stepper, type StepperItem } from "./widgets/stepper";
-export { Input, InputField, RhfTextField, type InputFieldProps } from "./shared/ui/input";
+export { Input, InputField, type InputFieldProps } from "./shared/ui/input";
 export { Label } from "./shared/ui/label";
 export {
   Form,
@@ -54,6 +61,56 @@ export {
   type SimpleSelectOption,
   type SelectFieldProps,
 } from "./shared/ui/select";
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption,
+  DataTable,
+  DataTableColumnHeader,
+  DataTablePagination,
+  DataTableViewOptions,
+  DataTableRowActions,
+  selectColumn,
+  type DataTableProps,
+  type DataTableColumnHeaderProps,
+  type DataTablePaginationProps,
+  type DataTableViewOptionsProps,
+  type DataTableRowActionsProps,
+  type DataTableLabels,
+  type DataTableColumn,
+  type DataTableRow,
+  type DataTableColumnInstance,
+  type DataTableInstance,
+  type RowSelectionState,
+  type SortingState,
+  type ColumnFiltersState,
+  type VisibilityState,
+  type SelectColumnLabels,
+} from "./shared/ui/table";
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuGroup,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuRadioGroup,
+} from "./shared/ui/dropdown-menu";
+export { Textarea, TextareaField, type TextareaFieldProps } from "./shared/ui/textarea";
+export { CheckboxField, type CheckboxFieldProps } from "./shared/ui/checkbox-field";
 export { ConfirmDialog, ConfirmProvider, useConfirm } from "./features/confirm-dialog";
 export {
   AlertDialog,
@@ -72,3 +129,4 @@ export { PromptDialog } from "./features/prompt-dialog";
 export { DangerZone } from "./widgets/danger-zone";
 export { StatTile, type StatTileAccent } from "./widgets/stat-tile";
 export { SecretField } from "./shared/ui/secret-field";
+export { Toaster, toast, type ToasterProps } from "./shared/ui/toaster";

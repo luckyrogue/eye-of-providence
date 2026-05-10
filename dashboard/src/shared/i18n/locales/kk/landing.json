@@ -15,11 +15,7 @@
     "lead": "Инженерлерге арналған privacy-first аналитика. Қолмен жазылған кодты, AI-көмекті және уақыт қайда кететінін қадағала — IDE, браузер, CLI.",
     "cta_primary": "Бастау — тегін",
     "cta_secondary": "Қалай жұмыс істейтінін көру",
-    "trust": [
-      "Privacy-by-design",
-      "Self-hostable",
-      "Картасыз"
-    ]
+    "trust": ["Privacy-by-design", "Self-hostable", "Картасыз"]
   },
   "logo_strip": {
     "tagline": "Сен пайдаланатын әр арнаны бақылаймыз"
@@ -164,6 +160,9 @@
     "tagline": "Инженерлерге арналған privacy-first AI workflow аналитикасы. Жеке серверде орнатуға болады.",
     "product_title": "Өнім",
     "legal_title": "Заңды",
+    "legal_privacy": "Құпиялылық",
+    "legal_terms": "Шарттар",
+    "legal_security": "Қауіпсіздік",
     "status_ok": "Барлық жүйелер жұмыс істейді"
   },
   "preview": {

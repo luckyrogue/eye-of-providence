@@ -1,87 +1,63 @@
-// Минимальный markdown→html без зависимостей.
-// Покрывает то, что генерирует Gemini: # h1, ## h2, - bullets, **bold**, _italic_, `code`, абзацы.
-// Плюс: подсветка чисел/процентов в bold (badge-style) и иконок в начале заголовков.
+// Безопасный markdown через react-markdown.
+//
+// react-markdown рендерит дерево элементов, не использует dangerouslySetInnerHTML
+// и по умолчанию не пропускает HTML — поэтому XSS невозможен даже на untrusted
+// LLM-выводах. Custom-классы передаём через `components` props без потери
+// type-safety и без regex-парсинга.
+import ReactMarkdown from "react-markdown";
 
-import { useMemo } from "react";
-
-function escape(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function inline(s: string): string {
-  let r = escape(s);
-  // `inline code` — фон + моно
-  r = r.replace(/`([^`]+)`/g, '<code class="rounded bg-purple-500/10 px-1.5 py-0.5 text-[0.85em] font-mono text-purple-700 dark:text-purple-300">$1</code>');
-  // **bold** — выделяем числа/проценты яркой подсветкой, остальное — просто bold
-  r = r.replace(/\*\*([^*]+)\*\*/g, (_, t: string) => {
-    const isNumeric = /^-?[\d.,]+\s*(%|сек|мин|ч|секунд|минут|часов|часа|симв|событий)?$|^-?[\d.,]+%/.test(t);
-    if (isNumeric) {
-      return `<strong class="text-foreground bg-amber-500/10 rounded px-1 py-0.5">${t}</strong>`;
-    }
-    return `<strong class="font-semibold text-foreground">${t}</strong>`;
-  });
-  // _italic_
-  r = r.replace(/(^|\s)_([^_]+)_(?=\s|$|[.,!?])/g, '$1<em class="text-muted-foreground">$2</em>');
-  // ▸ → spaced bullet
-  r = r.replace(/▸/g, '<span class="text-purple-500">▸</span>');
-  return r;
-}
-
-function render(md: string): string {
-  const lines = md.split("\n");
-  const out: string[] = [];
-  let inList = false;
-  let para: string[] = [];
-
-  const flushPara = () => {
-    if (para.length) {
-      out.push(`<p class="mb-3 leading-relaxed text-foreground/90">${inline(para.join(" "))}</p>`);
-      para = [];
-    }
-  };
-  const closeList = () => {
-    if (inList) {
-      out.push("</ul>");
-      inList = false;
-    }
-  };
-
-  for (const raw of lines) {
-    const line = raw.trimEnd();
-    if (!line.trim()) {
-      flushPara();
-      closeList();
-      continue;
-    }
-    if (line.startsWith("## ")) {
-      flushPara();
-      closeList();
-      const text = line.slice(3);
-      out.push(`<h2 class="mt-6 mb-3 text-lg font-semibold tracking-tight flex items-center gap-2">${inline(text)}</h2>`);
-    } else if (line.startsWith("# ")) {
-      flushPara();
-      closeList();
-      const text = line.slice(2);
-      out.push(`<h1 class="mt-2 mb-4 text-2xl font-bold tracking-tight">${inline(text)}</h1>`);
-    } else if (/^\s*-\s+/.test(line)) {
-      flushPara();
-      if (!inList) {
-        out.push('<ul class="mb-4 space-y-1.5 pl-1">');
-        inList = true;
-      }
-      const item = line.replace(/^\s*-\s+/, "");
-      out.push(`<li class="flex gap-2 text-foreground/90"><span class="text-purple-500/60 mt-1">•</span><span class="flex-1">${inline(item)}</span></li>`);
-    } else {
-      closeList();
-      para.push(line);
-    }
-  }
-  flushPara();
-  closeList();
-  return out.join("\n");
-}
+const NUMERIC_RE = /^-?[\d.,]+\s*(%|сек|мин|ч|секунд|минут|часов|часа|симв|событий)?$|^-?[\d.,]+%/;
 
 export function Markdown({ source }: { source: string }) {
-  const html = useMemo(() => render(source), [source]);
-  return <div className="prose-eop" dangerouslySetInnerHTML={{ __html: html }} />;
+  return (
+    <div className="prose-eop">
+      <ReactMarkdown
+        components={{
+          h1: ({ children }) => (
+            <h1 className="mt-2 mb-4 text-2xl font-bold tracking-tight">{children}</h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="mt-6 mb-3 text-lg font-semibold tracking-tight flex items-center gap-2">
+              {children}
+            </h2>
+          ),
+          p: ({ children }) => (
+            <p className="mb-3 leading-relaxed text-foreground/90">{children}</p>
+          ),
+          ul: ({ children }) => <ul className="mb-4 space-y-1.5 pl-1">{children}</ul>,
+          li: ({ children }) => (
+            <li className="flex gap-2 text-foreground/90">
+              <span className="text-purple-500/60 mt-1">•</span>
+              <span className="flex-1">{children}</span>
+            </li>
+          ),
+          code: ({ children }) => (
+            <code className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[0.85em] font-mono text-purple-700 dark:text-purple-300">
+              {children}
+            </code>
+          ),
+          em: ({ children }) => <em className="text-muted-foreground">{children}</em>,
+          strong: ({ children }) => {
+            const text = childrenToString(children);
+            const isNumeric = NUMERIC_RE.test(text.trim());
+            const className = isNumeric
+              ? "text-foreground bg-amber-500/10 rounded px-1 py-0.5 font-semibold"
+              : "font-semibold text-foreground";
+            return <strong className={className}>{children}</strong>;
+          },
+        }}
+      >
+        {source}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+// react-markdown передаёт в `children` массив с разными node-типами.
+// Для классификации numeric/non-numeric достаточно flatten в строку.
+function childrenToString(children: React.ReactNode): string {
+  if (typeof children === "string") return children;
+  if (typeof children === "number") return String(children);
+  if (Array.isArray(children)) return children.map(childrenToString).join("");
+  return "";
 }

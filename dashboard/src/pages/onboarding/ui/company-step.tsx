@@ -1,19 +1,38 @@
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from "@eop/ui";
+import { z } from "zod";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Form,
+  InputField,
+} from "@eop/ui";
 import { ArrowRight, Building2, Loader2 } from "lucide-react";
 
+const companyFormSchema = z.object({
+  name: z.string().trim().min(2, "company.errors.too_short").max(100, "company.errors.too_long"),
+});
+
+type CompanyForm = z.infer<typeof companyFormSchema>;
+
 export function CompanyStep({
-  name,
-  setName,
   busy,
   onSubmit,
 }: {
-  name: string;
-  setName: (v: string) => void;
   busy: boolean;
-  onSubmit: () => void;
+  onSubmit: (name: string) => void;
 }) {
   const { t } = useTranslation("onboarding");
+  const form = useForm<CompanyForm>({
+    defaultValues: { name: "" },
+    resolver: zodResolver(companyFormSchema),
+  });
+
   return (
     <Card className="card-hover reveal">
       <CardHeader>
@@ -24,21 +43,24 @@ export function CompanyStep({
         <CardDescription>{t("company.lead")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Input
-          autoFocus
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !busy && name.trim() && onSubmit()}
-          placeholder={t("company.placeholder")}
-          maxLength={100}
-          className="w-full text-base"
-        />
-        <div className="flex justify-end">
-          <Button onClick={onSubmit} disabled={busy || !name.trim()}>
-            {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-            {t("company.submit")} <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit((v) => onSubmit(v.name.trim()))} className="space-y-4">
+            <InputField
+              control={form.control}
+              name="name"
+              label={t("company.label")}
+              placeholder={t("company.placeholder")}
+              disabled={busy}
+              translateError={(msg) => (msg ? t(msg, { defaultValue: msg }) : undefined)}
+            />
+            <div className="flex justify-end">
+              <Button type="submit" disabled={busy || !form.formState.isValid}>
+                {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                {t("company.submit")} <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

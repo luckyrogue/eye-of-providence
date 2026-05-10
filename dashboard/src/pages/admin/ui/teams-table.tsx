@@ -1,11 +1,28 @@
-import { Fragment, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, IconButton, PlanBadge } from "@eop/ui";
-import { CreditCard, UserPlus } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  EmptyState,
+  PlanBadge,
+  useConfirm,
+  type DataTableColumn,
+} from "@eop/ui";
 import type { AdminTeam, AdminUser } from "../../../entities/admin";
-import { AddMemberRow } from "../../../features/admin-add-team-member";
-import { DeleteTeamButton } from "../../../features/admin-delete-team";
+import { useAdminDeleteTeam } from "../../../entities/admin";
+import { AddMemberForm } from "../../../features/admin-add-team-member";
 import { SubscriptionModal } from "../../../features/admin-set-subscription";
+import { dtLabels } from "../../../shared/lib/data-table-labels";
+import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { formatDate } from "../../../shared/lib/tz";
 
 export function TeamsTable({
@@ -18,89 +35,155 @@ export function TeamsTable({
   tz: string;
 }) {
   const { t } = useTranslation(["app", "common"]);
-  const [adding, setAdding] = useState<string | null>(null);
   const [subTeam, setSubTeam] = useState<AdminTeam | null>(null);
+  const confirm = useConfirm();
+  const deleteTeam = useAdminDeleteTeam();
+  const runToast = useMutationToast();
+
+  const destroy = useCallback(
+    async (team: AdminTeam) => {
+      const ok = await confirm({
+        title: t("app:admin.team_delete_confirm_title", { name: team.name }),
+        description: t("app:admin.team_delete_confirm_lead"),
+        typeToConfirm: team.name,
+        destructive: true,
+        confirmText: t("app:team_detail.settings_danger_confirm"),
+      });
+      if (!ok) return;
+      await runToast(deleteTeam.mutateAsync(team.id), {
+        success: t("app:admin.team_deleted"),
+        error: t("app:admin.team_delete_failed"),
+      });
+    },
+    [confirm, deleteTeam, runToast, t],
+  );
+
+  const columns = useMemo<DataTableColumn<AdminTeam>[]>(
+    () => [
+      {
+        accessorKey: "name",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("app:admin.teams_table_name")} />
+        ),
+        cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+      },
+      {
+        id: "plan",
+        accessorFn: (row) => row.subscription_plan,
+        header: t("app:admin.teams_subscribe"),
+        enableSorting: false,
+        cell: ({ row }) => (
+          <PlanBadge
+            plan={row.original.subscription_plan}
+            until={row.original.subscription_until}
+            untilLabel={t("common:plan_badge.until")}
+            expiredLabel={t("common:plan_badge.expired")}
+          />
+        ),
+      },
+      {
+        accessorKey: "member_count",
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("app:admin.teams_table_members")}
+            align="right"
+          />
+        ),
+        cell: ({ row }) => (
+          <div className="text-right tabular-nums">{row.original.member_count}</div>
+        ),
+      },
+      {
+        accessorKey: "owner_email",
+        header: t("app:admin.teams_table_owner"),
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{row.original.owner_email ?? "—"}</span>
+        ),
+      },
+      {
+        accessorKey: "created_at",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("app:admin.teams_table_created")} />
+        ),
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">
+            {formatDate(row.original.created_at, tz)}
+          </span>
+        ),
+      },
+      {
+        id: "actions",
+        enableHiding: false,
+        enableSorting: false,
+        header: () => null,
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <DataTableRowActions triggerLabel={t("common:data_table.open_menu")}>
+              <DropdownMenuLabel>{t("app:admin.team_actions_label")}</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setSubTeam(row.original)}>
+                {t("app:admin.team_subscribe_btn")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => row.toggleExpanded()}>
+                {row.getIsExpanded()
+                  ? t("app:admin.team_add_member_close")
+                  : t("app:admin.team_add_member_btn")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                disabled={deleteTeam.isPending}
+                onClick={() => void destroy(row.original)}
+              >
+                {t("app:admin.team_delete_btn")}
+              </DropdownMenuItem>
+            </DataTableRowActions>
+          </div>
+        ),
+      },
+    ],
+    [t, tz, deleteTeam.isPending, destroy],
+  );
 
   return (
     <>
       <Card className="card-hover">
         <CardHeader>
           <CardTitle className="font-display tracking-tight">
-            {t("admin.all_teams_title", { defaultValue: "All companies" })}
+            {t("app:admin.all_teams_title")}
           </CardTitle>
           <CardDescription>
-            {t("admin.all_teams_lead", {
-              count: teams.length,
-              defaultValue: `${teams.length} companies in the system`,
-            })}
+            {t("app:admin.all_teams_lead", { count: teams.length })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {teams.length === 0 ? (
             <EmptyState
-              eyebrow={t("admin.all_teams_empty_eyebrow", { defaultValue: "No companies" })}
-              title={t("admin.all_teams_empty_title", { defaultValue: "No companies yet" })}
+              eyebrow={t("app:admin.all_teams_empty_eyebrow")}
+              title={t("app:admin.all_teams_empty_title")}
             />
           ) : (
-            <div className="overflow-x-auto rounded-md border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="py-2.5 px-3 text-left">{t("admin.teams_table_name")}</th>
-                    <th className="py-2.5 px-3 text-left">{t("admin.teams_subscribe")}</th>
-                    <th className="py-2.5 px-3 text-right">{t("admin.teams_table_members")}</th>
-                    <th className="py-2.5 px-3 text-left">{t("admin.teams_table_owner")}</th>
-                    <th className="py-2.5 px-3 text-left">{t("admin.teams_table_created")}</th>
-                    <th className="py-2.5 px-3 text-right" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {teams.map((team) => (
-                    <Fragment key={team.id}>
-                      <tr className="border-t hover:bg-muted/30">
-                        <td className="py-2 px-3 font-medium">{team.name}</td>
-                        <td className="py-2 px-3">
-                          <PlanBadge
-                            plan={team.subscription_plan}
-                            until={team.subscription_until}
-                            untilLabel={t("common:plan_badge.until", { defaultValue: "until" })}
-                            expiredLabel={t("common:plan_badge.expired", { defaultValue: "expired" })}
-                          />
-                        </td>
-                        <td className="py-2 px-3 text-right tabular-nums">{team.member_count}</td>
-                        <td className="py-2 px-3 text-xs text-muted-foreground">{team.owner_email ?? "—"}</td>
-                        <td className="py-2 px-3 text-xs text-muted-foreground">{formatDate(team.created_at, tz)}</td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex justify-end gap-1">
-                            <IconButton
-                              title={t("admin.team_subscribe_btn", { defaultValue: "Manage subscription" })}
-                              onClick={() => setSubTeam(team)}
-                            >
-                              <CreditCard className="h-3.5 w-3.5" />
-                            </IconButton>
-                            <IconButton
-                              title={t("admin.team_add_member_btn", { defaultValue: "Add member" })}
-                              onClick={() => setAdding(adding === team.id ? null : team.id)}
-                            >
-                              <UserPlus className="h-3.5 w-3.5" />
-                            </IconButton>
-                            <DeleteTeamButton teamID={team.id} name={team.name} />
-                          </div>
-                        </td>
-                      </tr>
-                      {adding === team.id && (
-                        <AddMemberRow
-                          teamID={team.id}
-                          users={users}
-                          onCancel={() => setAdding(null)}
-                          onAdded={() => setAdding(null)}
-                        />
-                      )}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={columns}
+              data={teams}
+              filterableColumn={{
+                id: "name",
+                placeholder: t("app:admin.teams_filter_name"),
+              }}
+              enableColumnVisibility
+              enablePagination
+              pageSize={20}
+              labels={dtLabels(t)}
+              getRowCanExpand={() => true}
+              renderSubComponent={(row) => (
+                <AddMemberForm
+                  teamID={row.original.id}
+                  users={users}
+                  onCancel={() => row.toggleExpanded(false)}
+                  onAdded={() => row.toggleExpanded(false)}
+                />
+              )}
+            />
           )}
         </CardContent>
       </Card>

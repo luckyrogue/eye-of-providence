@@ -7,12 +7,29 @@ const ACCENTS = {
   amber: "from-amber-500/20",
 } as const;
 
-function PreviewStat({ label, value, accent }: { label: string; value: string; accent: keyof typeof ACCENTS }) {
+function PreviewStat({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent: keyof typeof ACCENTS;
+}) {
   return (
     <div className="rounded-lg border bg-card p-2.5 sm:p-3 relative overflow-hidden">
-      <div className={cn("absolute right-0 top-0 h-12 w-12 sm:h-16 sm:w-16 rounded-bl-full bg-gradient-to-bl to-transparent", ACCENTS[accent])} />
-      <div className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest2 text-muted-foreground line-clamp-2">{label}</div>
-      <div className="font-display text-xl sm:text-2xl md:text-3xl font-bold tracking-tightest tabular-nums mt-1 truncate">{value}</div>
+      <div
+        className={cn(
+          "absolute right-0 top-0 h-12 w-12 sm:h-16 sm:w-16 rounded-bl-full bg-gradient-to-bl to-transparent",
+          ACCENTS[accent],
+        )}
+      />
+      <div className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest2 text-muted-foreground line-clamp-2">
+        {label}
+      </div>
+      <div className="font-display text-xl sm:text-2xl md:text-3xl font-bold tracking-tightest tabular-nums mt-1 truncate">
+        {value}
+      </div>
     </div>
   );
 }
@@ -25,7 +42,11 @@ function FakeChart() {
   const path = (arr: number[]) =>
     arr.map((v, i) => `${(i / (arr.length - 1)) * 100},${100 - (v / max) * 90}`).join(" ");
   return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full mt-6 px-3 pb-3">
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      className="absolute inset-0 w-full h-full mt-6 px-3 pb-3"
+    >
       <defs>
         <linearGradient id="manualG" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor="hsl(220 80% 55%)" stopOpacity="0.3" />
@@ -36,8 +57,20 @@ function FakeChart() {
           <stop offset="100%" stopColor="hsl(280 70% 60%)" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <polyline points={path(points)} fill="none" stroke="hsl(220 80% 55%)" strokeWidth="0.6" vectorEffect="non-scaling-stroke" />
-      <polyline points={path(pointsAi)} fill="none" stroke="hsl(280 70% 60%)" strokeWidth="0.6" vectorEffect="non-scaling-stroke" />
+      <polyline
+        points={path(points)}
+        fill="none"
+        stroke="hsl(220 80% 55%)"
+        strokeWidth="0.6"
+        vectorEffect="non-scaling-stroke"
+      />
+      <polyline
+        points={path(pointsAi)}
+        fill="none"
+        stroke="hsl(280 70% 60%)"
+        strokeWidth="0.6"
+        vectorEffect="non-scaling-stroke"
+      />
       <polygon points={`0,100 ${path(points)} 100,100`} fill="url(#manualG)" />
       <polygon points={`0,100 ${path(pointsAi)} 100,100`} fill="url(#aiG)" />
     </svg>
@@ -54,7 +87,9 @@ export function ProductPreview() {
           <span className="h-2.5 w-2.5 rounded-full bg-red-500/70" />
           <span className="h-2.5 w-2.5 rounded-full bg-amber-500/70" />
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/70" />
-          <span className="ml-3 font-mono text-xs text-muted-foreground">eop.rysdavletov.org/dashboard</span>
+          <span className="ml-3 font-mono text-xs text-muted-foreground">
+            eop.rysdavletov.org/dashboard
+          </span>
         </div>
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-3 gap-3">

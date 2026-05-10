@@ -48,15 +48,7 @@
     "delete_failed": "No se pudo eliminar"
   },
   "heatmap": {
-    "days": [
-      "Dom",
-      "Lun",
-      "Mar",
-      "Mié",
-      "Jue",
-      "Vie",
-      "Sáb"
-    ],
+    "days": ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"],
     "total": "total",
     "minutes_short": "min",
     "hover_hint": "Pasa el cursor por una celda para ver detalles."
@@ -64,5 +56,22 @@
   "plan_badge": {
     "until": "hasta",
     "expired": "expiró"
+  },
+  "data_table": {
+    "filter": "Filtrar…",
+    "columns": "Columnas",
+    "toggle_columns": "Mostrar columnas",
+    "no_results": "Sin resultados.",
+    "loading": "Cargando…",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "first_page": "Primera página",
+    "last_page": "Última página",
+    "rows_per_page": "Filas por página",
+    "page_of_total": "Página {{page}} de {{total}}",
+    "selected_of_total": "{{selected}} de {{total}} fila(s) seleccionada(s).",
+    "select_all": "Seleccionar todo",
+    "select_row": "Seleccionar fila",
+    "open_menu": "Abrir menú"
   }
 }

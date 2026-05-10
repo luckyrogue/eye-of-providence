@@ -4,6 +4,7 @@
 // Privacy: содержимое сообщений НЕ передаётся, только размер и host.
 
 import { aiInfoForHost } from "../shared/api/ai-domains";
+import type { AiCopyMessage } from "../shared/api/messages";
 
 const host = location.host;
 const info = aiInfoForHost(host);
@@ -20,7 +21,8 @@ function onCopy(_event: ClipboardEvent) {
   const size = sel.toString().length;
   if (size === 0) return;
 
-  chrome.runtime.sendMessage({ type: "ai-copy", host, size }).catch(() => {
+  const msg: AiCopyMessage = { type: "ai-copy", host, size };
+  chrome.runtime.sendMessage(msg).catch(() => {
     // service worker возможно ещё не готов — это нормально
   });
 }

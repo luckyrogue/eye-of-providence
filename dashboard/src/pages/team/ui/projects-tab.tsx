@@ -24,7 +24,9 @@ export function ProjectsTab({ teamID, role, tz }: { teamID: string; role: string
           {list.map((p) => (
             <li key={p.id} className="rounded-md border p-3">
               <div className="font-medium text-sm">{p.name}</div>
-              {p.repo_url && <div className="text-xs text-muted-foreground font-mono">{p.repo_url}</div>}
+              {p.repo_url && (
+                <div className="text-xs text-muted-foreground font-mono">{p.repo_url}</div>
+              )}
               <div className="text-xs text-muted-foreground mt-1">
                 {t("team_detail.projects_created", { date: formatDate(p.created_at, tz) })}
               </div>

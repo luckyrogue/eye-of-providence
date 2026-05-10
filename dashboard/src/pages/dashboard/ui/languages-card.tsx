@@ -8,7 +8,9 @@ export function LanguagesCard({ cells }: { cells: LangCell[] }) {
   return (
     <Card className="card-hover">
       <CardHeader>
-        <CardTitle className="font-display tracking-tight">{t("dashboard.languages_title")}</CardTitle>
+        <CardTitle className="font-display tracking-tight">
+          {t("dashboard.languages_title")}
+        </CardTitle>
         <CardDescription>{t("dashboard.languages_lead")}</CardDescription>
       </CardHeader>
       <CardContent>

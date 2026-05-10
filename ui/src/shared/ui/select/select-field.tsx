@@ -19,7 +19,10 @@ export type SelectFieldProps<
   hideMessage?: boolean;
 };
 
-export function SelectField<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
+export function SelectField<
+  TFieldValues extends FieldValues,
+  TName extends FieldPath<TFieldValues>,
+>({
   control,
   name,
   label,

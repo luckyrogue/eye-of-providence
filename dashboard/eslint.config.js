@@ -3,4 +3,4 @@
 // Не делаем полноценный stylistic linting (для этого есть tsc + Prettier).
 import { baseConfig } from "@eop/ui/eslint.base.js";
 
-export default baseConfig();
+export default baseConfig({ fsdLayers: true });

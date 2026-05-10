@@ -8,6 +8,7 @@
   "status_loading": "cargando…",
   "status_all_sent": "Todos los eventos se han enviado",
   "status_buffer": "En búfer: {{count}} evento(s) pendientes de envío",
+  "status_error": "No se pudo leer el estado — reinicie el agente si persiste",
   "status_hint": "El agente funciona en segundo plano y en la bandeja del sistema. Los eventos se guardan localmente y se sincronizan con el backend cada 15 segundos.",
   "status_refresh": "Actualizar",
   "setup_title": "Comprobaciones de configuración",

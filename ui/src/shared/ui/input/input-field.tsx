@@ -9,7 +9,10 @@ export type { InputFieldProps } from "./types";
 /**
  * react-hook-form + shadcn FormField + Input (props instead of render-prop boilerplate).
  */
-export function InputField<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
+export function InputField<
+  TFieldValues extends FieldValues,
+  TName extends FieldPath<TFieldValues>,
+>({
   control,
   name,
   label,
@@ -48,6 +51,3 @@ export function InputField<TFieldValues extends FieldValues, TName extends Field
     />
   );
 }
-
-/** @deprecated Use {@link InputField} */
-export const RhfTextField = InputField;

@@ -22,13 +22,16 @@ export type CreateProjectReq = { name: string; repo_url: string };
 
 // --- Query keys ---
 
+// Все query keys строятся от общего корня `all`, чтобы инвалидация
+// одного ключа уровня сущности (`teams`) очищала все её вариации.
 export const teamsKeys = {
-  list: ["teams"] as const,
-  beta: ["teams.beta"] as const,
-  members: (teamID: string) => ["teams", teamID, "members"] as const,
-  summary: (teamID: string) => ["teams", teamID, "summary"] as const,
-  projects: (teamID: string) => ["teams", teamID, "projects"] as const,
-  commits: (teamID: string) => ["teams", teamID, "commits"] as const,
+  all: ["teams"] as const,
+  list: () => [...teamsKeys.all, "list"] as const,
+  beta: () => [...teamsKeys.all, "beta"] as const,
+  members: (teamID: string) => [...teamsKeys.all, "members", teamID] as const,
+  summary: (teamID: string) => [...teamsKeys.all, "summary", teamID] as const,
+  projects: (teamID: string) => [...teamsKeys.all, "projects", teamID] as const,
+  commits: (teamID: string) => [...teamsKeys.all, "commits", teamID] as const,
 };
 
 // --- Fetchers ---
@@ -72,9 +75,7 @@ export const removeMember = (teamID: string, userID: string) =>
 
 export const createInvite = (teamID: string, email?: string) => {
   const body = email ? { email } : undefined;
-  return http
-    .post<CreateInviteRes>(`/v1/teams/${enc(teamID)}/invites`, body)
-    .then((r) => r.data);
+  return http.post<CreateInviteRes>(`/v1/teams/${enc(teamID)}/invites`, body).then((r) => r.data);
 };
 
 export const previewInvite = (code: string) =>
@@ -96,33 +97,33 @@ export const listTeamCommits = (teamID: string) =>
 
 // --- Query hooks ---
 
-export const useTeams = () => useQuery({ queryKey: teamsKeys.list, queryFn: listMyTeams });
-export const useBetaInfo = () => useQuery({ queryKey: teamsKeys.beta, queryFn: fetchBetaInfo });
+export const useTeams = () => useQuery({ queryKey: teamsKeys.list(), queryFn: listMyTeams });
+export const useBetaInfo = () => useQuery({ queryKey: teamsKeys.beta(), queryFn: fetchBetaInfo });
 
 export const useMembers = (teamID: string | null) =>
   useQuery({
-    queryKey: teamID ? teamsKeys.members(teamID) : ["members.disabled"],
+    queryKey: teamID ? teamsKeys.members(teamID) : [...teamsKeys.all, "members", "disabled"],
     queryFn: () => listMembers(teamID!),
     enabled: !!teamID,
   });
 
 export const useTeamSummary = (teamID: string | null) =>
   useQuery({
-    queryKey: teamID ? teamsKeys.summary(teamID) : ["summary.disabled"],
+    queryKey: teamID ? teamsKeys.summary(teamID) : [...teamsKeys.all, "summary", "disabled"],
     queryFn: () => teamSummary(teamID!),
     enabled: !!teamID,
   });
 
 export const useProjects = (teamID: string | null) =>
   useQuery({
-    queryKey: teamID ? teamsKeys.projects(teamID) : ["projects.disabled"],
+    queryKey: teamID ? teamsKeys.projects(teamID) : [...teamsKeys.all, "projects", "disabled"],
     queryFn: () => listProjects(teamID!),
     enabled: !!teamID,
   });
 
 export const useTeamCommits = (teamID: string | null) =>
   useQuery({
-    queryKey: teamID ? teamsKeys.commits(teamID) : ["commits.disabled"],
+    queryKey: teamID ? teamsKeys.commits(teamID) : [...teamsKeys.all, "commits", "disabled"],
     queryFn: () => listTeamCommits(teamID!),
     enabled: !!teamID,
   });
@@ -133,10 +134,9 @@ export function useCreateTeam() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (name: string) => createTeam(name),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: teamsKeys.list });
-      qc.invalidateQueries({ queryKey: teamsKeys.beta });
-    },
+    // Создание команды влияет и на список, и на beta-инфо. Один root-prefix invalidate
+    // чистит обе ветки.
+    onSuccess: () => qc.invalidateQueries({ queryKey: teamsKeys.all }),
   });
 }
 
@@ -144,7 +144,7 @@ export function useUpdateTeam(teamID: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (name: string) => updateTeam(teamID, name),
-    onSuccess: () => qc.invalidateQueries({ queryKey: teamsKeys.list }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: teamsKeys.list() }),
   });
 }
 
@@ -152,10 +152,8 @@ export function useDeleteTeam(teamID: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => deleteTeam(teamID),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: teamsKeys.list });
-      qc.invalidateQueries({ queryKey: teamsKeys.beta });
-    },
+    // После удаления команды чистим всё: list/beta и зависящие members/summary/projects/commits.
+    onSuccess: () => qc.invalidateQueries({ queryKey: teamsKeys.all }),
   });
 }
 
@@ -177,7 +175,13 @@ export function useRemoveMember(teamID: string) {
 }
 
 export function useCreateInvite(teamID: string) {
-  return useMutation({ mutationFn: () => createInvite(teamID) });
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => createInvite(teamID),
+    // Инвайт сам по себе не отображается в списках, но caller может зависать
+    // на members (пользователь только что присоединился). Освежим members.
+    onSuccess: () => qc.invalidateQueries({ queryKey: teamsKeys.members(teamID) }),
+  });
 }
 
 export function useCreateProject(teamID: string) {

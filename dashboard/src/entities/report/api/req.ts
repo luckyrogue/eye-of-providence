@@ -12,7 +12,9 @@ export const reportsKeys = {
 // --- Fetchers ---
 
 export const generateReport = (period: ReportPeriod = "weekly") =>
-  http.post<GenerateReportRes>(`/v1/reports/generate`, undefined, { params: { period } }).then((r) => r.data);
+  http
+    .post<GenerateReportRes>(`/v1/reports/generate`, undefined, { params: { period } })
+    .then((r) => r.data);
 
 export const listReports = () =>
   http.get<ListReportsRes>("/v1/reports/").then((r) => r.data.reports ?? []);

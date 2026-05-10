@@ -1,6 +1,18 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, SecretField, Tabs, TabsList, TabsTrigger } from "@eop/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  SecretField,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@eop/ui";
 import { ArrowRight, Loader2, Mail, SkipForward } from "lucide-react";
 
 // InviteStep — два режима:

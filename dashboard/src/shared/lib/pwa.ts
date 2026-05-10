@@ -35,7 +35,8 @@ export function isStandalone(): boolean {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
     // iOS-specific
-    "standalone" in window.navigator && (window.navigator as { standalone?: boolean }).standalone === true
+    ("standalone" in window.navigator &&
+      (window.navigator as { standalone?: boolean }).standalone === true)
   );
 }
 
@@ -53,8 +54,10 @@ export function isIOS(): boolean {
 //   - dismiss: спрятать hint навсегда (localStorage flag)
 export function useInstallPrompt() {
   const [event, setEvent] = useState<BeforeInstallPromptEvent | null>(null);
-  const [dismissed, setDismissed] = useState(() =>
-    typeof localStorage !== "undefined" && localStorage.getItem(INSTALL_HINT_DISMISSED_KEY) === "1",
+  const [dismissed, setDismissed] = useState(
+    () =>
+      typeof localStorage !== "undefined" &&
+      localStorage.getItem(INSTALL_HINT_DISMISSED_KEY) === "1",
   );
   const [installed, setInstalled] = useState(() => isStandalone());
 

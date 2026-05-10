@@ -110,7 +110,9 @@ export function CreateTokenDialog({ open, onClose }: { open: boolean; onClose: (
             />
           )}
           <DialogFooter>
-            <Button size="sm" onClick={close}>{t("tokens_close")}</Button>
+            <Button size="sm" onClick={close}>
+              {t("tokens_close")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

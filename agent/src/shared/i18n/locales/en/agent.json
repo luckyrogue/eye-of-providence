@@ -8,6 +8,7 @@
   "status_loading": "loading…",
   "status_all_sent": "All events have been sent",
   "status_buffer": "In buffer: {{count}} event(s) pending send",
+  "status_error": "Failed to read status — restart the agent if this persists",
   "status_hint": "The agent runs in the background and in the system tray. Events are stored locally and synced with the backend every 15 seconds.",
   "status_refresh": "Refresh",
   "setup_title": "Setup checks",

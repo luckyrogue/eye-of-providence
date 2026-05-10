@@ -83,10 +83,7 @@ export async function apiRegister(
   });
 }
 
-export async function apiLogin(
-  email: string,
-  password: string,
-): Promise<AuthResponse> {
+export async function apiLogin(email: string, password: string): Promise<AuthResponse> {
   return createApiClient().fetch<AuthResponse>("/v1/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
@@ -107,10 +104,7 @@ export interface TeamRow {
   subscription_plan?: string;
 }
 
-export async function apiCreateTeam(
-  token: string,
-  name: string,
-): Promise<TeamRow> {
+export async function apiCreateTeam(token: string, name: string): Promise<TeamRow> {
   return createApiClient(token).fetch<TeamRow>("/v1/teams", {
     method: "POST",
     body: JSON.stringify({ name }),

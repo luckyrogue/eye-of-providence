@@ -25,9 +25,7 @@ const TIMEZONES: { label: string; value: string }[] = [
   { label: "UTC", value: "UTC" },
 ];
 
-export const UNIQUE_TIMEZONES = Array.from(
-  new Map(TIMEZONES.map((t) => [t.value, t])).values(),
-);
+export const UNIQUE_TIMEZONES = Array.from(new Map(TIMEZONES.map((t) => [t.value, t])).values());
 
 export function formatDate(iso: string, tz: string): string {
   return new Date(iso).toLocaleString("ru-RU", {

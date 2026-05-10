@@ -19,9 +19,7 @@ async function waitForBackend(): Promise<void> {
       await new Promise((r) => setTimeout(r, 1_000));
     }
   }
-  throw new Error(
-    `backend not healthy after 60s: ${(lastErr as Error)?.message ?? "unknown"}`,
-  );
+  throw new Error(`backend not healthy after 60s: ${(lastErr as Error)?.message ?? "unknown"}`);
 }
 
 export default async function globalSetup(): Promise<void> {
@@ -37,9 +35,7 @@ export default async function globalSetup(): Promise<void> {
     // Если docker exec недоступен (CI runner с пресетным docker compose) —
     // skip. Tests должны быть robust к "грязному" state через unique emails.
     // eslint-disable-next-line no-console
-    console.warn(
-      `[e2e] global-setup: DB reset skipped (${(e as Error).message})`,
-    );
+    console.warn(`[e2e] global-setup: DB reset skipped (${(e as Error).message})`);
   }
 
   // eslint-disable-next-line no-console

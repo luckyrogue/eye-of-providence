@@ -5,9 +5,10 @@ import "@eop/ui/styles.css";
 import { Button, Card, CardContent, CardHeader, CardTitle, SimpleSelect } from "@eop/ui";
 import { LOCALE_LABELS, SUPPORTED_LOCALES, type Locale } from "@eop/i18n";
 import i18n from "../shared/i18n";
-import { fetchDevToken, setConfig, clearConfig } from "../shared/api/backend";
+import { backendDisplayHost, fetchDevToken, setConfig, clearConfig } from "../shared/api/backend";
+import type { FlushNowMessage } from "../shared/api/messages";
 
-const DEFAULT_BACKEND_HOST = "eop.rysdavletov.org";
+const DEFAULT_BACKEND_HOST = backendDisplayHost();
 
 const LOCALE_OPTIONS = SUPPORTED_LOCALES.map((lng) => ({
   value: lng,
@@ -25,7 +26,7 @@ function Popup() {
   const localeValue = SUPPORTED_LOCALES.includes(lng) ? lng : "ru";
 
   useEffect(() => {
-    chrome.storage.local.get(["eop_token"]).then((r) => {
+    void chrome.storage.local.get(["eop_token"]).then((r) => {
       setToken(r.eop_token as string | undefined);
     });
   }, []);
@@ -51,8 +52,14 @@ function Popup() {
 
   async function flushNow() {
     setBusy(true);
+    setError(null);
     try {
-      await chrome.runtime.sendMessage({ type: "flush-now" });
+      const msg: FlushNowMessage = { type: "flush-now" };
+      await chrome.runtime.sendMessage(msg);
+    } catch (e) {
+      // sendMessage может отвалиться, если service worker уснул и не успел
+      // ответить — для пользователя это не фатально, но залогируем.
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }

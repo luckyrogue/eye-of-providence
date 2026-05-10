@@ -2,7 +2,20 @@
 // ingest() возвращает success-flag — caller сам решает что делать с failed batch'ем
 // (re-queue в persistent storage для retry).
 
-const DEFAULT_BACKEND = "https://eop.rysdavletov.org/api";
+export const DEFAULT_BACKEND = "https://eop.rysdavletov.org/api";
+
+// Display-host для popup — чтобы не дублировать строку. Backend URL парсится
+// один раз; на ошибке возвращаем сырое значение.
+export function backendDisplayHost(url: string = DEFAULT_BACKEND): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
+
+const REQUEST_TIMEOUT_MS = 15_000;
+const DEV_TOKEN_TIMEOUT_MS = 10_000;
 
 export type EventPayload = {
   app_bundle: string;
@@ -31,10 +44,19 @@ export async function clearConfig() {
 }
 
 export async function fetchDevToken(backend = DEFAULT_BACKEND): Promise<string> {
-  const res = await fetch(`${backend}/v1/auth/dev-token`, { method: "POST" });
-  if (!res.ok) throw new Error(`dev-token failed: ${res.status}`);
-  const data = await res.json();
-  return data.token;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), DEV_TOKEN_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${backend}/v1/auth/dev-token`, {
+      method: "POST",
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`dev-token failed: ${res.status}`);
+    const data = (await res.json()) as { token: string };
+    return data.token;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export type IngestResult =
@@ -51,11 +73,14 @@ export async function ingest(events: EventPayload[]): Promise<IngestResult> {
     console.debug("[eop] no token, skipping ingest of", events.length, "events");
     return { kind: "no-token" };
   }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
   try {
     const res = await fetch(`${backend}/v1/ingest`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ events }),
+      signal: ctrl.signal,
     });
     if (res.ok) return { kind: "ok" };
 
@@ -70,8 +95,10 @@ export async function ingest(events: EventPayload[]): Promise<IngestResult> {
     console.warn("[eop] ingest client-error, dropping batch", res.status);
     return { kind: "client-error", status: res.status };
   } catch (err) {
-    // Network error — retry.
+    // Network error / abort — retry.
     console.warn("[eop] ingest network error", err);
     return { kind: "retry-later" };
+  } finally {
+    clearTimeout(timer);
   }
 }

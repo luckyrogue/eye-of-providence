@@ -11,8 +11,13 @@
   "company": {
     "title": "What's your company name?",
     "lead": "This will be the workspace where your team sees metrics. You can change it later.",
+    "label": "Company name",
     "placeholder": "Acme Inc.",
-    "submit": "Create"
+    "submit": "Create",
+    "errors": {
+      "too_short": "Name must be at least 2 characters.",
+      "too_long": "Name must be at most 100 characters."
+    }
   },
   "install": {
     "title": "Install the agent",

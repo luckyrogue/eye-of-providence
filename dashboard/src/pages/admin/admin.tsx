@@ -19,10 +19,8 @@ export function Admin({ tz }: AdminProps) {
       <Tabs value={tab} onValueChange={(v) => setTab(v as AdminTabKey)} className="space-y-4">
         <div className="flex items-baseline justify-between">
           <div>
-            <Eyebrow>{t("admin.eyebrow", { defaultValue: "Super admin" })}</Eyebrow>
-            <h2 className="display-head text-3xl mt-2">
-              {t("admin.platform_management", { defaultValue: "Platform management" })}
-            </h2>
+            <Eyebrow>{t("admin.eyebrow")}</Eyebrow>
+            <h2 className="display-head text-3xl mt-2">{t("admin.platform_management")}</h2>
           </div>
           <TabsList>
             {ADMIN_TABS.map((it) => (

@@ -10,6 +10,12 @@
 
 import { aiInfoForHost } from "../shared/api/ai-domains";
 import { ingest, type EventPayload, type IngestResult } from "../shared/api/backend";
+import type {
+  AiCopyResponse,
+  ExtensionMessage,
+  FlushNowResponse,
+  PendingCountResponse,
+} from "../shared/api/messages";
 
 type FocusEntry = {
   host: string;
@@ -63,25 +69,27 @@ async function mutate(fn: (s: StoredState) => void): Promise<void> {
 // --- Lifecycle ---
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.alarms.create("flush", { periodInMinutes: FLUSH_INTERVAL_MS / 60_000 });
+  void chrome.alarms.create("flush", { periodInMinutes: FLUSH_INTERVAL_MS / 60_000 });
   chrome.idle.setDetectionInterval(IDLE_THRESHOLD_S);
 });
 
 // onStartup на каждый запуск браузера тоже создаёт alarm (на случай если
 // onInstalled не сработал — например, ext был уже установлен но браузер только запустился).
 chrome.runtime.onStartup.addListener(() => {
-  chrome.alarms.create("flush", { periodInMinutes: FLUSH_INTERVAL_MS / 60_000 });
+  void chrome.alarms.create("flush", { periodInMinutes: FLUSH_INTERVAL_MS / 60_000 });
 });
 
 // --- Tab/window focus ---
 
-chrome.tabs.onActivated.addListener(async ({ tabId }) => {
-  try {
-    const tab = await chrome.tabs.get(tabId);
-    await handleFocus(tab.url);
-  } catch {
-    // tab gone
-  }
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  void (async () => {
+    try {
+      const tab = await chrome.tabs.get(tabId);
+      await handleFocus(tab.url);
+    } catch {
+      // tab gone
+    }
+  })();
 });
 
 chrome.tabs.onUpdated.addListener((_tabId, info, tab) => {
@@ -90,51 +98,67 @@ chrome.tabs.onUpdated.addListener((_tabId, info, tab) => {
   }
 });
 
-chrome.windows.onFocusChanged.addListener(async (windowId) => {
-  if (windowId === chrome.windows.WINDOW_ID_NONE) {
-    await closeCurrent();
-    return;
-  }
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, windowId });
-    await handleFocus(tab?.url);
-  } catch {
-    // ignore
-  }
+chrome.windows.onFocusChanged.addListener((windowId) => {
+  void (async () => {
+    if (windowId === chrome.windows.WINDOW_ID_NONE) {
+      await closeCurrent();
+      return;
+    }
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, windowId });
+      await handleFocus(tab?.url);
+    } catch {
+      // ignore
+    }
+  })();
 });
 
-chrome.idle.onStateChanged.addListener(async (state) => {
+chrome.idle.onStateChanged.addListener((state) => {
   if (state === "idle" || state === "locked") {
-    await closeCurrent();
+    void closeCurrent();
   }
 });
 
-chrome.alarms.onAlarm.addListener(async (alarm) => {
+chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "flush") {
-    await closeCurrent();
-    await flush();
+    void (async () => {
+      await closeCurrent();
+      await flush();
+    })();
   }
 });
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg?.type === "ai-copy") {
-    void handleAiCopy(msg).then(() => sendResponse({ ok: true }));
-    return true;
-  }
-  if (msg?.type === "flush-now") {
-    void closeCurrent()
-      .then(flush)
-      .then(() => sendResponse({ ok: true }));
-    return true;
-  }
-  if (msg?.type === "pending-count") {
-    void loadState().then((s) =>
-      sendResponse({ buffer: s.buffer.length, retry: s.retryQueue.length }),
-    );
-    return true;
-  }
-  return false;
-});
+chrome.runtime.onMessage.addListener(
+  (msg: ExtensionMessage, _sender, sendResponse: (response?: unknown) => void) => {
+    switch (msg.type) {
+      case "ai-copy": {
+        void handleAiCopy(msg).then(() => {
+          const r: AiCopyResponse = { ok: true };
+          sendResponse(r);
+        });
+        return true;
+      }
+      case "flush-now": {
+        void closeCurrent()
+          .then(flush)
+          .then(() => {
+            const r: FlushNowResponse = { ok: true };
+            sendResponse(r);
+          });
+        return true;
+      }
+      case "pending-count": {
+        void loadState().then((s) => {
+          const r: PendingCountResponse = { buffer: s.buffer.length, retry: s.retryQueue.length };
+          sendResponse(r);
+        });
+        return true;
+      }
+      default:
+        return false;
+    }
+  },
+);
 
 // --- Focus handlers ---
 
@@ -192,19 +216,19 @@ function finalizeCurrent(s: StoredState): void {
   }
 }
 
-async function handleAiCopy(msg: { host?: string; size?: number }): Promise<void> {
+async function handleAiCopy(msg: { host: string; size: number }): Promise<void> {
   if (!msg.host) return;
   const info = aiInfoForHost(msg.host);
   if (!info) return;
   await mutate((s) => {
     s.buffer.push({
-      app_bundle: msg.host as string,
+      app_bundle: msg.host,
       category: "ai",
       source: "browser",
       ai_provider: info.provider,
       ai_channel: info.channel,
       duration_ms: 0,
-      chars_in: msg.size ?? 0,
+      chars_in: msg.size,
     });
   });
 }
@@ -258,7 +282,7 @@ async function flush(): Promise<void> {
       });
       // Exponential backoff: schedule повторного flush через 2^attempts минут (cap на 30 min).
       const delayMin = Math.min(Math.pow(2, attempts), 30);
-      chrome.alarms.create("retry-flush", { delayInMinutes: delayMin });
+      void chrome.alarms.create("retry-flush", { delayInMinutes: delayMin });
       console.log(`[eop] retry-later (#${attempts}), next flush в ${delayMin}m`);
     }
   }
@@ -266,8 +290,8 @@ async function flush(): Promise<void> {
 
 // --- Retry alarm ---
 
-chrome.alarms.onAlarm.addListener(async (alarm) => {
+chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "retry-flush") {
-    await flush();
+    void flush();
   }
 });

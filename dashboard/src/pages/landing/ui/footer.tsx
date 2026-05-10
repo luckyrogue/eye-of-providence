@@ -11,9 +11,9 @@ export function Footer() {
     { href: "/dashboard", label: t("nav.open_dashboard") },
   ];
   const legalLinks = [
-    { href: "/privacy", label: "Privacy" },
-    { href: "/terms", label: "Terms" },
-    { href: "/security", label: "Security" },
+    { href: "/privacy", label: t("footer.legal_privacy") },
+    { href: "/terms", label: t("footer.legal_terms") },
+    { href: "/security", label: t("footer.legal_security") },
   ];
   return (
     <footer className="border-t">
@@ -25,7 +25,9 @@ export function Footer() {
             </div>
             <span className="font-display font-bold tracking-tightest">Eye of Providence</span>
           </div>
-          <p className="text-muted-foreground mt-3 max-w-xs leading-relaxed text-xs">{t("footer.tagline")}</p>
+          <p className="text-muted-foreground mt-3 max-w-xs leading-relaxed text-xs">
+            {t("footer.tagline")}
+          </p>
         </div>
         <FooterColumn title={t("footer.product_title")} links={productLinks} />
         <FooterColumn title={t("footer.legal_title")} links={legalLinks} />
@@ -34,7 +36,7 @@ export function Footer() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-5 flex items-center justify-between text-xs text-muted-foreground font-mono">
           <span>© {new Date().getFullYear()} Eye of Providence</span>
           <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
             {t("footer.status_ok")}
           </span>
         </div>
@@ -43,10 +45,18 @@ export function Footer() {
   );
 }
 
-function FooterColumn({ title, links }: { title: string; links: { href: string; label: string }[] }) {
+function FooterColumn({
+  title,
+  links,
+}: {
+  title: string;
+  links: { href: string; label: string }[];
+}) {
   return (
     <div>
-      <div className="font-mono text-[11px] uppercase tracking-widest2 text-muted-foreground mb-3">{title}</div>
+      <div className="font-mono text-[11px] uppercase tracking-widest2 text-muted-foreground mb-3">
+        {title}
+      </div>
       <ul className="space-y-2 text-muted-foreground">
         {links.map((l) => (
           <li key={l.href}>

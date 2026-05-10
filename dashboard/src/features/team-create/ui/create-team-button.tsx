@@ -27,13 +27,17 @@ export function CreateTeamButton({
   async function submit(name: string) {
     try {
       const r = await create.mutateAsync(name);
-      runToast(Promise.resolve(r), { success: t("app:teams.created_toast") });
+      await runToast(Promise.resolve(r), { success: t("app:teams.created_toast") });
       onCreated?.(r.id);
       setOpen(false);
     } catch (e) {
       const code = (e as { code?: string }).code;
-      const errorMsg = code ? t(`errors:${code}`, { defaultValue: t("errors:generic") }) : t("errors:generic");
-      runToast(Promise.reject(new Error(errorMsg)), { error: t("errors:team_create_failed") });
+      const errorMsg = code
+        ? t(`errors:${code}`, { defaultValue: t("errors:generic") })
+        : t("errors:generic");
+      await runToast(Promise.reject(new Error(errorMsg)), {
+        error: t("errors:team_create_failed"),
+      });
     }
   }
 

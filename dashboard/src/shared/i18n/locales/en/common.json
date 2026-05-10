@@ -48,15 +48,7 @@
     "delete_failed": "Failed to delete"
   },
   "heatmap": {
-    "days": [
-      "Sun",
-      "Mon",
-      "Tue",
-      "Wed",
-      "Thu",
-      "Fri",
-      "Sat"
-    ],
+    "days": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     "total": "total",
     "minutes_short": "min",
     "hover_hint": "Hover a cell to see details."
@@ -64,5 +56,22 @@
   "plan_badge": {
     "until": "until",
     "expired": "expired"
+  },
+  "data_table": {
+    "filter": "Filter…",
+    "columns": "Columns",
+    "toggle_columns": "Toggle columns",
+    "no_results": "No results.",
+    "loading": "Loading…",
+    "previous": "Previous",
+    "next": "Next",
+    "first_page": "First page",
+    "last_page": "Last page",
+    "rows_per_page": "Rows per page",
+    "page_of_total": "Page {{page}} of {{total}}",
+    "selected_of_total": "{{selected}} of {{total}} row(s) selected.",
+    "select_all": "Select all",
+    "select_row": "Select row",
+    "open_menu": "Open menu"
   }
 }

@@ -6,12 +6,7 @@
 //   - реджект пустого тела с типизированной ошибкой
 
 import { test, expect } from "@playwright/test";
-import {
-  apiLogin,
-  apiRegister,
-  ApiError,
-  createApiClient,
-} from "../helpers/api.js";
+import { apiLogin, apiRegister, ApiError, createApiClient } from "../helpers/api.js";
 import { uniqueEmail } from "../helpers/db.js";
 
 test.describe("auth", () => {

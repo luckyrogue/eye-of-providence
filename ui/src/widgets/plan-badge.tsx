@@ -6,7 +6,7 @@ const planColors: Record<string, string> = {
   free: "bg-muted text-muted-foreground border-border",
   pro: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
   team: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30",
-  enterprise: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  enterprise: "bg-warning/10 text-warning border-warning/30",
 };
 
 export function PlanBadge({

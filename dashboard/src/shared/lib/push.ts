@@ -17,16 +17,25 @@ export function urlBase64ToUint8Array(b64: string): Uint8Array {
 // для UI ("список зарегистрированных устройств").
 export function parseUserAgent(ua: string): string {
   if (!ua) return "";
-  const platform = /iPhone|iPad/.test(ua) ? "iOS"
-    : /Android/.test(ua) ? "Android"
-      : /Macintosh/.test(ua) ? "Mac"
-        : /Windows/.test(ua) ? "Windows"
-          : /Linux/.test(ua) ? "Linux"
+  const platform = /iPhone|iPad/.test(ua)
+    ? "iOS"
+    : /Android/.test(ua)
+      ? "Android"
+      : /Macintosh/.test(ua)
+        ? "Mac"
+        : /Windows/.test(ua)
+          ? "Windows"
+          : /Linux/.test(ua)
+            ? "Linux"
             : "";
-  const browser = /Edg\//.test(ua) ? "Edge"
-    : /Chrome\//.test(ua) ? "Chrome"
-      : /Firefox\//.test(ua) ? "Firefox"
-        : /Safari\//.test(ua) ? "Safari"
+  const browser = /Edg\//.test(ua)
+    ? "Edge"
+    : /Chrome\//.test(ua)
+      ? "Chrome"
+      : /Firefox\//.test(ua)
+        ? "Firefox"
+        : /Safari\//.test(ua)
+          ? "Safari"
           : "";
   return [browser, platform].filter(Boolean).join(" • ");
 }

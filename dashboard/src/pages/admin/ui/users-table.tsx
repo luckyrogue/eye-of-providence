@@ -1,60 +1,150 @@
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState } from "@eop/ui";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableRowActions,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  EmptyState,
+  type DataTableColumn,
+} from "@eop/ui";
 import type { AdminUser } from "../../../entities/admin";
-import { DeleteUserButton } from "../../../features/admin-delete-user";
+import { useAdminDeleteUser } from "../../../entities/admin";
+import { useConfirm } from "@eop/ui";
 import { UserRoleSelect } from "../../../features/admin-update-user-role";
+import { dtLabels } from "../../../shared/lib/data-table-labels";
+import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { formatDate } from "../../../shared/lib/tz";
 
 export function UsersTable({ users, tz }: { users: AdminUser[]; tz: string }) {
-  const { t } = useTranslation("app");
+  const { t } = useTranslation(["app", "common"]);
+  const confirm = useConfirm();
+  const del = useAdminDeleteUser();
+  const runToast = useMutationToast();
+
+  const destroy = useCallback(
+    async (user: AdminUser) => {
+      const ok = await confirm({
+        title: t("app:admin.user_delete_confirm_title", { email: user.email }),
+        description: t("app:admin.user_delete_confirm_lead"),
+        destructive: true,
+        confirmText: t("app:admin.users_delete"),
+      });
+      if (!ok) return;
+      await runToast(del.mutateAsync(user.id), {
+        success: t("app:admin.users_deleted"),
+        error: t("app:admin.users_delete_failed"),
+      });
+    },
+    [confirm, del, runToast, t],
+  );
+
+  const columns = useMemo<DataTableColumn<AdminUser>[]>(
+    () => [
+      {
+        accessorKey: "email",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("app:admin.users_email")} />
+        ),
+        cell: ({ row }) => <span className="font-mono text-xs">{row.original.email}</span>,
+      },
+      {
+        accessorKey: "display_name",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("app:admin.users_name")} />
+        ),
+        cell: ({ row }) => row.original.display_name,
+      },
+      {
+        accessorKey: "global_role",
+        header: t("app:admin.users_global_role"),
+        enableSorting: false,
+        cell: ({ row }) => (
+          <UserRoleSelect userID={row.original.id} value={row.original.global_role} />
+        ),
+      },
+      {
+        accessorKey: "teams_count",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("app:admin.users_team")} align="right" />
+        ),
+        cell: ({ row }) => (
+          <div className="text-right tabular-nums">{row.original.teams_count ?? 0}</div>
+        ),
+      },
+      {
+        accessorKey: "created_at",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("app:admin.table_created")} />
+        ),
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">
+            {formatDate(row.original.created_at, tz)}
+          </span>
+        ),
+      },
+      {
+        id: "actions",
+        enableHiding: false,
+        enableSorting: false,
+        header: () => null,
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <DataTableRowActions triggerLabel={t("common:data_table.open_menu")}>
+              <DropdownMenuLabel>{t("app:admin.user_actions_label")}</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(row.original.email)}>
+                {t("app:admin.user_action_copy_email")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => void destroy(row.original)}
+                disabled={del.isPending}
+              >
+                {t("app:admin.users_delete")}
+              </DropdownMenuItem>
+            </DataTableRowActions>
+          </div>
+        ),
+      },
+    ],
+    [t, tz, del.isPending, destroy],
+  );
 
   return (
     <Card className="card-hover">
       <CardHeader>
         <CardTitle className="font-display tracking-tight">
-          {t("admin.all_users_title", { defaultValue: "All users" })}
+          {t("app:admin.all_users_title")}
         </CardTitle>
-        <CardDescription>
-          {t("admin.all_users_lead", { count: users.length, defaultValue: `${users.length} accounts` })}
-        </CardDescription>
+        <CardDescription>{t("app:admin.all_users_lead", { count: users.length })}</CardDescription>
       </CardHeader>
       <CardContent>
         {users.length === 0 ? (
           <EmptyState
-            eyebrow={t("admin.all_users_empty_eyebrow", { defaultValue: "No users" })}
-            title={t("admin.all_users_empty_title", { defaultValue: "Nobody yet" })}
+            eyebrow={t("app:admin.all_users_empty_eyebrow")}
+            title={t("app:admin.all_users_empty_title")}
           />
         ) : (
-          <div className="overflow-x-auto rounded-md border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="py-2.5 px-3 text-left">{t("admin.users_email")}</th>
-                  <th className="py-2.5 px-3 text-left">{t("admin.users_name")}</th>
-                  <th className="py-2.5 px-3 text-left">{t("admin.users_global_role")}</th>
-                  <th className="py-2.5 px-3 text-right">{t("admin.users_team")}</th>
-                  <th className="py-2.5 px-3 text-left">{t("admin.table_created", { defaultValue: "Created" })}</th>
-                  <th className="py-2.5 px-3 text-right" />
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id} className="border-t hover:bg-muted/30">
-                    <td className="py-2 px-3 font-mono text-xs">{u.email}</td>
-                    <td className="py-2 px-3">{u.display_name}</td>
-                    <td className="py-2 px-3">
-                      <UserRoleSelect userID={u.id} value={u.global_role} />
-                    </td>
-                    <td className="py-2 px-3 text-right tabular-nums">{u.teams_count ?? 0}</td>
-                    <td className="py-2 px-3 text-xs text-muted-foreground">{formatDate(u.created_at, tz)}</td>
-                    <td className="py-2 px-3 text-right">
-                      <DeleteUserButton userID={u.id} email={u.email} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={columns}
+            data={users}
+            filterableColumn={{
+              id: "email",
+              placeholder: t("app:admin.users_filter_email"),
+            }}
+            enableColumnVisibility
+            enablePagination
+            pageSize={20}
+            labels={dtLabels(t)}
+          />
         )}
       </CardContent>
     </Card>

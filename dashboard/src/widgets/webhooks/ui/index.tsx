@@ -4,9 +4,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Button, Card, CardContent, CardDescription, CardHeader, CardTitle,
-} from "@eop/ui";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Plus, Webhook as WebhookIcon } from "lucide-react";
 import { useWebhooks } from "../../../entities/webhook";
 import { CreateWebhookDialog } from "../../../features/webhook-create";
@@ -39,7 +37,9 @@ export function WebhooksWidget() {
           <p className="text-sm text-muted-foreground">{t("webhooks_empty")}</p>
         ) : (
           <ul className="divide-y">
-            {list.data.map((hook) => <WebhookRow key={hook.id} hook={hook} />)}
+            {list.data.map((hook) => (
+              <WebhookRow key={hook.id} hook={hook} />
+            ))}
           </ul>
         )}
       </CardContent>

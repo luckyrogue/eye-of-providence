@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, PlanBadge, Tabs, TabsList, TabsTrigger } from "@eop/ui";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  PlanBadge,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@eop/ui";
 import { useMembers, useTeamSummary, type Team } from "../../../entities/team";
 import { TEAM_DETAIL_TABS, type TeamDetailTabKey } from "../model/team-detail-tabs";
 import { CommitsTab } from "./commits-tab";
@@ -33,8 +43,8 @@ export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; t
               <PlanBadge
                 plan={team.subscription_plan ?? "free"}
                 until={team.subscription_until}
-                untilLabel={t("common:plan_badge.until", { defaultValue: "until" })}
-                expiredLabel={t("common:plan_badge.expired", { defaultValue: "expired" })}
+                untilLabel={t("common:plan_badge.until")}
+                expiredLabel={t("common:plan_badge.expired")}
               />
             </div>
             <CardDescription>
@@ -56,7 +66,12 @@ export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; t
         </CardHeader>
         <CardContent className="space-y-4">
           {tab === "members" && (
-            <MembersTab teamID={teamID} role={role} members={members.data ?? []} stats={stats.data ?? []} />
+            <MembersTab
+              teamID={teamID}
+              role={role}
+              members={members.data ?? []}
+              stats={stats.data ?? []}
+            />
           )}
           {tab === "projects" && <ProjectsTab teamID={teamID} role={role} tz={tz} />}
           {tab === "commits" && <CommitsTab teamID={teamID} tz={tz} />}

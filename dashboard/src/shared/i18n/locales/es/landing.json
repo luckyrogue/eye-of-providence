@@ -15,11 +15,7 @@
     "lead": "Analítica privacy-first para ingenieros. Rastrea código manual, ayuda de IA y dónde se va tu tiempo — IDE, navegador y CLI.",
     "cta_primary": "Empezar — gratis",
     "cta_secondary": "Ver cómo funciona",
-    "trust": [
-      "Privacy-by-design",
-      "Self-hostable",
-      "Sin tarjeta"
-    ]
+    "trust": ["Privacy-by-design", "Self-hostable", "Sin tarjeta"]
   },
   "logo_strip": {
     "tagline": "Rastreamos cada canal que realmente usas"
@@ -164,6 +160,9 @@
     "tagline": "Analítica privacy-first de workflow con IA para ingenieros. Auto-alojable.",
     "product_title": "Producto",
     "legal_title": "Aviso legal",
+    "legal_privacy": "Privacidad",
+    "legal_terms": "Términos",
+    "legal_security": "Seguridad",
     "status_ok": "Todos los sistemas operativos"
   },
   "preview": {

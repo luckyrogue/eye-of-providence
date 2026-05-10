@@ -11,10 +11,23 @@ type Tier = {
 };
 
 // highlight middle tier (Founding Company) — index === 1
-function PriceCard({ tier, highlight, mostPopular }: { tier: Tier; highlight: boolean; mostPopular: string }) {
+function PriceCard({
+  tier,
+  highlight,
+  mostPopular,
+}: {
+  tier: Tier;
+  highlight: boolean;
+  mostPopular: string;
+}) {
   const { name, price, period, features, cta } = tier;
   return (
-    <div className={cn("relative rounded-xl border p-7 card-hover", highlight ? "border-foreground bg-card shadow-lg" : "bg-card")}>
+    <div
+      className={cn(
+        "relative rounded-xl border p-7 card-hover",
+        highlight ? "border-foreground bg-card shadow-lg" : "bg-card",
+      )}
+    >
       {highlight && (
         <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-foreground text-background px-3 py-1 text-[10px] font-mono uppercase tracking-widest2">
           {mostPopular}
@@ -22,7 +35,9 @@ function PriceCard({ tier, highlight, mostPopular }: { tier: Tier; highlight: bo
       )}
       <h3 className="font-display font-bold text-2xl tracking-tight">{name}</h3>
       <div className="mt-4 flex items-baseline gap-1">
-        <span className="font-display text-4xl sm:text-5xl font-bold tracking-tightest tabular-nums">{price}</span>
+        <span className="font-display text-4xl sm:text-5xl font-bold tracking-tightest tabular-nums">
+          {price}
+        </span>
         <span className="text-sm text-muted-foreground ml-2">{period}</span>
       </div>
       <ul className="mt-6 space-y-2.5 text-sm">

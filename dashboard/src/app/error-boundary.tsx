@@ -35,7 +35,9 @@ export class ErrorBoundary extends Component<Props, State> {
               {this.state.error.message}
             </pre>
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => location.reload()}>Обновить</Button>
+              <Button size="sm" onClick={() => location.reload()}>
+                Обновить
+              </Button>
               <Button
                 size="sm"
                 variant="outline"

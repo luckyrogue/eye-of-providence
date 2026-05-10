@@ -15,11 +15,7 @@
     "lead": "Privacy-first analytics for engineers. Track manual coding, AI assists, and where your time really goes — across IDE, browser, and CLI.",
     "cta_primary": "Get started — free",
     "cta_secondary": "See how it works",
-    "trust": [
-      "Privacy-by-design",
-      "Self-hostable",
-      "No credit card"
-    ]
+    "trust": ["Privacy-by-design", "Self-hostable", "No credit card"]
   },
   "logo_strip": {
     "tagline": "Tracks every channel you actually use"
@@ -164,6 +160,9 @@
     "tagline": "Privacy-first AI workflow analytics for engineers. Self-hostable.",
     "product_title": "Product",
     "legal_title": "Legal",
+    "legal_privacy": "Privacy",
+    "legal_terms": "Terms",
+    "legal_security": "Security",
     "status_ok": "All systems operational"
   },
   "preview": {

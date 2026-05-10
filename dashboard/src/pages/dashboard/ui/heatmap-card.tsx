@@ -8,7 +8,9 @@ export function HeatmapCard({ cells, tz }: { cells: HeatmapCell[]; tz: string })
   return (
     <Card className="card-hover">
       <CardHeader>
-        <CardTitle className="font-display tracking-tight">{t("dashboard.heatmap_title")}</CardTitle>
+        <CardTitle className="font-display tracking-tight">
+          {t("dashboard.heatmap_title")}
+        </CardTitle>
         <CardDescription>{t("dashboard.heatmap_lead", { tz })}</CardDescription>
       </CardHeader>
       <CardContent>

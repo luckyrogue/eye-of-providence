@@ -84,9 +84,11 @@ export const fetchOnboardingStatus = () =>
   http.get<OnboardingStatus>("/v1/me/onboarding-status").then((r) => r.data);
 
 export const fetchInsights = (tz?: string) =>
-  http.get<{ insights: Insight[] }>("/v1/me/insights", {
-    params: tz ? { tz } : undefined,
-  }).then((r) => r.data.insights ?? []);
+  http
+    .get<{ insights: Insight[] }>("/v1/me/insights", {
+      params: tz ? { tz } : undefined,
+    })
+    .then((r) => r.data.insights ?? []);
 
 export async function dismissOnboarding(): Promise<void> {
   await http.post("/v1/me/onboarding/dismiss");
@@ -150,14 +152,20 @@ export const useInsights = (tz?: string) =>
     staleTime: 5 * 60 * 1000, // 5 минут — narrative-карточки не меняются часто
   });
 
-export const useTokens = () =>
-  useQuery({ queryKey: userKeys.tokens, queryFn: fetchTokens });
+export const useTokens = () => useQuery({ queryKey: userKeys.tokens, queryFn: fetchTokens });
 
 export function useCreateToken() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ name, scope, ttlDays }: { name: string; scope: APIToken["scope"]; ttlDays: number }) =>
-      createAPIToken(name, scope, ttlDays),
+    mutationFn: ({
+      name,
+      scope,
+      ttlDays,
+    }: {
+      name: string;
+      scope: APIToken["scope"];
+      ttlDays: number;
+    }) => createAPIToken(name, scope, ttlDays),
     onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.tokens }),
   });
 }

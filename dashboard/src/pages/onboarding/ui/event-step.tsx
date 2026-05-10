@@ -53,7 +53,10 @@ export function EventStep({ onFinish, onSkip }: { onFinish: () => void; onSkip: 
           <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
             <li>{t("event.ts_tauri")}</li>
             <li>
-              <Trans i18nKey="onboarding:event.ts_vscode" components={{ code: <code className="font-mono" /> }} />
+              <Trans
+                i18nKey="onboarding:event.ts_vscode"
+                components={{ code: <code className="font-mono" /> }}
+              />
             </li>
             <li>{t("event.ts_browser")}</li>
           </ul>

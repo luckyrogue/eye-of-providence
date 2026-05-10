@@ -1,14 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { http } from "../../../shared/api/http";
 import type { EventRow } from "./types";
-import type {
-  HeatmapRes,
-  IngestRes,
-  LanguagesRes,
-  RecentRes,
-  SummaryRes,
-  TrendRes,
-} from "./res";
+import type { HeatmapRes, IngestRes, LanguagesRes, RecentRes, SummaryRes, TrendRes } from "./res";
 
 // --- Request payload ---
 
@@ -16,13 +9,16 @@ export type IngestReq = { events: Partial<EventRow & { file_lang: string }>[] };
 
 // --- Query keys ---
 
+// Все query keys строятся от общего корня `all`, чтобы инвалидация
+// одного ключа уровня сущности (`events`) очищала все её вариации.
 export const eventsKeys = {
-  recent: (limit: number) => ["events.recent", limit] as const,
-  summary: (days: number) => ["events.summary", days] as const,
-  languages: (days: number) => ["events.languages", days] as const,
-  heatmap: (days: number, tz: string) => ["events.heatmap", days, tz] as const,
-  trend: (days: number, tz: string) => ["events.trend", days, tz] as const,
-  cost: ["events.cost"] as const,
+  all: ["events"] as const,
+  recent: (limit: number) => [...eventsKeys.all, "recent", limit] as const,
+  summary: (days: number) => [...eventsKeys.all, "summary", days] as const,
+  languages: (days: number) => [...eventsKeys.all, "languages", days] as const,
+  heatmap: (days: number, tz: string) => [...eventsKeys.all, "heatmap", days, tz] as const,
+  trend: (days: number, tz: string) => [...eventsKeys.all, "trend", days, tz] as const,
+  cost: () => [...eventsKeys.all, "cost"] as const,
 };
 
 // --- Fetchers ---
@@ -36,7 +32,9 @@ export const fetchSummary = (days = 7) =>
     .then((r) => r.data.categories ?? {});
 
 export const fetchLanguages = (days = 30) =>
-  http.get<LanguagesRes>(`/v1/summary/languages`, { params: { days } }).then((r) => r.data.cells ?? []);
+  http
+    .get<LanguagesRes>(`/v1/summary/languages`, { params: { days } })
+    .then((r) => r.data.cells ?? []);
 
 export const fetchHeatmap = (days = 30, tz?: string) =>
   http.get<HeatmapRes>(`/v1/heatmap`, { params: { days, tz } }).then((r) => r.data.cells ?? []);
@@ -88,19 +86,13 @@ export const useHeatmap = (days: number, tz: string) =>
 export const useTrend = (days: number, tz: string) =>
   useQuery({ queryKey: eventsKeys.trend(days, tz), queryFn: () => fetchTrend(days, tz) });
 
-export const useCost = () => useQuery({ queryKey: eventsKeys.cost, queryFn: fetchCost });
+export const useCost = () => useQuery({ queryKey: eventsKeys.cost(), queryFn: fetchCost });
 
 export function useIngestDemo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ingestDemoEvent,
-    onSuccess: () => {
-      // После demo-events надо обновить все агрегации.
-      qc.invalidateQueries({ queryKey: ["events.recent"] });
-      qc.invalidateQueries({ queryKey: ["events.summary"] });
-      qc.invalidateQueries({ queryKey: ["events.languages"] });
-      qc.invalidateQueries({ queryKey: ["events.heatmap"] });
-      qc.invalidateQueries({ queryKey: ["events.trend"] });
-    },
+    // Один root-prefix invalidate чистит recent / summary / languages / heatmap / trend / cost.
+    onSuccess: () => qc.invalidateQueries({ queryKey: eventsKeys.all }),
   });
 }

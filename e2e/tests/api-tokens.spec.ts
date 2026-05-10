@@ -15,9 +15,7 @@ interface CreateTokenResp {
 }
 
 test.describe("api-tokens", () => {
-  test("create token with write:ingest scope, use it to ingest", async ({
-    api,
-  }) => {
+  test("create token with write:ingest scope, use it to ingest", async ({ api }) => {
     const r = await api.fetch<CreateTokenResp>("/v1/me/tokens", {
       method: "POST",
       body: JSON.stringify({
@@ -32,22 +30,19 @@ test.describe("api-tokens", () => {
 
     // Используем token для ingest.
     const ingestC = createApiClient(r.token);
-    const ingestResp = await ingestC.fetch<{ accepted: number }>(
-      "/v1/ingest",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          events: [
-            {
-              app_bundle: "com.test.bundle",
-              source: "ide",
-              category: "manual",
-              duration_ms: 1000,
-            },
-          ],
-        }),
-      },
-    );
+    const ingestResp = await ingestC.fetch<{ accepted: number }>("/v1/ingest", {
+      method: "POST",
+      body: JSON.stringify({
+        events: [
+          {
+            app_bundle: "com.test.bundle",
+            source: "ide",
+            category: "manual",
+            duration_ms: 1000,
+          },
+        ],
+      }),
+    });
     expect(ingestResp.accepted).toBe(1);
   });
 
@@ -87,9 +82,7 @@ test.describe("api-tokens", () => {
     }
   });
 
-  test("API token cannot create another token (jwt_required guard)", async ({
-    api,
-  }) => {
+  test("API token cannot create another token (jwt_required guard)", async ({ api }) => {
     const r = await api.fetch<CreateTokenResp>("/v1/me/tokens", {
       method: "POST",
       body: JSON.stringify({

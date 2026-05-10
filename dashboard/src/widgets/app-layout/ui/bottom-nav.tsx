@@ -11,11 +11,24 @@ export function BottomNav({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       aria-label={t("nav.bottom")}
     >
       <div className="flex items-stretch">
-        <BottomNavItem to="/dashboard" icon={<Activity className="h-5 w-5" />} label={t("nav.dashboard")} />
+        <BottomNavItem
+          to="/dashboard"
+          icon={<Activity className="h-5 w-5" />}
+          label={t("nav.dashboard")}
+        />
         <BottomNavItem to="/team" icon={<Users className="h-5 w-5" />} label={t("nav.team")} />
-        <BottomNavItem to="/settings" icon={<SettingsIcon className="h-5 w-5" />} label={t("nav.settings")} />
+        <BottomNavItem
+          to="/settings"
+          icon={<SettingsIcon className="h-5 w-5" />}
+          label={t("nav.settings")}
+        />
         {isSuperAdmin && (
-          <BottomNavItem to="/admin" icon={<Shield className="h-5 w-5" />} label={t("nav.admin")} accent />
+          <BottomNavItem
+            to="/admin"
+            icon={<Shield className="h-5 w-5" />}
+            label={t("nav.admin")}
+            accent
+          />
         )}
       </div>
     </nav>

@@ -160,6 +160,9 @@
     "tagline": "Privacy-first аналитика AI-workflow для инженеров. С возможностью self-host.",
     "product_title": "Продукт",
     "legal_title": "Юридическое",
+    "legal_privacy": "Конфиденциальность",
+    "legal_terms": "Условия",
+    "legal_security": "Безопасность",
     "status_ok": "Все системы работают"
   },
   "preview": {

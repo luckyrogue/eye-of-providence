@@ -20,7 +20,10 @@ export function LogoStrip() {
         </p>
         <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-sm text-muted-foreground">
           {SOURCES.map(({ name, Icon }) => (
-            <span key={name} className="flex items-center gap-2 hover:text-foreground transition-colors">
+            <span
+              key={name}
+              className="flex items-center gap-2 hover:text-foreground transition-colors"
+            >
               <Icon className="h-4 w-4" />
               <span className="font-medium">{name}</span>
             </span>

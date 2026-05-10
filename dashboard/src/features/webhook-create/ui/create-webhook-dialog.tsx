@@ -81,7 +81,9 @@ export function CreateWebhookDialog({ open, onClose }: { open: boolean; onClose:
                 ]}
               />
               <p className="mt-1 text-[11px] text-muted-foreground">
-                {format === "slack" ? t("webhooks_format_slack_hint") : t("webhooks_format_raw_hint")}
+                {format === "slack"
+                  ? t("webhooks_format_slack_hint")
+                  : t("webhooks_format_raw_hint")}
               </p>
             </div>
             <div>
@@ -129,7 +131,9 @@ export function CreateWebhookDialog({ open, onClose }: { open: boolean; onClose:
             />
           )}
           <DialogFooter>
-            <Button size="sm" onClick={close}>{t("tokens_close")}</Button>
+            <Button size="sm" onClick={close}>
+              {t("tokens_close")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

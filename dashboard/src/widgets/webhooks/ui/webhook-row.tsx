@@ -25,7 +25,10 @@ export function WebhookRow({ hook }: { hook: Webhook }) {
         </div>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           {hook.events.map((e) => (
-            <span key={e} className="text-[11px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted">
+            <span
+              key={e}
+              className="text-[11px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted"
+            >
               {e}
             </span>
           ))}

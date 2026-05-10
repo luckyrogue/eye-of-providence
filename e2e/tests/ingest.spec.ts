@@ -26,35 +26,23 @@ function validEvent(overrides: Partial<Event> = {}): Event {
 
 test.describe("ingest", () => {
   test("happy path: 3 events accepted", async ({ api }) => {
-    const r = await api.fetch<{ accepted: number; rejected: number }>(
-      "/v1/ingest",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          events: [validEvent(), validEvent(), validEvent()],
-        }),
-      },
-    );
+    const r = await api.fetch<{ accepted: number; rejected: number }>("/v1/ingest", {
+      method: "POST",
+      body: JSON.stringify({
+        events: [validEvent(), validEvent(), validEvent()],
+      }),
+    });
     expect(r.accepted).toBe(3);
     expect(r.rejected).toBe(0);
   });
 
-  test("invalid event (bad category) rejected, valid ones accepted", async ({
-    api,
-  }) => {
-    const r = await api.fetch<{ accepted: number; rejected: number }>(
-      "/v1/ingest",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          events: [
-            validEvent(),
-            validEvent({ category: "bogus_category" }),
-            validEvent(),
-          ],
-        }),
-      },
-    );
+  test("invalid event (bad category) rejected, valid ones accepted", async ({ api }) => {
+    const r = await api.fetch<{ accepted: number; rejected: number }>("/v1/ingest", {
+      method: "POST",
+      body: JSON.stringify({
+        events: [validEvent(), validEvent({ category: "bogus_category" }), validEvent()],
+      }),
+    });
     expect(r.accepted).toBe(2);
     expect(r.rejected).toBe(1);
   });
@@ -90,9 +78,7 @@ test.describe("ingest", () => {
     // CH inserts могут флашиться async через несколько ms.
     let found = false;
     for (let attempt = 0; attempt < 10; attempt++) {
-      const out = await api.fetch<{ events: Event[] }>(
-        "/v1/events/recent?limit=50",
-      );
+      const out = await api.fetch<{ events: Event[] }>("/v1/events/recent?limit=50");
       if (out.events.some((e) => e.app_bundle === marker)) {
         found = true;
         break;

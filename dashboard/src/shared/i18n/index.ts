@@ -8,7 +8,13 @@
 //
 // Lazy-load: пока тащим всё через import — namespaces маленькие.
 
-import { createI18n, LOCALE_LABELS, LOCALE_STORAGE_KEY, SUPPORTED_LOCALES, type Locale } from "@eop/i18n";
+import {
+  createI18n,
+  LOCALE_LABELS,
+  LOCALE_STORAGE_KEY,
+  SUPPORTED_LOCALES,
+  type Locale,
+} from "@eop/i18n";
 
 import enCommon from "./locales/en/common.json";
 import enErrors from "./locales/en/errors.json";

@@ -13,6 +13,7 @@
     "lint": "pnpm -r --parallel lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "prepare": "husky",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d",
     "infra:down": "docker compose -f infra/docker-compose.yml down",
     "e2e:install": "pnpm -F @eop/e2e exec playwright install --with-deps chromium",
@@ -25,6 +26,16 @@
     "proto:gen": "cd proto && buf generate"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
     "prettier": "^3.3.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "prettier --write"
+    ],
+    "*.{json,md,css,html}": [
+      "prettier --write"
+    ]
   }
 }

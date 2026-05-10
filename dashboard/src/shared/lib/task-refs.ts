@@ -13,8 +13,8 @@ const CU_RE = /\bCU-[a-z0-9]+\b/gi;
 const HASH_RE = /(?:^|\s)#([a-z0-9]{6,12})\b/gi;
 
 export type TaskRef = {
-  id: string;        // task ID без префикса
-  match: string;     // полный match-substring (CU-abc / #abc) для replace
+  id: string; // task ID без префикса
+  match: string; // полный match-substring (CU-abc / #abc) для replace
   url: string;
 };
 

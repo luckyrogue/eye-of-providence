@@ -1,4 +1,6 @@
-import type { TrendPoint } from "../../../entities/event";
+// Локальный shape вместо импорта из entities/event: shared/* не должен знать о выше-лежащих
+// слоях FSD. Структурная совместимость обеспечивает работу с TrendPoint из entities.
+type TrendPoint = { date: string; category: string; ms: number };
 
 export function Trend({ points }: { points: TrendPoint[] }) {
   const byDate = new Map<string, { manual: number; ai: number }>();
@@ -75,7 +77,15 @@ export function Trend({ points }: { points: TrendPoint[] }) {
           if (i % Math.ceil(sorted.length / 6) !== 0) return null;
           const x = pad.l + i * stepX;
           return (
-            <text key={date} x={x} y={H - 8} fontSize={9} fill="currentColor" opacity={0.5} textAnchor="middle">
+            <text
+              key={date}
+              x={x}
+              y={H - 8}
+              fontSize={9}
+              fill="currentColor"
+              opacity={0.5}
+              textAnchor="middle"
+            >
               {date.slice(5)}
             </text>
           );

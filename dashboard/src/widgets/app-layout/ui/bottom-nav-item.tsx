@@ -36,11 +36,7 @@ export function BottomNavItem({
           <span
             className={cn(
               "absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full transition-all",
-              isActive
-                ? accent
-                  ? "bg-amber-500"
-                  : "bg-primary"
-                : "bg-transparent",
+              isActive ? (accent ? "bg-amber-500" : "bg-primary") : "bg-transparent",
             )}
           />
           {icon}

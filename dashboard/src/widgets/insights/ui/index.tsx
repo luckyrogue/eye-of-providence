@@ -4,7 +4,15 @@
 // локализованную строку через `t(\`insights:${key}\`, vars)`.
 
 import { useTranslation } from "react-i18next";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Eyebrow, Skeleton } from "@eop/ui";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Eyebrow,
+  Skeleton,
+} from "@eop/ui";
 import { Sparkles } from "lucide-react";
 import { useInsights } from "../../../entities/user";
 import { InsightRow } from "./insight-row";
