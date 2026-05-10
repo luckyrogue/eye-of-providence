@@ -1,21 +1,25 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Skeleton } from "@eop/ui";
 import { Onboarding } from "./onboarding";
 import { useAuth } from "../../shared/hooks/use-auth";
 import { useTeams } from "../../entities/team";
 import { useDismissOnboarding, useOnboardingStatus } from "../../entities/user";
+import { buildLoginURL } from "../../shared/lib/redirect";
 
 export function OnboardingRoute() {
   const { isAuthed } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const status = useOnboardingStatus({ enabled: isAuthed });
   const teams = useTeams();
   const dismiss = useDismissOnboarding();
 
   useEffect(() => {
-    if (!isAuthed) navigate("/login", { replace: true });
-  }, [isAuthed, navigate]);
+    if (!isAuthed) {
+      navigate(buildLoginURL(location.pathname + location.search), { replace: true });
+    }
+  }, [isAuthed, navigate, location.pathname, location.search]);
 
   // Не возвращаем сюда юзера, который:
   //   - явно dismiss'нул wizard, или

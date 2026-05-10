@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Activity, Eye, LogOut, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import { cn } from "@eop/ui";
@@ -7,28 +7,35 @@ import { useAuth } from "../../shared/hooks/use-auth";
 import { useMe } from "../../entities/user";
 import { useTeams } from "../../entities/team";
 import { AUTH_FAILED_EVENT } from "../../shared/api/http";
+import { buildLoginURL } from "../../shared/lib/redirect";
 
 export function AppLayout() {
   const { t } = useTranslation("common");
   const { isAuthed, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const me = useMe();
   const teams = useTeams();
 
-  // 401 → logout + редирект на /login
+  // 401 → logout + редирект на /login с сохранённым ?redirect=, чтобы
+  // после re-login юзер вернулся туда же.
   useEffect(() => {
     function onAuthFailed() {
+      const dest = location.pathname + location.search;
       logout();
-      navigate("/login", { replace: true });
+      navigate(buildLoginURL(dest), { replace: true });
     }
     window.addEventListener(AUTH_FAILED_EVENT, onAuthFailed);
     return () => window.removeEventListener(AUTH_FAILED_EVENT, onAuthFailed);
-  }, [logout, navigate]);
+  }, [logout, navigate, location.pathname, location.search]);
 
-  // Не аутентифицирован — отправляем на login.
+  // Не аутентифицирован — отправляем на login c сохранением destination.
   useEffect(() => {
-    if (!isAuthed) navigate("/login", { replace: true });
-  }, [isAuthed, navigate]);
+    if (!isAuthed) {
+      const dest = location.pathname + location.search;
+      navigate(buildLoginURL(dest), { replace: true });
+    }
+  }, [isAuthed, navigate, location.pathname, location.search]);
 
   // Без команд — на onboarding (но только если не super_admin без команд:
   // он мог только что разлогиниться-залогиниться и попасть сюда).
