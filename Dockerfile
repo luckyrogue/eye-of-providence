@@ -57,19 +57,48 @@ ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
 RUN pnpm -F @eop/dashboard build
 
 ############################
+# Caddy from-source rebuild
+############################
+# caddy:2.11-alpine binary upstream был built с Go 1.26.0 + outdated deps
+# (otel 1.40, go-jose v4.1.3) — содержит 9+ HIGH CVE по trivy. Rebuild from
+# source через xcaddy дают clean stdlib + auto-bumped transitive deps:
+#
+#   stdlib:    1.26.0 → 1.26.3+ (CVE-2026-25679/27137/32280-83/33810 fixed)
+#   otel:      1.40   → 1.41+   (CVE-2026-29181 fixed)
+#   otel/sdk:  1.40   → 1.43+   (CVE-2026-39883 fixed)
+#   go-jose:   v3+v4   → patched (CVE-2026-34986 fixed)
+#
+# caddy:2.11-builder-alpine содержит Go 1.26.3 + xcaddy + ca-certificates.
+# `xcaddy build v2.11.2` builds tag explicitly — reproducible.
+FROM caddy:2.11-builder-alpine AS caddy-builder
+# --with overrides force-bump sub-dependencies в caddy go.sum:
+#   - go-jose v3+v4 → patched (CVE-2026-34986 JWE DoS)
+#   - otel 1.41 → fixed CVE-2026-29181 (baggage header DoS)
+#   - otel/sdk 1.43 → fixed CVE-2026-39883 (BSD kenv PATH hijack)
+# Все semver-compatible upgrades. xcaddy validates через go mod tidy.
+RUN xcaddy build v2.11.2 \
+    --with github.com/go-jose/go-jose/v3@v3.0.5 \
+    --with github.com/go-jose/go-jose/v4@v4.1.4 \
+    --with go.opentelemetry.io/otel@v1.41.0 \
+    --with go.opentelemetry.io/otel/sdk@v1.43.0 \
+    --output /out/caddy
+
+############################
 # Final image: Caddy + Go API
 ############################
 # Pinned specific minor (vs floating `2-alpine`) для reproducibility.
 # Bump после review каждого нового minor — см. .trivyignore для CVE waivers
-# (caddy upstream embeds smallstep+grpc-go которые могут содержать not-yet-
-# patched CVEs; whitelist'ятся когда docs показывают что наш config их не
-# exploit'ит).
+# (smallstep/certificates SCEP, grpc-go authz — not-exploitable в нашей
+# config с auto_https off + нет gRPC endpoints).
 FROM caddy:2.11-alpine
 
 # Подтягиваем последние patch-версии apk-пакетов (libcrypto3, libssl3, libxml2,
 # zlib и пр.), даже если base-image отстал на пару дней. Trivy gates на
 # CRITICAL — фиксят vendors через apk-репозиторий быстрее, чем в base-tag.
 RUN apk upgrade --no-cache && rm -rf /var/cache/apk/*
+
+# Caddy binary — наш custom build с current Go, replaces upstream vulnerable.
+COPY --from=caddy-builder /out/caddy /usr/bin/caddy
 
 # Go-бинарь + migrate CLI (для ручного rollback в проде)
 COPY --from=api-builder /out/api /usr/local/bin/api
