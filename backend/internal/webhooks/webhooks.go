@@ -153,7 +153,7 @@ func (s *Service) Dispatch(userID uuid.UUID, event string, payload any) {
 }
 
 // dispatchSync — testable inner. Background goroutine'у нужен свой context
-// (request ctx может быть cancelled).
+// (request ctx может быть canceled).
 func (s *Service) dispatchSync(userID uuid.UUID, event string, payload any) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
