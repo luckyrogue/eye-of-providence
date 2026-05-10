@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Tabs, TabsList, TabsTrigger } from "@eop/ui";
 import { Users } from "lucide-react";
 import { useBetaInfo, useTeams } from "../../entities/team";
 import { useMe } from "../../entities/user";
@@ -73,25 +73,18 @@ export function Teams({ tz }: { tz: string }) {
           {teamsList.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("teams.empty")}</p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {teamsList.map((team) => (
-                <button
-                  key={team.id}
-                  type="button"
-                  onClick={() => switchTeam(team.id)}
-                  className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
-                    activeTeam === team.id
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card hover:bg-secondary"
-                  }`}
-                >
-                  {team.name}
-                  <span className="ml-2 font-mono text-[10px] uppercase tracking-widest2 opacity-70">
-                    {t(`team_detail.role.${team.role}` as const, { defaultValue: team.role })}
-                  </span>
-                </button>
-              ))}
-            </div>
+            <Tabs value={activeTeam ?? ""} onValueChange={switchTeam}>
+              <TabsList className="flex-wrap gap-2">
+                {teamsList.map((team) => (
+                  <TabsTrigger key={team.id} value={team.id} className="border data-[state=active]:border-primary">
+                    {team.name}
+                    <span className="ml-2 font-mono text-[10px] uppercase tracking-widest2 opacity-70">
+                      {t(`team_detail.role.${team.role}` as const, { defaultValue: team.role })}
+                    </span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
           )}
         </CardContent>
       </Card>

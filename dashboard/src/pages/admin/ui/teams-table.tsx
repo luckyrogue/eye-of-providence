@@ -1,13 +1,12 @@
 import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, PlanBadge } from "@eop/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, IconButton, PlanBadge } from "@eop/ui";
 import { CreditCard, UserPlus } from "lucide-react";
 import type { AdminTeam, AdminUser } from "../../../entities/admin";
 import { AddMemberRow } from "../../../features/admin-add-team-member";
 import { DeleteTeamButton } from "../../../features/admin-delete-team";
 import { SubscriptionModal } from "../../../features/admin-set-subscription";
 import { formatDate } from "../../../shared/lib/tz";
-import { IconButton } from "../../../shared/ui/icon-button";
 
 export function TeamsTable({
   teams,

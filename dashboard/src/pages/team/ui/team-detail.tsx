@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, PlanBadge, Tab, TabBar } from "@eop/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, PlanBadge, Tabs, TabsList, TabsTrigger } from "@eop/ui";
 import { useMembers, useTeamSummary, type Team } from "../../../entities/team";
 import { TEAM_DETAIL_TABS, type TeamDetailTabKey } from "../model/team-detail-tabs";
 import { CommitsTab } from "./commits-tab";
@@ -25,41 +25,44 @@ export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; t
 
   return (
     <Card className="card-hover">
-      <CardHeader className="flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3 flex-wrap">
-            <CardTitle className="font-display tracking-tight">{team.name}</CardTitle>
-            <PlanBadge
-              plan={team.subscription_plan ?? "free"}
-              until={team.subscription_until}
-              untilLabel={t("common:plan_badge.until", { defaultValue: "until" })}
-              expiredLabel={t("common:plan_badge.expired", { defaultValue: "expired" })}
-            />
+      <Tabs value={tab} onValueChange={(v) => setTab(v as TeamDetailTabKey)}>
+        <CardHeader className="flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              <CardTitle className="font-display tracking-tight">{team.name}</CardTitle>
+              <PlanBadge
+                plan={team.subscription_plan ?? "free"}
+                until={team.subscription_until}
+                untilLabel={t("common:plan_badge.until", { defaultValue: "until" })}
+                expiredLabel={t("common:plan_badge.expired", { defaultValue: "expired" })}
+              />
+            </div>
+            <CardDescription>
+              {memberCountLabel}
+              {note ? ` · ${note}` : ""}
+            </CardDescription>
           </div>
-          <CardDescription>
-            {memberCountLabel}
-            {note ? ` · ${note}` : ""}
-          </CardDescription>
-        </div>
-        <TabBar className="justify-start lg:justify-end overflow-x-auto -mx-1 px-1">
-          {visibleTabs.map((it) => {
-            const Icon = it.icon;
-            return (
-              <Tab key={it.id} active={tab === it.id} onClick={() => setTab(it.id)} icon={<Icon className="h-3.5 w-3.5" />}>
-                {t(it.i18nKey)}
-              </Tab>
-            );
-          })}
-        </TabBar>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {tab === "members" && (
-          <MembersTab teamID={teamID} role={role} members={members.data ?? []} stats={stats.data ?? []} />
-        )}
-        {tab === "projects" && <ProjectsTab teamID={teamID} role={role} tz={tz} />}
-        {tab === "commits" && <CommitsTab teamID={teamID} tz={tz} />}
-        {tab === "settings" && role === "owner" && <SettingsTab team={team} />}
-      </CardContent>
+          <TabsList className="justify-start lg:justify-end overflow-x-auto -mx-1 px-1">
+            {visibleTabs.map((it) => {
+              const Icon = it.icon;
+              return (
+                <TabsTrigger key={it.id} value={it.id}>
+                  <Icon className="h-3.5 w-3.5" />
+                  {t(it.i18nKey)}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {tab === "members" && (
+            <MembersTab teamID={teamID} role={role} members={members.data ?? []} stats={stats.data ?? []} />
+          )}
+          {tab === "projects" && <ProjectsTab teamID={teamID} role={role} tz={tz} />}
+          {tab === "commits" && <CommitsTab teamID={teamID} tz={tz} />}
+          {tab === "settings" && role === "owner" && <SettingsTab team={team} />}
+        </CardContent>
+      </Tabs>
     </Card>
   );
 }

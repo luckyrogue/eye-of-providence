@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "lint": "eslint src",
     "changelog:gen": "cd ../backend && go run ./cmd/changelog-gen --out ../dashboard/public/changelog.json"
   },
   "dependencies": {
@@ -31,9 +32,11 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.20",
+    "eslint": "^10.3.0",
     "postcss": "^8.5.14",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.2",
     "vite": "^5.4.21"
   }
 }

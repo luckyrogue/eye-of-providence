@@ -1,7 +1,16 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
-import { Button, Input } from "@eop/ui";
+import {
+  Button,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+} from "@eop/ui";
 import { login, type AuthResponse } from "../../../entities/user";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { loginSchema, type LoginValues } from "../../../shared/lib/schemas";
@@ -9,18 +18,14 @@ import { loginSchema, type LoginValues } from "../../../shared/lib/schemas";
 export function LoginForm({ onSuccess }: { onSuccess: (r: AuthResponse) => void }) {
   const { t } = useTranslation(["auth", "errors"]);
   const runToast = useMutationToast();
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginValues>({
+  const form = useForm<LoginValues>({
     defaultValues: { email: "", password: "" },
     resolver: zodResolver(loginSchema),
   });
 
   // tr — переводит i18n-key из zod errors. Schemas хранят key'и (не строки),
   // чтобы один schema работал во всех 4 локалях.
-  const tr = (msg?: string) => (msg ? t(msg as never) : undefined);
+  const tr = (msg?: string) => (msg ? t(msg as never) : msg);
 
   async function onSubmit(values: LoginValues) {
     const r = await runToast(login(values.email, values.password), {
@@ -30,25 +35,38 @@ export function LoginForm({ onSuccess }: { onSuccess: (r: AuthResponse) => void 
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-      <Input
-        label={t("auth:field_email")}
-        type="email"
-        autoComplete="email"
-        placeholder="you@example.com"
-        error={tr(errors.email?.message)}
-        {...register("email")}
-      />
-      <Input
-        label={t("auth:field_password")}
-        type="password"
-        autoComplete="current-password"
-        error={tr(errors.password?.message)}
-        {...register("password")}
-      />
-      <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? "..." : t("auth:submit_login")}
-      </Button>
-    </form>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field, fieldState }) => (
+            <FormItem>
+              <FormLabel>{t("auth:field_email")}</FormLabel>
+              <FormControl>
+                <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} />
+              </FormControl>
+              <FormMessage>{tr(fieldState.error?.message)}</FormMessage>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field, fieldState }) => (
+            <FormItem>
+              <FormLabel>{t("auth:field_password")}</FormLabel>
+              <FormControl>
+                <Input type="password" autoComplete="current-password" {...field} />
+              </FormControl>
+              <FormMessage>{tr(fieldState.error?.message)}</FormMessage>
+            </FormItem>
+          )}
+        />
+        <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
+          {form.formState.isSubmitting ? "..." : t("auth:submit_login")}
+        </Button>
+      </form>
+    </Form>
   );
 }

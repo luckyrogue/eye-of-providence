@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Eye, Lock } from "lucide-react";
 import { fetchAuthConfig, type AuthConfig, type AuthResponse } from "../../entities/user";
 import { LoginForm } from "../../features/auth-login";
@@ -96,12 +96,14 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
           )}
           {mode === "login" && <LoginForm onSuccess={onAuth} />}
 
-          <button
+          <Button
+            type="button"
+            variant="ghost"
             onClick={() => setMode(mode === "register" ? "login" : "register")}
-            className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="w-full text-xs text-muted-foreground hover:text-foreground"
           >
             {mode === "register" ? t("switch_to_login") : t("switch_to_register")}
-          </button>
+          </Button>
 
           {mode === "login" && (
             <a

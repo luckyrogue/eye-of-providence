@@ -1,33 +1,24 @@
-import { forwardRef, type InputHTMLAttributes, type ReactNode } from "react";
+// shadcn/ui Input — copy-paste из registry. Голый input без label/hint/error
+// (используй Form/FormField для labelled-варианта с RHF integration).
+import { forwardRef, type InputHTMLAttributes } from "react";
 import { cn } from "./cn";
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: ReactNode;
-  hint?: ReactNode;
-  error?: string;
-}
-
-export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, hint, error, ...props }, ref) => {
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  ({ className, type, ...props }, ref) => {
     return (
-      <div className="space-y-1">
-        {label && (
-          <label className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
-            {label}
-          </label>
+      <input
+        ref={ref}
+        type={type}
+        className={cn(
+          "flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm",
+          "ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium",
+          "placeholder:text-muted-foreground",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          className,
         )}
-        <input
-          ref={ref}
-          className={cn(
-            "w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary",
-            error && "border-destructive focus:ring-destructive",
-            className,
-          )}
-          {...props}
-        />
-        {error && <div className="text-xs text-destructive">{error}</div>}
-        {hint && !error && <div className="text-xs text-muted-foreground">{hint}</div>}
-      </div>
+        {...props}
+      />
     );
   },
 );

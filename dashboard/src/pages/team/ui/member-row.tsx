@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Avatar } from "@eop/ui";
+import { Avatar, AvatarFallback, getInitials } from "@eop/ui";
 import { Brain } from "lucide-react";
 import type { MemberStat, TeamMember } from "../../../entities/team";
 import { RemoveMemberButton } from "../../../features/team-remove-member";
@@ -23,7 +23,9 @@ export function MemberRow({
   return (
     <li className="flex items-center justify-between rounded-md border p-3 hover:bg-muted/30 transition-colors">
       <div className="flex items-center gap-3 min-w-0">
-        <Avatar name={member.display_name} />
+        <Avatar>
+          <AvatarFallback>{getInitials(member.display_name)}</AvatarFallback>
+        </Avatar>
         <div className="min-w-0">
           <div className="text-sm font-medium truncate">{member.display_name}</div>
           <div className="text-xs text-muted-foreground truncate">{member.email}</div>

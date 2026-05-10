@@ -98,6 +98,58 @@ pages/<name>/
 Исключение для public-страниц без guard: `index.tsx` может одновременно быть
 route и page (см. `pages/landing`).
 
+## UI-компоненты
+
+Все UI primitives живут в `@eop/ui`. Любая работа с UI начинается с поиска
+готового компонента. Алгоритм:
+
+1. **Сначала проверь shadcn registry** (https://ui.shadcn.com/docs/components).
+   Если он там есть — добавь его в `@eop/ui` через shadcn copy-paste поверх
+   соответствующего Radix-примитива, а не пиши свой.
+2. **Потом проверь экспорты `@eop/ui`** (`ui/src/index.ts`). Если уже есть —
+   импортируй оттуда.
+3. **Только потом пиши кастомный** — но кастом должен быть **доменной
+   композицией** из shadcn-примитивов (как `StatTile`, `PlanBadge`,
+   `DangerZone`), а не "своя альтернатива" уже существующему компоненту.
+
+### Запрещено
+
+- **Голый `<button>`** в `.tsx` — есть `Button` / `IconButton`. Кнопкоподобный
+  toggle — это `Tabs` (если состояний 2+).
+- **Голый `<input readOnly>`** для показа secret/url — есть `SecretField`.
+- **Параллельно с `@eop/ui` писать «свою» Modal/Tabs/Dialog/Avatar** — у нас
+  они shadcn-based и подключены к Radix (focus trap, ARIA, keyboard).
+- **Класть UI primitives в `dashboard/src/shared/ui`** — место только в
+  `@eop/ui`. `dashboard/src/shared/ui` зарезервирован для dashboard-only
+  адаптеров поверх `@eop/ui` (если такие появятся).
+- **Custom CSS-only «табы»** через `<div><button .../></div>` — заменяй на
+  `Tabs/TabsList/TabsTrigger`.
+
+### Чек-лист "что → откуда"
+
+| Хочешь                            | Бери                                              |
+|-----------------------------------|---------------------------------------------------|
+| Primary / Outline / Ghost CTA     | `Button` (variants: default, outline, ghost, ...) |
+| Tiny icon-action (1-2 иконки)     | `IconButton`                                      |
+| Read-only поле + Copy             | `SecretField`                                     |
+| Modal                             | `Dialog` + `DialogContent` + `DialogHeader/...`   |
+| Confirm-диалог (императив)        | `useConfirm` (поверх AlertDialog)                 |
+| Confirm-диалог (декларатив)       | `AlertDialog` напрямую                            |
+| Prompt с инпутом                  | `PromptDialog`                                    |
+| Табы / переключатель состояний    | `Tabs` + `TabsList` + `TabsTrigger`               |
+| Avatar                            | `Avatar` + `AvatarImage` + `AvatarFallback`       |
+| Форма с валидацией                | `Form` + `FormField` + `FormItem` + `FormControl` + `FormLabel` + `FormMessage` |
+| Bare input field                  | `Input`                                           |
+| Select                            | `Select` (полный) / `SimpleSelect` (опции списком) |
+| Empty-state                       | `EmptyState`                                      |
+| Skeleton                          | `Skeleton` / `SkeletonText` / `SkeletonTable`     |
+| Опасная операция (карточка)       | `DangerZone`                                      |
+| Plan-бейдж (free/pro/team)        | `PlanBadge`                                       |
+| Stat-карточка                     | `StatTile`                                        |
+
+ESLint guard в `dashboard/eslint.config.js` ловит голые `<button>` и
+`<input readOnly>` — `pnpm lint` должен быть **0 ошибок**.
+
 ## Soft конвенции
 
 - Файлы — kebab-case (`team-detail.tsx`), компоненты — PascalCase (`TeamDetail`).

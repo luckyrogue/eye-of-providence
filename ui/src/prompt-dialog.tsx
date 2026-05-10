@@ -1,7 +1,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "./button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./dialog";
 import { Input } from "./input";
-import { Modal } from "./modal";
 
 // PromptDialog — стилизованная замена window.prompt(): модалка с одним
 // текстовым полем + кнопками. Возвращает строку или null (cancel).
@@ -44,27 +51,35 @@ export function PromptDialog({
   }
 
   return (
-    <Modal open={open} onClose={onClose} className="max-w-md">
-      <div className="p-6 space-y-4">
-        <h3 className="font-display text-xl tracking-tight">{title}</h3>
-        {description && <div className="text-sm text-muted-foreground">{description}</div>}
-        <Input
-          autoFocus
-          label={label}
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
-        />
-        <div className="flex justify-end gap-2 pt-2">
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md p-6 space-y-4">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          {description && <DialogDescription>{description}</DialogDescription>}
+        </DialogHeader>
+        <div className="space-y-1">
+          {label && (
+            <label className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
+              {label}
+            </label>
+          )}
+          <Input
+            autoFocus
+            placeholder={placeholder}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+          />
+        </div>
+        <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={busy}>
             {cancelText}
           </Button>
           <Button onClick={submit} disabled={busy || !value.trim()}>
             {busy ? "..." : confirmText}
           </Button>
-        </div>
-      </div>
-    </Modal>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

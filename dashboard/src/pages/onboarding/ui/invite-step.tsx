@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from "@eop/ui";
-import { ArrowRight, Copy, Loader2, Mail, SkipForward } from "lucide-react";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, SecretField, Tabs, TabsList, TabsTrigger } from "@eop/ui";
+import { ArrowRight, Loader2, Mail, SkipForward } from "lucide-react";
 
 // InviteStep — два режима:
 //   1) link-only (по умолчанию): сгенерить ссылку, скопировать руками
@@ -28,13 +28,6 @@ export function InviteStep({
   const { t } = useTranslation(["onboarding", "common"]);
   const [mode, setMode] = useState<"link" | "email">("link");
   const [email, setEmail] = useState("");
-  const [copied, setCopied] = useState(false);
-
-  function copy() {
-    onCopy();
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  }
 
   return (
     <Card className="card-hover reveal">
@@ -46,26 +39,12 @@ export function InviteStep({
         <CardDescription>{t("invite.lead")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex gap-2 text-xs">
-          <button
-            type="button"
-            onClick={() => setMode("link")}
-            className={`px-3 py-1.5 rounded-md border transition-colors ${
-              mode === "link" ? "bg-secondary" : "hover:bg-secondary/50"
-            }`}
-          >
-            {t("invite.tab_link")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("email")}
-            className={`px-3 py-1.5 rounded-md border transition-colors ${
-              mode === "email" ? "bg-secondary" : "hover:bg-secondary/50"
-            }`}
-          >
-            {t("invite.tab_email")}
-          </button>
-        </div>
+        <Tabs value={mode} onValueChange={(v) => setMode(v as "link" | "email")}>
+          <TabsList>
+            <TabsTrigger value="link">{t("invite.tab_link")}</TabsTrigger>
+            <TabsTrigger value="email">{t("invite.tab_email")}</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {mode === "email" ? (
           <>
@@ -98,17 +77,12 @@ export function InviteStep({
           </Button>
         ) : (
           <>
-            <div className="flex items-center gap-2">
-              <input
-                readOnly
-                value={inviteUrl}
-                className="flex-1 rounded-md border bg-background px-3 py-2 text-xs font-mono"
-              />
-              <Button size="sm" variant="outline" onClick={copy}>
-                <Copy className="h-3.5 w-3.5 mr-1" />
-                {copied ? t("invite.copied") : t("invite.copy")}
-              </Button>
-            </div>
+            <SecretField
+              value={inviteUrl}
+              copyLabel={t("invite.copy")}
+              copiedLabel={t("invite.copied")}
+              onCopy={onCopy}
+            />
             <p className="text-xs text-muted-foreground font-mono">{t("invite.url_note")}</p>
           </>
         )}

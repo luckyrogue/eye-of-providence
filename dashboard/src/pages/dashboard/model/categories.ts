@@ -1,12 +1,14 @@
-// Маппинг категории события на цветовой тон UI-компонента <Badge>.
-// Backend категории: manual / ai / refactor / idle / other / reading.
-// Категории, не описанные явно — дефолт "neutral".
+import type { BadgeVariant } from "@eop/ui";
 
-export const CATEGORY_TONES: Record<string, "blue" | "purple" | "amber" | "neutral"> = {
+// Маппинг категории события на цветовой variant <Badge>.
+// Backend категории: manual / ai / refactor / idle / other / reading.
+// Категории, не описанные явно — дефолт "default".
+
+export const CATEGORY_VARIANTS: Record<string, BadgeVariant> = {
   manual: "blue",
   ai: "purple",
   refactor: "amber",
-  idle: "neutral",
-  other: "neutral",
-  reading: "neutral",
+  idle: "default",
+  other: "default",
+  reading: "default",
 };

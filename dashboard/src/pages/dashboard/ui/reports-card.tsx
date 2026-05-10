@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Tabs, TabsList, TabsTrigger } from "@eop/ui";
 import { Sparkles } from "lucide-react";
 import { useGenerateReport, type Report } from "../../../entities/report";
 import { Markdown } from "../../../shared/lib/markdown";
@@ -46,19 +46,21 @@ export function ReportsCard({ reports, tz }: { reports: Report[]; tz: string }) 
       </CardHeader>
       <CardContent className="space-y-4">
         {reports.length > 1 && (
-          <div className="flex gap-2 flex-wrap">
-            {reports.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => setActiveReport(r)}
-                className={`rounded-md px-3 py-1 text-xs transition-colors ${
-                  current?.id === r.id ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/80"
-                }`}
-              >
-                {r.period}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            value={current?.id ?? ""}
+            onValueChange={(v) => {
+              const r = reports.find((rr) => rr.id === v);
+              if (r) setActiveReport(r);
+            }}
+          >
+            <TabsList className="flex-wrap gap-2">
+              {reports.map((r) => (
+                <TabsTrigger key={r.id} value={r.id} className="text-xs">
+                  {r.period}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         )}
         {current ? (
           <div className="rounded-lg border bg-card/50 p-5">

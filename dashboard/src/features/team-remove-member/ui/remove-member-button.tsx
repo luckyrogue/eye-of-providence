@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useConfirm } from "@eop/ui";
+import { IconButton, useConfirm } from "@eop/ui";
 import { UserMinus } from "lucide-react";
 import { useRemoveMember } from "../../../entities/team";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
@@ -35,15 +35,13 @@ export function RemoveMemberButton({
   }
 
   return (
-    <button
-      type="button"
+    <IconButton
+      danger
+      title={t("team_detail.member_remove_btn_title")}
       onClick={remove}
       disabled={disabled || removeM.isPending}
-      title={t("team_detail.member_remove_btn_title")}
-      aria-label={t("team_detail.member_remove_btn_title")}
-      className="rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
     >
       <UserMinus className="h-3.5 w-3.5" />
-    </button>
+    </IconButton>
   );
 }

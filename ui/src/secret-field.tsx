@@ -1,17 +1,28 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { Button } from "@eop/ui";
 import { Copy } from "lucide-react";
+import { Button } from "./button";
 
 // Read-only поле с кнопкой "Copy". Используется для одноразового показа
 // secret'а (API token plaintext, webhook secret) — после закрытия модалки
 // значение становится недоступно.
-export function SecretField({ value }: { value: string }) {
-  const { t } = useTranslation("developer");
+//
+// i18n-агностично: caller передаёт локализованные подписи.
+export function SecretField({
+  value,
+  copyLabel,
+  copiedLabel,
+  onCopy,
+}: {
+  value: string;
+  copyLabel: string;
+  copiedLabel: string;
+  onCopy?: () => void;
+}) {
   const [copied, setCopied] = useState(false);
   function copy() {
     void navigator.clipboard.writeText(value);
     setCopied(true);
+    onCopy?.();
     setTimeout(() => setCopied(false), 1500);
   }
   return (
@@ -23,7 +34,7 @@ export function SecretField({ value }: { value: string }) {
       />
       <Button size="sm" variant="outline" onClick={copy}>
         <Copy className="h-3.5 w-3.5 mr-1" />
-        {copied ? t("tokens_copied") : t("tokens_copy")}
+        {copied ? copiedLabel : copyLabel}
       </Button>
     </div>
   );
