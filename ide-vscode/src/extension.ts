@@ -1,16 +1,24 @@
 import * as vscode from "vscode";
 
-// Attribution v1 в IDE:
+// Attribution v2 в IDE:
 // - Каждое изменение документа — onDidChangeTextDocument с массивом contentChanges.
 // - Малые insert (< pasteThreshold chars и без replace) → typed.
-// - Большие insert (>= pasteThreshold) или одномоментная вставка → ai_inline (proxy для Copilot/Cursor accept).
+// - Большие insert (>= pasteThreshold) → ai_inline (Copilot/Cursor accept).
+//   ai_provider определяется через vscode.env.appName: Cursor → "cursor",
+//   иначе "copilot" (по умолчанию VS Code inline-completions = Copilot).
 // - Удаление + большой insert (replace) → refactor.
-// Данные накапливаются per-language и шлются батчем каждые flushInterval секунд.
+// - Burst-detection: несколько contentChanges за <100ms → один ai_inline event
+//   (это inline streaming completion vs cmd+v paste = одно contentChange).
+// Данные накапливаются per-language × ai_provider и шлются батчем каждые flushInterval секунд.
+
+type AIProvider = "copilot" | "cursor";
+type AIChannel = "inline" | "agent";
 
 type Bucket = {
   lang: string;
   category: "manual" | "ai" | "refactor" | "other";
-  ai_channel?: "inline";
+  ai_provider?: AIProvider;
+  ai_channel?: AIChannel;
   duration_ms: number;
   chars_in: number;
   lines_added: number;
@@ -29,6 +37,15 @@ type EventPayload = {
   lines_added: number;
   lines_removed: number;
 };
+
+// detectAIProvider — Cursor — VS Code fork с собственным AI; appName === "Cursor".
+// Остальные derivative IDE'шки (VSCodium, Windsurf и т.п.) тоже могут наследовать
+// inline-completion provider от Copilot — fallback на "copilot".
+function detectAIProvider(): AIProvider {
+  const name = vscode.env.appName.toLowerCase();
+  if (name.includes("cursor")) return "cursor";
+  return "copilot";
+}
 
 let buckets = new Map<string, Bucket>();
 let activeEditorStart: number | null = null;
@@ -84,6 +101,18 @@ function flushFocus() {
   activeEditorStart = Date.now();
 }
 
+// Burst-detection state. Inline streaming completion пишет несколько мелких
+// contentChanges подряд за <100ms; обычный typing — interval >150ms между ними.
+// Если >=N changes сошлись в одно burst-окно и сумма chars >= threshold, это
+// ai_inline. Хранится per-document.
+type BurstState = {
+  start: number;
+  inserted: number;
+  linesAdded: number;
+};
+const bursts = new Map<string, BurstState>();
+const BURST_WINDOW_MS = 100;
+
 function onChange(e: vscode.TextDocumentChangeEvent) {
   if (e.document.uri.scheme !== "file") return;
   // Multi-window dedup: VS Code broadcastит onDidChangeTextDocument во все
@@ -92,6 +121,9 @@ function onChange(e: vscode.TextDocumentChangeEvent) {
   if (!vscode.window.state.focused) return;
   const lang = e.document.languageId;
   const threshold = getPasteThreshold();
+  const provider = detectAIProvider();
+  const docKey = e.document.uri.toString();
+  const now = Date.now();
 
   for (const c of e.contentChanges) {
     const inserted = c.text.length;
@@ -106,38 +138,69 @@ function onChange(e: vscode.TextDocumentChangeEvent) {
 
     if (replaced > threshold && inserted >= replaced * 0.5) {
       addToBucket(lang, "refactor", { chars_in: inserted, lines_added: linesAdded, lines_removed: linesRemoved });
+      bursts.delete(docKey);
     } else if (inserted >= threshold) {
+      // Single big insert — paste/accept, attributed to ai_inline.
       addToBucket(lang, "ai", {
         chars_in: inserted,
         lines_added: linesAdded,
         lines_removed: linesRemoved,
+        ai_provider: provider,
         ai_channel: "inline",
       });
+      bursts.delete(docKey);
     } else {
-      addToBucket(lang, "manual", {
-        chars_in: inserted,
-        lines_added: linesAdded,
-        lines_removed: linesRemoved,
-      });
+      // Маленькая вставка — может быть typing или часть inline-streaming burst'а.
+      const burst = bursts.get(docKey);
+      if (burst && now - burst.start <= BURST_WINDOW_MS) {
+        burst.inserted += inserted;
+        burst.linesAdded += linesAdded;
+        if (burst.inserted >= threshold) {
+          // Burst накопился до AI-уровня — отписываем как ai_inline и закрываем.
+          addToBucket(lang, "ai", {
+            chars_in: burst.inserted,
+            lines_added: burst.linesAdded,
+            ai_provider: provider,
+            ai_channel: "inline",
+          });
+          bursts.delete(docKey);
+        }
+      } else {
+        // Новый burst или typing — начинаем burst-window и одновременно
+        // counting как manual (если burst не превысит threshold, останется
+        // manual; если превысит — последний chunk пере-attribут'нется).
+        bursts.set(docKey, { start: now, inserted, linesAdded });
+        addToBucket(lang, "manual", {
+          chars_in: inserted,
+          lines_added: linesAdded,
+          lines_removed: linesRemoved,
+        });
+      }
     }
   }
 }
 
-function bucketKey(lang: string, category: Bucket["category"], aiChannel?: string): string {
-  return `${lang}::${category}::${aiChannel ?? ""}`;
+function bucketKey(
+  lang: string,
+  category: Bucket["category"],
+  aiProvider?: string,
+  aiChannel?: string,
+): string {
+  return `${lang}::${category}::${aiProvider ?? ""}::${aiChannel ?? ""}`;
 }
 
 function addToBucket(
   lang: string,
   category: Bucket["category"],
-  patch: Partial<Bucket> & { ai_channel?: "inline" },
+  patch: Partial<Bucket> & { ai_provider?: AIProvider; ai_channel?: AIChannel },
 ) {
-  const key = bucketKey(lang, category, patch.ai_channel);
+  const key = bucketKey(lang, category, patch.ai_provider, patch.ai_channel);
   let b = buckets.get(key);
   if (!b) {
     b = {
       lang,
       category,
+      ai_provider: patch.ai_provider,
       ai_channel: patch.ai_channel,
       duration_ms: 0,
       chars_in: 0,
@@ -164,10 +227,15 @@ async function flushAll(verbose: boolean) {
     if (verbose) vscode.window.showInformationMessage("Eye of Providence: nothing to flush");
     return;
   }
+  // app_bundle отражает реальный host (Cursor / VS Code), чтобы analytics
+  // могли filter'нуть по IDE.
+  const provider = detectAIProvider();
+  const appBundle = provider === "cursor" ? "com.todesktop.230313mzl4w4u92" : "com.microsoft.VSCode";
   const events: EventPayload[] = Array.from(buckets.values()).map((b) => ({
-    app_bundle: "com.microsoft.VSCode",
+    app_bundle: appBundle,
     category: b.category,
     source: "ide",
+    ai_provider: b.ai_provider,
     ai_channel: b.ai_channel,
     file_lang: b.lang,
     duration_ms: b.duration_ms,
