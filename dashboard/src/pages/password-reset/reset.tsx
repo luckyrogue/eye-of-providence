@@ -40,7 +40,7 @@ export function ResetPasswordRoute() {
 
   if (!token) {
     return (
-      <div className="mx-auto max-w-md pt-16">
+      <div className="mx-auto max-w-md px-4 pt-12 sm:pt-16">
         <Card>
           <CardHeader>
             <CardTitle className="text-center">{t("auth:reset_invalid_link")}</CardTitle>
@@ -61,7 +61,7 @@ export function ResetPasswordRoute() {
   return (
     <div className="relative">
       <div className="dot-grid pointer-events-none absolute inset-x-0 top-0 h-[420px] -z-10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
-      <div className="mx-auto max-w-md pt-16">
+      <div className="mx-auto max-w-md px-4 pt-12 sm:pt-16">
         <Card className="card-hover reveal">
           <CardHeader>
             <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">

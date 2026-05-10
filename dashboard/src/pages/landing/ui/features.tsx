@@ -12,10 +12,10 @@ export function Features() {
   const items = t("features.items", { returnObjects: true }) as FeatureItem[];
   return (
     <section id="features" className="py-24">
-      <div className="mx-auto max-w-6xl px-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-2xl mb-16">
           <Eyebrow>{t("features.eyebrow")}</Eyebrow>
-          <h2 className="display-head text-4xl md:text-5xl mt-3">
+          <h2 className="display-head text-3xl sm:text-4xl md:text-5xl mt-3">
             <Trans i18nKey="landing:features.heading" components={{ em: <em /> }} />
           </h2>
         </div>

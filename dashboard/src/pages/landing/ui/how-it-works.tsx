@@ -8,10 +8,10 @@ export function HowItWorks() {
   const items = t("how.items", { returnObjects: true }) as HowItem[];
   return (
     <section id="how" className="py-24 border-t bg-muted/20">
-      <div className="mx-auto max-w-6xl px-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-2xl mb-16">
           <Eyebrow>{t("how.eyebrow")}</Eyebrow>
-          <h2 className="display-head text-4xl md:text-5xl mt-3">
+          <h2 className="display-head text-3xl sm:text-4xl md:text-5xl mt-3">
             <Trans i18nKey="landing:how.heading" components={{ em: <em /> }} />
           </h2>
         </div>

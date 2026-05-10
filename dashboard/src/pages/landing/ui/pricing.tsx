@@ -22,7 +22,7 @@ function PriceCard({ tier, highlight, mostPopular }: { tier: Tier; highlight: bo
       )}
       <h3 className="font-display font-bold text-2xl tracking-tight">{name}</h3>
       <div className="mt-4 flex items-baseline gap-1">
-        <span className="font-display text-5xl font-bold tracking-tightest tabular-nums">{price}</span>
+        <span className="font-display text-4xl sm:text-5xl font-bold tracking-tightest tabular-nums">{price}</span>
         <span className="text-sm text-muted-foreground ml-2">{period}</span>
       </div>
       <ul className="mt-6 space-y-2.5 text-sm">
@@ -45,10 +45,10 @@ export function Pricing() {
   const tiers = t("pricing.tiers", { returnObjects: true }) as Tier[];
   return (
     <section id="pricing" className="py-24">
-      <div className="mx-auto max-w-6xl px-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="text-center mb-12">
           <Eyebrow>{t("pricing.eyebrow")}</Eyebrow>
-          <h2 className="display-head text-4xl md:text-5xl mt-3 max-w-2xl mx-auto">
+          <h2 className="display-head text-3xl sm:text-4xl md:text-5xl mt-3 max-w-2xl mx-auto">
             <Trans i18nKey="landing:pricing.heading" components={{ em: <em /> }} />
           </h2>
           <p className="text-muted-foreground mt-4 max-w-lg mx-auto">{t("pricing.lead")}</p>

@@ -14,7 +14,7 @@ export function LogoStrip() {
   const { t } = useTranslation("landing");
   return (
     <section className="border-y bg-muted/20">
-      <div className="mx-auto max-w-6xl px-6 py-10">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10">
         <p className="text-center text-xs font-mono uppercase tracking-widest3 text-muted-foreground mb-6">
           {t("logo_strip.tagline")}
         </p>

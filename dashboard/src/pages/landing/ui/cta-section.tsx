@@ -6,8 +6,8 @@ export function CTASection() {
   const { t } = useTranslation("landing");
   return (
     <section className="py-24">
-      <div className="mx-auto max-w-3xl px-6 text-center">
-        <h2 className="display-head text-5xl md:text-6xl">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
+        <h2 className="display-head text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
           <Trans i18nKey="landing:cta.heading" components={{ em: <em /> }} />
         </h2>
         <p className="mt-5 text-muted-foreground max-w-md mx-auto">{t("cta.lead")}</p>

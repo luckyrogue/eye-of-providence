@@ -81,11 +81,11 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
   );
 
   return (
-    <div className="relative">
+    <div className="relative px-4 sm:px-6">
       <div className="dot-grid pointer-events-none absolute inset-x-0 top-0 h-[420px] -z-10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
-      <div className="mx-auto max-w-xl pt-12 pb-6 text-center reveal">
+      <div className="mx-auto max-w-xl pt-8 sm:pt-12 pb-6 text-center reveal">
         <span className="eyebrow">Eye of Providence</span>
-        <h1 className="display-head text-5xl md:text-6xl mt-3">
+        <h1 className="display-head text-3xl sm:text-4xl md:text-5xl lg:text-6xl mt-3">
           <em>{mode === "register" ? t("auth:title_register") : t("auth:title_login")}.</em>
           <br />
           {t("auth:subtitle")}

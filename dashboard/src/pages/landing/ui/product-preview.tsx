@@ -9,10 +9,10 @@ const ACCENTS = {
 
 function PreviewStat({ label, value, accent }: { label: string; value: string; accent: keyof typeof ACCENTS }) {
   return (
-    <div className="rounded-lg border bg-card p-3 relative overflow-hidden">
-      <div className={cn("absolute right-0 top-0 h-16 w-16 rounded-bl-full bg-gradient-to-bl to-transparent", ACCENTS[accent])} />
-      <div className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">{label}</div>
-      <div className="font-display text-3xl font-bold tracking-tightest tabular-nums mt-1">{value}</div>
+    <div className="rounded-lg border bg-card p-2.5 sm:p-3 relative overflow-hidden">
+      <div className={cn("absolute right-0 top-0 h-12 w-12 sm:h-16 sm:w-16 rounded-bl-full bg-gradient-to-bl to-transparent", ACCENTS[accent])} />
+      <div className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest2 text-muted-foreground line-clamp-2">{label}</div>
+      <div className="font-display text-xl sm:text-2xl md:text-3xl font-bold tracking-tightest tabular-nums mt-1 truncate">{value}</div>
     </div>
   );
 }

@@ -49,10 +49,10 @@ export function ChangelogRoute() {
   return (
     <main className="relative min-h-screen">
       <div className="dot-grid pointer-events-none absolute inset-x-0 top-0 h-[420px] -z-10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
-      <div className="mx-auto max-w-3xl px-6 pt-12 pb-20">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 pt-12 pb-20">
         <div className="text-center mb-10 reveal">
           <Eyebrow>{t("eyebrow")}</Eyebrow>
-          <h1 className="display-head text-4xl md:text-5xl mt-3">
+          <h1 className="display-head text-3xl sm:text-4xl md:text-5xl mt-3">
             <em>{t("title")}</em>
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">{t("lead")}</p>

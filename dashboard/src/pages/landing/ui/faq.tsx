@@ -8,10 +8,10 @@ export function FAQ() {
   const items = t("faq.items", { returnObjects: true }) as FaqItem[];
   return (
     <section id="faq" className="py-24 border-t bg-muted/20">
-      <div className="mx-auto max-w-3xl px-6">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <div className="mb-12">
           <Eyebrow>{t("faq.eyebrow")}</Eyebrow>
-          <h2 className="display-head text-4xl md:text-5xl mt-3">
+          <h2 className="display-head text-3xl sm:text-4xl md:text-5xl mt-3">
             <Trans i18nKey="landing:faq.heading" components={{ em: <em /> }} />
           </h2>
         </div>

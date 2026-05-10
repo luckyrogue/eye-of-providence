@@ -13,12 +13,15 @@ export function Nav() {
   ];
   return (
     <header className="sticky top-0 z-40 border-b header-blur">
-      <div className="mx-auto max-w-6xl px-6 h-16 flex items-center justify-between">
-        <a href="/" className="flex items-center gap-2.5 group">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center transition-transform duration-300 ease-out-expo group-hover:rotate-[8deg]">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 h-16 flex items-center justify-between">
+        <a href="/" className="flex items-center gap-2 sm:gap-2.5 group min-w-0">
+          <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center transition-transform duration-300 ease-out-expo group-hover:rotate-[8deg]">
             <Eye className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="font-display font-bold tracking-tightest text-lg">Eye of Providence</span>
+          <span className="font-display font-bold tracking-tightest text-base sm:text-lg truncate">
+            <span className="sm:hidden">EoP</span>
+            <span className="hidden sm:inline">Eye of Providence</span>
+          </span>
         </a>
         <nav className="hidden md:flex items-center gap-8 text-sm">
           {navLinks.map((l) => (

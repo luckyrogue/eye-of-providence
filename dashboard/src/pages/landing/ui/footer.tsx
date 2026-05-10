@@ -17,7 +17,7 @@ export function Footer() {
   ];
   return (
     <footer className="border-t">
-      <div className="mx-auto max-w-6xl px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-sm">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-sm">
         <div className="col-span-2">
           <div className="flex items-center gap-2.5">
             <div className="h-7 w-7 rounded-md bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
@@ -31,7 +31,7 @@ export function Footer() {
         <FooterColumn title={t("footer.legal_title")} links={legalLinks} />
       </div>
       <div className="border-t">
-        <div className="mx-auto max-w-6xl px-6 py-5 flex items-center justify-between text-xs text-muted-foreground font-mono">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-5 flex items-center justify-between text-xs text-muted-foreground font-mono">
           <span>© {new Date().getFullYear()} Eye of Providence</span>
           <span className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
