@@ -215,10 +215,11 @@ func TestCached_SetFailureNotFatal(t *testing.T) {
 	inner := &fakeStore{aggResp: map[string]uint64{"ai": 1}}
 	wrapped := NewCached(inner, c, zap.NewNop())
 
-	// Even with broken cache, read should succeed via inner
+	// Even with broken cache, read should succeed via inner.
+	// (DeadlineExceeded ok если ping глобальный timeout сработал — read
+	// fall-through всё равно работает, cache miss silently logged.)
 	_, err := wrapped.AggregateByCategory(context.Background(), "u", time.Now())
 	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
-		// Inner returned successfully, cache write/read failed silently
-		// (DeadlineExceeded ok если ping глобальный timeout сработал)
+		t.Fatalf("inner read should succeed when cache broken: %v", err)
 	}
 }
