@@ -74,7 +74,7 @@ func (s Service) handleProjectCommits(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "bad project id"})
 	}
-	return s.queryCommits(c, `WHERE project_id = $1 AND team_id = $2 ORDER BY authored_at DESC LIMIT 100`, projID, teamID)
+	return s.queryCommits(c, `WHERE c.project_id = $1 AND c.team_id = $2 ORDER BY c.authored_at DESC LIMIT 100`, projID, teamID)
 }
 
 func (s Service) handleTeamCommits(c *fiber.Ctx) error {
@@ -86,7 +86,7 @@ func (s Service) handleTeamCommits(c *fiber.Ctx) error {
 	if _, ok := s.teamRole(c.Context(), uid, teamID); !ok {
 		return c.Status(403).JSON(fiber.Map{"error": "not a team member"})
 	}
-	return s.queryCommits(c, `WHERE team_id = $1 ORDER BY authored_at DESC LIMIT 100`, teamID)
+	return s.queryCommits(c, `WHERE c.team_id = $1 ORDER BY c.authored_at DESC LIMIT 100`, teamID)
 }
 
 func (s Service) queryCommits(c *fiber.Ctx, where string, args ...any) error {
