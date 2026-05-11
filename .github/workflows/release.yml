@@ -133,7 +133,7 @@ jobs:
         run: |
           npm i -g @vscode/vsce
           vsce package --no-dependencies --skip-license -o eop-vscode.vsix
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name || inputs.version }}
           draft: true
@@ -158,7 +158,7 @@ jobs:
         working-directory: browser-extension
         run: |
           cd dist && zip -r ../eop-browser-extension.zip .
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name || inputs.version }}
           draft: true
