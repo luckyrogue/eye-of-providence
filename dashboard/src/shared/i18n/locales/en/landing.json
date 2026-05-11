@@ -1,7 +1,10 @@
 {
   "nav": {
-    "features": "Features",
-    "how": "How it works",
+    "features": "How it works",
+    "how": "How",
+    "attribution": "Attribution",
+    "privacy": "Privacy",
+    "integrations": "Integrations",
     "pricing": "Pricing",
     "faq": "FAQ",
     "sign_in": "Sign in",
@@ -10,15 +13,209 @@
     "changelog": "Changelog"
   },
   "hero": {
-    "badge": "Beta · all paid features free until GA",
-    "heading": "See how much you code <em>vs.</em> the AI.",
-    "lead": "Privacy-first analytics for engineers. Track manual coding, AI assists, and where your time really goes — across IDE, browser, and CLI.",
-    "cta_primary": "Get started — free",
-    "cta_secondary": "See how it works",
-    "trust": ["Privacy-by-design", "Self-hostable", "No credit card"]
+    "eyebrow": "v0.4 · public beta · macOS + Windows",
+    "title1": "See where your ",
+    "titleAccent": "code",
+    "title2": " really ",
+    "titleItal": "comes from",
+    "title3": ".",
+    "sub": "Eye of Providence measures how much you write yourself, how much your AI writes for you, and where the rest of your time goes — across IDE, terminal, and browser. Local-first. Open source. No code ever leaves your machine.",
+    "ctaPrimary": "Download agent",
+    "ctaSecondary": "Read the docs",
+    "kbd": "Press / to search",
+    "meta1": "Active devices",
+    "meta2": "Live since",
+    "meta3": "Open source",
+    "badge": "v0.4 · public beta · macOS + Windows",
+    "heading": "See where your code <em>really comes from</em>.",
+    "lead": "Eye of Providence measures how much you write yourself, how much your AI writes for you, and where the rest of your time goes.",
+    "cta_primary": "Download agent",
+    "cta_secondary": "Read the docs",
+    "trust": ["Local-first", "Open source", "No code leaves your machine"]
   },
-  "logo_strip": {
-    "tagline": "Tracks every channel you actually use"
+  "stats": [
+    { "label": "Active coding tracked", "value": "847", "unit": "h this month" },
+    { "label": "AI-assist ratio", "value": "62", "unit": "%" },
+    { "label": "Providers detected", "value": "11", "unit": "providers" },
+    { "label": "Code attributed", "value": "24.6", "unit": "K lines / week" }
+  ],
+  "measure": {
+    "eyebrow": "What we measure",
+    "title1": "Every keystroke, every paste, every ",
+    "titleItal": "agent call",
+    "title2": ".",
+    "sub": "Five categories, one timeline. Eye of Providence reconstructs the lineage of every line saved — whether you typed it, accepted an inline suggestion, or watched an agent write it for you.",
+    "cards": [
+      {
+        "title": "Activity & focus",
+        "body": "Active time, idle, AFK, and uninterrupted focus sessions per app and per project. Idle threshold 60–120 s, fully tunable.",
+        "pills": ["NSWorkspace", "WinEventHook", "60s idle"]
+      },
+      {
+        "title": "Coding time",
+        "body": "Manual coding, AI-assisted coding, and review/reading time — split per file, per language, per project.",
+        "pills": ["IDE-aware", "Per-language", "Per-project"]
+      },
+      {
+        "title": "AI usage breakdown",
+        "body": "By provider, channel, and interaction type. Detect chat, autocomplete, agents, and edits across browser, IDE, and CLI.",
+        "pills": ["11 providers", "4 channels"]
+      },
+      {
+        "title": "Code provenance",
+        "body": "Every diff classified: typed · pasted-AI · pasted-other · AI-inline · AI-agent. Conservative, with a visible 'unknown' bucket.",
+        "pills": ["typed", "ai-inline", "ai-agent"]
+      },
+      {
+        "title": "Live dashboards",
+        "body": "Heatmaps, AI-ratio trends, per-language splits, dependency score. Read-only local preview before anything syncs.",
+        "pills": ["Heatmap", "Trends", "Streaks"]
+      },
+      {
+        "title": "Narrative reports",
+        "body": "Weekly digests written by Gemini from aggregated numbers only — never code, never prompts. Opt-in. Local Ollama fallback.",
+        "pills": ["Gemini Flash", "Opt-in", "Ollama"]
+      }
+    ]
+  },
+  "how": {
+    "eyebrow": "How it works",
+    "title": "Four quiet pieces. One picture.",
+    "sub": "A lightweight agent watches the OS, your browser, and your editor. Everything else is just math.",
+    "heading": "Four quiet pieces. <em>One picture</em>.",
+    "step_label": "step {{num}}",
+    "items": [
+      {
+        "title": "Observe",
+        "desc": "5–15 MB Tauri agent samples focus, idle, and keystroke counts via NSWorkspace / WinEventHook. No content captured."
+      },
+      {
+        "title": "Categorize",
+        "desc": "Browser extension flags AI sites. IDE plugin sees inline accepts. Claude Code hooks fire on every agent edit."
+      },
+      {
+        "title": "Attribute",
+        "desc": "Diff hunks per save are matched to keystroke ranges, paste events, and clipboard provenance. The rest stays 'unknown'."
+      },
+      {
+        "title": "Synthesize",
+        "desc": "ClickHouse aggregates feed a personal dashboard, and — opt-in — a weekly narrative report from Gemini."
+      }
+    ],
+    "steps": [
+      {
+        "num": "01",
+        "title": "Observe",
+        "body": "5–15 MB Tauri agent samples focus, idle, and keystroke counts via NSWorkspace / WinEventHook. No content captured."
+      },
+      {
+        "num": "02",
+        "title": "Categorize",
+        "body": "Browser extension flags AI sites. IDE plugin sees inline accepts. Claude Code hooks fire on every agent edit."
+      },
+      {
+        "num": "03",
+        "title": "Attribute",
+        "body": "Diff hunks per save are matched to keystroke ranges, paste events, and clipboard provenance. The rest stays 'unknown'."
+      },
+      {
+        "num": "04",
+        "title": "Synthesize",
+        "body": "ClickHouse aggregates feed a personal dashboard, and — opt-in — a weekly narrative report from Gemini."
+      }
+    ]
+  },
+  "attribution": {
+    "eyebrow": "Attribution",
+    "title1": "A clean line, ",
+    "titleItal": "drawn carefully",
+    "title2": " around every save.",
+    "sub": "Every hunk that lands in your editor gets a tag. We err on the side of 'unknown' — better to admit ignorance than to mislabel a line you wrote yourself.",
+    "stream": [
+      {
+        "ts": "14:02:17",
+        "tag": "typed",
+        "msg": "src/lib/parser.ts · 14 lines · keystroke range 11:43:01 → 14:01:50"
+      },
+      {
+        "ts": "14:03:04",
+        "tag": "ai-inline",
+        "msg": "src/lib/parser.ts · 3 lines · Copilot inline accept"
+      },
+      {
+        "ts": "14:04:51",
+        "tag": "paste-ai",
+        "msg": "src/lib/parser.ts · 22 lines · clipboard from claude.ai · 4.1s ago"
+      },
+      {
+        "ts": "14:07:30",
+        "tag": "ai-agent",
+        "msg": "src/lib/index.ts · 41 lines · Claude Code PostToolUse"
+      },
+      {
+        "ts": "14:09:12",
+        "tag": "refactor",
+        "msg": "src/lib/parser.ts · rename symbol · 8 occurrences"
+      },
+      {
+        "ts": "14:11:46",
+        "tag": "typed",
+        "msg": "src/lib/parser.test.ts · 27 lines · keystroke stream"
+      },
+      {
+        "ts": "14:14:02",
+        "tag": "ai-inline",
+        "msg": "src/lib/parser.test.ts · 6 lines · Cursor tab"
+      }
+    ]
+  },
+  "privacy": {
+    "eyebrow": "Privacy",
+    "title1": "Local-first. ",
+    "titleItal": "Always.",
+    "sub": "Eye of Providence is a measurement tool, not a surveillance system. The agent is open source. The backend is self-hostable. Your code never travels.",
+    "principles": [
+      {
+        "strong": "Local-first by design",
+        "body": "All processing happens on your device. Only aggregated metadata leaves it."
+      },
+      {
+        "strong": "Never captured",
+        "body": "File contents, prompts, AI responses, raw keystrokes, clipboard payloads, private-window titles."
+      },
+      {
+        "strong": "Open-source client",
+        "body": "Agent and extension code is fully public. Self-host the backend if you want zero external dependencies."
+      },
+      {
+        "strong": "Team-mode is opt-in",
+        "body": "Admins see aggregates only, with k-anonymity ≥ 5. No per-session view. Every read is audit-logged."
+      },
+      {
+        "strong": "One-click delete",
+        "body": "Erases your data from ClickHouse, Postgres, and S3 in a single action. GDPR-ready."
+      }
+    ],
+    "shieldTitle": "What leaves your machine",
+    "shieldSends": [
+      "timestamps",
+      "event category",
+      "provider name",
+      "language tag",
+      "duration / counts"
+    ],
+    "shieldNoSends": [
+      "file contents",
+      "prompts & responses",
+      "raw keystrokes",
+      "window titles in private",
+      "clipboard payload"
+    ]
+  },
+  "integrations": {
+    "eyebrow": "Integrations",
+    "title": "Everywhere you already are.",
+    "sub": "Eleven AI providers, four channels, two operating systems, one quiet agent that ties them all together."
   },
   "features": {
     "eyebrow": "Features",
@@ -30,46 +227,23 @@
       },
       {
         "title": "Real coding time",
-        "desc": "Active focus minutes, not just calendar time. Idle, context-switching, and reading are measured separately."
+        "desc": "Active focus minutes, not just calendar time."
       },
       {
         "title": "By language & project",
-        "desc": "Heatmaps, breakdowns by repo and file extension. See where AI helps and where you write everything by hand."
+        "desc": "Heatmaps, breakdowns by repo and file extension."
       },
       {
         "title": "Privacy by design",
-        "desc": "We never store your prompts, code, or screen content. Only event metadata. Self-host the whole stack if you want."
+        "desc": "Only metadata leaves your machine."
       },
       {
         "title": "AI-generated reports",
-        "desc": "Weekly and monthly summaries from Gemini — what changed, where you sped up, what to focus on next."
+        "desc": "Weekly summaries from aggregates only."
       },
       {
         "title": "Built for teams",
-        "desc": "Invite-only teams, role-based access, per-project breakdowns for engineering managers."
-      }
-    ]
-  },
-  "how": {
-    "eyebrow": "How it works",
-    "heading": "From install to insight in <em>under five minutes</em>.",
-    "step_label": "step {{num}}",
-    "items": [
-      {
-        "title": "Install the agent",
-        "desc": "One binary on macOS or Windows. VS Code & Claude Code hooks ship as separate plugins."
-      },
-      {
-        "title": "Sign in",
-        "desc": "Email + password or GitHub OAuth. Invite-only team mode keeps your org private."
-      },
-      {
-        "title": "Code as usual",
-        "desc": "Agent classifies events locally. Only metadata leaves your machine — never code or prompts."
-      },
-      {
-        "title": "Read the dashboard",
-        "desc": "Live charts, language breakdown, AI-generated reports. Cancel anytime, export anytime."
+        "desc": "Invite-only teams, role-based access."
       }
     ]
   },
@@ -144,37 +318,27 @@
     "items": [
       {
         "q": "What does the agent actually collect?",
-        "a": "Only metadata: focused app, idle/active state, paste sizes, language extensions, AI provider names. Never prompts, code content, screenshots, or keystrokes."
-      },
-      {
-        "q": "How is AI use detected?",
-        "a": "Multiple signals — the active app and URL (e.g. claude.ai, ChatGPT), IDE plugin events (Copilot accept, Cursor agent), and clipboard heuristics for pasted code from AI windows. All classification happens on your machine."
-      },
-      {
-        "q": "Can I self-host?",
-        "a": "Yes. The backend is Go, dashboard is React, storage is Postgres + ClickHouse + Redis. Docker compose works out of the box. You can run the entire stack on a single VM."
-      },
-      {
-        "q": "Is my data sold or shared?",
-        "a": "No. We don't run ads, we don't sell aggregate data, we don't train models on your events. If we ever change that, we'd ask first."
-      },
-      {
-        "q": "What about my team's privacy?",
-        "a": "Team admins see aggregates per member. They cannot see individual prompts, files, or content. Members can pause tracking anytime and export or delete all their data."
+        "a": "Only metadata — never content."
       },
       {
         "q": "When does free end?",
-        "a": "The Free tier (1 team, 5 users, 30-day history) stays free forever. Pro and Business are free during beta — pricing kicks in at GA in Q4 2026. We'll notify you at least 30 days before any charge."
+        "a": "Free tier stays free forever. Pro/Business free during beta until Q4 2026."
       }
     ]
   },
   "cta": {
+    "title1": "Watch where your ",
+    "titleItal": "attention",
+    "title2": " actually goes.",
+    "sub": "Install in ninety seconds. Your first dashboard is ready after 24 hours of activity.",
+    "primary": "Download for macOS",
+    "secondary": "Download for Windows",
     "heading": "Ship more. <em>Know how.</em>",
     "lead": "Free during beta. Two minutes to try. Cancel any time.",
     "button": "Get started — free"
   },
   "footer": {
-    "tagline": "Privacy-first AI workflow analytics for engineers. Self-hostable.",
+    "tagline": "Eye of Providence is a privacy-first measurement tool for developers. Built for the era where the question is no longer 'did you write this?' but 'how much of it did you?'",
     "product_title": "Product",
     "legal_title": "Legal",
     "legal_privacy": "Privacy",
