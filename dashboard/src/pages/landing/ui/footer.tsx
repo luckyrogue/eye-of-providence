@@ -16,30 +16,34 @@ export function Footer() {
     { href: "/security", label: t("footer.legal_security") },
   ];
   return (
-    <footer className="border-t">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-sm">
-        <div className="col-span-2">
-          <div className="flex items-center gap-2.5">
-            <div className="h-7 w-7 rounded-md bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-              <Eye className="h-3.5 w-3.5 text-primary-foreground" />
-            </div>
-            <span className="font-display font-bold tracking-tightest">Eye of Providence</span>
+    <footer className="border-t px-4 sm:px-8 pt-16 pb-10">
+      <div className="mx-auto max-w-7xl grid grid-cols-2 md:grid-cols-4 gap-10 text-[13px]">
+        <div className="col-span-2 md:col-span-2">
+          <div className="flex items-center gap-3">
+            <Eye className="h-5 w-5 text-foreground" />
+            <span className="font-display font-semibold tracking-tight text-[15px]">
+              Eye of Providence
+            </span>
           </div>
-          <p className="text-muted-foreground mt-3 max-w-xs leading-relaxed text-xs">
+          <p className="text-muted-foreground mt-4 max-w-sm leading-relaxed text-[13px]">
             {t("footer.tagline")}
           </p>
         </div>
         <FooterColumn title={t("footer.product_title")} links={productLinks} />
         <FooterColumn title={t("footer.legal_title")} links={legalLinks} />
       </div>
-      <div className="border-t">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-5 flex items-center justify-between text-xs text-muted-foreground font-mono">
-          <span>© {new Date().getFullYear()} Eye of Providence</span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
-            {t("footer.status_ok")}
-          </span>
-        </div>
+      <div
+        className="mx-auto max-w-7xl mt-10 pt-6 border-t flex flex-wrap items-center justify-between gap-3 text-[12px] text-muted-foreground font-mono"
+        style={{ borderColor: "hsl(var(--border))" }}
+      >
+        <span>© {new Date().getFullYear()} Eye of Providence · MIT</span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="h-1.5 w-1.5 rounded-full animate-pulse"
+            style={{ background: "hsl(var(--success))" }}
+          />
+          {t("footer.status_ok")}
+        </span>
       </div>
     </footer>
   );
@@ -54,10 +58,10 @@ function FooterColumn({
 }) {
   return (
     <div>
-      <div className="font-mono text-[11px] uppercase tracking-widest2 text-muted-foreground mb-3">
+      <h6 className="font-mono text-[11px] uppercase tracking-widest2 text-muted-foreground mb-4 font-medium">
         {title}
-      </div>
-      <ul className="space-y-2 text-muted-foreground">
+      </h6>
+      <ul className="space-y-2.5 text-muted-foreground">
         {links.map((l) => (
           <li key={l.href}>
             <a href={l.href} className="hover:text-foreground transition-colors">

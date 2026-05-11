@@ -11,24 +11,41 @@ export function Features() {
   const { t } = useTranslation("landing");
   const items = t("features.items", { returnObjects: true }) as FeatureItem[];
   return (
-    <section id="features" className="py-24">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="max-w-2xl mb-16">
+    <section id="features" className="py-24 sm:py-32 px-4 sm:px-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="max-w-2xl mb-14 sm:mb-16">
           <Eyebrow>{t("features.eyebrow")}</Eyebrow>
-          <h2 className="display-head text-3xl sm:text-4xl md:text-5xl mt-3">
+          <h2 className="display-head text-[clamp(1.9rem,4vw,3.4rem)] mt-3 text-balance">
             <Trans i18nKey="landing:features.heading" components={{ em: <em /> }} />
           </h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Flat grid с 1px gap'ом — карточки делятся линиями, не отдельно стоят */}
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px rounded-2xl overflow-hidden border"
+          style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--border))" }}
+        >
           {items.map(({ title, desc }, i) => {
             const Icon = ICONS[i] ?? Brain;
             return (
-              <div key={title} className="rounded-xl border bg-card p-6 card-hover">
-                <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center mb-4">
+              <div
+                key={title}
+                className="p-8 sm:p-9 min-h-[260px] flex flex-col gap-4 transition-colors hover:bg-card/50"
+                style={{ background: "hsl(var(--background))" }}
+              >
+                <div
+                  className="h-10 w-10 rounded-lg grid place-items-center"
+                  style={{
+                    border: "1px solid hsl(var(--eop-line-strong))",
+                    color: "hsl(var(--accent))",
+                    background: "hsl(var(--eop-accent-soft))",
+                  }}
+                >
                   <Icon className="h-5 w-5" />
                 </div>
-                <h3 className="font-display font-bold tracking-tight text-lg">{title}</h3>
-                <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{desc}</p>
+                <h3 className="font-sans font-medium tracking-tight text-[19px] leading-tight">
+                  {title}
+                </h3>
+                <p className="text-[14px] text-muted-foreground leading-relaxed">{desc}</p>
               </div>
             );
           })}

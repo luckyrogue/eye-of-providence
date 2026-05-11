@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next";
-import { Button } from "@eop/ui";
 import { Eye } from "lucide-react";
 
 export function Nav() {
@@ -12,18 +11,21 @@ export function Nav() {
     { href: "#faq", label: t("nav.faq") },
   ];
   return (
-    <header className="sticky top-0 z-40 border-b header-blur">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 h-16 flex items-center justify-between">
-        <a href="/" className="flex items-center gap-2 sm:gap-2.5 group min-w-0">
-          <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center transition-transform duration-300 ease-out-expo group-hover:rotate-[8deg]">
-            <Eye className="h-4 w-4 text-primary-foreground" />
+    <header
+      className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-background/60 border-b"
+      style={{ borderColor: "hsl(var(--border))" }}
+    >
+      <div className="mx-auto max-w-7xl px-4 sm:px-8 h-[68px] flex items-center justify-between">
+        <a href="/" className="flex items-center gap-3 group min-w-0">
+          <div className="h-7 w-7 shrink-0 grid place-items-center relative">
+            <Eye className="h-5 w-5 text-foreground transition-transform duration-300 group-hover:rotate-[8deg]" />
           </div>
-          <span className="font-display font-bold tracking-tightest text-base sm:text-lg truncate">
+          <span className="font-display font-semibold tracking-tight text-[15px] truncate">
             <span className="sm:hidden">EoP</span>
             <span className="hidden sm:inline">Eye of Providence</span>
           </span>
         </a>
-        <nav className="hidden md:flex items-center gap-8 text-sm">
+        <nav className="hidden md:flex items-center gap-7 text-[14px]">
           {navLinks.map((l) => (
             <a
               key={l.href}
@@ -34,18 +36,21 @@ export function Nav() {
             </a>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {!isAuthed && (
             <a
               href="/dashboard"
-              className="hidden sm:inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="hidden sm:inline-flex items-center text-[14px] text-muted-foreground hover:text-foreground transition-colors"
             >
               {t("nav.sign_in")}
             </a>
           )}
-          <Button asChild size="sm">
-            <a href="/dashboard">{isAuthed ? t("nav.open_dashboard") : t("nav.get_started")}</a>
-          </Button>
+          <a
+            href="/dashboard"
+            className="btn-eop-primary inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[14px] font-medium whitespace-nowrap"
+          >
+            {isAuthed ? t("nav.open_dashboard") : t("nav.get_started")}
+          </a>
         </div>
       </div>
     </header>
