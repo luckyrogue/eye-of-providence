@@ -39,7 +39,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 ############################
 # Dashboard builder
 ############################
-FROM node:22-alpine AS dashboard-builder
+FROM node:26-alpine AS dashboard-builder
 WORKDIR /repo
 RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
 
