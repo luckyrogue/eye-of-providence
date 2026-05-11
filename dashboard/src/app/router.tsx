@@ -1,7 +1,7 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { Skeleton } from "@eop/ui";
-import { AppLayout } from "../widgets/app-layout";
+import { AppShellV2 } from "../widgets/app-shell-v2";
 import { NotFound } from "../pages/not-found";
 import { RouteError } from "../pages/route-error";
 
@@ -60,7 +60,7 @@ export const router = createBrowserRouter([
   { path: "/changelog", element: wrap(<ChangelogRoute />), ...eb },
   { path: "/pricing", element: wrap(<PricingRoute />), ...eb },
   {
-    element: <AppLayout />,
+    element: <AppShellV2 />,
     ...eb,
     children: [
       { path: "/dashboard", element: wrap(<DashboardRoute />), ...eb },
