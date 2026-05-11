@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -39,17 +40,22 @@ const defaultPrefix = "eop:cache"
 // New — конструктор. Тестит соединение через PING; если fails — возвращает
 // nil + err, caller должен decide fallback (typically — оставить event store
 // uncached).
+//
+// addr принимает оба формата:
+//   - `host:port` (in-cluster, docker network)
+//   - `redis://user:pass@host:port[/db]` или `rediss://...` (managed Redis,
+//     Dokploy/Heroku/Upstash) — парсим через redis.ParseURL чтобы извлечь
+//     credentials и TLS, иначе go-redis примет всю строку как Addr и упадёт
+//     с "too many colons".
 func New(ctx context.Context, addr string) (*Cache, error) {
 	if addr == "" {
 		return nil, errors.New("redis addr empty")
 	}
-	cli := redis.NewClient(&redis.Options{
-		Addr:         addr,
-		PoolSize:     10,
-		ReadTimeout:  500 * time.Millisecond,
-		WriteTimeout: 500 * time.Millisecond,
-		DialTimeout:  2 * time.Second,
-	})
+	opts, err := buildOptions(addr)
+	if err != nil {
+		return nil, err
+	}
+	cli := redis.NewClient(opts)
 	pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	if err := cli.Ping(pingCtx).Err(); err != nil {
@@ -57,6 +63,33 @@ func New(ctx context.Context, addr string) (*Cache, error) {
 		return nil, err
 	}
 	return &Cache{Client: cli, Prefix: defaultPrefix}, nil
+}
+
+func buildOptions(addr string) (*redis.Options, error) {
+	const (
+		poolSize     = 10
+		readTimeout  = 500 * time.Millisecond
+		writeTimeout = 500 * time.Millisecond
+		dialTimeout  = 2 * time.Second
+	)
+	if strings.Contains(addr, "://") {
+		opts, err := redis.ParseURL(addr)
+		if err != nil {
+			return nil, err
+		}
+		opts.PoolSize = poolSize
+		opts.ReadTimeout = readTimeout
+		opts.WriteTimeout = writeTimeout
+		opts.DialTimeout = dialTimeout
+		return opts, nil
+	}
+	return &redis.Options{
+		Addr:         addr,
+		PoolSize:     poolSize,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+		DialTimeout:  dialTimeout,
+	}, nil
 }
 
 // key — глобальный prefix + user-scoped key. Keeps keys grouped per pre-fix
