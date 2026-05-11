@@ -11,6 +11,7 @@ import (
 
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/httperr"
+	"github.com/eye-of-providence/backend/internal/plans"
 )
 
 // AdminService — bundle для admin SSO endpoints. teamRoleCheck inject'ится
@@ -19,6 +20,7 @@ type AdminService struct {
 	Pool     *pgxpool.Pool
 	Registry *Registry
 	Logger   *zap.Logger
+	Plans    plans.Service // feature-gate: SSO требует Business+ при Enforce=true
 }
 
 // RegisterAdminRoutes — owner/admin endpoints для SSO config CRUD.
@@ -119,6 +121,14 @@ func (s AdminService) handleSave(c *fiber.Ctx) error {
 	}
 	if err := requireOwnerOrAdmin(c, s.Pool, teamID); err != nil {
 		return err
+	}
+	// Plan gate: SSO — Business+ feature. В бете Enforce=false → пропускает всех.
+	var teamPlan string
+	_ = s.Pool.QueryRow(c.Context(),
+		"SELECT subscription_plan FROM teams WHERE id=$1", teamID).Scan(&teamPlan)
+	if !s.Plans.Limits(teamPlan).SSO {
+		return httperr.Forbidden(c, "plan_limit_exceeded",
+			"SSO requires Business plan or higher")
 	}
 	var req saveRequest
 	if err := c.BodyParser(&req); err != nil {

@@ -36,6 +36,7 @@ import (
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/mailer"
+	"github.com/eye-of-providence/backend/internal/plans"
 )
 
 const (
@@ -96,6 +97,7 @@ type Service struct {
 	Mailer        mailer.Mailer
 	PublicURL     string            // base URL дашборда для invite-ссылок в письме
 	Webhooks      WebhookDispatcher // nil — webhook delivery выключена (in-memory mode)
+	Plans         plans.Service     // feature-gate: max users/team при Enforce=true
 }
 
 // internalErr — единая точка для 500-ответов. Логируем полный текст,

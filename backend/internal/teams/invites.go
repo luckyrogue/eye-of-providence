@@ -5,6 +5,7 @@ package teams
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -158,6 +159,30 @@ func (s Service) handleInvitePreview(c *fiber.Ctx) error {
 
 func (s Service) handleInviteAccept(c *fiber.Ctx) error {
 	uid := userID(c)
+	// Pre-check: peek team's plan + current member count перед consumeInvite,
+	// чтобы НЕ инкрементировать use_count если упрёмся в plan_limit. Иначе
+	// инвайт "сгорит" впустую для следующих пользователей.
+	inv, err := s.findInvite(c.Context(), c.Params("code"))
+	if err != nil {
+		return httperr.NotFound(c, "invite_invalid", "invalid or expired invite")
+	}
+	var teamPlan string
+	_ = s.Pool.QueryRow(c.Context(),
+		"SELECT subscription_plan FROM teams WHERE id=$1", inv.TeamID).Scan(&teamPlan)
+	limits := s.Plans.Limits(teamPlan)
+	if limits.MaxUsersPerTeam > 0 {
+		var count int
+		if err := s.Pool.QueryRow(c.Context(),
+			"SELECT count(*) FROM team_members WHERE team_id=$1", inv.TeamID).Scan(&count); err != nil {
+			return s.internalErr(c, err)
+		}
+		if count >= limits.MaxUsersPerTeam {
+			return httperr.Forbidden(c, "plan_limit_exceeded",
+				fmt.Sprintf("team is on %s plan, limited to %d members (current: %d)",
+					limits.Plan, limits.MaxUsersPerTeam, count))
+		}
+	}
+
 	// consumeInvite атомарно проверяет лимиты и инкрементирует use_count.
 	teamID, err := s.consumeInvite(c.Context(), c.Params("code"), uid)
 	if err != nil {

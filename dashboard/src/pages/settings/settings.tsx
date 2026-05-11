@@ -6,6 +6,7 @@ import { DeleteMyDataButton } from "../../features/delete-my-data";
 import { LocaleSelect } from "../../features/locale-switch";
 import { TimezoneSelect } from "../../features/timezone-switch";
 import { APITokensWidget } from "../../widgets/api-tokens";
+import { DevicesWidget } from "../../widgets/devices";
 import { PushNotificationsWidget } from "../../widgets/push-notifications";
 import { WebhooksWidget } from "../../widgets/webhooks";
 
@@ -84,6 +85,7 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
       </Card>
 
       <PushNotificationsWidget />
+      <DevicesWidget />
       <APITokensWidget />
       <WebhooksWidget />
 

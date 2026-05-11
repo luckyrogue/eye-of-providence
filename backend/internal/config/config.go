@@ -28,6 +28,10 @@ type Config struct {
 	AutoMigrate     bool   // true = прогнать .sql миграции на старте
 	EnableDevToken  bool   // true = роут /v1/auth/dev-token зарегистрирован
 	BetaTeamLimit   int    // максимальное число команд в бете (0 = без лимита). Super_admin может больше.
+	// PlanLimitsEnforced — kill-switch для feature gates (plans package).
+	// false (default в бете) = все проверки no-op'ятся, всем доступны все фичи.
+	// true (на GA) = enforces Limits.MaxUsersPerTeam, MaxWebhooks, SSO, AuditLog.
+	PlanLimitsEnforced bool
 	ResendAPIKey    string // если пустой — Mailer = Noop (только лог, без HTTP-вызовов)
 	MailFrom        string // RFC-5322 from-address: `Eye of Providence <noreply@app.example.com>`
 	PublicURL       string // base URL дашборда для ссылок в email'ах
@@ -59,6 +63,7 @@ func FromEnv() Config {
 		AutoMigrate:     boolEnv("EOP_AUTO_MIGRATE", env != "production"),
 		EnableDevToken:  boolEnv("EOP_ENABLE_DEV_TOKEN", env != "production"),
 		BetaTeamLimit:   atoiOr(os.Getenv("EOP_BETA_TEAM_LIMIT"), 3),
+		PlanLimitsEnforced: boolEnv("EOP_PLAN_LIMITS_ENFORCED", false),
 		ResendAPIKey:    os.Getenv("EOP_RESEND_API_KEY"),
 		MailFrom:        getenv("EOP_MAIL_FROM", "Eye of Providence <noreply@example.com>"),
 		PublicURL:       getenv("EOP_PUBLIC_URL", "http://localhost:5173"),

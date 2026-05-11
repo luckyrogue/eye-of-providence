@@ -29,6 +29,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/eye-of-providence/backend/internal/plans"
 )
 
 // Известные event types. Constant'ы т.к. они часть public contract.
@@ -60,7 +62,8 @@ type Webhook struct {
 type Service struct {
 	Pool       *pgxpool.Pool
 	Logger     *zap.Logger
-	HTTPClient *http.Client // если nil → дефолт с timeout 5s
+	HTTPClient *http.Client  // если nil → дефолт с timeout 5s
+	Plans      plans.Service // feature-gate: MaxWebhooks при Enforce=true
 }
 
 // New — конструктор с дефолтным HTTP client.

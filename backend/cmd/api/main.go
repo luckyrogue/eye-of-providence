@@ -28,6 +28,7 @@ import (
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/cache"
 	"github.com/eye-of-providence/backend/internal/config"
+	"github.com/eye-of-providence/backend/internal/devices"
 	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/ingest"
 	"github.com/eye-of-providence/backend/internal/insights"
@@ -38,6 +39,7 @@ import (
 	"github.com/eye-of-providence/backend/internal/mailer"
 	"github.com/eye-of-providence/backend/internal/metrics"
 	"github.com/eye-of-providence/backend/internal/migrate"
+	"github.com/eye-of-providence/backend/internal/plans"
 	"github.com/eye-of-providence/backend/internal/reports"
 	"github.com/eye-of-providence/backend/internal/sso"
 	"github.com/eye-of-providence/backend/internal/store"
@@ -208,7 +210,20 @@ func main() {
 		EnableDevToken: cfg.EnableDevToken,
 	})
 
+	// Devices pairing — public /v1/devices/{pair,poll} + authed /v1/me/devices.
+	// Регистрируем после auth.RegisterRoutes чтобы public роуты не попали
+	// под /v1/me middleware.
+	devices.RegisterRoutes(app, devices.Service{
+		Pool:      pgPool,
+		Logger:    log,
+		JWTSecret: cfg.JWTSecret,
+	})
+
 	mail := chooseMailer(cfg, log)
+	// planSvc — единый kill-switch для plan feature gates (см. internal/plans).
+	// Enforce=false в бете (default), true на GA через EOP_PLAN_LIMITS_ENFORCED.
+	planSvc := plans.Service{Enforce: cfg.PlanLimitsEnforced}
+
 	// hookSvc — concrete *webhooks.Service. Удовлетворяет двум интерфейсам:
 	// teams.WebhookDispatcher и anomaly.Dispatcher (одна Dispatch-сигнатура).
 	// Если pgPool == nil (in-memory), hookSvc остаётся nil → consumers
@@ -217,6 +232,7 @@ func main() {
 	var hooksDispatcher teams.WebhookDispatcher
 	if pgPool != nil {
 		hookSvc = webhooks.New(pgPool, log)
+		hookSvc.Plans = planSvc
 		webhooks.RegisterRoutes(app, hookSvc, cfg.JWTSecret, pgPool)
 		hooksDispatcher = hookSvc
 	}
@@ -230,6 +246,7 @@ func main() {
 		Mailer:        mail,
 		PublicURL:     cfg.PublicURL,
 		Webhooks:      hooksDispatcher,
+		Plans:         planSvc,
 	})
 
 	// Protected routes — навешивают auth middleware на весь /v1.
@@ -263,7 +280,7 @@ func main() {
 			JWTSecret: cfg.JWTSecret,
 			PublicURL: strings.TrimRight(cfg.PublicURL, "/"),
 		})
-		ssoAdmin := sso.AdminService{Pool: pgPool, Registry: ssoRegistry, Logger: log}
+		ssoAdmin := sso.AdminService{Pool: pgPool, Registry: ssoRegistry, Logger: log, Plans: planSvc}
 		// /v1/teams/:id/sso/* — admin endpoints. Защищены auth middleware
 		// глобальным /v1 group'ом, role-check внутри handler'ов.
 		ssoAdmin.RegisterAdminRoutes(app.Group("/v1/teams/:id/sso", auth.Middleware(cfg.JWTSecret, pgPool)))
