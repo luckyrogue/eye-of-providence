@@ -9,8 +9,6 @@
 
 import { z } from "zod";
 
-// --- Common primitives ---
-
 const email = z
   .string()
   .min(1, "auth:validation_email_required")
@@ -28,8 +26,6 @@ const displayName = z
   .min(1, "auth:validation_name_required")
   .max(64, "auth:validation_name_max");
 
-// --- Auth ---
-
 export const loginSchema = z.object({ email, password: passwordLogin });
 export type LoginValues = z.infer<typeof loginSchema>;
 
@@ -39,8 +35,6 @@ export const registerSchema = z.object({
   displayName,
 });
 export type RegisterValues = z.infer<typeof registerSchema>;
-
-// --- Password reset ---
 
 export const forgotPasswordSchema = z.object({ email });
 export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
@@ -56,8 +50,6 @@ export const resetPasswordSchema = z
   });
 export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
 
-// --- Team ---
-
 const teamName = z
   .string()
   .min(1, "team:validation_name_required")
@@ -66,8 +58,6 @@ const teamName = z
 export const teamSchema = z.object({ name: teamName });
 export type TeamValues = z.infer<typeof teamSchema>;
 
-// --- Invite ---
-
 export const inviteSchema = z.object({
   email: z
     .string()
@@ -75,8 +65,6 @@ export const inviteSchema = z.object({
     .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "auth:validation_email_invalid"),
 });
 export type InviteValues = z.infer<typeof inviteSchema>;
-
-// --- API Token ---
 
 export const apiTokenSchema = z.object({
   name: z
@@ -87,8 +75,6 @@ export const apiTokenSchema = z.object({
   ttlDays: z.number().int().min(0).max(365),
 });
 export type APITokenValues = z.infer<typeof apiTokenSchema>;
-
-// --- Webhook ---
 
 export const webhookSchema = z.object({
   url: z.string().url("developer:validation_url_invalid").max(2048),

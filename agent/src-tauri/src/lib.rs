@@ -275,7 +275,6 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
-// --- Tauri commands ---
 
 #[tauri::command]
 fn status() -> serde_json::Value {

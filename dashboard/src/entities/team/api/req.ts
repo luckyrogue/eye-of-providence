@@ -13,14 +13,10 @@ import type {
 } from "./res";
 import type { BetaInfo, InvitePreview, Project } from "./types";
 
-// --- Request payload types ---
-
 export type CreateTeamReq = { name: string };
 export type UpdateTeamReq = { name: string };
 export type UpdateMemberRoleReq = { role: string };
 export type CreateProjectReq = { name: string; repo_url: string };
-
-// --- Query keys ---
 
 // Все query keys строятся от общего корня `all`, чтобы инвалидация
 // одного ключа уровня сущности (`teams`) очищала все её вариации.
@@ -33,8 +29,6 @@ export const teamsKeys = {
   projects: (teamID: string) => [...teamsKeys.all, "projects", teamID] as const,
   commits: (teamID: string) => [...teamsKeys.all, "commits", teamID] as const,
 };
-
-// --- Fetchers ---
 
 export const listMyTeams = () =>
   http.get<ListTeamsRes>("/v1/teams").then((r) => r.data.teams ?? []);
@@ -95,8 +89,6 @@ export const createProject = (teamID: string, name: string, repoURL: string) => 
 export const listTeamCommits = (teamID: string) =>
   http.get<ListCommitsRes>(`/v1/teams/${enc(teamID)}/commits`).then((r) => r.data.commits ?? []);
 
-// --- Query hooks ---
-
 export const useTeams = () => useQuery({ queryKey: teamsKeys.list(), queryFn: listMyTeams });
 export const useBetaInfo = () => useQuery({ queryKey: teamsKeys.beta(), queryFn: fetchBetaInfo });
 
@@ -127,8 +119,6 @@ export const useTeamCommits = (teamID: string | null) =>
     queryFn: () => listTeamCommits(teamID!),
     enabled: !!teamID,
   });
-
-// --- Mutation hooks ---
 
 export function useCreateTeam() {
   const qc = useQueryClient();

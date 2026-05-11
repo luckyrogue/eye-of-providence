@@ -62,8 +62,6 @@ export async function clearConfig() {
   await chrome.storage.local.remove(["eop_token", "eop_backend"]);
 }
 
-// --- Pairing flow ---
-
 export type PairBeginResponse = {
   pair_id: string;
   secret: string;

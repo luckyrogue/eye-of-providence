@@ -107,7 +107,6 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// --- Web Push заглушка (Phase B) ---
 //
 // Когда server шлёт push-payload (после weekly report generated, anomaly
 // alert и т.д.), browser вызывает это. Мы рендерим OS notification.

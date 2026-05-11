@@ -54,8 +54,6 @@ const (
 	tokenTTL = 14 * 24 * time.Hour
 )
 
-// --- Validators ---
-
 func validateEmail(s string) (string, bool) {
 	s = strings.TrimSpace(strings.ToLower(s))
 	if s == "" || len(s) > 254 {
@@ -86,8 +84,6 @@ func validateDisplayName(s string) (string, bool) {
 	return s, true
 }
 
-// --- Service ---
-
 type Service struct {
 	Pool          *pgxpool.Pool
 	JWTSecret     string
@@ -112,8 +108,6 @@ func (s Service) internalErr(c *fiber.Ctx, err error) error {
 	)
 	return httperr.Internal(c)
 }
-
-// --- Routes ---
 
 func RegisterRoutes(app *fiber.App, s Service) {
 	// Public
@@ -162,8 +156,6 @@ func RegisterRoutes(app *fiber.App, s Service) {
 	g.Patch("/admin/teams/:id/subscription", s.handleSetSubscription)
 	g.Get("/admin/teams/:id/payments", s.handleListPayments)
 }
-
-// --- Helpers (используются handler'ами всех доменных файлов) ---
 
 func userID(c *fiber.Ctx) uuid.UUID {
 	claims := auth.ClaimsFromCtx(c)

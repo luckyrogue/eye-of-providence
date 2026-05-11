@@ -357,8 +357,6 @@ func GCExpired(ctx context.Context, pool *pgxpool.Pool) (int64, error) {
 	return tag.RowsAffected(), nil
 }
 
-// --- helpers ---
-
 func randomCode(n int) (string, error) {
 	buf := make([]byte, n)
 	rnd := make([]byte, n)

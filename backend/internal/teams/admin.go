@@ -40,8 +40,6 @@ func (s Service) requireSuperAdmin(c *fiber.Ctx) bool {
 	return true
 }
 
-// --- Lists ---
-
 func (s Service) handleAdminListAllTeams(c *fiber.Ctx) error {
 	if !s.isSuperAdmin(c) {
 		return httperr.Forbidden(c, "super_admin_required", "super_admin only")
@@ -115,8 +113,6 @@ func (s Service) handleAdminListAllUsers(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"users": out, "limit": limit, "offset": offset})
 }
 
-// --- Stats ---
-
 func (s Service) handleAdminStats(c *fiber.Ctx) error {
 	if !s.requireSuperAdmin(c) {
 		return nil
@@ -132,8 +128,6 @@ func (s Service) handleAdminStats(c *fiber.Ctx) error {
 		"beta_limit":    s.BetaTeamLimit,
 	})
 }
-
-// --- Delete team / user ---
 
 func (s Service) handleAdminDeleteTeam(c *fiber.Ctx) error {
 	if !s.requireSuperAdmin(c) {
@@ -186,8 +180,6 @@ func (s Service) handleAdminDeleteUser(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"ok": true})
 }
 
-// --- Update user (role / display_name) ---
-
 type adminUpdateUserReq struct {
 	GlobalRole  *string `json:"global_role"`
 	DisplayName *string `json:"display_name"`
@@ -234,8 +226,6 @@ func (s Service) handleAdminUpdateUser(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{"ok": true})
 }
-
-// --- Add member to any team ---
 
 type adminAddMemberReq struct {
 	Email string `json:"email"`
@@ -289,8 +279,6 @@ func (s Service) handleAdminAddMember(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{"ok": true, "user_id": user.ID})
 }
-
-// --- Subscriptions (manual billing) ---
 
 type setSubscriptionReq struct {
 	Plan  *string `json:"plan"`  // "free" | "pro" | "team" | "enterprise"

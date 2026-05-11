@@ -59,8 +59,6 @@ export function createApiClient(token?: string): ApiClient {
   };
 }
 
-// --- Convenience wrappers (typed чтобы tests не плодили inline types) ---
-
 export interface AuthResponse {
   token: string;
   user_id: string;

@@ -13,8 +13,6 @@ import type {
 } from "./types";
 import type { AuthRes, DevTokenRes, MeRes, ProfileRes } from "./res";
 
-// --- Request payload types ---
-
 export type RegisterReq = {
   email: string;
   password: string;
@@ -24,8 +22,6 @@ export type RegisterReq = {
 
 export type LoginReq = { email: string; password: string };
 
-// --- Query keys ---
-
 export const userKeys = {
   me: ["me"] as const,
   profile: ["me.profile"] as const,
@@ -34,8 +30,6 @@ export const userKeys = {
   insights: ["me.insights"] as const,
   tokens: ["me.tokens"] as const,
 };
-
-// --- Auth fetchers ---
 
 function setToken(token: string) {
   localStorage.setItem(SESSION_KEYS.token, token);
@@ -75,8 +69,6 @@ export async function fetchAuthConfig(): Promise<AuthConfig> {
   }
 }
 
-// --- Me fetchers ---
-
 export const fetchMe = () => http.get<MeRes>("/v1/me").then((r) => r.data);
 export const fetchProfile = () => http.get<ProfileRes>("/v1/me/").then((r) => r.data);
 
@@ -108,8 +100,6 @@ export async function resetPassword(token: string, password: string): Promise<vo
   await http.post("/v1/auth/reset-password", { token, password });
 }
 
-// --- API tokens (public-API auth) ---
-
 export const fetchTokens = () =>
   http.get<{ tokens: APIToken[] }>("/v1/me/tokens").then((r) => r.data.tokens ?? []);
 
@@ -125,8 +115,6 @@ export async function deleteMyData(): Promise<void> {
   await http.delete("/v1/me/data");
   clearSession();
 }
-
-// --- Hooks ---
 
 export const useAuthConfig = () =>
   useQuery({ queryKey: userKeys.authConfig, queryFn: fetchAuthConfig, staleTime: Infinity });

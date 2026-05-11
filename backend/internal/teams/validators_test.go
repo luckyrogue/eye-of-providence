@@ -7,13 +7,13 @@ import (
 
 func TestValidateEmail(t *testing.T) {
 	cases := []struct {
-		in    string
-		want  string // если ok=true
+		in     string
+		want   string // если ok=true
 		wantOK bool
 	}{
 		{"user@example.com", "user@example.com", true},
-		{"  user@example.com  ", "user@example.com", true},  // trim
-		{"User@Example.COM", "user@example.com", true},      // lowercase
+		{"  user@example.com  ", "user@example.com", true}, // trim
+		{"User@Example.COM", "user@example.com", true},     // lowercase
 		{"first.last+tag@sub.example.com", "first.last+tag@sub.example.com", true},
 		{"", "", false},
 		{"not-an-email", "", false},
@@ -40,8 +40,8 @@ func TestValidatePassword(t *testing.T) {
 	}{
 		{"", false},
 		{"short", false},
-		{"1234567", false},  // 7 chars
-		{"12345678", true},  // 8 chars — min
+		{"1234567", false},                // 7 chars
+		{"12345678", true},                // 8 chars — min
 		{strings.Repeat("a", 256), true},  // max
 		{strings.Repeat("a", 257), false}, // > 256
 	}
@@ -65,8 +65,8 @@ func TestValidateDisplayName(t *testing.T) {
 		{"with\nnewline", "", false},
 		{"with\ttab", "", false},
 		{"with\rCR", "", false},
-		{strings.Repeat("a", 64), strings.Repeat("a", 64), true},  // max
-		{strings.Repeat("a", 65), "", false},                      // > 64
+		{strings.Repeat("a", 64), strings.Repeat("a", 64), true}, // max
+		{strings.Repeat("a", 65), "", false},                     // > 64
 		{"Юникод OK", "Юникод OK", true},
 	}
 	for _, tc := range cases {

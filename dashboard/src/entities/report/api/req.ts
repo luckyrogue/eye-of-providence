@@ -3,13 +3,9 @@ import { http } from "../../../shared/api/http";
 import type { GenerateReportRes, ListReportsRes } from "./res";
 import type { ReportPeriod } from "./types";
 
-// --- Query keys ---
-
 export const reportsKeys = {
   list: ["reports"] as const,
 };
-
-// --- Fetchers ---
 
 export const generateReport = (period: ReportPeriod = "weekly") =>
   http
@@ -18,8 +14,6 @@ export const generateReport = (period: ReportPeriod = "weekly") =>
 
 export const listReports = () =>
   http.get<ListReportsRes>("/v1/reports/").then((r) => r.data.reports ?? []);
-
-// --- Hooks ---
 
 export const useReports = () => useQuery({ queryKey: reportsKeys.list, queryFn: listReports });
 

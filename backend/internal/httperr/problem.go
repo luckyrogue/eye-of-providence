@@ -109,8 +109,6 @@ func Send(c *fiber.Ctx, p ProblemDetails) error {
 	return c.Send(body)
 }
 
-// --- Standard helpers ---
-
 func BadRequest(c *fiber.Ctx, code, detail string) error {
 	return Send(c, ProblemDetails{Status: fiber.StatusBadRequest, Code: code, Detail: detail})
 }

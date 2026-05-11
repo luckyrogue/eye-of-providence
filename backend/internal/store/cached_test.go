@@ -15,16 +15,16 @@ import (
 
 // fakeStore — counts calls для verification cache hits/misses.
 type fakeStore struct {
-	aggCalls       atomic.Int32
-	bulkCalls      atomic.Int32
-	langCalls      atomic.Int32
-	trendCalls     atomic.Int32
-	heatmapCalls   atomic.Int32
-	insertCalls    atomic.Int32
-	listCalls      atomic.Int32
-	deleteCalls    atomic.Int32
-	closeCalls     atomic.Int32
-	activeCalls    atomic.Int32
+	aggCalls     atomic.Int32
+	bulkCalls    atomic.Int32
+	langCalls    atomic.Int32
+	trendCalls   atomic.Int32
+	heatmapCalls atomic.Int32
+	insertCalls  atomic.Int32
+	listCalls    atomic.Int32
+	deleteCalls  atomic.Int32
+	closeCalls   atomic.Int32
+	activeCalls  atomic.Int32
 
 	aggResp     map[string]uint64
 	bulkResp    map[string]map[string]uint64
@@ -35,30 +35,38 @@ type fakeStore struct {
 
 func (f *fakeStore) Insert(_ context.Context, _ []Event) error { f.insertCalls.Add(1); return nil }
 func (f *fakeStore) ListRecent(_ context.Context, _ string, _ int) ([]Event, error) {
-	f.listCalls.Add(1); return nil, nil
+	f.listCalls.Add(1)
+	return nil, nil
 }
 func (f *fakeStore) AggregateByCategory(_ context.Context, _ string, _ time.Time) (map[string]uint64, error) {
-	f.aggCalls.Add(1); return f.aggResp, nil
+	f.aggCalls.Add(1)
+	return f.aggResp, nil
 }
 func (f *fakeStore) AggregateByCategoryBulk(_ context.Context, _ []string, _ time.Time) (map[string]map[string]uint64, error) {
-	f.bulkCalls.Add(1); return f.bulkResp, nil
+	f.bulkCalls.Add(1)
+	return f.bulkResp, nil
 }
 func (f *fakeStore) Heatmap(_ context.Context, _ string, _ time.Time, _ string) ([]HeatmapCell, error) {
-	f.heatmapCalls.Add(1); return f.heatmapResp, nil
+	f.heatmapCalls.Add(1)
+	return f.heatmapResp, nil
 }
 func (f *fakeStore) LanguageBreakdown(_ context.Context, _ string, _ time.Time) ([]LangCell, error) {
-	f.langCalls.Add(1); return f.langResp, nil
+	f.langCalls.Add(1)
+	return f.langResp, nil
 }
 func (f *fakeStore) ActiveUserIDs(_ context.Context, _ time.Time) ([]string, error) {
-	f.activeCalls.Add(1); return nil, nil
+	f.activeCalls.Add(1)
+	return nil, nil
 }
 func (f *fakeStore) DailyTrend(_ context.Context, _ string, _ time.Time, _ string) ([]TrendPoint, error) {
-	f.trendCalls.Add(1); return f.trendResp, nil
+	f.trendCalls.Add(1)
+	return f.trendResp, nil
 }
 func (f *fakeStore) Close() error { f.closeCalls.Add(1); return nil }
 
 func (f *fakeStore) DeleteUserData(_ context.Context, _ string) error {
-	f.deleteCalls.Add(1); return nil
+	f.deleteCalls.Add(1)
+	return nil
 }
 
 // setupCache — стартует mini-redis-style цепочку через real redis.Client с

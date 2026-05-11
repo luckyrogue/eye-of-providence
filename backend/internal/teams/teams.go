@@ -127,8 +127,6 @@ func (s Service) handleTeamDetail(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"id": teamID, "name": name, "role": role})
 }
 
-// --- Update / delete ---
-
 type updateTeamReq struct {
 	Name *string `json:"name"`
 }
@@ -175,8 +173,6 @@ func (s Service) handleDeleteTeam(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{"ok": true})
 }
-
-// --- Beta info ---
 
 func (s Service) handleBetaInfo(c *fiber.Ctx) error {
 	var teamCount int

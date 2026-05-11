@@ -12,8 +12,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
-// --- Public auth config (для UI) ---
-
 func (s Service) handleAuthConfig(c *fiber.Ctx) error {
 	var userCount int
 	if s.Pool != nil {
@@ -24,8 +22,6 @@ func (s Service) handleAuthConfig(c *fiber.Ctx) error {
 		"is_first_user": userCount == 0,
 	})
 }
-
-// --- Register / login ---
 
 type registerReq struct {
 	Email       string  `json:"email"`

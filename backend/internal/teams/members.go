@@ -48,8 +48,6 @@ func (s Service) handleListMembers(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"members": out})
 }
 
-// --- Team summary (per-member ratio за 7 дней) ---
-
 type EventStoreLike interface {
 	AggregateByCategoryBulk(ctx context.Context, userIDs []string, since time.Time) (map[string]map[string]uint64, error)
 }
@@ -116,8 +114,6 @@ func (s Service) handleTeamSummary(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{"members": out, "since": since})
 }
-
-// --- Role update / remove ---
 
 type updateMemberRoleReq struct {
 	Role string `json:"role"`

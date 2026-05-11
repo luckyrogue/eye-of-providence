@@ -8,8 +8,6 @@ import type {
   AdminStatsRes,
 } from "./res";
 
-// --- Request payload types ---
-
 export type UpdateUserReq = { global_role?: string; display_name?: string };
 
 export type AddMemberReq = { email: string; role: string };
@@ -29,8 +27,6 @@ export type SetSubscriptionReq = {
   payment?: SubscriptionPaymentReq;
 };
 
-// --- Query keys ---
-
 // Все query keys строятся от общего корня `all`, чтобы инвалидация
 // одного ключа уровня сущности (`admin`) очищала все её вариации.
 export const adminKeys = {
@@ -40,8 +36,6 @@ export const adminKeys = {
   users: () => [...adminKeys.all, "users"] as const,
   payments: (teamID: string) => [...adminKeys.all, "payments", teamID] as const,
 };
-
-// --- Fetchers ---
 
 export const adminStats = () => http.get<AdminStatsRes>("/v1/admin/stats").then((r) => r.data);
 
@@ -75,8 +69,6 @@ export const adminSetSubscription = (teamID: string, payload: SetSubscriptionReq
     .patch<AdminSetSubscriptionRes>(`/v1/admin/teams/${teamID}/subscription`, payload)
     .then((r) => r.data);
 
-// --- Query hooks ---
-
 export const useAdminStats = () => useQuery({ queryKey: adminKeys.stats(), queryFn: adminStats });
 
 export const useAdminTeams = () =>
@@ -91,8 +83,6 @@ export const useAdminPayments = (teamID: string | null) =>
     queryFn: () => adminListPayments(teamID!),
     enabled: !!teamID,
   });
-
-// --- Mutation hooks ---
 
 export function useAdminDeleteTeam() {
   const qc = useQueryClient();

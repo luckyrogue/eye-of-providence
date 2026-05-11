@@ -3,11 +3,7 @@ import { http } from "../../../shared/api/http";
 import type { EventRow } from "./types";
 import type { HeatmapRes, IngestRes, LanguagesRes, RecentRes, SummaryRes, TrendRes } from "./res";
 
-// --- Request payload ---
-
 export type IngestReq = { events: Partial<EventRow & { file_lang: string }>[] };
-
-// --- Query keys ---
 
 // Все query keys строятся от общего корня `all`, чтобы инвалидация
 // одного ключа уровня сущности (`events`) очищала все её вариации.
@@ -20,8 +16,6 @@ export const eventsKeys = {
   trend: (days: number, tz: string) => [...eventsKeys.all, "trend", days, tz] as const,
   cost: () => [...eventsKeys.all, "cost"] as const,
 };
-
-// --- Fetchers ---
 
 export const fetchRecent = (limit = 50) =>
   http.get<RecentRes>(`/v1/events/recent`, { params: { limit } }).then((r) => r.data.events ?? []);
@@ -68,8 +62,6 @@ export const ingestDemoEvent = () => {
   };
   return http.post<IngestRes>("/v1/ingest", body).then((r) => r.data);
 };
-
-// --- Hooks ---
 
 export const useRecent = (limit = 20) =>
   useQuery({ queryKey: eventsKeys.recent(limit), queryFn: () => fetchRecent(limit) });

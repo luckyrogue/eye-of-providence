@@ -17,16 +17,18 @@ import (
 // напрямую — eventual consistency приемлема для dashboard'а.
 //
 // Methods для cache (most-expensive aggregations):
-//   AggregateByCategory       — TTL 10m
-//   AggregateByCategoryBulk   — TTL 5m (multi-user, скорее меняется)
-//   LanguageBreakdown         — TTL 10m
-//   DailyTrend                — TTL 5m
-//   Heatmap                   — TTL 10m
+//
+//	AggregateByCategory       — TTL 10m
+//	AggregateByCategoryBulk   — TTL 5m (multi-user, скорее меняется)
+//	LanguageBreakdown         — TTL 10m
+//	DailyTrend                — TTL 5m
+//	Heatmap                   — TTL 10m
 //
 // Skipped (always-fresh OR low value):
-//   ListRecent                — events меняются constantly
-//   ActiveUserIDs             — admin-only, infrequent
-//   Insert / DeleteUserData   — mutating, no point
+//
+//	ListRecent                — events меняются constantly
+//	ActiveUserIDs             — admin-only, infrequent
+//	Insert / DeleteUserData   — mutating, no point
 type CachedEventStore struct {
 	Inner  EventStore
 	Cache  *cache.Cache
@@ -48,8 +50,6 @@ const (
 	ttlTrend   = 5 * time.Minute
 	ttlHeatmap = 10 * time.Minute
 )
-
-// --- Pass-through (no cache) ---
 
 func (s *CachedEventStore) Insert(ctx context.Context, events []Event) error {
 	return s.Inner.Insert(ctx, events)
@@ -99,8 +99,6 @@ func (s *CachedEventStore) invalidateUser(ctx context.Context, userID string) {
 		_ = s.Cache.Client.Del(ctx, keys...).Err()
 	}
 }
-
-// --- Cached methods ---
 
 func (s *CachedEventStore) AggregateByCategory(ctx context.Context, userID string, since time.Time) (map[string]uint64, error) {
 	key := fmt.Sprintf("agg:%s:%d", userID, since.Unix())

@@ -42,8 +42,6 @@ const MAX_BUFFER_SIZE = 1000; // hard cap чтобы не утечь памят�
 
 const STORAGE_KEY = "eop_state";
 
-// --- Persistent state (chrome.storage.session) ---
-
 async function loadState(): Promise<StoredState> {
   const data = await chrome.storage.local.get(STORAGE_KEY);
   const raw = data[STORAGE_KEY] as Partial<StoredState> | undefined;
@@ -74,8 +72,6 @@ async function mutate(fn: (s: StoredState) => void): Promise<void> {
   await saveState(s);
 }
 
-// --- Lifecycle ---
-
 chrome.runtime.onInstalled.addListener((details) => {
   void chrome.alarms.create("flush", { periodInMinutes: FLUSH_INTERVAL_MS / 60_000 });
   chrome.idle.setDetectionInterval(IDLE_THRESHOLD_S);
@@ -90,8 +86,6 @@ chrome.runtime.onInstalled.addListener((details) => {
 chrome.runtime.onStartup.addListener(() => {
   void chrome.alarms.create("flush", { periodInMinutes: FLUSH_INTERVAL_MS / 60_000 });
 });
-
-// --- Tab/window focus ---
 
 chrome.tabs.onActivated.addListener(({ tabId }) => {
   void (async () => {
@@ -194,8 +188,6 @@ chrome.runtime.onMessage.addListener(
   },
 );
 
-// --- Focus handlers ---
-
 async function handleFocus(url: string | undefined) {
   if (!url || !url.startsWith("http")) {
     await closeCurrent();
@@ -270,8 +262,6 @@ async function handleAiCopy(msg: { host: string; size: number }): Promise<void> 
   });
 }
 
-// --- Flush + retry ---
-
 async function flush(): Promise<void> {
   const state = await loadState();
   if (state.paused) return;
@@ -326,8 +316,6 @@ async function flush(): Promise<void> {
     }
   }
 }
-
-// --- Retry alarm ---
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "retry-flush") {

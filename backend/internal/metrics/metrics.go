@@ -14,8 +14,6 @@ import (
 	"time"
 )
 
-// --- Counter ---
-
 type Counter struct {
 	name string
 	help string
@@ -26,7 +24,6 @@ func (c *Counter) Inc()          { c.val.Add(1) }
 func (c *Counter) Add(v uint64)  { c.val.Add(v) }
 func (c *Counter) Value() uint64 { return c.val.Load() }
 
-// --- Histogram ---
 //
 // Bucketed observe в наносекундах для точности; рендерится в seconds-format
 // (Prometheus convention).
@@ -87,8 +84,6 @@ func (h *Histogram) ObserveSince(start time.Time) {
 	h.Observe(time.Since(start))
 }
 
-// --- Counters (registered) ---
-
 var (
 	IngestEventsAccepted = &Counter{name: "eop_ingest_events_accepted_total", help: "Events accepted by /v1/ingest"}
 	IngestEventsRejected = &Counter{name: "eop_ingest_events_rejected_total", help: "Events rejected by /v1/ingest"}
@@ -101,8 +96,6 @@ var (
 
 	UsersDeleted = &Counter{name: "eop_users_deleted_total", help: "Users that triggered DELETE /v1/me/data"}
 )
-
-// --- Histograms (registered) ---
 
 var (
 	RequestLatency  = newHistogram("eop_http_request_duration_seconds", "HTTP request latency by Fiber middleware")
@@ -121,8 +114,6 @@ func allCounters() []*Counter {
 func allHistograms() []*Histogram {
 	return []*Histogram{RequestLatency, ClickHouseWrite, ClickHouseRead}
 }
-
-// --- Render to Prometheus text format ---
 
 // renderMu — защищаем от concurrent чтения histogram'ов. Каждый bucket atomic,
 // но чтобы snapshot был согласованным (count соответствует bucket-counts),
