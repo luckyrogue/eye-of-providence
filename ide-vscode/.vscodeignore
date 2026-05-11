@@ -1,0 +1,13 @@
+src/**
+icon.svg
+**/*.vsix
+node_modules/**
+.vscode/**
+.github/**
+.vscode-test/**
+**/*.map
+**/tsconfig*.json
+.gitignore
+.eslintrc*
+**/*.test.ts
+package-lock.json

@@ -7,9 +7,9 @@ import * as vscode from "vscode";
 //   ai_provider определяется через vscode.env.appName: Cursor → "cursor",
 //   иначе "copilot" (по умолчанию VS Code inline-completions = Copilot).
 // - Удаление + большой insert (replace) → refactor.
-// - Burst-detection: несколько contentChanges за <100ms → один ai_inline event
-//   (это inline streaming completion vs cmd+v paste = одно contentChange).
-// Данные накапливаются per-language × ai_provider и шлются батчем каждые flushInterval секунд.
+// - Burst-detection: несколько contentChanges за <100ms → один ai_inline event.
+// Данные накапливаются per-language × ai_provider и шлются батчем каждые
+// flushInterval секунд.
 
 type AIProvider = "copilot" | "cursor";
 type AIChannel = "inline" | "agent";
@@ -38,9 +38,21 @@ type EventPayload = {
   lines_removed: number;
 };
 
-// detectAIProvider — Cursor — VS Code fork с собственным AI; appName === "Cursor".
-// Остальные derivative IDE'шки (VSCodium, Windsurf и т.п.) тоже могут наследовать
-// inline-completion provider от Copilot — fallback на "copilot".
+type StatusKind = "idle" | "sending" | "auth-required" | "paused";
+
+// SECRET_TOKEN_KEY — ключ в SecretStorage, в нём живёт API-токен (не path в
+// глобальном config). После активации перекладываем сюда старый `eop.token`
+// если он есть.
+const SECRET_TOKEN_KEY = "eop.api_token";
+const SECRET_USER_KEY = "eop.user_id";
+
+// Persisted state в globalState — переживает рестарт VS Code, потерь батча
+// между сессиями нет. Размер cap'нут чтобы не утечь память при долгом offline.
+const STATE_QUEUE_KEY = "eop.queue";
+const STATE_PAUSED_KEY = "eop.paused";
+const MAX_QUEUE_SIZE = 2000;
+const MAX_RETRY_ATTEMPTS = 8; // exp backoff: 30s, 60s, 2m, 4m, 8m, 16m, 32m, 60m
+
 function detectAIProvider(): AIProvider {
   const name = vscode.env.appName.toLowerCase();
   if (name.includes("cursor")) return "cursor";
@@ -50,21 +62,43 @@ function detectAIProvider(): AIProvider {
 let buckets = new Map<string, Bucket>();
 let activeEditorStart: number | null = null;
 let activeLang: string | null = null;
-let logger: vscode.OutputChannel;
+let logger: vscode.LogOutputChannel;
+let statusBar: vscode.StatusBarItem;
+let secretStorage: vscode.SecretStorage;
+let globalState: vscode.Memento;
+let authRequired = false;
+let paused = false;
+let retryAttempt = 0;
+let retryTimer: NodeJS.Timeout | null = null;
 
-export function activate(context: vscode.ExtensionContext) {
-  logger = vscode.window.createOutputChannel("Eye of Providence");
-  logger.appendLine("activated");
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  logger = vscode.window.createOutputChannel("Eye of Providence", { log: true });
+  statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  statusBar.command = "eop.openDashboard";
+  statusBar.show();
+  secretStorage = context.secrets;
+  globalState = context.globalState;
+  paused = globalState.get<boolean>(STATE_PAUSED_KEY, false);
+
+  await migrateLegacyToken();
+  await renderStatus();
+
+  logger.info("activated");
 
   context.subscriptions.push(
+    statusBar,
     vscode.workspace.onDidChangeTextDocument(onChange),
     vscode.window.onDidChangeActiveTextEditor(onActiveEditorChange),
     vscode.workspace.onDidSaveTextDocument(() => flushFocus()),
-    vscode.commands.registerCommand("eop.devLogin", devLoginCmd),
+    vscode.commands.registerCommand("eop.pair", pairCmd),
+    vscode.commands.registerCommand("eop.logout", logoutCmd),
     vscode.commands.registerCommand("eop.flush", () => flushAll(true)),
+    vscode.commands.registerCommand("eop.openDashboard", openDashboardCmd),
+    vscode.commands.registerCommand("eop.showLog", () => logger.show()),
+    vscode.commands.registerCommand("eop.pause", () => setPaused(true)),
+    vscode.commands.registerCommand("eop.resume", () => setPaused(false)),
   );
 
-  // Periodic flush
   const interval = setInterval(() => {
     flushFocus();
     void flushAll(false);
@@ -101,10 +135,6 @@ function flushFocus() {
   activeEditorStart = Date.now();
 }
 
-// Burst-detection state. Inline streaming completion пишет несколько мелких
-// contentChanges подряд за <100ms; обычный typing — interval >150ms между ними.
-// Если >=N changes сошлись в одно burst-окно и сумма chars >= threshold, это
-// ai_inline. Хранится per-document.
 type BurstState = {
   start: number;
   inserted: number;
@@ -114,10 +144,8 @@ const bursts = new Map<string, BurstState>();
 const BURST_WINDOW_MS = 100;
 
 function onChange(e: vscode.TextDocumentChangeEvent) {
+  if (paused) return;
   if (e.document.uri.scheme !== "file") return;
-  // Multi-window dedup: VS Code broadcastит onDidChangeTextDocument во все
-  // окна, где открыт документ. Считает событие только окно, у которого OS-фокус
-  // (изменения user'а пришли через keyboard в одном конкретном окне).
   if (!vscode.window.state.focused) return;
   const lang = e.document.languageId;
   const threshold = getPasteThreshold();
@@ -140,7 +168,6 @@ function onChange(e: vscode.TextDocumentChangeEvent) {
       addToBucket(lang, "refactor", { chars_in: inserted, lines_added: linesAdded, lines_removed: linesRemoved });
       bursts.delete(docKey);
     } else if (inserted >= threshold) {
-      // Single big insert — paste/accept, attributed to ai_inline.
       addToBucket(lang, "ai", {
         chars_in: inserted,
         lines_added: linesAdded,
@@ -150,13 +177,11 @@ function onChange(e: vscode.TextDocumentChangeEvent) {
       });
       bursts.delete(docKey);
     } else {
-      // Маленькая вставка — может быть typing или часть inline-streaming burst'а.
       const burst = bursts.get(docKey);
       if (burst && now - burst.start <= BURST_WINDOW_MS) {
         burst.inserted += inserted;
         burst.linesAdded += linesAdded;
         if (burst.inserted >= threshold) {
-          // Burst накопился до AI-уровня — отписываем как ai_inline и закрываем.
           addToBucket(lang, "ai", {
             chars_in: burst.inserted,
             lines_added: burst.linesAdded,
@@ -166,9 +191,6 @@ function onChange(e: vscode.TextDocumentChangeEvent) {
           bursts.delete(docKey);
         }
       } else {
-        // Новый burst или typing — начинаем burst-window и одновременно
-        // counting как manual (если burst не превысит threshold, останется
-        // manual; если превысит — последний chunk пере-attribут'нется).
         bursts.set(docKey, { start: now, inserted, linesAdded });
         addToBucket(lang, "manual", {
           chars_in: inserted,
@@ -215,23 +237,10 @@ function addToBucket(
   b.lines_removed += patch.lines_removed ?? 0;
 }
 
-async function flushAll(verbose: boolean) {
-  // Multi-window dedup для periodic flush: только focused окно делает
-  // network-call. Если фокус потерян (например, юзер ушёл в браузер) —
-  // ждём, пока фокус вернётся, потом всё ещё накопленное в buckets улетит.
-  // Manual flush (verbose=true) от пользователя — не блокируем focus-check.
-  if (!verbose && !vscode.window.state.focused) {
-    return;
-  }
-  if (buckets.size === 0) {
-    if (verbose) vscode.window.showInformationMessage("Eye of Providence: nothing to flush");
-    return;
-  }
-  // app_bundle отражает реальный host (Cursor / VS Code), чтобы analytics
-  // могли filter'нуть по IDE.
+function bucketsToEvents(): EventPayload[] {
   const provider = detectAIProvider();
   const appBundle = provider === "cursor" ? "com.todesktop.230313mzl4w4u92" : "com.microsoft.VSCode";
-  const events: EventPayload[] = Array.from(buckets.values()).map((b) => ({
+  return Array.from(buckets.values()).map((b) => ({
     app_bundle: appBundle,
     category: b.category,
     source: "ide",
@@ -243,49 +252,285 @@ async function flushAll(verbose: boolean) {
     lines_added: b.lines_added,
     lines_removed: b.lines_removed,
   }));
-  buckets = new Map();
+}
 
-  const cfg = vscode.workspace.getConfiguration("eop");
-  const url = (cfg.get<string>("backendUrl") ?? "https://eop.rysdavletov.org/api").replace(/\/$/, "");
-  const token = cfg.get<string>("token") ?? "";
-  if (!token) {
-    if (verbose) vscode.window.showWarningMessage("Eye of Providence: no token (run 'eop.devLogin')");
+function loadQueue(): EventPayload[] {
+  return globalState.get<EventPayload[]>(STATE_QUEUE_KEY, []);
+}
+
+async function saveQueue(q: EventPayload[]): Promise<void> {
+  const capped = q.length > MAX_QUEUE_SIZE ? q.slice(-MAX_QUEUE_SIZE) : q;
+  await globalState.update(STATE_QUEUE_KEY, capped);
+}
+
+async function flushAll(verbose: boolean) {
+  if (paused) {
+    if (verbose) vscode.window.showInformationMessage("Eye of Providence: paused");
+    return;
+  }
+  if (!verbose && !vscode.window.state.focused) {
+    return;
+  }
+  // Merge: in-memory bucket events + persisted queue. Bucket очищаем сразу,
+  // чтобы новые edits начали копиться в новый bucket. Persisted queue храним
+  // до подтверждения успешной отправки.
+  const fresh = bucketsToEvents();
+  buckets = new Map();
+  const queued = loadQueue();
+  const events = [...queued, ...fresh];
+  if (events.length === 0) {
+    if (verbose) vscode.window.showInformationMessage("Eye of Providence: nothing to flush");
     return;
   }
 
+  const url = getBackendUrl();
+  const token = await secretStorage.get(SECRET_TOKEN_KEY);
+  if (!token) {
+    // Persist обратно — попробуем после pairing.
+    await saveQueue(events);
+    if (verbose) {
+      vscode.window
+        .showWarningMessage("Eye of Providence: not paired", "Pair editor")
+        .then((c) => {
+          if (c === "Pair editor") void pairCmd();
+        });
+    }
+    return;
+  }
+
+  setStatus("sending");
   try {
     const res = await fetch(`${url}/v1/ingest`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ events }),
     });
-    if (!res.ok) {
-      logger.appendLine(`ingest failed: ${res.status}`);
-    } else {
-      const data = (await res.json()) as { accepted: number; rejected: number };
-      logger.appendLine(`ingest ok: accepted=${data.accepted} rejected=${data.rejected}`);
-      if (verbose) vscode.window.showInformationMessage(`EoP: sent ${data.accepted} events`);
+    if (res.status === 401) {
+      logger.warn("ingest 401 — auth required, marking token invalid");
+      authRequired = true;
+      // Очищаем persisted queue: данные «висят» до re-pair, дальше events
+      // которые пришли с другим юзером смешивать нельзя.
+      await saveQueue([]);
+      await renderStatus();
+      if (verbose) {
+        vscode.window
+          .showErrorMessage("Eye of Providence: token revoked. Re-pair this editor.", "Pair editor")
+          .then((c) => {
+            if (c === "Pair editor") void pairCmd();
+          });
+      }
+      return;
     }
+    if (res.status === 429 || res.status >= 500) {
+      // Retryable — persist обратно и schedule backoff.
+      await saveQueue(events);
+      scheduleRetry();
+      logger.warn(`ingest retryable status ${res.status}, queued ${events.length} events`);
+      return;
+    }
+    if (!res.ok) {
+      // 4xx (not 401/429) — дропаем, иначе зацикливаемся на bad data.
+      logger.error(`ingest dropped ${events.length} events: status ${res.status}`);
+      await saveQueue([]);
+      return;
+    }
+    const data = (await res.json()) as { accepted: number; rejected: number };
+    logger.info(`ingest ok: accepted=${data.accepted} rejected=${data.rejected}`);
+    if (verbose) vscode.window.showInformationMessage(`EoP: sent ${data.accepted} events`);
+    authRequired = false;
+    retryAttempt = 0;
+    await saveQueue([]);
   } catch (err) {
-    logger.appendLine(`ingest error: ${err}`);
+    // Network error — retry с backoff.
+    await saveQueue(events);
+    scheduleRetry();
+    logger.warn(`ingest network error: ${String(err)}, queued ${events.length} events`);
+  } finally {
+    await renderStatus();
   }
 }
 
-async function devLoginCmd() {
-  const cfg = vscode.workspace.getConfiguration("eop");
-  const url = (cfg.get<string>("backendUrl") ?? "https://eop.rysdavletov.org/api").replace(/\/$/, "");
+function scheduleRetry() {
+  retryAttempt += 1;
+  if (retryAttempt > MAX_RETRY_ATTEMPTS) {
+    logger.error(`retry exhausted after ${MAX_RETRY_ATTEMPTS} attempts, dropping queue`);
+    void saveQueue([]);
+    retryAttempt = 0;
+    return;
+  }
+  // Exp backoff: 30s → 60s → 2m → 4m → 8m → 16m → 32m → 60m (cap).
+  const delayMs = Math.min(30_000 * Math.pow(2, retryAttempt - 1), 60 * 60_000);
+  if (retryTimer !== null) clearTimeout(retryTimer);
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    void flushAll(false);
+  }, delayMs);
+  logger.info(`scheduled retry #${retryAttempt} in ${Math.round(delayMs / 1000)}s`);
+}
+
+async function setPaused(next: boolean) {
+  paused = next;
+  await globalState.update(STATE_PAUSED_KEY, paused);
+  await renderStatus();
+  vscode.window.showInformationMessage(
+    next ? "Eye of Providence: paused" : "Eye of Providence: resumed",
+  );
+}
+
+// Pairing — 6-знач код, юзер вводит в dashboard. Polling каждые 2.5с.
+async function pairCmd() {
+  const url = getBackendUrl();
+  let begin: { pair_id: string; secret: string; code: string; expires_in: number };
   try {
-    const res = await fetch(`${url}/v1/auth/dev-token`, { method: "POST" });
+    const res = await fetch(`${url}/v1/devices/pair`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "ide" }),
+    });
     if (!res.ok) {
-      vscode.window.showErrorMessage(`dev-token failed: ${res.status}`);
+      vscode.window.showErrorMessage(`pair failed: ${res.status}`);
       return;
     }
-    const data = (await res.json()) as { token: string; user_id: string };
-    await cfg.update("token", data.token, vscode.ConfigurationTarget.Global);
-    vscode.window.showInformationMessage(`EoP: logged in as ${data.user_id.slice(0, 8)}…`);
+    begin = (await res.json()) as typeof begin;
   } catch (err) {
-    vscode.window.showErrorMessage(`dev-token error: ${err}`);
+    vscode.window.showErrorMessage(`pair error: ${String(err)}`);
+    return;
   }
+
+  const dashboardHost = url.replace(/\/api\/?$/, "");
+  vscode.env.openExternal(vscode.Uri.parse(`${dashboardHost}/settings`));
+  vscode.env.clipboard.writeText(begin.code);
+  const pickPromise = vscode.window.showInformationMessage(
+    `EoP pairing code: ${begin.code} (copied). Enter it in dashboard → Settings → Connected devices.`,
+    "Cancel",
+  );
+
+  const start = Date.now();
+  const expiresMs = begin.expires_in * 1000;
+  let cancelled = false;
+  pickPromise.then((choice) => {
+    if (choice === "Cancel") cancelled = true;
+  });
+
+  while (!cancelled && Date.now() - start < expiresMs) {
+    await sleep(2_500);
+    try {
+      const res = await fetch(`${url}/v1/devices/poll`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pair_id: begin.pair_id, secret: begin.secret }),
+      });
+      if (!res.ok) {
+        logger.debug(`poll ${res.status}`);
+        continue;
+      }
+      const data = (await res.json()) as {
+        status: "pending" | "claimed" | "expired";
+        token?: string;
+        user_id?: string;
+      };
+      if (data.status === "expired") {
+        vscode.window.showWarningMessage("EoP pairing code expired. Try again.");
+        return;
+      }
+      if (data.status === "claimed" && data.token && data.user_id) {
+        await secretStorage.store(SECRET_TOKEN_KEY, data.token);
+        await secretStorage.store(SECRET_USER_KEY, data.user_id);
+        authRequired = false;
+        await renderStatus();
+        vscode.window.showInformationMessage(
+          `Eye of Providence: paired as ${data.user_id.slice(0, 8)}…`,
+        );
+        return;
+      }
+    } catch (err) {
+      logger.debug(`poll error: ${String(err)}`);
+    }
+  }
+  if (!cancelled) {
+    vscode.window.showWarningMessage("Eye of Providence: pairing timed out.");
+  }
+}
+
+async function logoutCmd() {
+  await secretStorage.delete(SECRET_TOKEN_KEY);
+  await secretStorage.delete(SECRET_USER_KEY);
+  authRequired = false;
+  await renderStatus();
+  vscode.window.showInformationMessage("Eye of Providence: signed out.");
+}
+
+function openDashboardCmd() {
+  const url = getBackendUrl().replace(/\/api\/?$/, "");
+  void vscode.env.openExternal(vscode.Uri.parse(url));
+}
+
+// migrateLegacyToken — старый `eop.token` config был plaintext в settings.json.
+// Переносим в SecretStorage и затираем config-key, чтобы не было утечек через
+// settings sync.
+async function migrateLegacyToken() {
+  const cfg = vscode.workspace.getConfiguration("eop");
+  const legacy = cfg.inspect<string>("token")?.globalValue;
+  if (legacy && legacy.length > 0) {
+    await secretStorage.store(SECRET_TOKEN_KEY, legacy);
+    await cfg.update("token", undefined, vscode.ConfigurationTarget.Global);
+    logger?.info("migrated legacy eop.token → SecretStorage");
+  }
+}
+
+async function renderStatus() {
+  const token = await secretStorage.get(SECRET_TOKEN_KEY);
+  if (!token) {
+    setStatus("auth-required");
+    return;
+  }
+  if (authRequired) {
+    setStatus("auth-required");
+    return;
+  }
+  if (paused) {
+    setStatus("paused");
+    return;
+  }
+  setStatus("idle");
+}
+
+function setStatus(kind: StatusKind) {
+  switch (kind) {
+    case "idle":
+      statusBar.text = "$(eye) EoP idle";
+      statusBar.tooltip = "Eye of Providence — active. Click to open dashboard.";
+      statusBar.backgroundColor = undefined;
+      statusBar.command = "eop.openDashboard";
+      break;
+    case "sending":
+      statusBar.text = "$(sync~spin) EoP sending";
+      statusBar.tooltip = "Flushing attribution events…";
+      statusBar.backgroundColor = undefined;
+      statusBar.command = "eop.openDashboard";
+      break;
+    case "auth-required":
+      statusBar.text = "$(warning) EoP pair";
+      statusBar.tooltip = "Eye of Providence — re-pair required. Click to start.";
+      statusBar.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground");
+      statusBar.command = "eop.pair";
+      break;
+    case "paused":
+      statusBar.text = "$(circle-slash) EoP paused";
+      statusBar.tooltip = "Eye of Providence — tracking paused.";
+      statusBar.backgroundColor = undefined;
+      statusBar.command = "eop.openDashboard";
+      break;
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function getBackendUrl(): string {
+  const cfg = vscode.workspace.getConfiguration("eop");
+  return (cfg.get<string>("backendUrl") ?? "https://eop.rysdavletov.org/api").replace(/\/$/, "");
 }
 
 function getFlushIntervalMs(): number {

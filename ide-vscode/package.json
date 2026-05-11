@@ -1,33 +1,70 @@
 {
   "name": "eop-vscode",
   "displayName": "Eye of Providence",
-  "description": "Track AI vs manual coding time in VS Code.",
+  "description": "Track AI vs manual coding time in VS Code / Cursor.",
   "version": "0.0.1",
   "private": true,
   "publisher": "eyeofprovidence",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eyeofprovidence/eye-of-providence.git"
+  },
+  "homepage": "https://eop.rysdavletov.org",
+  "categories": ["Other"],
+  "keywords": ["ai", "copilot", "cursor", "productivity", "analytics"],
   "engines": {
     "vscode": "^1.90.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "description": "Eye of Providence only reads document statistics and never executes workspace code."
+    }
   },
   "main": "./dist/extension.js",
   "scripts": {
     "compile": "tsc -p .",
-    "watch": "tsc -w -p ."
+    "watch": "tsc -w -p .",
+    "package": "vsce package --no-dependencies --skip-license"
   },
   "devDependencies": {
     "@types/node": "^25.6.2",
     "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.2.0",
     "typescript": "^5.9.3"
   },
   "activationEvents": ["onStartupFinished"],
   "contributes": {
     "commands": [
       {
-        "command": "eop.devLogin",
-        "title": "Eye of Providence: Get dev token"
+        "command": "eop.pair",
+        "title": "Eye of Providence: Pair this editor"
+      },
+      {
+        "command": "eop.logout",
+        "title": "Eye of Providence: Sign out"
       },
       {
         "command": "eop.flush",
         "title": "Eye of Providence: Flush attribution events"
+      },
+      {
+        "command": "eop.openDashboard",
+        "title": "Eye of Providence: Open dashboard"
+      },
+      {
+        "command": "eop.showLog",
+        "title": "Eye of Providence: Show log"
+      },
+      {
+        "command": "eop.pause",
+        "title": "Eye of Providence: Pause tracking"
+      },
+      {
+        "command": "eop.resume",
+        "title": "Eye of Providence: Resume tracking"
       }
     ],
     "configuration": {
@@ -37,11 +74,6 @@
           "type": "string",
           "default": "https://eop.rysdavletov.org/api",
           "description": "Backend URL"
-        },
-        "eop.token": {
-          "type": "string",
-          "default": "",
-          "description": "Bearer token (use 'eop.devLogin' command to fetch one in dev mode)"
         },
         "eop.flushIntervalSec": {
           "type": "number",
