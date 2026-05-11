@@ -1,4 +1,7 @@
 version: 2
+# Стратегия: minor/patch — группой (одно ревью на всё), major — отдельным
+# PR'ом для ручной проверки migration guide. Иначе получаем "ядерные"
+# bumps типа vite 5→8 + tailwindcss 3→4 + typescript 5→6 одним PR'ом.
 updates:
   - package-ecosystem: gomod
     directory: /backend
@@ -9,25 +12,46 @@ updates:
     groups:
       go-deps:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
     groups:
       npm-deps:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
+        # Эти libs обновляем отдельными PR'ами даже на minor/patch,
+        # т.к. они задевают build-pipeline и часто требуют ручной
+        # проверки конфига.
+        exclude-patterns:
+          - "tailwindcss"
+          - "vite"
+          - "vitest"
+          - "typescript"
+          - "@vitejs/plugin-react"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
+    groups:
+      gha-deps:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
       day: monday
+    # Docker base images — ignore major bumps, накатываем руками когда
+    # есть время проверить native modules (sharp, better-sqlite3) и
+    # image size. minor/patch — auto-merge OK.
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
