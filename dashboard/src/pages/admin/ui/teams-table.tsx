@@ -1,11 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
@@ -147,46 +142,42 @@ export function TeamsTable({
 
   return (
     <>
-      <Card className="card-hover">
-        <CardHeader>
-          <CardTitle className="font-display tracking-tight">
-            {t("app:admin.all_teams_title")}
-          </CardTitle>
-          <CardDescription>
-            {t("app:admin.all_teams_lead", { count: teams.length })}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {teams.length === 0 ? (
-            <EmptyState
-              eyebrow={t("app:admin.all_teams_empty_eyebrow")}
-              title={t("app:admin.all_teams_empty_title")}
-            />
-          ) : (
-            <DataTable
-              columns={columns}
-              data={teams}
-              filterableColumn={{
-                id: "name",
-                placeholder: t("app:admin.teams_filter_name"),
-              }}
-              enableColumnVisibility
-              enablePagination
-              pageSize={20}
-              labels={dtLabels(t)}
-              getRowCanExpand={() => true}
-              renderSubComponent={(row) => (
-                <AddMemberForm
-                  teamID={row.original.id}
-                  users={users}
-                  onCancel={() => row.toggleExpanded(false)}
-                  onAdded={() => row.toggleExpanded(false)}
-                />
-              )}
-            />
-          )}
-        </CardContent>
-      </Card>
+      <div className="eop-card">
+        <div className="card-head">
+          <div>
+            <div className="card-title">{t("app:admin.all_teams_title")}</div>
+            <div className="card-sub">{t("app:admin.all_teams_lead", { count: teams.length })}</div>
+          </div>
+        </div>
+        {teams.length === 0 ? (
+          <EmptyState
+            eyebrow={t("app:admin.all_teams_empty_eyebrow")}
+            title={t("app:admin.all_teams_empty_title")}
+          />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={teams}
+            filterableColumn={{
+              id: "name",
+              placeholder: t("app:admin.teams_filter_name"),
+            }}
+            enableColumnVisibility
+            enablePagination
+            pageSize={20}
+            labels={dtLabels(t)}
+            getRowCanExpand={() => true}
+            renderSubComponent={(row) => (
+              <AddMemberForm
+                teamID={row.original.id}
+                users={users}
+                onCancel={() => row.toggleExpanded(false)}
+                onAdded={() => row.toggleExpanded(false)}
+              />
+            )}
+          />
+        )}
+      </div>
 
       <SubscriptionModal team={subTeam} tz={tz} onClose={() => setSubTeam(null)} />
     </>

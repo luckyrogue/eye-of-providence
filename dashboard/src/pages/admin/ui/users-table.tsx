@@ -1,11 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
@@ -119,34 +114,32 @@ export function UsersTable({ users, tz }: { users: AdminUser[]; tz: string }) {
   );
 
   return (
-    <Card className="card-hover">
-      <CardHeader>
-        <CardTitle className="font-display tracking-tight">
-          {t("app:admin.all_users_title")}
-        </CardTitle>
-        <CardDescription>{t("app:admin.all_users_lead", { count: users.length })}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {users.length === 0 ? (
-          <EmptyState
-            eyebrow={t("app:admin.all_users_empty_eyebrow")}
-            title={t("app:admin.all_users_empty_title")}
-          />
-        ) : (
-          <DataTable
-            columns={columns}
-            data={users}
-            filterableColumn={{
-              id: "email",
-              placeholder: t("app:admin.users_filter_email"),
-            }}
-            enableColumnVisibility
-            enablePagination
-            pageSize={20}
-            labels={dtLabels(t)}
-          />
-        )}
-      </CardContent>
-    </Card>
+    <div className="eop-card">
+      <div className="card-head">
+        <div>
+          <div className="card-title">{t("app:admin.all_users_title")}</div>
+          <div className="card-sub">{t("app:admin.all_users_lead", { count: users.length })}</div>
+        </div>
+      </div>
+      {users.length === 0 ? (
+        <EmptyState
+          eyebrow={t("app:admin.all_users_empty_eyebrow")}
+          title={t("app:admin.all_users_empty_title")}
+        />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={users}
+          filterableColumn={{
+            id: "email",
+            placeholder: t("app:admin.users_filter_email"),
+          }}
+          enableColumnVisibility
+          enablePagination
+          pageSize={20}
+          labels={dtLabels(t)}
+        />
+      )}
+    </div>
   );
 }

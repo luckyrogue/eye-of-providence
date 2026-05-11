@@ -799,6 +799,31 @@
     animation: eop-pulse 1.6s ease-in-out infinite;
   }
 
+  /* Segmented tab pills (admin/settings tabs control в стиле topbar date-pick) */
+  [data-theme="eop"] .eop-tab-pills {
+    display: flex;
+    border: 1px solid hsl(var(--border));
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 12px;
+    font-family: "JetBrains Mono", monospace;
+  }
+  [data-theme="eop"] .eop-tab-pills button {
+    padding: 7px 14px;
+    color: hsl(var(--muted-foreground));
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  [data-theme="eop"] .eop-tab-pills button:hover {
+    color: hsl(var(--foreground));
+  }
+  [data-theme="eop"] .eop-tab-pills button.on {
+    background: hsl(232 13% 14%);
+    color: hsl(var(--foreground));
+  }
+
   /* Dashboard content + grid */
   [data-theme="eop"] .eop-dash-content {
     padding: 28px;
