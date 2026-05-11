@@ -152,7 +152,7 @@ func atoiOr(s string, fallback int) int {
 		return fallback
 	}
 	n, err := strconv.Atoi(s)
-	if err != nil || n <= 0 {
+	if err != nil || n < 0 {
 		return fallback
 	}
 	return n

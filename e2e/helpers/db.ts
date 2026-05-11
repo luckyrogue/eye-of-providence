@@ -26,10 +26,12 @@ const PG_TABLES = [
   "commits",
   "projects",
   "team_members",
+  "sso_states",
+  "sso_configs",
   "teams",
   "api_tokens",
   "push_subscriptions",
-  "webhook_subscriptions",
+  "webhooks",
   "users",
 ];
 

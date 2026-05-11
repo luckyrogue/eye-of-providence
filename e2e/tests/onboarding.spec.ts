@@ -1,7 +1,7 @@
 // Onboarding endpoints:
-//   - GET /v1/me/onboarding/status — teams_count, has_event, dismissed
+//   - GET /v1/me/onboarding-status — teams_count, has_event, dismissed
 //   - POST /v1/me/onboarding/dismiss → idempotent
-//   - POST /v1/me/locale смена locale + persistence
+//   - PATCH /v1/me/locale смена locale + persistence
 
 import { test, expect } from "../fixtures/index.js";
 import { ApiError } from "../helpers/api.js";
@@ -15,7 +15,7 @@ interface OnboardingStatus {
 
 test.describe("onboarding", () => {
   test("fresh user: teams_count=0, has_event=false, dismissed=false", async ({ api }) => {
-    const s = await api.fetch<OnboardingStatus>("/v1/me/onboarding/status");
+    const s = await api.fetch<OnboardingStatus>("/v1/me/onboarding-status");
     expect(s.teams_count).toBe(0);
     expect(s.has_event).toBe(false);
     expect(s.dismissed).toBe(false);
@@ -26,7 +26,7 @@ test.describe("onboarding", () => {
       method: "POST",
       body: JSON.stringify({ name: uniqueTeamName("onb") }),
     });
-    const s = await api.fetch<OnboardingStatus>("/v1/me/onboarding/status");
+    const s = await api.fetch<OnboardingStatus>("/v1/me/onboarding-status");
     expect(s.teams_count).toBe(1);
   });
 
@@ -35,13 +35,13 @@ test.describe("onboarding", () => {
     expect(r1.status).toBe("ok");
     const r2 = await api.fetch<{ status: string }>("/v1/me/onboarding/dismiss", { method: "POST" });
     expect(r2.status).toBe("ok");
-    const s = await api.fetch<OnboardingStatus>("/v1/me/onboarding/status");
+    const s = await api.fetch<OnboardingStatus>("/v1/me/onboarding-status");
     expect(s.dismissed).toBe(true);
   });
 
   test("set locale = ru → returns ru", async ({ api }) => {
     const r = await api.fetch<{ locale: string }>("/v1/me/locale", {
-      method: "POST",
+      method: "PATCH",
       body: JSON.stringify({ locale: "ru" }),
     });
     expect(r.locale).toBe("ru");
@@ -50,7 +50,7 @@ test.describe("onboarding", () => {
   test("invalid locale → invalid_locale", async ({ api }) => {
     try {
       await api.fetch("/v1/me/locale", {
-        method: "POST",
+        method: "PATCH",
         body: JSON.stringify({ locale: "klingon" }),
       });
       throw new Error("expected to throw");
