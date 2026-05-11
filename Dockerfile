@@ -133,7 +133,12 @@ RUN cat > /etc/caddy/Caddyfile <<'CADDY'
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src {$CSP_CONNECT_SRC:'self'}; object-src 'none'; frame-ancestors 'none'; base-uri 'self';"
+		# CSP — strict. script-src без 'unsafe-inline' благодаря /preboot.js
+		# (см. dashboard/index.html). style-src/font-src whitelisting Google
+		# Fonts (см. <link rel=stylesheet> в index.html). img-src https: —
+		# changelog markdown и user avatars могут тянуть с любых HTTPS-хостов.
+		# connect-src — задаётся через CSP_CONNECT_SRC env (e.g. backend host).
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src {$CSP_CONNECT_SRC:'self'}; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
 		# Удаляем Server header чтобы не палить Caddy version.
 		-Server
 	}

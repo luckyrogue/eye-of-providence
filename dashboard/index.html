@@ -4,40 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0a0a0a" />
-    <script>
-      // Sync <html lang> + data-theme до first paint — иначе скринридеры и
-      // spell-check увидят "ru" пока не загрузится i18next, и FOUC: light
-      // theme мигнёт пока React не выставит data-theme="eop". Ключ совпадает
-      // с LOCALE_STORAGE_KEY (@eop/i18n constants).
-      (function () {
-        try {
-          var supported = ["ru", "en", "kk", "es"];
-          var raw = localStorage.getItem("eop_locale");
-          var lng = raw && supported.indexOf(raw) !== -1 ? raw : null;
-          if (!lng && navigator.language) {
-            var base = navigator.language.split("-")[0];
-            if (supported.indexOf(base) !== -1) lng = base;
-          }
-          document.documentElement.lang = lng || "ru";
-          // Global eop theme — warm-dark + orange палитра (см. ui/styles.css
-          // [data-theme="eop"]). Закрывает FOUC между HTML load и React mount.
-          document.documentElement.setAttribute("data-theme", "eop");
-        } catch (_) {}
-      })();
-    </script>
-    <!-- CSP — closed beta hardening. Описание:
-         default-src 'self' блокирует загрузку scripts/styles с других origin'ов.
-         font-src/style-src 'unsafe-inline' нужны для Google Fonts + Tailwind
-         динамических классов через <style>. img-src 'self' data: blob: —
-         генерация heatmap/canvas в blob URLs.
-         connect-src включает прод API + любые https-хосты (для self-hosted
-         beta), плюс ws: для Vite HMR в dev (игнорируется в prod build).
-         Если CSP сломает что-то в проде — закомментируйте эту строку,
-         не строгий блокер. -->
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: ws: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
-    />
+    <!-- Sync preboot script — выставляет <html lang> + data-theme="eop" до
+         first paint (закрывает FOUC + screenreader lang flicker). Вынесен
+         в /preboot.js, чтобы CSP script-src оставался 'self' без
+         'unsafe-inline' (XSS hardening). CSP сам задаётся в Caddyfile,
+         см. Dockerfile. Здесь мета-тега нет специально — две CSP политики
+         (header + meta) применяются конъюнкцией, любое нарушение блокирует. -->
+    <script src="/preboot.js"></script>
     <meta
       name="description"
       content="Eye of Providence — сколько ты пишешь сам, а сколько с AI. Privacy-by-design."
