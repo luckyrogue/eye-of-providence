@@ -23,10 +23,59 @@ export function registerSW() {
   if (!("serviceWorker" in navigator) || import.meta.env.DEV) return;
   // Wait for window load чтобы не конкурировать с initial render.
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch((err) => {
-      console.warn("[eop] sw register failed", err);
-    });
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => {
+        // SW update: при появлении нового версии sw.js шлём custom event;
+        // useUpdatePrompt в app-layout превращает это в toast c кнопкой "Reload".
+        reg.addEventListener("updatefound", () => {
+          const newWorker = reg.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener("statechange", () => {
+            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+              window.dispatchEvent(new CustomEvent("eop:sw-update-available"));
+            }
+          });
+        });
+      })
+      .catch((err) => {
+        console.warn("[eop] sw register failed", err);
+      });
   });
+}
+
+// useUpdatePrompt — слушает eop:sw-update-available и возвращает {available, reload}.
+// reload() триггерит location.reload — браузер на следующем navigation подхватит
+// активированный SW.
+export function useUpdatePrompt() {
+  const [available, setAvailable] = useState(false);
+  useEffect(() => {
+    const handler = () => setAvailable(true);
+    window.addEventListener("eop:sw-update-available", handler);
+    return () => window.removeEventListener("eop:sw-update-available", handler);
+  }, []);
+  return {
+    available,
+    reload: () => {
+      window.location.reload();
+    },
+  };
+}
+
+// useOnlineStatus — баннер "вы офлайн". navigator.onLine + online/offline events.
+export function useOnlineStatus() {
+  const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
+  return online;
 }
 
 // isStandalone — пользователь уже запустил из home-screen (iOS / Android PWA).

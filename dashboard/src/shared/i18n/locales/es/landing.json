@@ -74,6 +74,8 @@
     ]
   },
   "pricing": {
+    "beta_badge": "Gratis durante la beta",
+    "compare_link": "Comparar todas las funciones →",
     "eyebrow": "Precios · Beta",
     "heading": "Gratis para las <em>primeras 3 empresas</em>. Para siempre para devs solo.",
     "lead": "Aceptamos 3 founding companies gratis — sin tarjeta, sin contador de trial, sin límite de plazas. Self-hosted gratis para todos.",

@@ -2,6 +2,8 @@ import { lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { Skeleton } from "@eop/ui";
 import { AppLayout } from "../widgets/app-layout";
+import { NotFound } from "../pages/not-found";
+import { RouteError } from "../pages/route-error";
 
 const Landing = lazy(() => import("../pages/landing").then((m) => ({ default: m.Landing })));
 const AuthRoute = lazy(() => import("../pages/auth").then((m) => ({ default: m.AuthRoute })));
@@ -41,24 +43,31 @@ function RouteFallback() {
 
 const wrap = (node: ReactNode) => <Suspense fallback={<RouteFallback />}>{node}</Suspense>;
 
+// errorElement: один RouteError на каждый route — при unhandled rejection
+// в loader/render показывает retry UI вместо белой страницы. Дублируем явно,
+// чтобы каждый route имел свой boundary (иначе ошибка в /dashboard свалит
+// и /landing — все маршруты разделяют root).
+const eb = { errorElement: <RouteError /> };
+
 export const router = createBrowserRouter([
-  { path: "/", element: wrap(<Landing />) },
-  { path: "/landing", element: <Navigate to="/" replace /> },
-  { path: "/login", element: wrap(<AuthRoute mode="login" />) },
-  { path: "/signup", element: wrap(<AuthRoute mode="register" />) },
-  { path: "/forgot-password", element: wrap(<ForgotPasswordRoute />) },
-  { path: "/reset-password", element: wrap(<ResetPasswordRoute />) },
-  { path: "/onboarding", element: wrap(<OnboardingRoute />) },
-  { path: "/changelog", element: wrap(<ChangelogRoute />) },
-  { path: "/pricing", element: wrap(<PricingRoute />) },
+  { path: "/", element: wrap(<Landing />), ...eb },
+  { path: "/landing", element: <Navigate to="/" replace />, ...eb },
+  { path: "/login", element: wrap(<AuthRoute mode="login" />), ...eb },
+  { path: "/signup", element: wrap(<AuthRoute mode="register" />), ...eb },
+  { path: "/forgot-password", element: wrap(<ForgotPasswordRoute />), ...eb },
+  { path: "/reset-password", element: wrap(<ResetPasswordRoute />), ...eb },
+  { path: "/onboarding", element: wrap(<OnboardingRoute />), ...eb },
+  { path: "/changelog", element: wrap(<ChangelogRoute />), ...eb },
+  { path: "/pricing", element: wrap(<PricingRoute />), ...eb },
   {
     element: <AppLayout />,
+    ...eb,
     children: [
-      { path: "/dashboard", element: wrap(<DashboardRoute />) },
-      { path: "/team", element: wrap(<TeamRoute />) },
-      { path: "/settings", element: wrap(<SettingsRoute />) },
-      { path: "/admin", element: wrap(<AdminRoute />) },
+      { path: "/dashboard", element: wrap(<DashboardRoute />), ...eb },
+      { path: "/team", element: wrap(<TeamRoute />), ...eb },
+      { path: "/settings", element: wrap(<SettingsRoute />), ...eb },
+      { path: "/admin", element: wrap(<AdminRoute />), ...eb },
     ],
   },
-  { path: "*", element: <Navigate to="/" replace /> },
+  { path: "*", element: <NotFound /> },
 ]);

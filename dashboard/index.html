@@ -21,6 +21,19 @@
         } catch (_) {}
       })();
     </script>
+    <!-- CSP — closed beta hardening. Описание:
+         default-src 'self' блокирует загрузку scripts/styles с других origin'ов.
+         font-src/style-src 'unsafe-inline' нужны для Google Fonts + Tailwind
+         динамических классов через <style>. img-src 'self' data: blob: —
+         генерация heatmap/canvas в blob URLs.
+         connect-src включает прод API + любые https-хосты (для self-hosted
+         beta), плюс ws: для Vite HMR в dev (игнорируется в prod build).
+         Если CSP сломает что-то в проде — закомментируйте эту строку,
+         не строгий блокер. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: ws: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
     <meta
       name="description"
       content="Eye of Providence — сколько ты пишешь сам, а сколько с AI. Privacy-by-design."

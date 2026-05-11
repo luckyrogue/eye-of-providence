@@ -73,5 +73,27 @@
     "select_all": "Select all",
     "select_row": "Select row",
     "open_menu": "Open menu"
+  },
+  "not_found": {
+    "title": "Page not found",
+    "lead": "We couldn't find what you were looking for.",
+    "home": "Go home",
+    "dashboard": "Open dashboard"
+  },
+  "route_error": {
+    "title": "Something went wrong",
+    "lead": "The page failed to load. You can go back or return to the home page.",
+    "back": "Go back",
+    "home": "Go home"
+  },
+  "offline": {
+    "banner": "You're offline. Changes will sync when you reconnect."
+  },
+  "update": {
+    "available": "A new version is available.",
+    "reload": "Reload"
+  },
+  "a11y": {
+    "skip_to_content": "Skip to content"
   }
 }
