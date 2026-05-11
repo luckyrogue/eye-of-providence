@@ -15,6 +15,9 @@ import { ADMIN_TABS, type AdminProps, type AdminTabKey } from "./model";
 import { Overview } from "./ui/overview";
 import { TeamsTable } from "./ui/teams-table";
 import { UsersTable } from "./ui/users-table";
+import { Revenue } from "./ui/revenue";
+import { SSOConfigs } from "./ui/sso";
+import { AuditLog } from "./ui/audit";
 
 export function Admin({ tz }: AdminProps) {
   const { t } = useTranslation("app");
@@ -123,6 +126,9 @@ export function Admin({ tz }: AdminProps) {
             <TeamsTable teams={teams.data ?? []} users={users.data ?? []} tz={tz} />
           )}
           {tab === "users" && <UsersTable users={users.data ?? []} tz={tz} />}
+          {tab === "revenue" && <Revenue tz={tz} />}
+          {tab === "sso" && <SSOConfigs tz={tz} />}
+          {tab === "audit" && <AuditLog tz={tz} />}
         </>
       )}
     </>

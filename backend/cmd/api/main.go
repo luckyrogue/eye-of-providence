@@ -25,6 +25,7 @@ import (
 
 	"github.com/eye-of-providence/backend/internal/analytics"
 	"github.com/eye-of-providence/backend/internal/anomaly"
+	"github.com/eye-of-providence/backend/internal/audit"
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/cache"
 	"github.com/eye-of-providence/backend/internal/config"
@@ -223,6 +224,9 @@ func main() {
 	// planSvc — единый kill-switch для plan feature gates (см. internal/plans).
 	// Enforce=false в бете (default), true на GA через EOP_PLAN_LIMITS_ENFORCED.
 	planSvc := plans.Service{Enforce: cfg.PlanLimitsEnforced}
+	// auditSvc — append-only лог критичных действий. Inject'ится в teams/sso
+	// services. Если pgPool == nil — no-op (Log/List вернут пустоту/error).
+	auditSvc := audit.Service{Pool: pgPool, Logger: log}
 
 	// hookSvc — concrete *webhooks.Service. Удовлетворяет двум интерфейсам:
 	// teams.WebhookDispatcher и anomaly.Dispatcher (одна Dispatch-сигнатура).
@@ -266,6 +270,7 @@ func main() {
 		PublicURL:     cfg.PublicURL,
 		Webhooks:      hooksDispatcher,
 		Plans:         planSvc,
+		Audit:         auditSvc,
 	})
 
 	// Protected routes — навешивают auth middleware на весь /v1.
@@ -293,7 +298,7 @@ func main() {
 	// для роутов, зарегистрированных через тот group). Public SSO routes
 	// уже зарегистрированы выше, ДО teams.RegisterRoutes.
 	if pgPool != nil && ssoRegistry != nil {
-		ssoAdmin := sso.AdminService{Pool: pgPool, Registry: ssoRegistry, Logger: log, Plans: planSvc}
+		ssoAdmin := sso.AdminService{Pool: pgPool, Registry: ssoRegistry, Logger: log, Plans: planSvc, Audit: auditSvc}
 		ssoAdmin.RegisterAdminRoutes(app.Group("/v1/teams/:id/sso", auth.Middleware(cfg.JWTSecret, pgPool)))
 	}
 

@@ -84,6 +84,103 @@ export const useAdminPayments = (teamID: string | null) =>
     enabled: !!teamID,
   });
 
+// --- Revenue ---
+
+export type RevenuePayment = {
+  id: string;
+  team_id: string;
+  team_name: string;
+  amount_cents?: number;
+  currency?: string;
+  method?: string;
+  covers_until: string;
+  paid_at: string;
+  note?: string;
+};
+
+export type AdminRevenue = {
+  total_cents: number;
+  last_30d_cents: number;
+  currency: string;
+  paying_teams: number;
+  by_plan: Record<string, number>;
+  recent: RevenuePayment[];
+};
+
+const fetchRevenue = () => http.get<AdminRevenue>("/v1/admin/revenue").then((r) => r.data);
+
+export const useAdminRevenue = () =>
+  useQuery({ queryKey: [...adminKeys.all, "revenue"] as const, queryFn: fetchRevenue });
+
+// --- Audit log ---
+
+export type AuditEntry = {
+  id: string;
+  actor_id?: string;
+  actor_email?: string;
+  action: string;
+  target_type?: string;
+  target_id?: string;
+  metadata?: Record<string, unknown>;
+  ip?: string;
+  user_agent?: string;
+  created_at: string;
+};
+
+export type AuditFilter = {
+  action?: string;
+  target_type?: string;
+  target_id?: string;
+  actor_id?: string;
+  limit?: number;
+};
+
+const fetchAudit = (f: AuditFilter) =>
+  http
+    .get<{ entries: AuditEntry[]; limit: number; offset: number }>("/v1/admin/audit", {
+      params: f,
+    })
+    .then((r) => r.data.entries ?? []);
+
+export const useAdminAudit = (f: AuditFilter = {}) =>
+  useQuery({
+    queryKey: [...adminKeys.all, "audit", f] as const,
+    queryFn: () => fetchAudit(f),
+  });
+
+// --- SSO global view ---
+
+export type AdminSSOConfig = {
+  team_id: string;
+  team_name: string;
+  provider: string;
+  enabled: boolean;
+  oidc_issuer: string;
+  oidc_client_id: string;
+  allowed_domains: string[];
+  jit_provision: boolean;
+  jit_role: string;
+  created_at: string;
+  updated_at: string;
+};
+
+const fetchSSOConfigs = () =>
+  http.get<{ configs: AdminSSOConfig[] }>("/v1/admin/sso").then((r) => r.data.configs ?? []);
+
+const adminSSODisable = (teamID: string) =>
+  http.post(`/v1/admin/sso/${teamID}/disable`).then(() => undefined);
+
+export const useAdminSSOList = () =>
+  useQuery({ queryKey: [...adminKeys.all, "sso"] as const, queryFn: fetchSSOConfigs });
+
+export function useAdminSSODisable() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (teamID: string) => adminSSODisable(teamID),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...adminKeys.all, "sso"] }),
+  });
+}
+
 export function useAdminDeleteTeam() {
   const qc = useQueryClient();
   return useMutation({

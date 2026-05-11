@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
+	"github.com/eye-of-providence/backend/internal/audit"
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/plans"
@@ -21,6 +22,18 @@ type AdminService struct {
 	Registry *Registry
 	Logger   *zap.Logger
 	Plans    plans.Service // feature-gate: SSO требует Business+ при Enforce=true
+	Audit    audit.Service // append-only лог сохранения/удаления конфигов
+}
+
+// actorInfo — берёт actor_id + email для audit-trail.
+func (s AdminService) actorInfo(c *fiber.Ctx) (uuid.UUID, string) {
+	claims := auth.ClaimsFromCtx(c)
+	uid, _ := uuid.Parse(claims.UserID)
+	var email string
+	if s.Pool != nil {
+		_ = s.Pool.QueryRow(c.Context(), "SELECT email FROM users WHERE id=$1", uid).Scan(&email)
+	}
+	return uid, email
 }
 
 // RegisterAdminRoutes — owner/admin endpoints для SSO config CRUD.
@@ -189,6 +202,15 @@ func (s AdminService) handleSave(c *fiber.Ctx) error {
 	}
 	s.Registry.Invalidate(teamID)
 
+	actorID, actorEmail := s.actorInfo(c)
+	s.Audit.LogFromCtx(c, actorID, actorEmail, audit.ActionSSOSaved, "team", teamID.String(), map[string]any{
+		"provider":         string(cfg.Provider),
+		"enabled":          cfg.Enabled,
+		"oidc_issuer":      cfg.OIDCIssuer,
+		"allowed_domains":  cfg.AllowedDomains,
+		"jit_provision":    cfg.JITProvision,
+		"jit_role":         cfg.JITRole,
+	})
 	return c.JSON(fiber.Map{"config": toResponse(cfg)})
 }
 
@@ -204,6 +226,8 @@ func (s AdminService) handleDelete(c *fiber.Ctx) error {
 		return httperr.Internal(c)
 	}
 	s.Registry.Invalidate(teamID)
+	actorID, actorEmail := s.actorInfo(c)
+	s.Audit.LogFromCtx(c, actorID, actorEmail, audit.ActionSSODeleted, "team", teamID.String(), nil)
 	return c.JSON(fiber.Map{"deleted": true})
 }
 

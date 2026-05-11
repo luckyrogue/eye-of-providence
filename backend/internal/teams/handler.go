@@ -33,6 +33,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
+	"github.com/eye-of-providence/backend/internal/audit"
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/mailer"
@@ -94,6 +95,18 @@ type Service struct {
 	PublicURL     string            // base URL дашборда для invite-ссылок в письме
 	Webhooks      WebhookDispatcher // nil — webhook delivery выключена (in-memory mode)
 	Plans         plans.Service     // feature-gate: max users/team при Enforce=true
+	Audit         audit.Service     // append-only лог критичных действий
+}
+
+// actorInfo — берёт текущего user_id + email для audit-trail. Email
+// денормализован чтобы audit-row сохранялся даже если user удалён.
+func (s Service) actorInfo(c *fiber.Ctx) (uuid.UUID, string) {
+	uid := userID(c)
+	var email string
+	if s.Pool != nil {
+		_ = s.Pool.QueryRow(c.Context(), "SELECT email FROM users WHERE id=$1", uid).Scan(&email)
+	}
+	return uid, email
 }
 
 // internalErr — единая точка для 500-ответов. Логируем полный текст,
@@ -149,6 +162,10 @@ func RegisterRoutes(app *fiber.App, s Service) {
 	g.Get("/admin/teams", s.handleAdminListAllTeams)
 	g.Get("/admin/users", s.handleAdminListAllUsers)
 	g.Get("/admin/stats", s.handleAdminStats)
+	g.Get("/admin/revenue", s.handleAdminRevenue)
+	g.Get("/admin/sso", s.handleAdminSSOList)
+	g.Post("/admin/sso/:id/disable", s.handleAdminSSODisable)
+	g.Get("/admin/audit", s.handleAdminAudit)
 	g.Delete("/admin/teams/:id", s.handleAdminDeleteTeam)
 	g.Delete("/admin/users/:id", s.handleAdminDeleteUser)
 	g.Patch("/admin/users/:id", s.handleAdminUpdateUser)

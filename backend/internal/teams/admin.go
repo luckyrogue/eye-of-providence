@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/eye-of-providence/backend/internal/audit"
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/store"
@@ -129,6 +130,206 @@ func (s Service) handleAdminStats(c *fiber.Ctx) error {
 	})
 }
 
+// handleAdminAudit — list audit log entries с filtering. Делегирует в
+// audit.Service.List. Тонкая обёртка для сохранения single registration
+// point (все /v1/admin/* в этом файле) и единого super_admin guard.
+func (s Service) handleAdminAudit(c *fiber.Ctx) error {
+	if !s.requireSuperAdmin(c) {
+		return nil
+	}
+	f := audit.ListFilter{
+		Action:     c.Query("action"),
+		TargetType: c.Query("target_type"),
+		TargetID:   c.Query("target_id"),
+	}
+	if a := c.Query("actor_id"); a != "" {
+		id, err := uuid.Parse(a)
+		if err != nil {
+			return httperr.BadRequest(c, "invalid_actor_id", "actor_id must be uuid")
+		}
+		f.ActorID = id
+	}
+	if l := c.Query("limit"); l != "" {
+		n, err := strconv.Atoi(l)
+		if err == nil && n > 0 {
+			f.Limit = n
+		}
+	}
+	if o := c.Query("offset"); o != "" {
+		n, err := strconv.Atoi(o)
+		if err == nil && n > 0 {
+			f.Offset = n
+		}
+	}
+	entries, err := s.Audit.List(c.Context(), f)
+	if err != nil {
+		return s.internalErr(c, err)
+	}
+	return c.JSON(fiber.Map{
+		"entries": entries,
+		"limit":   f.Limit,
+		"offset":  f.Offset,
+	})
+}
+
+// handleAdminRevenue — aggregate финансовых метрик для admin overview.
+//
+// Возвращает:
+//
+//	total_cents       — сумма всех payment'ов за всё время
+//	last_30d_cents    — сумма payments за последние 30 дней (≈ MRR proxy)
+//	currency          — наиболее частая валюта в payments (для display)
+//	paying_teams      — distinct count team'ов с >=1 payment'ом
+//	by_plan           — распределение subscription_plan по teams (count)
+//	recent[]          — последние 10 payments для табы
+func (s Service) handleAdminRevenue(c *fiber.Ctx) error {
+	if !s.requireSuperAdmin(c) {
+		return nil
+	}
+	ctx := c.Context()
+
+	var totalCents, last30Cents int64
+	var payingTeams int
+	var currency string
+
+	_ = s.Pool.QueryRow(ctx, "SELECT COALESCE(SUM(amount_cents), 0) FROM team_payments").Scan(&totalCents)
+	_ = s.Pool.QueryRow(ctx,
+		"SELECT COALESCE(SUM(amount_cents), 0) FROM team_payments WHERE paid_at > now() - interval '30 days'",
+	).Scan(&last30Cents)
+	_ = s.Pool.QueryRow(ctx, "SELECT count(DISTINCT team_id) FROM team_payments").Scan(&payingTeams)
+	_ = s.Pool.QueryRow(ctx, `
+		SELECT currency FROM team_payments
+		WHERE currency IS NOT NULL AND currency <> ''
+		GROUP BY currency
+		ORDER BY count(*) DESC LIMIT 1`).Scan(&currency)
+	if currency == "" {
+		currency = "USD"
+	}
+
+	// Plan distribution.
+	byPlan := map[string]int{}
+	rows, err := s.Pool.Query(ctx,
+		"SELECT COALESCE(subscription_plan, 'free') AS plan, count(*) FROM teams GROUP BY 1")
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var plan string
+			var cnt int
+			if err := rows.Scan(&plan, &cnt); err == nil {
+				byPlan[plan] = cnt
+			}
+		}
+	}
+
+	// Recent payments (top 10).
+	type recentPayment struct {
+		ID          uuid.UUID  `json:"id"`
+		TeamID      uuid.UUID  `json:"team_id"`
+		TeamName    string     `json:"team_name"`
+		AmountCents *int       `json:"amount_cents,omitempty"`
+		Currency    *string    `json:"currency,omitempty"`
+		Method      *string    `json:"method,omitempty"`
+		CoversUntil time.Time  `json:"covers_until"`
+		PaidAt      time.Time  `json:"paid_at"`
+		Note        *string    `json:"note,omitempty"`
+	}
+	recent := []recentPayment{}
+	rrows, err := s.Pool.Query(ctx, `
+		SELECT p.id, p.team_id, t.name, p.amount_cents, p.currency, p.method, p.covers_until, p.paid_at, p.note
+		FROM team_payments p
+		JOIN teams t ON t.id = p.team_id
+		ORDER BY p.paid_at DESC
+		LIMIT 10`)
+	if err == nil {
+		defer rrows.Close()
+		for rrows.Next() {
+			var r recentPayment
+			if err := rrows.Scan(&r.ID, &r.TeamID, &r.TeamName, &r.AmountCents, &r.Currency, &r.Method, &r.CoversUntil, &r.PaidAt, &r.Note); err == nil {
+				recent = append(recent, r)
+			}
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"total_cents":    totalCents,
+		"last_30d_cents": last30Cents,
+		"currency":       currency,
+		"paying_teams":   payingTeams,
+		"by_plan":        byPlan,
+		"recent":         recent,
+	})
+}
+
+// handleAdminSSOList — все SSO-конфиги для super_admin global view.
+// Join с teams для получения team_name. Client_secret НИКОГДА не возвращаем.
+func (s Service) handleAdminSSOList(c *fiber.Ctx) error {
+	if !s.requireSuperAdmin(c) {
+		return nil
+	}
+	type ssoEntry struct {
+		TeamID         uuid.UUID `json:"team_id"`
+		TeamName       string    `json:"team_name"`
+		Provider       string    `json:"provider"`
+		Enabled        bool      `json:"enabled"`
+		OIDCIssuer     string    `json:"oidc_issuer"`
+		OIDCClientID   string    `json:"oidc_client_id"`
+		AllowedDomains []string  `json:"allowed_domains"`
+		JITProvision   bool      `json:"jit_provision"`
+		JITRole        string    `json:"jit_role"`
+		CreatedAt      time.Time `json:"created_at"`
+		UpdatedAt      time.Time `json:"updated_at"`
+	}
+	rows, err := s.Pool.Query(c.Context(), `
+		SELECT sc.team_id, t.name, sc.provider, sc.enabled, COALESCE(sc.oidc_issuer, ''),
+		       COALESCE(sc.oidc_client_id, ''), COALESCE(sc.allowed_domains, ARRAY[]::text[]),
+		       sc.jit_provision, sc.jit_role, sc.created_at, sc.updated_at
+		FROM sso_configs sc
+		JOIN teams t ON t.id = sc.team_id
+		ORDER BY sc.updated_at DESC`)
+	if err != nil {
+		return s.internalErr(c, err)
+	}
+	defer rows.Close()
+	out := []ssoEntry{}
+	for rows.Next() {
+		var e ssoEntry
+		if err := rows.Scan(&e.TeamID, &e.TeamName, &e.Provider, &e.Enabled, &e.OIDCIssuer,
+			&e.OIDCClientID, &e.AllowedDomains, &e.JITProvision, &e.JITRole, &e.CreatedAt, &e.UpdatedAt); err != nil {
+			return s.internalErr(c, err)
+		}
+		out = append(out, e)
+	}
+	return c.JSON(fiber.Map{"configs": out})
+}
+
+// handleAdminSSODisable — force-disable SSO для team (super_admin override).
+// Owner может re-enable в team settings; полное удаление через DELETE
+// /v1/teams/:id/sso (owner-only).
+func (s Service) handleAdminSSODisable(c *fiber.Ctx) error {
+	if !s.requireSuperAdmin(c) {
+		return nil
+	}
+	teamID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httperr.BadRequest(c, "invalid_team_id", "invalid team id")
+	}
+	tag, err := s.Pool.Exec(c.Context(),
+		"UPDATE sso_configs SET enabled = false, updated_at = now() WHERE team_id = $1", teamID)
+	if err != nil {
+		return s.internalErr(c, err)
+	}
+	if tag.RowsAffected() == 0 {
+		return httperr.NotFound(c, "sso_not_configured", "no SSO config for team")
+	}
+	actorID, actorEmail := s.actorInfo(c)
+	s.Audit.LogFromCtx(c, actorID, actorEmail, audit.ActionSSOSaved, "team", teamID.String(), map[string]any{
+		"enabled":   false,
+		"force_off": true,
+		"by":        "super_admin",
+	})
+	return c.JSON(fiber.Map{"ok": true})
+}
+
 func (s Service) handleAdminDeleteTeam(c *fiber.Ctx) error {
 	if !s.requireSuperAdmin(c) {
 		return nil
@@ -137,9 +338,16 @@ func (s Service) handleAdminDeleteTeam(c *fiber.Ctx) error {
 	if err != nil {
 		return httperr.BadRequest(c, "invalid_team_id", "invalid team id")
 	}
+	// Capture team name для audit-trail ДО удаления.
+	var teamName string
+	_ = s.Pool.QueryRow(c.Context(), "SELECT name FROM teams WHERE id=$1", teamID).Scan(&teamName)
 	if _, err := s.Pool.Exec(c.Context(), "DELETE FROM teams WHERE id=$1", teamID); err != nil {
 		return s.internalErr(c, err)
 	}
+	actorID, actorEmail := s.actorInfo(c)
+	s.Audit.LogFromCtx(c, actorID, actorEmail, audit.ActionTeamDeleted, "team", teamID.String(), map[string]any{
+		"name": teamName,
+	})
 	return c.JSON(fiber.Map{"ok": true})
 }
 
@@ -174,9 +382,17 @@ func (s Service) handleAdminDeleteUser(c *fiber.Ctx) error {
 				zap.String("user_id", uid.String()), zap.Error(err))
 		}
 	}
+	// Capture victim email для audit-trail ДО удаления.
+	var victimEmail string
+	_ = s.Pool.QueryRow(c.Context(), "SELECT email FROM users WHERE id=$1", uid).Scan(&victimEmail)
 	if _, err := s.Pool.Exec(c.Context(), "DELETE FROM users WHERE id=$1", uid); err != nil {
 		return s.internalErr(c, err)
 	}
+	actorID, actorEmail := s.actorInfo(c)
+	s.Audit.LogFromCtx(c, actorID, actorEmail, audit.ActionUserDeleted, "user", uid.String(), map[string]any{
+		"email": victimEmail,
+		"role":  role,
+	})
 	return c.JSON(fiber.Map{"ok": true})
 }
 
@@ -206,6 +422,9 @@ func (s Service) handleAdminUpdateUser(c *fiber.Ctx) error {
 		if uid == userID(c) && role != "super_admin" {
 			return httperr.Conflict(c, "cannot_demote_self", "cannot demote yourself")
 		}
+		var prevRole, victimEmail string
+		_ = s.Pool.QueryRow(c.Context(),
+			"SELECT global_role, email FROM users WHERE id=$1", uid).Scan(&prevRole, &victimEmail)
 		if _, err := s.Pool.Exec(c.Context(),
 			"UPDATE users SET global_role=$1 WHERE id=$2", role, uid); err != nil {
 			return s.internalErr(c, err)
@@ -213,6 +432,14 @@ func (s Service) handleAdminUpdateUser(c *fiber.Ctx) error {
 		// Инвалидируем существующие JWT этого юзера — иначе при демоуте super_admin
 		// сохранил бы доступ к /v1/admin/* до истечения 14d токена.
 		_ = auth.BumpTokenVersion(c.Context(), s.Pool, uid)
+		if prevRole != role {
+			actorID, actorEmail := s.actorInfo(c)
+			s.Audit.LogFromCtx(c, actorID, actorEmail, audit.ActionUserRoleChanged, "user", uid.String(), map[string]any{
+				"email":    victimEmail,
+				"role_from": prevRole,
+				"role_to":   role,
+			})
+		}
 	}
 	if req.DisplayName != nil {
 		dn, ok := validateDisplayName(*req.DisplayName)
@@ -404,6 +631,24 @@ func (s Service) handleSetSubscription(c *fiber.Ctx) error {
 	if err := tx.Commit(c.Context()); err != nil {
 		return s.internalErr(c, err)
 	}
+	actorID, actorEmail := s.actorInfo(c)
+	meta := map[string]any{}
+	if req.Plan != nil {
+		meta["plan_to"] = planNorm
+	}
+	if req.Until != nil {
+		if untilTS != nil {
+			meta["until"] = untilTS.Format(time.RFC3339)
+		} else {
+			meta["until"] = nil
+		}
+	}
+	if paymentID != nil {
+		meta["payment_id"] = paymentID.String()
+		meta["amount_cents"] = req.Payment.AmountCents
+		meta["currency"] = req.Payment.Currency
+	}
+	s.Audit.LogFromCtx(c, actorID, actorEmail, audit.ActionSubscriptionSet, "team", teamID.String(), meta)
 	return c.JSON(fiber.Map{"ok": true, "payment_id": paymentID})
 }
 
