@@ -10,7 +10,7 @@
     "changelog": "Changelog"
   },
   "hero": {
-    "badge": "Beta · 3 founding companies free",
+    "badge": "Beta · all paid features free until GA",
     "heading": "See how much you code <em>vs.</em> the AI.",
     "lead": "Privacy-first analytics for engineers. Track manual coding, AI assists, and where your time really goes — across IDE, browser, and CLI.",
     "cta_primary": "Get started — free",
@@ -74,49 +74,66 @@
     ]
   },
   "pricing": {
-    "eyebrow": "Pricing · Beta",
-    "heading": "Free for the <em>first 3 companies</em>. Forever for solo devs.",
-    "lead": "We onboard 3 founding companies free of charge — no credit card, no trial countdown, no seat caps. Self-hosted is free for everyone.",
+    "eyebrow": "Pricing",
+    "heading": "Free during beta. <em>Honest pricing</em> at GA.",
+    "lead": "All paid features are free until GA in Q4 2026 — no credit card, no countdown. After GA, only Free tier stays $0.",
     "most_popular": "Most popular",
+    "beta_badge": "Free during beta",
+    "compare_link": "Compare all features →",
     "tiers": [
       {
-        "name": "Solo",
-        "price": "Free",
+        "name": "Free",
+        "price": "$0",
         "period": "forever",
         "cta": "Get started",
         "features": [
-          "Personal dashboard",
-          "Up to 3 projects",
-          "30-day event history",
-          "Weekly AI report",
+          "1 team, up to 5 users",
+          "30 days of event history",
+          "1 webhook",
+          "Basic dashboard & reports",
           "Community support"
         ]
       },
       {
-        "name": "Founding Company",
-        "price": "Free",
-        "period": "for the first 3",
-        "cta": "Claim a slot",
+        "name": "Pro",
+        "price": "$5",
+        "period": "per user / month, billed annually",
+        "cta": "Start free",
         "features": [
-          "Everything in Solo",
-          "Unlimited team members",
-          "Unlimited projects",
-          "Roles, invites, member analytics",
-          "18-month event history",
-          "Direct line to the founders"
+          "Up to 50 users per team",
+          "365 days of history",
+          "Unlimited webhooks",
+          "AI insights & anomaly detection",
+          "Email reports, API tokens",
+          "Email support (48h)"
         ]
       },
       {
-        "name": "Self-hosted",
-        "price": "Free",
-        "period": "open-core",
-        "cta": "Read the docs",
+        "name": "Business",
+        "price": "$19",
+        "period": "per user / month, billed annually",
+        "cta": "Start free",
         "features": [
-          "Run the whole stack",
-          "Your data on your infra",
-          "Docker / docker-compose",
-          "Postgres + ClickHouse",
-          "Community support"
+          "Unlimited users & retention",
+          "SSO (OIDC + SAML)",
+          "Audit log & custom roles",
+          "Signed webhooks with retries",
+          "Self-hosted Docker image",
+          "Priority support (24h)"
+        ]
+      },
+      {
+        "name": "Enterprise",
+        "price": "Custom",
+        "period": "annual contract",
+        "cta": "Talk to sales",
+        "features": [
+          "Everything in Business",
+          "99.9% SLA",
+          "SOC2 / GDPR reports",
+          "Dedicated success manager",
+          "On-prem deployment & support",
+          "Custom security review"
         ]
       }
     ]
@@ -147,7 +164,7 @@
       },
       {
         "q": "When does free end?",
-        "a": "Solo and self-hosted are free forever. Team will eventually have paid tiers — but during beta, all team features are free with no time limit."
+        "a": "The Free tier (1 team, 5 users, 30-day history) stays free forever. Pro and Business are free during beta — pricing kicks in at GA in Q4 2026. We'll notify you at least 30 days before any charge."
       }
     ]
   },

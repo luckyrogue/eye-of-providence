@@ -10,21 +10,31 @@ type Tier = {
   cta: string;
 };
 
-// highlight middle tier (Founding Company) — index === 1
+// "Pro" tier (index 1) — most-popular highlight. Last tier ("Enterprise") routes
+// to sales contact; everything else opens dashboard signup.
 function PriceCard({
   tier,
+  index,
+  total,
   highlight,
   mostPopular,
+  betaBadge,
+  isPaid,
 }: {
   tier: Tier;
+  index: number;
+  total: number;
   highlight: boolean;
   mostPopular: string;
+  betaBadge: string;
+  isPaid: boolean;
 }) {
   const { name, price, period, features, cta } = tier;
+  const isEnterprise = index === total - 1;
   return (
     <div
       className={cn(
-        "relative rounded-xl border p-7 card-hover",
+        "relative rounded-xl border p-7 card-hover flex flex-col",
         highlight ? "border-foreground bg-card shadow-lg" : "bg-card",
       )}
     >
@@ -40,7 +50,12 @@ function PriceCard({
         </span>
         <span className="text-sm text-muted-foreground ml-2">{period}</span>
       </div>
-      <ul className="mt-6 space-y-2.5 text-sm">
+      {isPaid && (
+        <span className="mt-2 inline-flex w-fit rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 text-[11px] font-medium">
+          {betaBadge}
+        </span>
+      )}
+      <ul className="mt-6 space-y-2.5 text-sm flex-1">
         {features.map((f) => (
           <li key={f} className="flex items-start gap-2">
             <Check className="h-4 w-4 mt-0.5 text-foreground shrink-0" />
@@ -49,7 +64,7 @@ function PriceCard({
         ))}
       </ul>
       <Button asChild className="w-full mt-7" variant={highlight ? "default" : "outline"}>
-        <a href="/dashboard">{cta}</a>
+        <a href={isEnterprise ? "mailto:sales@eop.rysdavletov.org" : "/dashboard"}>{cta}</a>
       </Button>
     </div>
   );
@@ -66,17 +81,29 @@ export function Pricing() {
           <h2 className="display-head text-3xl sm:text-4xl md:text-5xl mt-3 max-w-2xl mx-auto">
             <Trans i18nKey="landing:pricing.heading" components={{ em: <em /> }} />
           </h2>
-          <p className="text-muted-foreground mt-4 max-w-lg mx-auto">{t("pricing.lead")}</p>
+          <p className="text-muted-foreground mt-4 max-w-xl mx-auto">{t("pricing.lead")}</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
           {tiers.map((tier, i) => (
             <PriceCard
               key={tier.name}
               tier={tier}
+              index={i}
+              total={tiers.length}
               highlight={i === 1}
               mostPopular={t("pricing.most_popular")}
+              betaBadge={t("pricing.beta_badge")}
+              isPaid={i > 0 && i < tiers.length - 1}
             />
           ))}
+        </div>
+        <div className="mt-10 text-center">
+          <a
+            href="/pricing"
+            className="text-sm font-medium text-foreground/80 hover:text-foreground underline underline-offset-4"
+          >
+            {t("pricing.compare_link")}
+          </a>
         </div>
       </div>
     </section>

@@ -17,6 +17,9 @@ const OnboardingRoute = lazy(() =>
 const ChangelogRoute = lazy(() =>
   import("../pages/changelog").then((m) => ({ default: m.ChangelogRoute })),
 );
+const PricingRoute = lazy(() =>
+  import("../pages/pricing").then((m) => ({ default: m.PricingRoute })),
+);
 const DashboardRoute = lazy(() =>
   import("../pages/dashboard").then((m) => ({ default: m.DashboardRoute })),
 );
@@ -47,6 +50,7 @@ export const router = createBrowserRouter([
   { path: "/reset-password", element: wrap(<ResetPasswordRoute />) },
   { path: "/onboarding", element: wrap(<OnboardingRoute />) },
   { path: "/changelog", element: wrap(<ChangelogRoute />) },
+  { path: "/pricing", element: wrap(<PricingRoute />) },
   {
     element: <AppLayout />,
     children: [
