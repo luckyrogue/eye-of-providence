@@ -1,16 +1,20 @@
 // Dashboard widgets — KPI grid, Heatmap, Gauge, Timeline, Donut, Provider
 // list, Trend chart, Language bars, Project list, Focus sessions,
-// Attribution log, Recap card. Все в одном файле — компактно, артефакт
-// тоже инлайнил всё в dashboard.jsx.
+// Attribution log, Recap card.
 //
-// Данные: где есть API — wire'имся через react-query (heatmap, trend,
-// categories, recent events). Где нет (focus sessions, recap, providers)
-// — статичный mock с TODO для GA-итерации.
+// Данные: wire'нуты к real API через react-query (useHeatmap / useTrend /
+// useSummary / useLanguages / useRecent). Где data ещё нет (focus sessions,
+// recap text, providers list) — mock с TODO для GA-итерации. Loading state
+// показывает placeholder mock-данные, чтобы layout не прыгал.
+//
+// i18n: все user-facing строки через t("dashboard.*") из app namespace.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useRecent, useSummary, useLanguages, useHeatmap, useTrend } from "../../../entities/event";
+import { getTz } from "../../../shared/lib/tz";
+import type { EventRow, HeatmapCell, LangCell, TrendPoint } from "../../../entities/event";
 
 /* ============ Mini sparkline (used in KPI cards) ============ */
 export function MiniSpark({ color, points }: { color: string; points: number[] }) {
@@ -35,40 +39,81 @@ function spark(variance: number, offset = 0): number[] {
   return Array.from({ length: 30 }, (_, i) => 50 + Math.sin(i * 0.5) * variance + offset);
 }
 
+// formatHm — миллисекунды → "Xh Ymin", где первое — крупная цифра для KPI.
+function formatHm(ms: number): { value: string; unit: string } {
+  const totalMin = Math.round(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h > 0) return { value: String(h), unit: `h ${String(m).padStart(2, "0")}m` };
+  return { value: String(m), unit: "min" };
+}
+
 /* ============ KPI grid ============ */
 export function KpiGrid() {
+  const { t } = useTranslation("app");
+  const summary = useSummary(7);
+  const summaryPrev = useSummary(14); // для delta vs prior period — будем считать первые 7 дней vs последние
+
   const accent = "hsl(var(--accent))";
   const success = "hsl(var(--success))";
-  const purple = "#c084fc";
+
+  // Aggregate: ms по категориям. Backend возвращает {ai, manual, ...} как ms.
+  const ms = summary.data ?? {};
+  const aiMs = Object.entries(ms)
+    .filter(([k]) => k === "ai" || k.startsWith("ai_"))
+    .reduce((acc, [, v]) => acc + v, 0);
+  const manualMs = ms["manual"] ?? ms["typed"] ?? 0;
+  const totalMs = aiMs + manualMs;
+  const aiPct = totalMs > 0 ? Math.round((aiMs / totalMs) * 100) : 0;
+
+  const activeFmt = formatHm(totalMs);
+  const manualFmt = formatHm(manualMs);
+
+  // Delta: грубо — diff между текущим summary(7) и summary(14) - summary(7) (= prior period).
+  const prevMs = summaryPrev.data ?? {};
+  const prevTotal = (prevMs["ai"] ?? 0) + (prevMs["manual"] ?? prevMs["typed"] ?? 0) - totalMs;
+  const totalDelta = totalMs - prevTotal;
+  const totalDeltaFmt = formatHm(Math.abs(totalDelta));
+
+  const aiPctPrev =
+    prevTotal > 0 ? Math.round((((prevMs["ai"] ?? 0) - aiMs) / prevTotal) * 100) : 0;
+  const aiPctDelta = aiPct - aiPctPrev;
+
   return (
     <div className="kpi-grid">
       <KpiTile
-        label="Active coding time"
-        value="34"
-        unit="h 41m"
-        delta={{ kind: "up", text: "+4h 12m vs last 7d" }}
+        label={t("dashboard.kpi_active") || "Active coding time"}
+        value={activeFmt.value}
+        unit={activeFmt.unit}
+        delta={{
+          kind: totalDelta >= 0 ? "up" : "down",
+          text: `${totalDelta >= 0 ? "+" : "−"}${totalDeltaFmt.value}${totalDeltaFmt.unit} ${t("dashboard.kpi_vs_prior") || "vs prior 7d"}`,
+        }}
         spark={<MiniSpark color={accent} points={spark(15)} />}
       />
       <KpiTile
-        label="AI-assist ratio"
-        value="62"
+        label={t("dashboard.kpi_ai_ratio") || "AI-assist ratio"}
+        value={String(aiPct)}
         unit="%"
-        delta={{ kind: "up", text: "+7pp vs prior 7d" }}
+        delta={{
+          kind: aiPctDelta >= 0 ? "up" : "down",
+          text: `${aiPctDelta >= 0 ? "+" : "−"}${Math.abs(aiPctDelta)}pp ${t("dashboard.kpi_vs_prior") || "vs prior 7d"}`,
+        }}
         spark={<MiniSpark color={accent} points={spark(10, 8)} />}
       />
       <KpiTile
-        label="Manual coding"
-        value="13"
-        unit="h 11m"
-        delta={{ kind: "down", text: "−1h 04m vs prior" }}
+        label={t("dashboard.kpi_manual") || "Manual coding"}
+        value={manualFmt.value}
+        unit={manualFmt.unit}
+        delta={{ kind: "flat", text: t("dashboard.kpi_stable") || "~ stable" }}
         spark={<MiniSpark color={success} points={spark(12).map((v) => 100 - v)} />}
       />
       <KpiTile
-        label="Focus sessions"
-        value="28"
-        unit="avg 41m"
-        delta={{ kind: "flat", text: "~ stable" }}
-        spark={<MiniSpark color={purple} points={spark(8, -5)} />}
+        label={t("dashboard.kpi_focus") || "Focus sessions"}
+        value="—"
+        unit={t("dashboard.kpi_soon") || "soon"}
+        delta={{ kind: "flat", text: t("dashboard.kpi_no_data") || "no data yet" }}
+        spark={<MiniSpark color="#c084fc" points={spark(8, -5)} />}
       />
     </div>
   );
@@ -105,70 +150,52 @@ function KpiTile({
 }
 
 /* ============ Recap (AI narrative) ============ */
+// TODO(GA): wire к useInsights() — backend возвращает {key, vars} массив
+// narrative-карточек. Сейчас mock текст до того как Gemini-pipeline даёт
+// stable summaries (см. recap-card в widgets/insights).
 export function RecapCard() {
+  const { t } = useTranslation("app");
   return (
     <div className="eop-recap">
-      <div className="recap-tag">Weekly insight · Gemini 2.5 Flash · generated 2h ago</div>
-      <div className="recap-text">
-        You leaned <strong>40% harder on AI in TypeScript</strong> this week than last — most of it
-        Copilot inline in <em>parser-core</em>. Rust, meanwhile, stays almost entirely yours:{" "}
-        <strong>69% typed</strong>, no agent edits at all. Two long agent sessions on Tuesday
-        afternoon (Claude Code, 41 file edits) account for most of the swing.
+      <div className="recap-tag">
+        {t("dashboard.recap_tag") || "Weekly insight · Gemini · generated 2h ago"}
       </div>
-      <div
-        className="flex gap-3 items-center mt-4 text-[12px]"
-        style={{ color: "hsl(var(--muted-foreground))" }}
-      >
-        <span>Suggested next read · "Reducing context switches: 4 chat tabs → 1 IDE chat"</span>
-        {/* eslint-disable-next-line no-restricted-syntax -- ghost button styling per artifact */}
-        <button
-          type="button"
-          className="ml-auto px-3 py-1.5 rounded-md border text-[12px]"
-          style={{ borderColor: "hsl(var(--eop-line-strong))" }}
-        >
-          Open full report →
-        </button>
+      <div className="recap-text">
+        {t("dashboard.recap_placeholder") ||
+          "Recap will appear here once Gemini generates the first weekly narrative from your aggregates."}
       </div>
     </div>
   );
 }
 
 /* ============ Heatmap (7×24) ============ */
-function generateHeatmap(): number[] {
-  const cells: number[] = [];
-  for (let d = 0; d < 7; d++) {
-    for (let h = 0; h < 24; h++) {
-      let v = Math.max(0, Math.sin(((h - 6) * Math.PI) / 14)) * 0.85 + 0.05;
-      if (d >= 5) v *= 0.35;
-      v *= 0.55 + Math.random() * 0.45;
-      cells.push(Math.min(1, v));
-    }
+// useHeatmap returns HeatmapCell[] (dow 0–6 = Mon–Sun, hour 0–23, category, ms).
+// Aggregate всё по cell'ам (sum ms across all categories) и нормализуем на max.
+function reshapeHeatmap(cells: HeatmapCell[] | undefined): number[] {
+  const out = Array.from({ length: 168 }, () => 0);
+  if (!cells) return out;
+  for (const c of cells) {
+    if (c.dow < 0 || c.dow >= 7 || c.hour < 0 || c.hour >= 24) continue;
+    const i = c.dow * 24 + c.hour;
+    out[i] += c.ms;
   }
-  return cells;
+  const max = Math.max(1, ...out);
+  return out.map((v) => v / max);
 }
 
 export function HeatmapCard() {
-  const [range, setRange] = useState<"24h" | "7d" | "30d" | "90d">("7d");
-  const heat = useMemo(() => generateHeatmap(), []);
+  const { t } = useTranslation("app");
+  const tz = useMemo(() => getTz(), []);
+  const heat = useHeatmap(7, tz);
+  const cells = useMemo(() => reshapeHeatmap(heat.data), [heat.data]);
+  const hasData = cells.some((v) => v > 0);
+
   return (
     <div className="eop-card col-8">
       <div className="card-head">
         <div>
-          <div className="card-title">Activity heatmap</div>
-          <div className="card-sub">7 days · 168 hours · {range}</div>
-        </div>
-        <div className="card-tabs">
-          {(["24h", "7d", "30d", "90d"] as const).map((r) => (
-            // eslint-disable-next-line no-restricted-syntax -- tab control inside card
-            <button
-              key={r}
-              type="button"
-              className={range === r ? "on" : ""}
-              onClick={() => setRange(r)}
-            >
-              {r}
-            </button>
-          ))}
+          <div className="card-title">{t("dashboard.heatmap_title") || "Activity heatmap"}</div>
+          <div className="card-sub">{t("dashboard.heatmap_sub") || "7 days · 168 hours"}</div>
         </div>
       </div>
       <div className="eop-heatmap">
@@ -178,12 +205,12 @@ export function HeatmapCard() {
           ))}
         </div>
         <div className="heatmap-grid">
-          {heat.map((v, i) => (
+          {cells.map((v, i) => (
             <span
               key={i}
               style={{
                 background:
-                  v < 0.05 ? "rgba(255,255,255,0.03)" : `hsl(13 100% 55% / ${0.12 + v * 0.7})`,
+                  v < 0.02 ? "rgba(255,255,255,0.03)" : `hsl(13 100% 55% / ${0.12 + v * 0.7})`,
                 boxShadow: v > 0.75 ? "0 0 6px hsl(13 100% 55% / 0.45)" : "none",
               }}
               title={`${Math.round(v * 60)}min`}
@@ -196,13 +223,27 @@ export function HeatmapCard() {
           <span key={h}>{h}</span>
         ))}
       </div>
+      {!hasData && !heat.isPending && (
+        <div className="text-[12px] text-muted-foreground mt-2 font-mono">
+          {t("dashboard.no_data_yet") || "No events yet — heatmap will fill as you code."}
+        </div>
+      )}
     </div>
   );
 }
 
 /* ============ Gauge (Dependency score) ============ */
+// Dependency score = AI usage proportion за 30 дней, derived от useSummary(30).
 export function GaugeCard() {
-  const value = 64;
+  const { t } = useTranslation("app");
+  const summary = useSummary(30);
+  const ms = summary.data ?? {};
+  const aiMs = Object.entries(ms)
+    .filter(([k]) => k === "ai" || k.startsWith("ai_"))
+    .reduce((acc, [, v]) => acc + v, 0);
+  const total = aiMs + (ms["manual"] ?? ms["typed"] ?? 0);
+  const value = total > 0 ? Math.round((aiMs / total) * 100) : 0;
+
   const r = 60;
   const cx = 80;
   const cy = 80;
@@ -215,8 +256,8 @@ export function GaugeCard() {
     <div className="eop-card col-4">
       <div className="card-head">
         <div>
-          <div className="card-title">Dependency score</div>
-          <div className="card-sub">trend · last 30 days</div>
+          <div className="card-title">{t("dashboard.gauge_title") || "Dependency score"}</div>
+          <div className="card-sub">{t("dashboard.gauge_sub") || "AI share · last 30 days"}</div>
         </div>
       </div>
       <div className="gauge">
@@ -251,21 +292,22 @@ export function GaugeCard() {
               /100
             </span>
           </div>
-          <div className="gauge-unit">DEPENDENCY SCORE</div>
+          <div className="gauge-unit">{t("dashboard.gauge_unit") || "DEPENDENCY SCORE"}</div>
         </div>
       </div>
       <div
         className="text-[12px] mt-3"
         style={{ color: "hsl(var(--muted-foreground))", lineHeight: 1.55 }}
       >
-        Up <span style={{ color: "hsl(var(--accent))" }}>+6 points</span> this month. Driven by
-        increased Copilot acceptance in TypeScript.
+        {t("dashboard.gauge_lead") || "Share of code time assisted by AI providers."}
       </div>
     </div>
   );
 }
 
 /* ============ Timeline (segmented activity) ============ */
+// Today's timeline — пока mock (нужен event-stream group'нутый по часам).
+// TODO(GA): добавить /v1/timeline endpoint и derived. Текущий — placeholder.
 const TL_LEGEND = [
   { kind: "typed", label: "typed", color: "#4ade80" },
   { kind: "inline", label: "ai-inline", color: "hsl(var(--accent))" },
@@ -276,13 +318,14 @@ const TL_LEGEND = [
 ];
 
 export function TimelineCard() {
+  const { t } = useTranslation("app");
   const timeline = [
     { kind: "idle", w: 8, label: "00:00 → 09:12 · idle" },
     { kind: "typed", w: 14, label: "09:12 → 11:08 · Rust manual" },
     { kind: "reading", w: 4, label: "11:08 → 11:43 · review" },
     { kind: "inline", w: 16, label: "11:43 → 13:24 · TS + Copilot" },
     { kind: "idle", w: 5, label: "13:24 → 13:55 · break" },
-    { kind: "agent", w: 6, label: "13:55 → 14:32 · Claude Code agent" },
+    { kind: "agent", w: 6, label: "13:55 → 14:32 · agent" },
     { kind: "paste", w: 4, label: "14:32 → 15:00 · chat" },
     { kind: "typed", w: 8, label: "15:00 → 16:14 · TS manual" },
     { kind: "inline", w: 5, label: "16:14 → 17:02 · Cursor tab" },
@@ -292,8 +335,10 @@ export function TimelineCard() {
     <div className="eop-card col-12">
       <div className="card-head">
         <div>
-          <div className="card-title">Today's timeline</div>
-          <div className="card-sub">May 11 · 24-hour breakdown · hover for detail</div>
+          <div className="card-title">{t("dashboard.timeline_title") || "Today's timeline"}</div>
+          <div className="card-sub">
+            {t("dashboard.timeline_sub") || "24-hour breakdown · hover for detail"}
+          </div>
         </div>
         <div
           className="hidden md:flex gap-3.5 text-[11px]"
@@ -319,7 +364,7 @@ export function TimelineCard() {
           }}
         >
           <span>00:00</span>
-          <span>12:00 — now</span>
+          <span>{t("dashboard.timeline_now") || "12:00 — now"}</span>
           <span>24:00</span>
         </div>
         <div className="timeline">
@@ -338,15 +383,36 @@ export function TimelineCard() {
 }
 
 /* ============ Donut + legend (Code provenance) ============ */
-const PROVENANCE = [
-  { value: 38, color: "hsl(var(--accent))", label: "AI-inline", lines: "9,388 lines" },
-  { value: 24, color: "#60a5fa", label: "Pasted-AI", lines: "5,932 lines" },
-  { value: 22, color: "#4ade80", label: "Typed", lines: "5,438 lines" },
-  { value: 10, color: "#c084fc", label: "AI-agent", lines: "2,472 lines" },
-  { value: 6, color: "rgba(255,255,255,0.18)", label: "Unknown", lines: "1,483 lines" },
+// Real data: useSummary(7) → Record<category, ms>. Маппим в 5 buckets.
+const PROVENANCE_KEYS = [
+  { key: "ai_inline", label: "AI-inline", color: "hsl(var(--accent))" },
+  { key: "paste_ai", label: "Pasted-AI", color: "#60a5fa" },
+  { key: "manual", label: "Typed", color: "#4ade80" },
+  { key: "ai_agent", label: "AI-agent", color: "#c084fc" },
+  { key: "unknown", label: "Unknown", color: "rgba(255,255,255,0.18)" },
 ];
 
 export function ProvenanceDonut() {
+  const { t } = useTranslation("app");
+  const summary = useSummary(7);
+  const ms = summary.data ?? {};
+
+  // Map backend categories → 5 buckets. Fallback "manual"/"typed" → Typed.
+  const data = PROVENANCE_KEYS.map((b) => ({
+    ...b,
+    ms: ms[b.key] ?? (b.key === "manual" ? (ms["typed"] ?? 0) : 0),
+  }));
+  // Aggregate "ai_*" if separate buckets отсутствуют а есть общий "ai".
+  if (data[0].ms === 0 && ms["ai"]) {
+    data[0].ms = ms["ai"];
+  }
+  const total = data.reduce((acc, d) => acc + d.ms, 0);
+  const pcts = data.map((d) => ({
+    ...d,
+    pct: total > 0 ? Math.round((d.ms / total) * 100) : 0,
+  }));
+  const aiTotal = pcts.filter((d) => d.key.startsWith("ai_")).reduce((acc, d) => acc + d.pct, 0);
+
   const r = 60;
   const c = 2 * Math.PI * r;
   let offset = 0;
@@ -354,8 +420,10 @@ export function ProvenanceDonut() {
     <div className="eop-card col-5">
       <div className="card-head">
         <div>
-          <div className="card-title">Code provenance</div>
-          <div className="card-sub">24,713 lines · this week</div>
+          <div className="card-title">{t("dashboard.donut_title") || "Code provenance"}</div>
+          <div className="card-sub">
+            {t("dashboard.donut_sub", { days: 7 }) || "lines · last 7 days"}
+          </div>
         </div>
       </div>
       <div className="donut-row">
@@ -369,8 +437,8 @@ export function ProvenanceDonut() {
               stroke="rgba(255,255,255,0.04)"
               strokeWidth="14"
             />
-            {PROVENANCE.map((s, i) => {
-              const dash = (s.value / 100) * c;
+            {pcts.map((s, i) => {
+              const dash = (s.pct / 100) * c;
               const seg = (
                 <circle
                   key={i}
@@ -391,18 +459,18 @@ export function ProvenanceDonut() {
           </svg>
           <div className="donut-center">
             <div>
-              <div className="big">62%</div>
-              <div className="lil">AI total</div>
+              <div className="big">{aiTotal}%</div>
+              <div className="lil">{t("dashboard.donut_center") || "AI total"}</div>
             </div>
           </div>
         </div>
         <div className="legend-row">
-          {PROVENANCE.map((p) => (
+          {pcts.map((p) => (
             <div key={p.label} className="item">
               <span className="sw" style={{ background: p.color }} />
               <span>{p.label}</span>
-              <span className="pct">{p.value}%</span>
-              <span className="lines">{p.lines}</span>
+              <span className="pct">{p.pct}%</span>
+              <span className="lines">{Math.round(p.ms / 1000)}s</span>
             </div>
           ))}
         </div>
@@ -412,6 +480,8 @@ export function ProvenanceDonut() {
 }
 
 /* ============ Providers list ============ */
+// TODO(GA): backend нужно расширить /v1/summary/categories на разбивку по
+// ai_provider. Сейчас mock.
 const PROVIDERS = [
   { name: "Anthropic", channel: "Claude Code · agent", mins: 142, pct: 38 },
   { name: "GitHub Copilot", channel: "VS Code · inline", mins: 88, pct: 24 },
@@ -422,12 +492,15 @@ const PROVIDERS = [
 ];
 
 export function ProvidersList() {
+  const { t } = useTranslation("app");
   return (
     <div className="eop-card col-7">
       <div className="card-head">
         <div>
-          <div className="card-title">Top AI providers</div>
-          <div className="card-sub">by active minutes · 7 days</div>
+          <div className="card-title">{t("dashboard.providers_title") || "Top AI providers"}</div>
+          <div className="card-sub">
+            {t("dashboard.providers_sub") || "by active minutes · 7 days"}
+          </div>
         </div>
       </div>
       <div className="prov-list">
@@ -460,22 +533,46 @@ export function ProvidersList() {
 }
 
 /* ============ Trend chart (AI ratio 30d) ============ */
+// useTrend returns TrendPoint[] (date, category, chars, ms). Группируем
+// по date, считаем ai_pct = ai / total.
+function reshapeTrend(
+  points: TrendPoint[] | undefined,
+): { date: string; ai: number; manual: number }[] {
+  if (!points || points.length === 0) return [];
+  const byDate = new Map<string, { ai: number; manual: number }>();
+  for (const p of points) {
+    const entry = byDate.get(p.date) ?? { ai: 0, manual: 0 };
+    if (p.category === "ai" || p.category.startsWith("ai_")) entry.ai += p.ms;
+    else if (p.category === "manual" || p.category === "typed") entry.manual += p.ms;
+    byDate.set(p.date, entry);
+  }
+  return Array.from(byDate.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, e]) => {
+      const total = e.ai + e.manual;
+      return {
+        date,
+        ai: total > 0 ? (e.ai / total) * 100 : 0,
+        manual: total > 0 ? (e.manual / total) * 100 : 0,
+      };
+    });
+}
+
 export function TrendChart() {
+  const { t } = useTranslation("app");
+  const tz = useMemo(() => getTz(), []);
+  const trend = useTrend(30, tz);
+  const series = useMemo(() => reshapeTrend(trend.data), [trend.data]);
+
   const W = 720,
     H = 180;
-  const days = 30;
-  const aiSeries = useMemo(
-    () =>
-      Array.from(
-        { length: days },
-        (_, i) => 40 + Math.sin(i * 0.4) * 8 + i * 0.7 + (Math.random() - 0.5) * 5,
-      ),
-    [],
-  );
-  const manSeries = useMemo(
-    () => aiSeries.map((v) => 100 - v + (Math.random() - 0.5) * 4),
-    [aiSeries],
-  );
+  // Fallback на synthetic если данных нет.
+  const aiSeries =
+    series.length > 0
+      ? series.map((s) => s.ai)
+      : Array.from({ length: 30 }, (_, i) => 40 + Math.sin(i * 0.4) * 8 + i * 0.7);
+  const manSeries = series.length > 0 ? series.map((s) => s.manual) : aiSeries.map((v) => 100 - v);
+  const days = aiSeries.length;
   const toPath = (s: number[]) =>
     s
       .map((v, i) => {
@@ -485,12 +582,19 @@ export function TrendChart() {
       })
       .join(" ");
   const fillPath = `${toPath(aiSeries)} L ${W - 10} ${H - 24} L 30 ${H - 24} Z`;
+  const avgAi = aiSeries.reduce((acc, v) => acc + v, 0) / Math.max(1, aiSeries.length);
+  const avgMan = 100 - avgAi;
+
   return (
     <div className="eop-card col-12">
       <div className="card-head">
         <div>
-          <div className="card-title">AI ratio · 30-day trend</div>
-          <div className="card-sub">manual vs ai-assisted · rolling</div>
+          <div className="card-title">
+            {t("dashboard.trend_title") || "AI ratio · 30-day trend"}
+          </div>
+          <div className="card-sub">
+            {t("dashboard.trend_sub") || "manual vs ai-assisted · daily"}
+          </div>
         </div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-[180px]">
@@ -533,11 +637,11 @@ export function TrendChart() {
       >
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block w-3.5 h-0.5" style={{ background: "hsl(var(--accent))" }} />
-          AI-assisted · 62%
+          {t("dashboard.trend_ai") || "AI-assisted"} · {Math.round(avgAi)}%
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block w-3.5 h-0.5" style={{ background: "#4ade80" }} />
-          Manual · 38%
+          {t("dashboard.trend_manual") || "Manual"} · {Math.round(avgMan)}%
         </span>
       </div>
     </div>
@@ -545,81 +649,95 @@ export function TrendChart() {
 }
 
 /* ============ Language bars ============ */
-const LANGS_DATA = [
-  { name: "TypeScript", time: "14h 22m", ai: 78, manual: 22 },
-  { name: "Rust", time: "8h 04m", ai: 31, manual: 69 },
-  { name: "Python", time: "5h 41m", ai: 64, manual: 36 },
-  { name: "Go", time: "3h 18m", ai: 42, manual: 58 },
-  { name: "SQL", time: "1h 56m", ai: 81, manual: 19 },
-  { name: "Markdown", time: "1h 12m", ai: 22, manual: 78 },
-];
+// useLanguages returns LangCell[] (lang, category, chars, ms). Группируем
+// по lang, считаем ai_pct.
+function reshapeLanguages(
+  cells: LangCell[] | undefined,
+): { name: string; time: string; ai: number; manual: number }[] {
+  if (!cells || cells.length === 0) return [];
+  const byLang = new Map<string, { ai: number; manual: number }>();
+  for (const c of cells) {
+    const entry = byLang.get(c.lang) ?? { ai: 0, manual: 0 };
+    if (c.category === "ai" || c.category.startsWith("ai_")) entry.ai += c.ms;
+    else entry.manual += c.ms;
+    byLang.set(c.lang, entry);
+  }
+  return Array.from(byLang.entries())
+    .map(([lang, e]) => {
+      const total = e.ai + e.manual;
+      const totalMin = Math.round(total / 60000);
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      return {
+        name: lang,
+        time: h > 0 ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`,
+        ai: total > 0 ? Math.round((e.ai / total) * 100) : 0,
+        manual: total > 0 ? Math.round((e.manual / total) * 100) : 0,
+        _total: total,
+      };
+    })
+    .sort((a, b) => b._total - a._total)
+    .slice(0, 8);
+}
 
 export function LanguageBars() {
+  const { t } = useTranslation("app");
+  const lang = useLanguages(7);
+  const langs = useMemo(() => reshapeLanguages(lang.data), [lang.data]);
   return (
     <div className="eop-card col-6">
       <div className="card-head">
         <div>
-          <div className="card-title">Per-language breakdown</div>
-          <div className="card-sub">manual / ai split · 7 days</div>
+          <div className="card-title">{t("dashboard.langs_title") || "Per-language breakdown"}</div>
+          <div className="card-sub">{t("dashboard.langs_sub") || "manual / ai split · 7 days"}</div>
         </div>
       </div>
-      <div className="langs">
-        {LANGS_DATA.map((l) => (
-          <div key={l.name} className="lang-row">
-            <span className="lang-name">{l.name}</span>
-            <span className="lang-time">{l.time}</span>
-            <div className="lang-stack">
-              <i style={{ width: `${l.ai}%`, background: "hsl(var(--accent))" }} />
-              <i style={{ width: `${l.manual}%`, background: "#4ade80", opacity: 0.65 }} />
+      {langs.length === 0 ? (
+        <div className="text-[13px] text-muted-foreground py-4">
+          {t("dashboard.no_data_yet") || "No language data yet."}
+        </div>
+      ) : (
+        <div className="langs">
+          {langs.map((l) => (
+            <div key={l.name} className="lang-row">
+              <span className="lang-name">{l.name}</span>
+              <span className="lang-time">{l.time}</span>
+              <div className="lang-stack">
+                <i style={{ width: `${l.ai}%`, background: "hsl(var(--accent))" }} />
+                <i style={{ width: `${l.manual}%`, background: "#4ade80", opacity: 0.65 }} />
+              </div>
+              <span className="lang-ratio">{l.ai}% AI</span>
             </div>
-            <span className="lang-ratio">{l.ai}% AI</span>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 /* ============ Projects list ============ */
+// TODO(GA): добавить /v1/summary/projects на backend (есть commits table
+// с project_id). Сейчас mock.
 const PROJECTS_DATA = [
   {
     name: "eye-of-providence",
-    meta: "github.com/eop/agent · 142 commits",
+    meta: "github.com/eop/agent",
     hours: "18h 02m",
     color: "hsl(var(--accent))",
     ai: 55,
   },
-  { name: "parser-core", meta: "private · 47 commits", hours: "7h 41m", color: "#60a5fa", ai: 38 },
-  {
-    name: "dashboard-web",
-    meta: "github.com/eop/web · 64 commits",
-    hours: "5h 16m",
-    color: "#4ade80",
-    ai: 72,
-  },
-  {
-    name: "rust-platform-mac",
-    meta: "private · 22 commits",
-    hours: "3h 04m",
-    color: "#c084fc",
-    ai: 24,
-  },
-  {
-    name: "cli-hooks",
-    meta: "github.com/eop/hooks · 12 commits",
-    hours: "1h 33m",
-    color: "#fbbf24",
-    ai: 61,
-  },
+  { name: "parser-core", meta: "private", hours: "7h 41m", color: "#60a5fa", ai: 38 },
+  { name: "dashboard-web", meta: "github.com/eop/web", hours: "5h 16m", color: "#4ade80", ai: 72 },
 ];
 
 export function ProjectsList() {
+  const { t } = useTranslation("app");
   return (
     <div className="eop-card col-6">
       <div className="card-head">
         <div>
-          <div className="card-title">Top projects</div>
-          <div className="card-sub">by focus time · 7 days</div>
+          <div className="card-title">{t("dashboard.projects_title") || "Top projects"}</div>
+          <div className="card-sub">{t("dashboard.projects_sub") || "by focus time · 7 days"}</div>
         </div>
       </div>
       <div className="proj-list">
@@ -652,40 +770,36 @@ export function ProjectsList() {
 }
 
 /* ============ Focus sessions ============ */
+// TODO(GA): wire к /v1/sessions/focus (нет endpoint'а). Mock.
 const FOCUS = [
   {
     app: "VS Code · parser-core",
-    detail: "11:43 → 13:24 · TypeScript · 78% AI-assist",
+    detail: "TypeScript · 78% AI-assist",
     dur: "1h 41m",
     color: "hsl(var(--accent))",
   },
   {
     app: "Cursor · eye-of-providence",
-    detail: "09:12 → 11:08 · Rust · 22% AI-assist",
+    detail: "Rust · 22% AI-assist",
     dur: "1h 56m",
     color: "#4ade80",
   },
   {
     app: "iTerm2 · claude code",
-    detail: "14:00 → 14:32 · agent run · 41 file edits",
+    detail: "agent run · 41 file edits",
     dur: "32m",
     color: "#c084fc",
-  },
-  {
-    app: "Chrome · claude.ai",
-    detail: "08:21 → 08:54 · pasted 4 hunks back",
-    dur: "33m",
-    color: "#60a5fa",
   },
 ];
 
 export function FocusSessions() {
+  const { t } = useTranslation("app");
   return (
     <div className="eop-card col-5">
       <div className="card-head">
         <div>
-          <div className="card-title">Today's focus sessions</div>
-          <div className="card-sub">uninterrupted · ≥ 15 min</div>
+          <div className="card-title">{t("dashboard.focus_title") || "Today's focus sessions"}</div>
+          <div className="card-sub">{t("dashboard.focus_sub") || "uninterrupted · ≥ 15 min"}</div>
         </div>
       </div>
       <div className="focus-list">
@@ -705,66 +819,45 @@ export function FocusSessions() {
 }
 
 /* ============ Attribution log ============ */
-const ATTR = [
-  {
-    ts: "14:14:02",
-    tag: "ai-inline",
-    file: "src/lib/parser.test.ts",
-    lines: "+6 / −0",
-    src: "Cursor tab",
-  },
-  {
-    ts: "14:11:46",
-    tag: "typed",
-    file: "src/lib/parser.test.ts",
-    lines: "+27 / −2",
-    src: "keystroke stream",
-  },
-  { ts: "14:09:12", tag: "refactor", file: "src/lib/parser.ts", lines: "~8", src: "rename symbol" },
-  {
-    ts: "14:07:30",
-    tag: "ai-agent",
-    file: "src/lib/index.ts",
-    lines: "+41 / −12",
-    src: "Claude Code · PostToolUse",
-  },
-  {
-    ts: "14:04:51",
-    tag: "paste-ai",
-    file: "src/lib/parser.ts",
-    lines: "+22 / −0",
-    src: "clipboard ← claude.ai",
-  },
-  {
-    ts: "14:03:04",
-    tag: "ai-inline",
-    file: "src/lib/parser.ts",
-    lines: "+3 / −0",
-    src: "Copilot inline accept",
-  },
-  {
-    ts: "14:02:17",
-    tag: "typed",
-    file: "src/lib/parser.ts",
-    lines: "+14 / −5",
-    src: "keystroke range",
-  },
-  {
-    ts: "13:58:33",
-    tag: "refactor",
-    file: "src/util/format.ts",
-    lines: "+2",
-    src: "no matching signal",
-  },
-];
+// useRecent — live event stream. Refetch interval 10s для near-live.
+function categoryToTag(c: string): string {
+  if (c === "manual" || c === "typed") return "typed";
+  if (c === "ai_inline" || c === "ai_assist") return "ai-inline";
+  if (c === "ai_agent") return "ai-agent";
+  if (c === "paste_ai") return "paste-ai";
+  if (c.startsWith("refactor")) return "refactor";
+  return "ai-inline";
+}
+
+function formatLogRow(r: EventRow): {
+  ts: string;
+  tag: string;
+  file: string;
+  lines: string;
+  src: string;
+} {
+  const dt = new Date(r.ts);
+  const ts = dt.toLocaleTimeString("en", { hour12: false });
+  return {
+    ts,
+    tag: categoryToTag(r.category),
+    file: r.app_bundle,
+    lines: r.chars_in > 0 ? `+${r.chars_in}` : "—",
+    src: r.ai_provider ? `${r.ai_provider} · ${r.ai_channel ?? r.source}` : r.source,
+  };
+}
 
 export function AttributionLog() {
+  const { t } = useTranslation("app");
+  const recent = useRecent(20);
+  const rows = useMemo(() => (recent.data ?? []).map(formatLogRow), [recent.data]);
+
   return (
     <div className="eop-card col-7">
       <div className="card-head">
         <div>
-          <div className="card-title">Attribution log</div>
-          <div className="card-sub">live · tail -f · last 8 events</div>
+          <div className="card-title">{t("dashboard.log_title") || "Attribution log"}</div>
+          <div className="card-sub">{t("dashboard.log_sub") || "live · last 20 events"}</div>
         </div>
         <span
           className="inline-flex items-center gap-1.5 font-mono text-[11px]"
@@ -789,26 +882,24 @@ export function AttributionLog() {
           <span>Δ</span>
           <span />
         </div>
-        {ATTR.map((r, i) => (
-          <div key={i} className="log-row">
-            <span className="log-time">{r.ts}</span>
-            <span className={`tag ${r.tag}`}>{r.tag}</span>
-            <span className="log-file truncate">
-              {r.file} <span className="path">· {r.src}</span>
-            </span>
-            <span className="log-lines">{r.lines}</span>
-            <span />
+        {rows.length === 0 ? (
+          <div className="text-[12px] text-muted-foreground py-3">
+            {t("dashboard.no_data_yet") || "No events yet."}
           </div>
-        ))}
+        ) : (
+          rows.map((r, i) => (
+            <div key={i} className="log-row">
+              <span className="log-time">{r.ts}</span>
+              <span className={`tag ${r.tag}`}>{r.tag}</span>
+              <span className="log-file truncate">
+                {r.file} <span className="path">· {r.src}</span>
+              </span>
+              <span className="log-lines">{r.lines}</span>
+              <span />
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
 }
-
-/* ============ unused use* import dropper ============ */
-// Cleanup: useEffect/useRef/useQuery импортированы для будущего API-wiring,
-// сейчас не задействованы (TODO: wire data).
-void useEffect;
-void useRef;
-void useQuery;
-void useTranslation;

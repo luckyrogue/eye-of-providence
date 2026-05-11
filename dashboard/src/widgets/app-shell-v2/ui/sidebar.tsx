@@ -30,10 +30,14 @@ export function Sidebar({
   user,
   isSuperAdmin,
   open,
+  onNavigate,
 }: {
   user: { name: string; handle: string; avatarLabel: string };
   isSuperAdmin: boolean;
   open?: boolean;
+  // onNavigate — закрываем mobile drawer после клика на nav-item, иначе
+  // юзер должен сам закрыть drawer вручную. На desktop no-op.
+  onNavigate?: () => void;
 }) {
   const { t } = useTranslation("common");
   const workspace: NavItem[] = [
@@ -101,6 +105,7 @@ export function Sidebar({
             key={it.to + it.label}
             to={it.to}
             end={it.to === "/dashboard"}
+            onClick={onNavigate}
             className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
           >
             <it.icon className="nav-icon" />
@@ -116,6 +121,7 @@ export function Sidebar({
           <NavLink
             key={it.to + it.label}
             to={it.to}
+            onClick={onNavigate}
             className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
           >
             <it.icon className="nav-icon" />
@@ -124,7 +130,11 @@ export function Sidebar({
           </NavLink>
         ))}
         {isSuperAdmin && (
-          <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}>
+          <NavLink
+            to="/admin"
+            onClick={onNavigate}
+            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+          >
             <Shield className="nav-icon" />
             <span>{t("nav.admin")}</span>
           </NavLink>

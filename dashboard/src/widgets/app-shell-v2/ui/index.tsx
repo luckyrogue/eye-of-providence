@@ -28,7 +28,19 @@ export function AppShellV2() {
         }}
         isSuperAdmin={me.data?.global_role === "super_admin"}
         open={sidebarOpen}
+        onNavigate={() => setSidebarOpen(false)}
       />
+      {/* Backdrop overlay для mobile drawer — click outside закрывает sidebar.
+          Скрыт на md+ где sidebar — sticky column а не off-canvas. */}
+      {sidebarOpen && (
+        // eslint-disable-next-line no-restricted-syntax -- backdrop overlay; IconButton не подходит (full-screen click target)
+        <button
+          type="button"
+          aria-label="Close menu"
+          onClick={() => setSidebarOpen(false)}
+          className="md:hidden fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm"
+        />
+      )}
       <main className="flex flex-col min-w-0">
         <Topbar
           crumb={{ section, now: "" }}
