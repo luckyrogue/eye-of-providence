@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../../../entities/session";
 import { useMe } from "../../../entities/user";
 import { useAuthRedirect } from "../../app-layout/lib/use-auth-redirect";
@@ -10,23 +11,18 @@ import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 
 export function AppShellV2() {
+  const { t } = useTranslation("common");
   const { isAuthed, logout } = useAuth();
   const me = useMe();
-  // 401 / no-token → редирект на /login с сохранением destination. Без
-  // этого guard'а старый dashboard-ui logout test падает (после
-  // localStorage.clear() юзер должен попасть на /login, а не остаться
-  // в shell без данных).
   useAuthRedirect();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const section = sectionLabel(location.pathname);
+  const section = sectionLabel(location.pathname, t);
 
-  // Гарантируем что mount без auth НЕ рендерит content (useAuthRedirect
-  // делает navigate, но рендер происходит до effect'а — без guard'а
-  // dashboard вспыхивает empty layout перед redirect'ом).
   if (!isAuthed) return null;
 
-  const userName = me.data?.display_name || me.data?.email?.split("@")[0] || "User";
+  const userName =
+    me.data?.display_name || me.data?.email?.split("@")[0] || t("topbar.user_default");
   const avatarLabel = userName.slice(0, 2).toUpperCase();
 
   return (
@@ -47,7 +43,7 @@ export function AppShellV2() {
         // eslint-disable-next-line no-restricted-syntax -- backdrop overlay; IconButton не подходит (full-screen click target)
         <button
           type="button"
-          aria-label="Close menu"
+          aria-label={t("topbar.menu_toggle")}
           onClick={() => setSidebarOpen(false)}
           className="md:hidden fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm"
         />
@@ -69,10 +65,10 @@ export function AppShellV2() {
   );
 }
 
-function sectionLabel(path: string): string {
-  if (path.startsWith("/dashboard")) return "Workspace";
-  if (path.startsWith("/team")) return "Workspace";
-  if (path.startsWith("/settings")) return "Settings";
-  if (path.startsWith("/admin")) return "Admin";
-  return "Workspace";
+function sectionLabel(path: string, t: (k: string) => string): string {
+  if (path.startsWith("/dashboard") || path.startsWith("/team"))
+    return t("topbar.section_workspace");
+  if (path.startsWith("/settings")) return t("topbar.section_settings");
+  if (path.startsWith("/admin")) return t("topbar.section_admin");
+  return t("topbar.section_workspace");
 }

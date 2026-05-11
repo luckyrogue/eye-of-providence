@@ -8,7 +8,35 @@
     "team": "Команда",
     "settings": "Баптаулар",
     "admin": "Admin",
+    "projects": "Жобалар",
+    "reports": "Есептер",
     "bottom": "Төменгі навигация"
+  },
+  "sidebar": {
+    "workspace": "Жұмыс кеңістігі",
+    "insights": "Инсайттер",
+    "integrations": "Интеграциялар",
+    "code_provenance": "Кодтың шығу тегі",
+    "languages": "Тілдер",
+    "tracking_active": "Бақылау белсенді",
+    "local_first": "Local-first · 0 күтуде",
+    "version_label": "v0.4 · бета"
+  },
+  "topbar": {
+    "search": "Іздеу",
+    "tracking": "Белсенді",
+    "paused": "Кідіртілді",
+    "pause_title": "Бақылауды кідірту",
+    "resume_title": "Бақылауды жалғастыру",
+    "menu_toggle": "Мәзір",
+    "notifications": "Хабарландырулар",
+    "section_workspace": "Workspace",
+    "section_settings": "Баптаулар",
+    "section_admin": "Admin",
+    "user_default": "Пайдаланушы",
+    "tracking_active_title": "Бақылау белсенді",
+    "badge_new": "жаңа",
+    "badge_live": "live"
   },
   "actions": {
     "save": "Сақтау",

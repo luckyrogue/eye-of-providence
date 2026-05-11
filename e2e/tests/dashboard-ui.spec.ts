@@ -35,9 +35,15 @@ test.describe("dashboard ui", () => {
     expect(page.url()).toMatch(/settings|login|^http/);
   });
 
-  test("logout via clearing localStorage redirects to login/landing", async ({ page }) => {
+  test("logout via clearing localStorage redirects to login/landing", async ({ page, context }) => {
     await page.goto("/dashboard");
-    await page.evaluate(() => {
+    // createSession (fixtures/index.ts → helpers/auth.ts) использует
+    // context.addInitScript, который перенакатывается ПРИ КАЖДОЙ навигации.
+    // Поэтому page.evaluate(removeItem) перед page.goto бессмысленен:
+    // следующий navigate инжектит token обратно. Добавляем override init
+    // script — выполняется ПОСЛЕ оригинала, чистит localStorage уже после
+    // того как fixture его проставил.
+    await context.addInitScript(() => {
       localStorage.removeItem("eop_token");
       localStorage.removeItem("eop_user_id");
     });

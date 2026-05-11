@@ -8,7 +8,35 @@
     "team": "Equipo",
     "settings": "Configuración",
     "admin": "Admin",
+    "projects": "Proyectos",
+    "reports": "Informes",
     "bottom": "Navegación inferior"
+  },
+  "sidebar": {
+    "workspace": "Espacio de trabajo",
+    "insights": "Insights",
+    "integrations": "Integraciones",
+    "code_provenance": "Origen del código",
+    "languages": "Lenguajes",
+    "tracking_active": "Seguimiento activo",
+    "local_first": "Local-first · 0 en cola",
+    "version_label": "v0.4 · beta"
+  },
+  "topbar": {
+    "search": "Buscar",
+    "tracking": "Activo",
+    "paused": "En pausa",
+    "pause_title": "Pausar seguimiento",
+    "resume_title": "Reanudar seguimiento",
+    "menu_toggle": "Menú",
+    "notifications": "Notificaciones",
+    "section_workspace": "Workspace",
+    "section_settings": "Configuración",
+    "section_admin": "Admin",
+    "user_default": "Usuario",
+    "tracking_active_title": "Seguimiento activo",
+    "badge_new": "nuevo",
+    "badge_live": "live"
   },
   "actions": {
     "save": "Guardar",

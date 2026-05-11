@@ -39,25 +39,38 @@ export function Sidebar({
   // юзер должен сам закрыть drawer вручную. На desktop no-op.
   onNavigate?: () => void;
 }) {
-  const { t } = useTranslation("common");
+  const { t } = useTranslation(["common", "app"]);
   const workspace: NavItem[] = [
     { to: "/dashboard", label: t("nav.dashboard"), icon: Home },
-    { to: "/dashboard?tab=activity", label: t("dashboard.stat_active"), icon: Activity },
-    { to: "/dashboard?tab=ai", label: t("dashboard.stat_ai_share"), icon: Brain, badge: "live" },
-    { to: "/dashboard?tab=provenance", label: "Code provenance", icon: Code2 },
-    { to: "/dashboard?tab=projects", label: t("nav.projects") || "Projects", icon: FolderOpen },
-    { to: "/dashboard?tab=languages", label: "Languages", icon: Languages },
+    {
+      to: "/dashboard?tab=activity",
+      label: t("app:dashboard.stat_active"),
+      icon: Activity,
+    },
+    {
+      to: "/dashboard?tab=ai",
+      label: t("app:dashboard.stat_ai_share"),
+      icon: Brain,
+      badge: t("topbar.badge_live"),
+    },
+    {
+      to: "/dashboard?tab=provenance",
+      label: t("sidebar.code_provenance"),
+      icon: Code2,
+    },
+    { to: "/dashboard?tab=projects", label: t("nav.projects"), icon: FolderOpen },
+    { to: "/dashboard?tab=languages", label: t("sidebar.languages"), icon: Languages },
   ];
   const insights: NavItem[] = [
     {
       to: "/dashboard?tab=reports",
-      label: t("nav.reports") || "Reports",
+      label: t("nav.reports"),
       icon: FileText,
-      badge: "new",
+      badge: t("topbar.badge_new"),
       badgeKind: "new",
     },
     { to: "/team", label: t("nav.team"), icon: Users },
-    { to: "/settings?tab=devices", label: "Integrations", icon: Plug },
+    { to: "/settings?tab=devices", label: t("sidebar.integrations"), icon: Plug },
     { to: "/settings", label: t("nav.settings"), icon: SettingsIcon },
   ];
 
@@ -85,7 +98,7 @@ export function Sidebar({
         </span>
         <div className="brand-name">
           Eye of Providence
-          <small>v0.4 · beta</small>
+          <small>{t("sidebar.version_label")}</small>
         </div>
       </div>
 
@@ -95,11 +108,11 @@ export function Sidebar({
           <div className="user-name truncate">{user.name}</div>
           <div className="user-meta truncate">{user.handle}</div>
         </div>
-        <span className="user-live" title="Tracking active" />
+        <span className="user-live" title={t("sidebar.tracking_active")} />
       </div>
 
       <div className="nav-group">
-        <h6>Workspace</h6>
+        <h6>{t("sidebar.workspace")}</h6>
         {workspace.map((it) => (
           <NavLink
             key={it.to + it.label}
@@ -116,7 +129,7 @@ export function Sidebar({
       </div>
 
       <div className="nav-group">
-        <h6>Insights</h6>
+        <h6>{t("sidebar.insights")}</h6>
         {insights.map((it) => (
           <NavLink
             key={it.to + it.label}
@@ -144,7 +157,7 @@ export function Sidebar({
       <div className="sidebar-footer">
         <div className="privacy-pill">
           <Shield style={{ width: 14, height: 14 }} />
-          <span>Local-first · 0 sync pending</span>
+          <span>{t("sidebar.local_first")}</span>
         </div>
       </div>
     </aside>

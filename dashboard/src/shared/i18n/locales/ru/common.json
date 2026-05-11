@@ -8,7 +8,35 @@
     "team": "Команда",
     "settings": "Настройки",
     "admin": "Admin",
+    "projects": "Проекты",
+    "reports": "Отчёты",
     "bottom": "Нижняя навигация"
+  },
+  "sidebar": {
+    "workspace": "Рабочее пространство",
+    "insights": "Инсайты",
+    "integrations": "Интеграции",
+    "code_provenance": "Источник кода",
+    "languages": "Языки",
+    "tracking_active": "Отслеживание активно",
+    "local_first": "Local-first · 0 в очереди",
+    "version_label": "v0.4 · бета"
+  },
+  "topbar": {
+    "search": "Поиск",
+    "tracking": "Активно",
+    "paused": "На паузе",
+    "pause_title": "Поставить на паузу",
+    "resume_title": "Возобновить отслеживание",
+    "menu_toggle": "Меню",
+    "notifications": "Уведомления",
+    "section_workspace": "Workspace",
+    "section_settings": "Настройки",
+    "section_admin": "Admin",
+    "user_default": "Пользователь",
+    "tracking_active_title": "Отслеживание активно",
+    "badge_new": "новое",
+    "badge_live": "live"
   },
   "actions": {
     "save": "Сохранить",

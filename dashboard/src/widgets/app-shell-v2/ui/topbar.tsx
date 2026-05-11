@@ -28,7 +28,7 @@ export function Topbar({
         onClick={onMenuClick}
         className="md:hidden grid place-items-center w-9 h-9 rounded-lg border"
         style={{ borderColor: "hsl(var(--border))" }}
-        aria-label="Toggle menu"
+        aria-label={t("topbar.menu_toggle")}
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -41,7 +41,7 @@ export function Topbar({
 
       <div className="search-bar">
         <Search className="h-4 w-4" />
-        <span>{t("actions.search") || "Search"}…</span>
+        <span>{t("topbar.search")}…</span>
         <span className="kbd">⌘ K</span>
       </div>
 
@@ -65,7 +65,7 @@ export function Topbar({
         {/* eslint-disable-next-line no-restricted-syntax -- icon-only notif button */}
         <button
           type="button"
-          aria-label="Notifications"
+          aria-label={t("topbar.notifications")}
           className="relative w-9 h-9 grid place-items-center rounded-lg border transition-colors hover:bg-foreground/5"
           style={{ borderColor: "hsl(var(--border))" }}
         >
@@ -77,11 +77,11 @@ export function Topbar({
           type="button"
           className="pause-btn hidden md:inline-flex"
           onClick={() => setPaused((p) => !p)}
-          title={paused ? "Resume tracking" : "Pause tracking"}
+          title={paused ? t("topbar.resume_title") : t("topbar.pause_title")}
         >
           {paused ? null : <span className="dot" />}
           <Pause className="h-3.5 w-3.5" />
-          {paused ? "Paused" : "Tracking"}
+          {paused ? t("topbar.paused") : t("topbar.tracking")}
         </button>
 
         {/* eslint-disable-next-line no-restricted-syntax -- inline text-only link-style action */}

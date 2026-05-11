@@ -21,9 +21,10 @@ import {
 } from "../../widgets/dashboard-v2/ui/widgets";
 
 export function DashboardRoute() {
-  const { t } = useTranslation("app");
+  const { t, i18n } = useTranslation("app");
   const today = new Date();
   const generate = useGenerateReport();
+  const localeTag = i18nToBcp47(i18n.language);
 
   const handleGenerate = () => {
     generate.mutate("weekly", {
@@ -39,10 +40,14 @@ export function DashboardRoute() {
     <>
       <div className="page-head">
         <div>
-          <h1>Overview</h1>
+          <h1>{t("dashboard.overview")}</h1>
           <div className="sub font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
-            {today.toLocaleDateString("en", { month: "short", day: "numeric", weekday: "short" })} ·{" "}
-            {today.toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" })}
+            {today.toLocaleDateString(localeTag, {
+              month: "short",
+              day: "numeric",
+              weekday: "short",
+            })}{" "}
+            · {today.toLocaleTimeString(localeTag, { hour: "2-digit", minute: "2-digit" })}
           </div>
         </div>
         <div className="page-head-actions flex gap-2">
@@ -95,4 +100,21 @@ export function DashboardRoute() {
       </div>
     </>
   );
+}
+
+// i18nToBcp47 — наш storage хранит "ru"/"en"/"kk"/"es", но Intl нужны BCP-47
+// теги ("ru-RU", "en-US", "kk-KZ", "es-ES"). Маппим в наиболее ходовой регион.
+function i18nToBcp47(lng: string): string {
+  const base = lng.split("-")[0];
+  switch (base) {
+    case "ru":
+      return "ru-RU";
+    case "kk":
+      return "kk-KZ";
+    case "es":
+      return "es-ES";
+    case "en":
+    default:
+      return "en-US";
+  }
 }

@@ -82,37 +82,37 @@ export function KpiGrid() {
   return (
     <div className="kpi-grid">
       <KpiTile
-        label={t("dashboard.kpi_active") || "Active coding time"}
+        label={t("dashboard.kpi_active")}
         value={activeFmt.value}
         unit={activeFmt.unit}
         delta={{
           kind: totalDelta >= 0 ? "up" : "down",
-          text: `${totalDelta >= 0 ? "+" : "−"}${totalDeltaFmt.value}${totalDeltaFmt.unit} ${t("dashboard.kpi_vs_prior") || "vs prior 7d"}`,
+          text: `${totalDelta >= 0 ? "+" : "−"}${totalDeltaFmt.value}${totalDeltaFmt.unit} ${t("dashboard.kpi_vs_prior")}`,
         }}
         spark={<MiniSpark color={accent} points={spark(15)} />}
       />
       <KpiTile
-        label={t("dashboard.kpi_ai_ratio") || "AI-assist ratio"}
+        label={t("dashboard.kpi_ai_ratio")}
         value={String(aiPct)}
         unit="%"
         delta={{
           kind: aiPctDelta >= 0 ? "up" : "down",
-          text: `${aiPctDelta >= 0 ? "+" : "−"}${Math.abs(aiPctDelta)}pp ${t("dashboard.kpi_vs_prior") || "vs prior 7d"}`,
+          text: `${aiPctDelta >= 0 ? "+" : "−"}${Math.abs(aiPctDelta)}pp ${t("dashboard.kpi_vs_prior")}`,
         }}
         spark={<MiniSpark color={accent} points={spark(10, 8)} />}
       />
       <KpiTile
-        label={t("dashboard.kpi_manual") || "Manual coding"}
+        label={t("dashboard.kpi_manual")}
         value={manualFmt.value}
         unit={manualFmt.unit}
-        delta={{ kind: "flat", text: t("dashboard.kpi_stable") || "~ stable" }}
+        delta={{ kind: "flat", text: t("dashboard.kpi_stable") }}
         spark={<MiniSpark color={success} points={spark(12).map((v) => 100 - v)} />}
       />
       <KpiTile
-        label={t("dashboard.kpi_focus") || "Focus sessions"}
+        label={t("dashboard.kpi_focus")}
         value="—"
-        unit={t("dashboard.kpi_soon") || "soon"}
-        delta={{ kind: "flat", text: t("dashboard.kpi_no_data") || "no data yet" }}
+        unit={t("dashboard.kpi_soon")}
+        delta={{ kind: "flat", text: t("dashboard.kpi_no_data") }}
         spark={<MiniSpark color="#c084fc" points={spark(8, -5)} />}
       />
     </div>
@@ -157,13 +157,8 @@ export function RecapCard() {
   const { t } = useTranslation("app");
   return (
     <div className="eop-recap">
-      <div className="recap-tag">
-        {t("dashboard.recap_tag") || "Weekly insight · Gemini · generated 2h ago"}
-      </div>
-      <div className="recap-text">
-        {t("dashboard.recap_placeholder") ||
-          "Recap will appear here once Gemini generates the first weekly narrative from your aggregates."}
-      </div>
+      <div className="recap-tag">{t("dashboard.recap_tag")}</div>
+      <div className="recap-text">{t("dashboard.recap_placeholder")}</div>
     </div>
   );
 }
@@ -194,13 +189,18 @@ export function HeatmapCard() {
     <div className="eop-card col-8">
       <div className="card-head">
         <div>
-          <div className="card-title">{t("dashboard.heatmap_title") || "Activity heatmap"}</div>
-          <div className="card-sub">{t("dashboard.heatmap_sub") || "7 days · 168 hours"}</div>
+          <div className="card-title">{t("dashboard.heatmap_title")}</div>
+          <div className="card-sub">{t("dashboard.heatmap_sub")}</div>
         </div>
       </div>
       <div className="eop-heatmap">
         <div className="heatmap-y">
-          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+          {(
+            t("dashboard.weekdays_short", {
+              returnObjects: true,
+              defaultValue: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+            }) as string[]
+          ).map((d) => (
             <span key={d}>{d}</span>
           ))}
         </div>
@@ -225,7 +225,7 @@ export function HeatmapCard() {
       </div>
       {!hasData && !heat.isPending && (
         <div className="text-[12px] text-muted-foreground mt-2 font-mono">
-          {t("dashboard.no_data_yet") || "No events yet — heatmap will fill as you code."}
+          {t("dashboard.no_data_yet")}
         </div>
       )}
     </div>
@@ -256,8 +256,8 @@ export function GaugeCard() {
     <div className="eop-card col-4">
       <div className="card-head">
         <div>
-          <div className="card-title">{t("dashboard.gauge_title") || "Dependency score"}</div>
-          <div className="card-sub">{t("dashboard.gauge_sub") || "AI share · last 30 days"}</div>
+          <div className="card-title">{t("dashboard.gauge_title")}</div>
+          <div className="card-sub">{t("dashboard.gauge_sub")}</div>
         </div>
       </div>
       <div className="gauge">
@@ -292,14 +292,14 @@ export function GaugeCard() {
               /100
             </span>
           </div>
-          <div className="gauge-unit">{t("dashboard.gauge_unit") || "DEPENDENCY SCORE"}</div>
+          <div className="gauge-unit">{t("dashboard.gauge_unit")}</div>
         </div>
       </div>
       <div
         className="text-[12px] mt-3"
         style={{ color: "hsl(var(--muted-foreground))", lineHeight: 1.55 }}
       >
-        {t("dashboard.gauge_lead") || "Share of code time assisted by AI providers."}
+        {t("dashboard.gauge_lead")}
       </div>
     </div>
   );
@@ -308,17 +308,25 @@ export function GaugeCard() {
 /* ============ Timeline (segmented activity) ============ */
 // Today's timeline — пока mock (нужен event-stream group'нутый по часам).
 // TODO(GA): добавить /v1/timeline endpoint и derived. Текущий — placeholder.
-const TL_LEGEND = [
-  { kind: "typed", label: "typed", color: "#4ade80" },
-  { kind: "inline", label: "ai-inline", color: "hsl(var(--accent))" },
-  { kind: "paste", label: "paste-ai", color: "#60a5fa" },
-  { kind: "agent", label: "agent", color: "#c084fc" },
-  { kind: "reading", label: "reading", color: "rgba(255,255,255,0.18)" },
-  { kind: "idle", label: "idle", color: "rgba(255,255,255,0.08)" },
-];
+const TL_LEGEND_COLORS: Record<string, string> = {
+  typed: "#4ade80",
+  inline: "hsl(var(--accent))",
+  paste: "#60a5fa",
+  agent: "#c084fc",
+  reading: "rgba(255,255,255,0.18)",
+  idle: "rgba(255,255,255,0.08)",
+};
 
 export function TimelineCard() {
   const { t } = useTranslation("app");
+  const tlLegend = [
+    { kind: "typed", label: t("dashboard.legend_typed") },
+    { kind: "inline", label: t("dashboard.legend_inline") },
+    { kind: "paste", label: t("dashboard.legend_paste") },
+    { kind: "agent", label: t("dashboard.legend_agent") },
+    { kind: "reading", label: t("dashboard.legend_reading") },
+    { kind: "idle", label: t("dashboard.legend_idle") },
+  ];
   const timeline = [
     { kind: "idle", w: 8, label: "00:00 → 09:12 · idle" },
     { kind: "typed", w: 14, label: "09:12 → 11:08 · Rust manual" },
@@ -335,10 +343,8 @@ export function TimelineCard() {
     <div className="eop-card col-12">
       <div className="card-head">
         <div>
-          <div className="card-title">{t("dashboard.timeline_title") || "Today's timeline"}</div>
-          <div className="card-sub">
-            {t("dashboard.timeline_sub") || "24-hour breakdown · hover for detail"}
-          </div>
+          <div className="card-title">{t("dashboard.timeline_title")}</div>
+          <div className="card-sub">{t("dashboard.timeline_sub")}</div>
         </div>
         <div
           className="hidden md:flex gap-3.5 text-[11px]"
@@ -347,9 +353,12 @@ export function TimelineCard() {
             color: "hsl(var(--muted-foreground))",
           }}
         >
-          {TL_LEGEND.map((l) => (
+          {tlLegend.map((l) => (
             <span key={l.kind} className="inline-flex items-center gap-1.5">
-              <span className="inline-block w-2 h-2 rounded-sm" style={{ background: l.color }} />
+              <span
+                className="inline-block w-2 h-2 rounded-sm"
+                style={{ background: TL_LEGEND_COLORS[l.kind] }}
+              />
               {l.label}
             </span>
           ))}
@@ -364,7 +373,7 @@ export function TimelineCard() {
           }}
         >
           <span>00:00</span>
-          <span>{t("dashboard.timeline_now") || "12:00 — now"}</span>
+          <span>{t("dashboard.timeline_now")}</span>
           <span>24:00</span>
         </div>
         <div className="timeline">
@@ -384,12 +393,12 @@ export function TimelineCard() {
 
 /* ============ Donut + legend (Code provenance) ============ */
 // Real data: useSummary(7) → Record<category, ms>. Маппим в 5 buckets.
-const PROVENANCE_KEYS = [
-  { key: "ai_inline", label: "AI-inline", color: "hsl(var(--accent))" },
-  { key: "paste_ai", label: "Pasted-AI", color: "#60a5fa" },
-  { key: "manual", label: "Typed", color: "#4ade80" },
-  { key: "ai_agent", label: "AI-agent", color: "#c084fc" },
-  { key: "unknown", label: "Unknown", color: "rgba(255,255,255,0.18)" },
+const PROVENANCE_BUCKETS = [
+  { key: "ai_inline", labelKey: "dashboard.provenance_ai_inline", color: "hsl(var(--accent))" },
+  { key: "paste_ai", labelKey: "dashboard.provenance_paste_ai", color: "#60a5fa" },
+  { key: "manual", labelKey: "dashboard.provenance_manual", color: "#4ade80" },
+  { key: "ai_agent", labelKey: "dashboard.provenance_ai_agent", color: "#c084fc" },
+  { key: "unknown", labelKey: "dashboard.provenance_unknown", color: "rgba(255,255,255,0.18)" },
 ];
 
 export function ProvenanceDonut() {
@@ -398,8 +407,9 @@ export function ProvenanceDonut() {
   const ms = summary.data ?? {};
 
   // Map backend categories → 5 buckets. Fallback "manual"/"typed" → Typed.
-  const data = PROVENANCE_KEYS.map((b) => ({
+  const data = PROVENANCE_BUCKETS.map((b) => ({
     ...b,
+    label: t(b.labelKey),
     ms: ms[b.key] ?? (b.key === "manual" ? (ms["typed"] ?? 0) : 0),
   }));
   // Aggregate "ai_*" if separate buckets отсутствуют а есть общий "ai".
@@ -420,10 +430,8 @@ export function ProvenanceDonut() {
     <div className="eop-card col-5">
       <div className="card-head">
         <div>
-          <div className="card-title">{t("dashboard.donut_title") || "Code provenance"}</div>
-          <div className="card-sub">
-            {t("dashboard.donut_sub", { days: 7 }) || "lines · last 7 days"}
-          </div>
+          <div className="card-title">{t("dashboard.donut_title")}</div>
+          <div className="card-sub">{t("dashboard.donut_sub", { days: 7 })}</div>
         </div>
       </div>
       <div className="donut-row">
@@ -460,7 +468,7 @@ export function ProvenanceDonut() {
           <div className="donut-center">
             <div>
               <div className="big">{aiTotal}%</div>
-              <div className="lil">{t("dashboard.donut_center") || "AI total"}</div>
+              <div className="lil">{t("dashboard.donut_center")}</div>
             </div>
           </div>
         </div>
@@ -497,10 +505,8 @@ export function ProvidersList() {
     <div className="eop-card col-7">
       <div className="card-head">
         <div>
-          <div className="card-title">{t("dashboard.providers_title") || "Top AI providers"}</div>
-          <div className="card-sub">
-            {t("dashboard.providers_sub") || "by active minutes · 7 days"}
-          </div>
+          <div className="card-title">{t("dashboard.providers_title")}</div>
+          <div className="card-sub">{t("dashboard.providers_sub")}</div>
         </div>
       </div>
       <div className="prov-list">
@@ -589,12 +595,8 @@ export function TrendChart() {
     <div className="eop-card col-12">
       <div className="card-head">
         <div>
-          <div className="card-title">
-            {t("dashboard.trend_title") || "AI ratio · 30-day trend"}
-          </div>
-          <div className="card-sub">
-            {t("dashboard.trend_sub") || "manual vs ai-assisted · daily"}
-          </div>
+          <div className="card-title">{t("dashboard.trend_title")}</div>
+          <div className="card-sub">{t("dashboard.trend_sub")}</div>
         </div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-[180px]">
@@ -637,11 +639,11 @@ export function TrendChart() {
       >
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block w-3.5 h-0.5" style={{ background: "hsl(var(--accent))" }} />
-          {t("dashboard.trend_ai") || "AI-assisted"} · {Math.round(avgAi)}%
+          {t("dashboard.trend_ai")} · {Math.round(avgAi)}%
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block w-3.5 h-0.5" style={{ background: "#4ade80" }} />
-          {t("dashboard.trend_manual") || "Manual"} · {Math.round(avgMan)}%
+          {t("dashboard.trend_manual")} · {Math.round(avgMan)}%
         </span>
       </div>
     </div>
@@ -688,14 +690,12 @@ export function LanguageBars() {
     <div className="eop-card col-6">
       <div className="card-head">
         <div>
-          <div className="card-title">{t("dashboard.langs_title") || "Per-language breakdown"}</div>
-          <div className="card-sub">{t("dashboard.langs_sub") || "manual / ai split · 7 days"}</div>
+          <div className="card-title">{t("dashboard.langs_title")}</div>
+          <div className="card-sub">{t("dashboard.langs_sub")}</div>
         </div>
       </div>
       {langs.length === 0 ? (
-        <div className="text-[13px] text-muted-foreground py-4">
-          {t("dashboard.no_data_yet") || "No language data yet."}
-        </div>
+        <div className="text-[13px] text-muted-foreground py-4">{t("dashboard.no_data_yet")}</div>
       ) : (
         <div className="langs">
           {langs.map((l) => (
@@ -706,7 +706,9 @@ export function LanguageBars() {
                 <i style={{ width: `${l.ai}%`, background: "hsl(var(--accent))" }} />
                 <i style={{ width: `${l.manual}%`, background: "#4ade80", opacity: 0.65 }} />
               </div>
-              <span className="lang-ratio">{l.ai}% AI</span>
+              <span className="lang-ratio">
+                {l.ai}% {t("dashboard.lang_ratio_ai")}
+              </span>
             </div>
           ))}
         </div>
@@ -736,8 +738,8 @@ export function ProjectsList() {
     <div className="eop-card col-6">
       <div className="card-head">
         <div>
-          <div className="card-title">{t("dashboard.projects_title") || "Top projects"}</div>
-          <div className="card-sub">{t("dashboard.projects_sub") || "by focus time · 7 days"}</div>
+          <div className="card-title">{t("dashboard.projects_title")}</div>
+          <div className="card-sub">{t("dashboard.projects_sub")}</div>
         </div>
       </div>
       <div className="proj-list">
@@ -798,8 +800,8 @@ export function FocusSessions() {
     <div className="eop-card col-5">
       <div className="card-head">
         <div>
-          <div className="card-title">{t("dashboard.focus_title") || "Today's focus sessions"}</div>
-          <div className="card-sub">{t("dashboard.focus_sub") || "uninterrupted · ≥ 15 min"}</div>
+          <div className="card-title">{t("dashboard.focus_title")}</div>
+          <div className="card-sub">{t("dashboard.focus_sub")}</div>
         </div>
       </div>
       <div className="focus-list">
@@ -856,8 +858,8 @@ export function AttributionLog() {
     <div className="eop-card col-7">
       <div className="card-head">
         <div>
-          <div className="card-title">{t("dashboard.log_title") || "Attribution log"}</div>
-          <div className="card-sub">{t("dashboard.log_sub") || "live · last 20 events"}</div>
+          <div className="card-title">{t("dashboard.log_title")}</div>
+          <div className="card-sub">{t("dashboard.log_sub")}</div>
         </div>
         <span
           className="inline-flex items-center gap-1.5 font-mono text-[11px]"
@@ -876,16 +878,14 @@ export function AttributionLog() {
       </div>
       <div className="log-table">
         <div className="log-row head">
-          <span>TIME</span>
-          <span>TAG</span>
-          <span>FILE / SIGNAL</span>
+          <span>{t("dashboard.log_col_time")}</span>
+          <span>{t("dashboard.log_col_tag")}</span>
+          <span>{t("dashboard.log_col_file")}</span>
           <span>Δ</span>
           <span />
         </div>
         {rows.length === 0 ? (
-          <div className="text-[12px] text-muted-foreground py-3">
-            {t("dashboard.no_data_yet") || "No events yet."}
-          </div>
+          <div className="text-[12px] text-muted-foreground py-3">{t("dashboard.no_data_yet")}</div>
         ) : (
           rows.map((r, i) => (
             <div key={i} className="log-row">

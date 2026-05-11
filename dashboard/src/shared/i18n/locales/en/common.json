@@ -8,7 +8,35 @@
     "team": "Team",
     "settings": "Settings",
     "admin": "Admin",
+    "projects": "Projects",
+    "reports": "Reports",
     "bottom": "Bottom navigation"
+  },
+  "sidebar": {
+    "workspace": "Workspace",
+    "insights": "Insights",
+    "integrations": "Integrations",
+    "code_provenance": "Code provenance",
+    "languages": "Languages",
+    "tracking_active": "Tracking active",
+    "local_first": "Local-first · 0 sync pending",
+    "version_label": "v0.4 · beta"
+  },
+  "topbar": {
+    "search": "Search",
+    "tracking": "Tracking",
+    "paused": "Paused",
+    "pause_title": "Pause tracking",
+    "resume_title": "Resume tracking",
+    "menu_toggle": "Toggle menu",
+    "notifications": "Notifications",
+    "section_workspace": "Workspace",
+    "section_settings": "Settings",
+    "section_admin": "Admin",
+    "user_default": "User",
+    "tracking_active_title": "Tracking active",
+    "badge_new": "new",
+    "badge_live": "live"
   },
   "actions": {
     "save": "Save",
