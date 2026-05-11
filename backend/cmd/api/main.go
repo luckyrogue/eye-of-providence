@@ -135,6 +135,10 @@ func main() {
 	}))
 	app.Use(logger.New(logger.Config{
 		Format: "[${time}] rid=${locals:requestid} ${status} ${method} ${path} ${latency}\n",
+		Next: func(c *fiber.Ctx) bool {
+			p := c.Path()
+			return p == "/healthz" || p == "/metrics"
+		},
 	}))
 
 	app.Get("/healthz", healthzHandler(pgPool, eventStore))
