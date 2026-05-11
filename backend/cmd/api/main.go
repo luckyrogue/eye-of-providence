@@ -236,6 +236,25 @@ func main() {
 		webhooks.RegisterRoutes(app, hookSvc, cfg.JWTSecret, pgPool)
 		hooksDispatcher = hookSvc
 	}
+	// SSO public endpoints (/v1/sso/start, /v1/sso/oidc/callback) ДОЛЖНЫ
+	// быть зарегистрированы ДО teams.RegisterRoutes, потому что внутри
+	// teams вызывается `app.Group("/v1", auth.Middleware)` — Fiber
+	// применяет это middleware ко ВСЕМ subsequent /v1/* роутам. Если SSO
+	// зарегистрировать после, public endpoints отвечают 401 unauthorized.
+	// Admin SSO routes (под /v1/teams/:id/sso) регистрируются после с явным
+	// auth middleware — там это правильно.
+	var ssoRegistry *sso.Registry
+	if pgPool != nil {
+		ssoRegistry = sso.NewRegistry(pgPool, strings.TrimRight(cfg.PublicURL, "/")+"/api/v1/sso/oidc/callback")
+		sso.RegisterRoutes(app, sso.Service{
+			Pool:      pgPool,
+			Registry:  ssoRegistry,
+			Logger:    log,
+			JWTSecret: cfg.JWTSecret,
+			PublicURL: strings.TrimRight(cfg.PublicURL, "/"),
+		})
+	}
+
 	teams.EventStore = eventStore
 	teams.RegisterRoutes(app, teams.Service{
 		Pool:          pgPool,
@@ -269,20 +288,12 @@ func main() {
 		})
 	}
 
-	// SSO (OIDC) — public callback endpoints + admin CRUD под team_id.
-	// Disabled полностью если pgPool nil (in-memory dev mode).
-	if pgPool != nil {
-		ssoRegistry := sso.NewRegistry(pgPool, strings.TrimRight(cfg.PublicURL, "/")+"/api/v1/sso/oidc/callback")
-		sso.RegisterRoutes(app, sso.Service{
-			Pool:      pgPool,
-			Registry:  ssoRegistry,
-			Logger:    log,
-			JWTSecret: cfg.JWTSecret,
-			PublicURL: strings.TrimRight(cfg.PublicURL, "/"),
-		})
+	// SSO admin CRUD — /v1/teams/:id/sso/*. Защищены явным auth middleware
+	// (не наследуют от teams.RegisterRoutes group'а — он работает только
+	// для роутов, зарегистрированных через тот group). Public SSO routes
+	// уже зарегистрированы выше, ДО teams.RegisterRoutes.
+	if pgPool != nil && ssoRegistry != nil {
 		ssoAdmin := sso.AdminService{Pool: pgPool, Registry: ssoRegistry, Logger: log, Plans: planSvc}
-		// /v1/teams/:id/sso/* — admin endpoints. Защищены auth middleware
-		// глобальным /v1 group'ом, role-check внутри handler'ов.
 		ssoAdmin.RegisterAdminRoutes(app.Group("/v1/teams/:id/sso", auth.Middleware(cfg.JWTSecret, pgPool)))
 	}
 

@@ -18,6 +18,22 @@ function promoteToSuperAdmin(userID: string): void {
 }
 
 test.describe("admin", () => {
+  // Bootstrap-sentinel: backend промоутит ПЕРВОГО зарегистрированного юзера в
+  // super_admin (auth.go: "first user promoted to super_admin"). Если admin
+  // suite запускается первым (alphabetical), test#1 регистрирует и обнаруживает
+  // что user — super_admin (тест ждёт regular). Регистрируем sentinel заранее,
+  // чтобы "consume" first-user privilege и все последующие юзеры стали
+  // регулярными.
+  test.beforeAll(async () => {
+    const { apiRegister } = await import("../helpers/api.js");
+    const { uniqueEmail } = await import("../helpers/db.js");
+    try {
+      await apiRegister(uniqueEmail("admin-sentinel"), "TestPassword123!");
+    } catch {
+      // Уже есть user в БД — sentinel не нужен. Идемпотентно.
+    }
+  });
+
   test("regular user gets super_admin_required on /admin/teams", async ({ api }) => {
     try {
       await api.fetch("/v1/admin/teams");

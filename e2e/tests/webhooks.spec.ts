@@ -21,7 +21,9 @@ test.describe("webhooks", () => {
         format: "raw",
       }),
     });
-    expect(r.secret).toMatch(/^[a-f0-9]{32,}$/);
+    // Backend выдаёт "whk_<64 hex>" — prefix добавлен в webhooks/webhooks.go
+    // (generateSecret), чтобы отличить от api-token / dev-token при reading.
+    expect(r.secret).toMatch(/^whk_[a-f0-9]{32,}$/);
     expect(r.webhook.id).toMatch(/^[0-9a-f-]{36}$/);
 
     // List

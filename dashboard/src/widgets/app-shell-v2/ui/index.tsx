@@ -5,15 +5,26 @@ import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../../entities/session";
 import { useMe } from "../../../entities/user";
+import { useAuthRedirect } from "../../app-layout/lib/use-auth-redirect";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 
 export function AppShellV2() {
-  const { logout } = useAuth();
+  const { isAuthed, logout } = useAuth();
   const me = useMe();
+  // 401 / no-token → редирект на /login с сохранением destination. Без
+  // этого guard'а старый dashboard-ui logout test падает (после
+  // localStorage.clear() юзер должен попасть на /login, а не остаться
+  // в shell без данных).
+  useAuthRedirect();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const section = sectionLabel(location.pathname);
+
+  // Гарантируем что mount без auth НЕ рендерит content (useAuthRedirect
+  // делает navigate, но рендер происходит до effect'а — без guard'а
+  // dashboard вспыхивает empty layout перед redirect'ом).
+  if (!isAuthed) return null;
 
   const userName = me.data?.display_name || me.data?.email?.split("@")[0] || "User";
   const avatarLabel = userName.slice(0, 2).toUpperCase();
