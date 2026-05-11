@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { Button, IconButton } from "@eop/ui";
 import { Activity, Eye, LogOut, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import { NavItem } from "./nav-item";
+import { LangSwitch } from "../../../shared/ui/lang-switch";
 
 export function HeaderNav({
   isSuperAdmin,
@@ -48,6 +49,7 @@ export function HeaderNav({
             </NavItem>
           )}
           <span className="mx-2 h-5 w-px bg-border" />
+          <LangSwitch />
           <Button
             variant="ghost"
             size="sm"
@@ -58,7 +60,8 @@ export function HeaderNav({
           </Button>
         </nav>
 
-        <div className="md:hidden">
+        <div className="md:hidden flex items-center gap-2">
+          <LangSwitch />
           <IconButton title={t("actions.logout")} onClick={onLogout}>
             <LogOut className="h-5 w-5" />
           </IconButton>

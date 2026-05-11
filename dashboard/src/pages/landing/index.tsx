@@ -9,28 +9,22 @@ import { Pricing } from "./ui/pricing";
 import { CTASection } from "./ui/cta-section";
 import { Footer } from "./ui/footer";
 
-// data-theme="eop" — переключает CSS vars на warm-dark + orange палитру.
-// Структура соответствует Claude artifact (Eye of Providence) 1:1: Hero →
-// Measure → How → Attribution → Privacy → Integrations → Pricing → CTA → Footer.
-// LogoStrip / Features / FAQ удалены — их заменили новые секции.
+// Eop theme выставлен глобально на documentElement (см. index.html inline-script),
+// bg-grid/glow — на body::before/::after (см. ui/styles.css). Этот компонент
+// просто стакает секции в order, который соответствует Claude artifact 1:1.
 export function Landing() {
   return (
-    <div data-theme="eop" className="min-h-screen relative overflow-x-hidden">
-      <div className="eop-bg-grid" aria-hidden />
-      <div className="eop-bg-glow" aria-hidden />
-      <div className="eop-bg-noise" aria-hidden />
-      <div className="relative z-10">
-        <Nav />
-        <Hero />
-        <Measure />
-        <HowItWorks />
-        <Attribution />
-        <Privacy />
-        <Integrations />
-        <Pricing />
-        <CTASection />
-        <Footer />
-      </div>
+    <div className="min-h-screen relative overflow-x-hidden">
+      <Nav />
+      <Hero />
+      <Measure />
+      <HowItWorks />
+      <Attribution />
+      <Privacy />
+      <Integrations />
+      <Pricing />
+      <CTASection />
+      <Footer />
     </div>
   );
 }

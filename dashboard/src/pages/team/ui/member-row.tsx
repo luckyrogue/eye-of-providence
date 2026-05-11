@@ -35,7 +35,7 @@ export function MemberRow({
         {stat && stat.total_ms > 0 && (
           <div className="text-right hidden sm:block">
             <div className="flex items-center gap-1 text-sm justify-end">
-              <Brain className="h-3.5 w-3.5 text-purple-500" />
+              <Brain className="h-3.5 w-3.5" style={{ color: "hsl(var(--accent))" }} />
               <span className="font-medium tabular-nums">{stat.ai_ratio}%</span>
             </div>
             <div className="text-[10px] text-muted-foreground tabular-nums font-mono">

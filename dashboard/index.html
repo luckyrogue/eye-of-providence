@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0a0a0a" />
     <script>
-      // Sync <html lang> до first paint — иначе скринридеры и spell-check
-      // увидят "ru" пока не загрузится i18next. Ключ должен совпадать с
-      // LOCALE_STORAGE_KEY (@eop/i18n constants).
+      // Sync <html lang> + data-theme до first paint — иначе скринридеры и
+      // spell-check увидят "ru" пока не загрузится i18next, и FOUC: light
+      // theme мигнёт пока React не выставит data-theme="eop". Ключ совпадает
+      // с LOCALE_STORAGE_KEY (@eop/i18n constants).
       (function () {
         try {
           var supported = ["ru", "en", "kk", "es"];
@@ -18,6 +19,9 @@
             if (supported.indexOf(base) !== -1) lng = base;
           }
           document.documentElement.lang = lng || "ru";
+          // Global eop theme — warm-dark + orange палитра (см. ui/styles.css
+          // [data-theme="eop"]). Закрывает FOUC между HTML load и React mount.
+          document.documentElement.setAttribute("data-theme", "eop");
         } catch (_) {}
       })();
     </script>

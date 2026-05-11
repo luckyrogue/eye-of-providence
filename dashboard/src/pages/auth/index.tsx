@@ -29,13 +29,9 @@ export function AuthRoute({ mode }: { mode: "login" | "register" }) {
   }
 
   return (
-    <div data-theme="eop" className="min-h-screen relative overflow-x-hidden">
-      <div className="eop-bg-grid" aria-hidden />
-      <div className="eop-bg-glow" aria-hidden />
-      <div className="relative z-10 min-h-screen flex items-center justify-center py-12">
-        <div className="w-full">
-          <Auth onAuth={onAuth} />
-        </div>
+    <div className="min-h-screen flex items-center justify-center py-12 px-4">
+      <div className="w-full">
+        <Auth onAuth={onAuth} />
       </div>
     </div>
   );

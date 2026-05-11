@@ -59,6 +59,38 @@
   /* "eop" theme — warm-dark + orange accent для landing / marketing / pricing
      pages. Скоупится через `[data-theme="eop"]` на root-элементе страницы,
      чтобы dashboard-internal сохранил нейтральный shadcn-цвет. */
+  /* Global bg layers для eop theme — крепятся к body, чтобы покрывать
+     ВЕСЬ app (landing, auth, dashboard internals) без per-page wrappers.
+     ::before — grid, ::after — orange/violet glow, оба fixed + behind content. */
+  html[data-theme="eop"] body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse at 50% 0%, rgba(0, 0, 0, 0.6), transparent 70%);
+  }
+  html[data-theme="eop"] body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 700px 500px at 80% 20%, hsl(13 100% 55% / 0.1), transparent 70%),
+      radial-gradient(ellipse 600px 400px at 10% 60%, rgba(124, 58, 237, 0.06), transparent 70%);
+  }
+  /* App content должен лежать ВЫШЕ background-layers. Корневой #root —
+     position: relative + z-index: 1 чтобы перекрыть body::before/after. */
+  html[data-theme="eop"] #root {
+    position: relative;
+    z-index: 1;
+  }
+
   [data-theme="eop"] {
     color-scheme: dark;
     --background: 230 17% 6%; /* #0c0d12 */

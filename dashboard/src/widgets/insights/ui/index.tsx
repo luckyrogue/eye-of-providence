@@ -28,7 +28,7 @@ export function InsightsWidget() {
           <Eyebrow>{t("title")}</Eyebrow>
         </div>
         <CardTitle className="font-display tracking-tight mt-2 flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-purple-500" />
+          <Sparkles className="h-5 w-5" style={{ color: "hsl(var(--accent))" }} />
           {t("lead")}
         </CardTitle>
         <CardDescription className="sr-only">{t("lead")}</CardDescription>

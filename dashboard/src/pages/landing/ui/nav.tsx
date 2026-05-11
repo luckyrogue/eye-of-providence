@@ -2,15 +2,10 @@
 // Brand mark = pyramid с eye внутри (artifact pyramid SVG 1:1).
 
 import { useTranslation } from "react-i18next";
-
-const LANGS = ["en", "ru", "kk", "es"] as const;
+import { LangSwitch } from "../../../shared/ui/lang-switch";
 
 export function Nav() {
-  const { t, i18n } = useTranslation("landing");
-  const language = i18n.language;
-  const changeLanguage = (l: string) => {
-    void i18n.changeLanguage(l);
-  };
+  const { t } = useTranslation("landing");
   const isAuthed = typeof window !== "undefined" && !!localStorage.getItem("eop_user_id");
   const navLinks = [
     { href: "#measure", label: t("nav.features") },
@@ -61,29 +56,7 @@ export function Nav() {
           ))}
         </nav>
         <div className="flex items-center gap-3.5">
-          <div
-            className="hidden sm:flex border rounded-full p-0.5 font-mono text-[12px]"
-            style={{ borderColor: "hsl(var(--eop-line-strong))" }}
-          >
-            {LANGS.map((l) => {
-              const active = language.startsWith(l);
-              return (
-                // eslint-disable-next-line no-restricted-syntax -- tab-switcher для locale (микро-control, <Tabs> overkill)
-                <button
-                  key={l}
-                  type="button"
-                  onClick={() => changeLanguage(l)}
-                  className="px-2.5 py-1 rounded-full transition-colors"
-                  style={{
-                    background: active ? "hsl(var(--foreground))" : "transparent",
-                    color: active ? "hsl(var(--background))" : "hsl(var(--muted-foreground))",
-                  }}
-                >
-                  {l.toUpperCase()}
-                </button>
-              );
-            })}
-          </div>
+          <LangSwitch />
           {!isAuthed && (
             <a
               href="/dashboard"

@@ -21,54 +21,46 @@ export function ResetPasswordRoute() {
 
   if (!token) {
     return (
-      <div data-theme="eop" className="min-h-screen relative overflow-x-hidden">
-        <div className="eop-bg-grid" aria-hidden />
-        <div className="eop-bg-glow" aria-hidden />
-        <div className="relative z-10 mx-auto max-w-md px-4 pt-12 sm:pt-16 pb-12">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">{t("reset_invalid_link")}</CardTitle>
-              <CardDescription className="text-center">
-                {t("reset_invalid_link_lead")}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link to="/forgot-password" className="block text-center text-sm underline">
-                {t("reset_request_new")}
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="min-h-screen mx-auto max-w-md px-4 pt-12 sm:pt-16 pb-12">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center">{t("reset_invalid_link")}</CardTitle>
+            <CardDescription className="text-center">
+              {t("reset_invalid_link_lead")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/forgot-password" className="block text-center text-sm underline">
+              {t("reset_request_new")}
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div data-theme="eop" className="min-h-screen relative overflow-x-hidden">
-      <div className="eop-bg-grid" aria-hidden />
-      <div className="eop-bg-glow" aria-hidden />
-      <div className="relative z-10 mx-auto max-w-md px-4 pt-12 sm:pt-16 pb-12">
-        <Card className="card-hover reveal">
-          <CardHeader>
-            <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-              {done ? (
-                <CheckCircle2 className="h-6 w-6 text-primary-foreground" />
-              ) : (
-                <Lock className="h-6 w-6 text-primary-foreground" />
-              )}
-            </div>
-            <CardTitle className="text-center font-display tracking-tight">
-              {done ? t("reset_done_title") : t("reset_title")}
-            </CardTitle>
-            <CardDescription className="text-center">
-              {done ? t("reset_done_lead") : t("reset_lead")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {!done && <ResetPasswordForm token={token} onDone={onDone} />}
-          </CardContent>
-        </Card>
-      </div>
+    <div className="min-h-screen mx-auto max-w-md px-4 pt-12 sm:pt-16 pb-12">
+      <Card className="card-hover reveal">
+        <CardHeader>
+          <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+            {done ? (
+              <CheckCircle2 className="h-6 w-6 text-primary-foreground" />
+            ) : (
+              <Lock className="h-6 w-6 text-primary-foreground" />
+            )}
+          </div>
+          <CardTitle className="text-center font-display tracking-tight">
+            {done ? t("reset_done_title") : t("reset_title")}
+          </CardTitle>
+          <CardDescription className="text-center">
+            {done ? t("reset_done_lead") : t("reset_lead")}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {!done && <ResetPasswordForm token={token} onDone={onDone} />}
+        </CardContent>
+      </Card>
     </div>
   );
 }

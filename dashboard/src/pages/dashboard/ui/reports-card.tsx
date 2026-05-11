@@ -29,7 +29,7 @@ export function ReportsCard({ reports, tz }: { reports: Report[]; tz: string }) 
       <CardHeader className="flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="min-w-0 flex-1">
           <CardTitle className="flex items-center gap-2 font-display tracking-tight">
-            <Sparkles className="h-4 w-4 text-purple-500 shrink-0" />
+            <Sparkles className="h-4 w-4 shrink-0" style={{ color: "hsl(var(--accent))" }} />
             {t("dashboard.report_title")}
           </CardTitle>
           <CardDescription>{t("dashboard.report_lead")}</CardDescription>

@@ -27,7 +27,7 @@ export function StatsRow({
           label={t("dashboard.stat_ai_share")}
           value={`${aiRatio}%`}
           hint={t("dashboard.stat_ai_hint")}
-          icon={<Brain className="h-4 w-4 text-purple-500" />}
+          icon={<Brain className="h-4 w-4" style={{ color: "hsl(var(--accent))" }} />}
           accent="purple"
           className="reveal reveal-delay-1"
         />
@@ -36,7 +36,7 @@ export function StatsRow({
           value={totalMinutes}
           unit={t("dashboard.stat_minutes")}
           hint={t("dashboard.stat_active_hint_events", { count: eventsCount })}
-          icon={<Activity className="h-4 w-4 text-blue-500" />}
+          icon={<Activity className="h-4 w-4 text-foreground/70" />}
           accent="blue"
           className="reveal reveal-delay-2"
         />
