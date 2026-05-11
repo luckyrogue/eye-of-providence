@@ -2,10 +2,15 @@
 // Чистый CSS-animation — никакого WebGL/canvas, всё в transform 3D + keyframes
 // (см. [data-theme="eop"] keyframes в ui/src/shared/styles.css).
 //
+// Orbital placement: измеряем реальный размер eye-stage через ResizeObserver
+// и кладём ноды на 38%-радиусе от центра. translate(${x}%, ${y}%) в CSS
+// percent-units относится к ВЛАДЕЛЬЦУ transform-а (38px own-size), что
+// давало бы кластер в 18px от центра — неправильно. Используем px-вычисление.
+//
 // Подложка mouse-tracking: parent <div> rotateX/Y по перемещению мыши даёт
 // иллюзию "следит за курсором" — детали в useEffect.
 
-import { useEffect, useRef, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 
 type IconName = "VSCode" | "Browser" | "Terminal" | "Anthropic" | "Cursor" | "Copilot";
 
@@ -56,8 +61,28 @@ const NODES: { icon: IconName; angle: number; glow?: boolean }[] = [
   { icon: "Copilot", angle: 300 },
 ];
 
+// Радиус орбиты как % от ширины eye-stage. 0.38 кладёт ноды чуть за внешним
+// ring'ом (r1 inset:0 = диаметр stage, r2 inset:8%, r3 inset:16%).
+const ORBIT_RADIUS_RATIO = 0.38;
+
 export function EyeScene() {
   const stageRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState(0);
+
+  // Измеряем фактический размер stage. ResizeObserver — для responsive
+  // (eye-stage растягивается до 560px max-width, на mobile меньше).
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const e of entries) {
+        setSize(e.contentRect.width);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // Mouse-tracking: tilt stage по cursor position для "следящего" эффекта.
   // Throttling не нужен — CSS transition в 0.3s сам сглаживает.
   useEffect(() => {
@@ -73,6 +98,8 @@ export function EyeScene() {
     window.addEventListener("mousemove", onMove);
     return () => window.removeEventListener("mousemove", onMove);
   }, []);
+
+  const radiusPx = size * ORBIT_RADIUS_RATIO;
 
   return (
     <div
@@ -91,23 +118,23 @@ export function EyeScene() {
         <div className="ring r3">
           <span className="ring-tick" />
         </div>
-        {NODES.map((n, i) => {
-          const radius = 47;
-          const rad = (n.angle * Math.PI) / 180;
-          const x = Math.cos(rad) * radius;
-          const y = Math.sin(rad) * radius;
-          return (
-            <div
-              key={i}
-              className={`orbit-node ${n.glow ? "glow" : ""}`}
-              style={{
-                transform: `translate(-50%, -50%) translate(${x}%, ${y}%)`,
-              }}
-            >
-              {Icons[n.icon]}
-            </div>
-          );
-        })}
+        {radiusPx > 0 &&
+          NODES.map((n, i) => {
+            const rad = (n.angle * Math.PI) / 180;
+            const x = Math.cos(rad) * radiusPx;
+            const y = Math.sin(rad) * radiusPx;
+            return (
+              <div
+                key={i}
+                className={`orbit-node ${n.glow ? "glow" : ""}`}
+                style={{
+                  transform: `translate(-50%, -50%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`,
+                }}
+              >
+                {Icons[n.icon]}
+              </div>
+            );
+          })}
       </div>
       <div className="eye-core">
         <div className="pyramid">

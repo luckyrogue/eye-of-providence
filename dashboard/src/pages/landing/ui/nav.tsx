@@ -3,7 +3,7 @@
 
 import { useTranslation } from "react-i18next";
 
-const LANGS = ["en", "ru"] as const;
+const LANGS = ["en", "ru", "kk", "es"] as const;
 
 export function Nav() {
   const { t, i18n } = useTranslation("landing");
@@ -62,7 +62,7 @@ export function Nav() {
         </nav>
         <div className="flex items-center gap-3.5">
           <div
-            className="flex border rounded-full p-0.5 font-mono text-[12px]"
+            className="hidden sm:flex border rounded-full p-0.5 font-mono text-[12px]"
             style={{ borderColor: "hsl(var(--eop-line-strong))" }}
           >
             {LANGS.map((l) => {

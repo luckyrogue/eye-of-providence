@@ -1,124 +1,283 @@
 {
   "nav": {
-    "features": "Funciones",
-    "how": "Cómo funciona",
+    "features": "Cómo funciona",
+    "how": "Cómo",
+    "attribution": "Atribución",
+    "privacy": "Privacidad",
+    "integrations": "Integraciones",
     "pricing": "Precios",
     "faq": "FAQ",
     "sign_in": "Iniciar sesión",
     "get_started": "Empezar",
-    "open_dashboard": "Abrir panel",
-    "changelog": "Novedades"
+    "open_dashboard": "Abrir dashboard",
+    "changelog": "Changelog"
   },
   "hero": {
-    "badge": "Beta · 3 founding companies gratis",
-    "heading": "Cuánto escribes tú <em>vs.</em> la IA.",
-    "lead": "Analítica privacy-first para ingenieros. Rastrea código manual, ayuda de IA y dónde se va tu tiempo — IDE, navegador y CLI.",
-    "cta_primary": "Empezar — gratis",
-    "cta_secondary": "Ver cómo funciona",
-    "trust": ["Privacy-by-design", "Self-hostable", "Sin tarjeta"]
+    "eyebrow": "v0.4 · beta pública · macOS + Windows",
+    "title1": "Ve de dónde ",
+    "titleAccent": "viene",
+    "title2": " realmente ",
+    "titleItal": "tu código",
+    "title3": ".",
+    "sub": "Eye of Providence mide cuánto escribes tú, cuánto escribe la IA por ti y a dónde va el resto de tu tiempo — en el IDE, terminal y navegador. Local-first. Open source. Tu código nunca sale de tu máquina.",
+    "ctaPrimary": "Descargar agente",
+    "ctaSecondary": "Leer documentación",
+    "kbd": "Pulsa / para buscar",
+    "meta1": "Dispositivos activos",
+    "meta2": "En vivo desde",
+    "meta3": "Open source",
+    "badge": "v0.4 · beta pública · macOS + Windows",
+    "heading": "Ve de dónde <em>viene realmente</em> tu código.",
+    "lead": "Eye of Providence mide cuánto escribes tú y cuánto escribe la IA.",
+    "cta_primary": "Descargar agente",
+    "cta_secondary": "Documentación",
+    "trust": ["Local-first", "Open source", "El código no sale de tu máquina"]
   },
-  "logo_strip": {
-    "tagline": "Rastreamos cada canal que realmente usas"
-  },
-  "features": {
-    "eyebrow": "Funciones",
-    "heading": "Todo lo necesario para <em>entender</em> tu workflow con IA.",
-    "items": [
+  "stats": [
+    { "label": "Código rastreado", "value": "847", "unit": "h este mes" },
+    { "label": "Proporción IA", "value": "62", "unit": "%" },
+    { "label": "Proveedores", "value": "11", "unit": "fuentes" },
+    { "label": "Atribuido", "value": "24.6", "unit": "K líneas / sem" }
+  ],
+  "measure": {
+    "eyebrow": "Lo que medimos",
+    "title1": "Cada tecla, cada pega, cada ",
+    "titleItal": "llamada al agente",
+    "title2": ".",
+    "sub": "Cinco categorías, una línea de tiempo. Eye of Providence reconstruye el origen de cada línea guardada — la escribiste tú, aceptaste una sugerencia, o un agente la escribió por ti.",
+    "cards": [
       {
-        "title": "Atribución IA vs manual",
-        "desc": "Detecta automáticamente qué viene de Copilot, Cursor, Claude Code, ChatGPT — y qué escribiste tú mismo."
+        "title": "Actividad y enfoque",
+        "body": "Tiempo activo, idle, AFK y sesiones de focus ininterrumpido por app y proyecto. Umbral idle 60–120 s, ajustable.",
+        "pills": ["NSWorkspace", "WinEventHook", "60s idle"]
       },
       {
-        "title": "Tiempo real de codificación",
-        "desc": "Minutos de foco activo, no tiempo de calendario. Idle, cambio de contexto y lectura se miden por separado."
+        "title": "Tiempo de código",
+        "body": "Código manual, AI-assisted y review/reading — separados por archivo, lenguaje y proyecto.",
+        "pills": ["IDE-aware", "Por lenguaje", "Por proyecto"]
       },
       {
-        "title": "Por idioma y proyecto",
-        "desc": "Heatmaps, desglose por repo y extensión. Ves dónde la IA ayuda y dónde escribes todo a mano."
+        "title": "Uso de IA",
+        "body": "Desglose por proveedor, canal y tipo de interacción: chat, autocomplete, agent, edit.",
+        "pills": ["11 proveedores", "4 canales"]
       },
       {
-        "title": "Privacidad desde el diseño",
-        "desc": "Nunca guardamos tus prompts, código ni pantalla. Solo metadatos de eventos. Aloja el stack completo en tu infra si quieres."
+        "title": "Procedencia del código",
+        "body": "Cada diff: typed · pasted-AI · pasted-other · AI-inline · AI-agent. Conservador, con 'unknown' visible.",
+        "pills": ["typed", "ai-inline", "ai-agent"]
       },
       {
-        "title": "Reportes con IA",
-        "desc": "Resúmenes semanales y mensuales de Gemini — qué cambió, dónde aceleraste, en qué enfocarte después."
+        "title": "Dashboards en vivo",
+        "body": "Heatmaps, tendencias de AI-ratio, splits por lenguaje. Preview local read-only.",
+        "pills": ["Heatmap", "Tendencias", "Streaks"]
       },
       {
-        "title": "Hecho para equipos",
-        "desc": "Equipos invite-only, accesos por rol, desglose por proyecto para engineering managers."
+        "title": "Informes narrativos",
+        "body": "Resúmenes semanales escritos por Gemini solo desde agregados — nunca código ni prompts. Opt-in.",
+        "pills": ["Gemini Flash", "Opt-in", "Ollama"]
       }
     ]
   },
   "how": {
     "eyebrow": "Cómo funciona",
-    "heading": "De instalación a insight en <em>menos de cinco minutos</em>.",
+    "title": "Cuatro piezas silenciosas. Una imagen.",
+    "sub": "Un agente ligero observa el OS, navegador y editor. Lo demás es matemáticas.",
+    "heading": "Cuatro piezas silenciosas. <em>Una imagen</em>.",
     "step_label": "paso {{num}}",
     "items": [
+      { "title": "Observa", "desc": "Agente Tauri 5–15 MB muestrea focus, idle y keystrokes." },
+      { "title": "Categoriza", "desc": "La extensión del navegador marca sitios de IA." },
+      { "title": "Atribuye", "desc": "Diff hunks se cruzan con rangos de keystroke." },
+      { "title": "Sintetiza", "desc": "Agregados de ClickHouse alimentan el dashboard." }
+    ],
+    "steps": [
       {
-        "title": "Instala el agente",
-        "desc": "Un binario en macOS o Windows. Hooks de VS Code y Claude Code vienen como plugins separados."
+        "num": "01",
+        "title": "Observa",
+        "body": "Agente Tauri 5–15 MB muestrea focus, idle y conteos de keystroke vía NSWorkspace / WinEventHook. Sin captura de contenido."
       },
       {
-        "title": "Inicia sesión",
-        "desc": "Email + contraseña o GitHub OAuth. El modo invite-only mantiene tu organización privada."
+        "num": "02",
+        "title": "Categoriza",
+        "body": "La extensión del navegador marca sitios de IA. El plugin del IDE ve inline accepts. Los hooks de Claude Code disparan en cada edición de agente."
       },
       {
-        "title": "Codifica como siempre",
-        "desc": "El agente clasifica eventos localmente. Solo metadatos salen de tu máquina — nunca código ni prompts."
+        "num": "03",
+        "title": "Atribuye",
+        "body": "Los diff hunks por save se emparejan con rangos de keystroke, eventos de paste y procedencia del portapapeles. Lo demás se queda como 'unknown'."
       },
       {
-        "title": "Lee el panel",
-        "desc": "Gráficos en vivo, desglose por idioma, reportes con IA. Cancela y exporta cuando quieras."
+        "num": "04",
+        "title": "Sintetiza",
+        "body": "Los agregados de ClickHouse alimentan un dashboard personal y, opt-in, un informe narrativo semanal de Gemini."
       }
     ]
   },
+  "attribution": {
+    "eyebrow": "Atribución",
+    "title1": "Una línea limpia, ",
+    "titleItal": "trazada con cuidado",
+    "title2": " alrededor de cada save.",
+    "sub": "Cada hunk que llega al editor recibe una etiqueta. Erramos en 'unknown' — mejor admitir ignorancia que etiquetar mal una línea que escribiste tú.",
+    "stream": [
+      {
+        "ts": "14:02:17",
+        "tag": "typed",
+        "msg": "src/lib/parser.ts · 14 líneas · keystroke range 11:43:01 → 14:01:50"
+      },
+      {
+        "ts": "14:03:04",
+        "tag": "ai-inline",
+        "msg": "src/lib/parser.ts · 3 líneas · Copilot inline accept"
+      },
+      {
+        "ts": "14:04:51",
+        "tag": "paste-ai",
+        "msg": "src/lib/parser.ts · 22 líneas · clipboard from claude.ai · hace 4.1s"
+      },
+      {
+        "ts": "14:07:30",
+        "tag": "ai-agent",
+        "msg": "src/lib/index.ts · 41 líneas · Claude Code PostToolUse"
+      },
+      {
+        "ts": "14:09:12",
+        "tag": "refactor",
+        "msg": "src/lib/parser.ts · rename symbol · 8 ocurrencias"
+      },
+      {
+        "ts": "14:11:46",
+        "tag": "typed",
+        "msg": "src/lib/parser.test.ts · 27 líneas · keystroke stream"
+      },
+      {
+        "ts": "14:14:02",
+        "tag": "ai-inline",
+        "msg": "src/lib/parser.test.ts · 6 líneas · Cursor tab"
+      }
+    ]
+  },
+  "privacy": {
+    "eyebrow": "Privacidad",
+    "title1": "Local-first. ",
+    "titleItal": "Siempre.",
+    "sub": "Eye of Providence es una herramienta de medición, no de vigilancia. El agente es open source. El backend es self-hostable. Tu código no viaja.",
+    "principles": [
+      {
+        "strong": "Local-first by design",
+        "body": "Todo el procesamiento ocurre en tu dispositivo. Solo los metadatos agregados salen."
+      },
+      {
+        "strong": "Nunca capturado",
+        "body": "Contenido de archivos, prompts, respuestas de IA, keystrokes raw, payloads del portapapeles, títulos de ventanas privadas."
+      },
+      {
+        "strong": "Cliente open-source",
+        "body": "El código del agente y la extensión es totalmente público. Self-host del backend si quieres cero dependencias externas."
+      },
+      {
+        "strong": "Team-mode es opt-in",
+        "body": "Los admins ven solo agregados con k-anonymity ≥ 5. Sin vista per-session. Cada lectura va al audit log."
+      },
+      {
+        "strong": "Borrado en un clic",
+        "body": "Borra tus datos de ClickHouse, Postgres y S3 en una sola acción. GDPR-ready."
+      }
+    ],
+    "shieldTitle": "Qué sale de tu máquina",
+    "shieldSends": [
+      "timestamps",
+      "categoría de evento",
+      "nombre del proveedor",
+      "tag de lenguaje",
+      "duración / conteos"
+    ],
+    "shieldNoSends": [
+      "contenido de archivos",
+      "prompts y respuestas",
+      "keystrokes raw",
+      "títulos en privado",
+      "payload del portapapeles"
+    ]
+  },
+  "integrations": {
+    "eyebrow": "Integraciones",
+    "title": "Donde ya trabajas.",
+    "sub": "Once proveedores de IA, cuatro canales, dos sistemas operativos, un agente silencioso que los une a todos."
+  },
+  "features": {
+    "eyebrow": "Características",
+    "heading": "Todo lo que necesitas para <em>entender</em> tu AI workflow.",
+    "items": [
+      { "title": "IA vs manual", "desc": "Atribución automática." },
+      { "title": "Tiempo real de código", "desc": "Minutos de focus activo." },
+      { "title": "Por lenguaje y proyecto", "desc": "Heatmaps y desgloses." },
+      { "title": "Privacy by design", "desc": "Solo metadatos salen." },
+      { "title": "Informes IA", "desc": "Resúmenes semanales." },
+      { "title": "Para equipos", "desc": "Invite-only, role-based." }
+    ]
+  },
   "pricing": {
-    "beta_badge": "Gratis durante la beta",
+    "eyebrow": "Precios",
+    "heading": "Gratis durante la beta. <em>Precios honestos</em> en GA.",
+    "lead": "Todas las funciones de pago son gratis hasta el GA en Q4 2026. Después del GA, solo Free sigue gratis.",
+    "most_popular": "Más popular",
+    "beta_badge": "Gratis en beta",
     "compare_link": "Comparar todas las funciones →",
-    "eyebrow": "Precios · Beta",
-    "heading": "Gratis para las <em>primeras 3 empresas</em>. Para siempre para devs solo.",
-    "lead": "Aceptamos 3 founding companies gratis — sin tarjeta, sin contador de trial, sin límite de plazas. Self-hosted gratis para todos.",
-    "most_popular": "El más popular",
     "tiers": [
       {
-        "name": "Solo",
-        "price": "Gratis",
+        "name": "Free",
+        "price": "$0",
         "period": "para siempre",
         "cta": "Empezar",
         "features": [
-          "Panel personal",
-          "Hasta 3 proyectos",
-          "30 días de historial",
-          "Reporte IA semanal",
-          "Soporte de comunidad"
+          "1 equipo, hasta 5 usuarios",
+          "30 días de historia",
+          "1 webhook",
+          "Dashboard básico",
+          "Soporte community"
         ]
       },
       {
-        "name": "Empresa fundadora",
-        "price": "Gratis",
-        "period": "para los 3 primeros",
-        "cta": "Reservar plaza",
+        "name": "Pro",
+        "price": "$5",
+        "period": "por usuario / mes, anual",
+        "cta": "Probar gratis",
         "features": [
-          "Todo lo de Solo",
-          "Miembros ilimitados",
-          "Proyectos ilimitados",
-          "Roles, invitaciones, analítica de miembros",
-          "18 meses de historial",
-          "Línea directa con los founders"
+          "Hasta 50 usuarios",
+          "365 días de historia",
+          "Webhooks ilimitados",
+          "AI insights",
+          "Informes por email",
+          "Soporte email (48h)"
         ]
       },
       {
-        "name": "En tu servidor",
-        "price": "Gratis",
-        "period": "núcleo abierto",
-        "cta": "Leer docs",
+        "name": "Business",
+        "price": "$19",
+        "period": "por usuario / mes, anual",
+        "cta": "Probar gratis",
         "features": [
-          "Stack completo en tu infra",
-          "Tus datos en tu infraestructura",
-          "Docker / docker-compose",
-          "Postgres + ClickHouse",
-          "Soporte de comunidad"
+          "Usuarios e historia ilimitados",
+          "SSO (OIDC + SAML)",
+          "Audit log",
+          "Webhooks firmados",
+          "Self-hosted Docker",
+          "Soporte prioritario (24h)"
+        ]
+      },
+      {
+        "name": "Enterprise",
+        "price": "A medida",
+        "period": "contrato anual",
+        "cta": "Hablar con ventas",
+        "features": [
+          "Todo de Business",
+          "SLA 99.9%",
+          "SOC2 / GDPR",
+          "Customer success dedicado",
+          "On-prem",
+          "Auditoría de seguridad"
         ]
       }
     ]
@@ -127,50 +286,37 @@
     "eyebrow": "FAQ",
     "heading": "Respuestas rápidas, <em>antes de que preguntes</em>.",
     "items": [
-      {
-        "q": "¿Qué recoge realmente el agente?",
-        "a": "Solo metadatos: app activa, estado idle/active, tamaño de pegados, extensiones de archivos, nombres de proveedores de IA. Nunca prompts, contenido de código, capturas o teclas."
-      },
-      {
-        "q": "¿Cómo se detecta el uso de IA?",
-        "a": "Múltiples señales — app activa y URL (claude.ai, ChatGPT), eventos de plugin de IDE (Copilot accept, Cursor agent), heurísticas de portapapeles para código pegado de ventanas de IA. Toda la clasificación ocurre en tu máquina."
-      },
-      {
-        "q": "¿Puedo self-host?",
-        "a": "Sí. Backend en Go, panel en React, almacenamiento Postgres + ClickHouse + Redis. Docker compose funciona out-of-the-box. Puedes correr todo el stack en una sola VM."
-      },
-      {
-        "q": "¿Mis datos se venden o se comparten?",
-        "a": "No. No mostramos publicidad, no vendemos agregados, no entrenamos modelos con tus eventos. Si alguna vez cambia, te preguntaríamos primero."
-      },
-      {
-        "q": "¿Y la privacidad del equipo?",
-        "a": "Los admins ven agregados por miembro. No ven prompts, archivos ni contenido individual. Los miembros pueden pausar el rastreo y exportar o eliminar todos sus datos."
-      },
+      { "q": "¿Qué recoge el agente?", "a": "Solo metadatos — nunca contenido." },
       {
         "q": "¿Cuándo termina lo gratis?",
-        "a": "Solo y self-hosted son gratis para siempre. Team eventualmente tendrá tiers de pago — pero durante la beta, todas las funciones de team son gratis sin límite."
+        "a": "Free para siempre. Pro/Business gratis en beta hasta Q4 2026."
       }
     ]
   },
   "cta": {
+    "title1": "Ve a dónde va tu ",
+    "titleItal": "atención",
+    "title2": " de verdad.",
+    "sub": "Instalación en noventa segundos. Tu primer dashboard listo tras 24h de actividad.",
+    "primary": "Descargar para macOS",
+    "secondary": "Descargar para Windows",
     "heading": "Envía más. <em>Sabe cómo.</em>",
-    "lead": "Gratis durante la beta. Dos minutos para probar. Cancela cuando quieras.",
-    "button": "Empezar — gratis"
+    "lead": "Gratis durante la beta. Dos minutos para probar.",
+    "button": "Empezar gratis"
   },
   "footer": {
-    "tagline": "Analítica privacy-first de workflow con IA para ingenieros. Auto-alojable.",
+    "tagline": "Eye of Providence es una herramienta de medición privacy-first para desarrolladores.",
     "product_title": "Producto",
-    "legal_title": "Aviso legal",
+    "legal_title": "Legal",
     "legal_privacy": "Privacidad",
     "legal_terms": "Términos",
     "legal_security": "Seguridad",
     "status_ok": "Todos los sistemas operativos"
   },
   "preview": {
-    "ai_ratio": "Cuota IA",
-    "active_time": "Tiempo activo",
+    "ai_ratio": "Proporción IA",
+    "active_time": "Activo",
     "manual": "Manual",
-    "last_30": "Últimos 30 días"
+    "last_30": "30 días"
   }
 }
