@@ -3,7 +3,9 @@
 // MV3-особенности:
 //   - Service worker может быть terminated/restarted в любой момент.
 //   - In-memory state (`let current` / `let buffer`) ТЕРЯЕТСЯ при terminate.
-//   - Решение: всё persistent state — в chrome.storage.session (живёт до закрытия браузера).
+//   - Решение: persistent state — в chrome.storage.local (переживает
+//     рестарт браузера и переустановку расширения; events не теряются
+//     при offline > сессии).
 //
 // Privacy: НЕ отправляем заголовки страниц, URL-параметры, содержимое.
 // Только host (для AI mapping) и duration.
@@ -14,7 +16,9 @@ import type {
   AiCopyResponse,
   ExtensionMessage,
   FlushNowResponse,
+  GetStatusResponse,
   PendingCountResponse,
+  SetPausedResponse,
 } from "../shared/api/messages";
 
 type FocusEntry = {
@@ -27,6 +31,8 @@ type StoredState = {
   buffer: EventPayload[];
   retryQueue: EventPayload[];
   retryAttempts: number;
+  paused: boolean;
+  lastSuccessTs: number;
 };
 
 const FLUSH_INTERVAL_MS = 30_000;
@@ -39,18 +45,20 @@ const STORAGE_KEY = "eop_state";
 // --- Persistent state (chrome.storage.session) ---
 
 async function loadState(): Promise<StoredState> {
-  const data = await chrome.storage.session.get(STORAGE_KEY);
-  return (
-    (data[STORAGE_KEY] as StoredState | undefined) ?? {
-      buffer: [],
-      retryQueue: [],
-      retryAttempts: 0,
-    }
-  );
+  const data = await chrome.storage.local.get(STORAGE_KEY);
+  const raw = data[STORAGE_KEY] as Partial<StoredState> | undefined;
+  return {
+    current: raw?.current,
+    buffer: raw?.buffer ?? [],
+    retryQueue: raw?.retryQueue ?? [],
+    retryAttempts: raw?.retryAttempts ?? 0,
+    paused: raw?.paused ?? false,
+    lastSuccessTs: raw?.lastSuccessTs ?? 0,
+  };
 }
 
 async function saveState(s: StoredState): Promise<void> {
-  await chrome.storage.session.set({ [STORAGE_KEY]: s });
+  await chrome.storage.local.set({ [STORAGE_KEY]: s });
 }
 
 async function mutate(fn: (s: StoredState) => void): Promise<void> {
@@ -68,9 +76,13 @@ async function mutate(fn: (s: StoredState) => void): Promise<void> {
 
 // --- Lifecycle ---
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((details) => {
   void chrome.alarms.create("flush", { periodInMinutes: FLUSH_INTERVAL_MS / 60_000 });
   chrome.idle.setDetectionInterval(IDLE_THRESHOLD_S);
+  if (details.reason === "install") {
+    // Открываем onboarding-страницу один раз при установке.
+    void chrome.tabs.create({ url: chrome.runtime.getURL("options.html") });
+  }
 });
 
 // onStartup на каждый запуск браузера тоже создаёт alarm (на случай если
@@ -154,6 +166,28 @@ chrome.runtime.onMessage.addListener(
         });
         return true;
       }
+      case "set-paused": {
+        void mutate((s) => {
+          s.paused = msg.paused;
+          if (msg.paused) s.current = undefined;
+        }).then(() => {
+          const r: SetPausedResponse = { ok: true };
+          sendResponse(r);
+        });
+        return true;
+      }
+      case "get-status": {
+        void loadState().then((s) => {
+          const r: GetStatusResponse = {
+            buffer: s.buffer.length,
+            retry: s.retryQueue.length,
+            paused: s.paused,
+            lastSuccessTs: s.lastSuccessTs,
+          };
+          sendResponse(r);
+        });
+        return true;
+      }
       default:
         return false;
     }
@@ -175,6 +209,7 @@ async function handleFocus(url: string | undefined) {
   }
 
   const state = await loadState();
+  if (state.paused) return;
   if (state.current && state.current.host === host) return;
 
   // Финализируем предыдущий focus.
@@ -220,6 +255,8 @@ async function handleAiCopy(msg: { host: string; size: number }): Promise<void> 
   if (!msg.host) return;
   const info = aiInfoForHost(msg.host);
   if (!info) return;
+  const state = await loadState();
+  if (state.paused) return;
   await mutate((s) => {
     s.buffer.push({
       app_bundle: msg.host,
@@ -237,6 +274,7 @@ async function handleAiCopy(msg: { host: string; size: number }): Promise<void> 
 
 async function flush(): Promise<void> {
   const state = await loadState();
+  if (state.paused) return;
   if (state.buffer.length === 0 && state.retryQueue.length === 0) return;
 
   // Сначала пробуем retry-queue, потом текущий buffer.
@@ -256,6 +294,7 @@ async function flush(): Promise<void> {
       console.debug("[eop] flushed", batch.length, "events");
       await mutate((s) => {
         s.retryAttempts = 0;
+        s.lastSuccessTs = Date.now();
       });
       return;
 

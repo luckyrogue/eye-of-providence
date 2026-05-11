@@ -7,6 +7,10 @@
     "build": "vite build",
     "dev": "vite build --watch",
     "lint": "eslint src",
+    "test": "vitest run",
+    "icons": "node scripts/gen-icons.mjs",
+    "package": "pnpm run build && pnpm run zip:dist",
+    "zip:dist": "cd dist && zip -r ../eop-browser-extension-$npm_package_version.zip .",
     "install:hint": "echo 'Build first → load `dist/` (НЕ корневую папку) в chrome://extensions Developer mode → Load unpacked.'"
   },
   "dependencies": {
@@ -24,10 +28,13 @@
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^10.3.0",
+    "jsdom": "^26.1.0",
     "postcss": "^8.5.14",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.59.2",
-    "vite": "^5.4.21"
+    "vite": "^5.4.21",
+    "vitest": "^3.2.4"
   }
 }

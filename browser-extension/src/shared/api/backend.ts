@@ -14,8 +14,22 @@ export function backendDisplayHost(url: string = DEFAULT_BACKEND): string {
   }
 }
 
+// Dashboard URL для ссылки "Open dashboard" в pairing-wizard. Выводим из
+// backend URL: https://host/api → https://host. Кастомизируется отдельно
+// если backend и UI на разных хостах.
+export function dashboardUrlFor(backend: string = DEFAULT_BACKEND): string {
+  try {
+    const u = new URL(backend);
+    const path = u.pathname.replace(/\/api\/?$/, "/");
+    u.pathname = path === "" ? "/" : path;
+    return u.origin + (path === "/" ? "" : "");
+  } catch {
+    return "https://eop.rysdavletov.org";
+  }
+}
+
 const REQUEST_TIMEOUT_MS = 15_000;
-const DEV_TOKEN_TIMEOUT_MS = 10_000;
+const PAIR_TIMEOUT_MS = 10_000;
 
 export type EventPayload = {
   app_bundle: string;
@@ -35,6 +49,11 @@ async function getConfig() {
   };
 }
 
+export async function getBackend(): Promise<string> {
+  const { eop_backend } = await chrome.storage.local.get(["eop_backend"]);
+  return (eop_backend as string | undefined) ?? DEFAULT_BACKEND;
+}
+
 export async function setConfig(token: string, backend?: string) {
   await chrome.storage.local.set({ eop_token: token, eop_backend: backend ?? DEFAULT_BACKEND });
 }
@@ -43,17 +62,58 @@ export async function clearConfig() {
   await chrome.storage.local.remove(["eop_token", "eop_backend"]);
 }
 
-export async function fetchDevToken(backend = DEFAULT_BACKEND): Promise<string> {
+// --- Pairing flow ---
+
+export type PairBeginResponse = {
+  pair_id: string;
+  secret: string;
+  code: string;
+  expires_in: number;
+};
+
+export type PollResponse =
+  | { status: "pending" }
+  | { status: "expired" }
+  | { status: "claimed"; token?: string; user_id?: string; device_name?: string };
+
+// pairBegin — создаёт pairing-сессию, возвращает code + secret. secret
+// клиент должен держать в памяти (не показывать юзеру) и слать в poll'ы.
+export async function pairBegin(backend = DEFAULT_BACKEND): Promise<PairBeginResponse> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), DEV_TOKEN_TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), PAIR_TIMEOUT_MS);
   try {
-    const res = await fetch(`${backend}/v1/auth/dev-token`, {
+    const res = await fetch(`${backend}/v1/devices/pair`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "ext", name: "Browser extension" }),
       signal: ctrl.signal,
     });
-    if (!res.ok) throw new Error(`dev-token failed: ${res.status}`);
-    const data = (await res.json()) as { token: string };
-    return data.token;
+    if (!res.ok) throw new Error(`pair failed: ${res.status}`);
+    return (await res.json()) as PairBeginResponse;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// pairPoll — проверяем статус pairing-сессии. Backend выдаёт plaintext token
+// ровно один раз; caller обязан сохранить через setConfig.
+export async function pairPoll(
+  pairID: string,
+  secret: string,
+  backend = DEFAULT_BACKEND,
+): Promise<PollResponse> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), PAIR_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${backend}/v1/devices/poll`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pair_id: pairID, secret }),
+      signal: ctrl.signal,
+    });
+    if (res.status === 404) return { status: "expired" };
+    if (!res.ok) throw new Error(`poll failed: ${res.status}`);
+    return (await res.json()) as PollResponse;
   } finally {
     clearTimeout(timer);
   }
