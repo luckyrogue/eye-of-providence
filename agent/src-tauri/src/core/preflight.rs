@@ -203,3 +203,30 @@ fn error_check(id: String, label: String, message: String) -> CheckResult {
         action_label: None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn data_dir_writable_ok() {
+        let dir = tempdir().unwrap();
+        let r = check_data_dir(dir.path());
+        assert!(matches!(r.status, CheckStatus::Ok));
+        assert_eq!(r.id, "data_dir");
+    }
+
+    #[test]
+    fn data_dir_missing_errors() {
+        let r = check_data_dir(Path::new("/definitely/does/not/exist/eop"));
+        assert!(matches!(r.status, CheckStatus::Error));
+    }
+
+    #[tokio::test]
+    async fn backend_missing_url_warns() {
+        let r = check_backend(None, None).await;
+        assert!(matches!(r.status, CheckStatus::Warn));
+        assert_eq!(r.id, "backend");
+    }
+}

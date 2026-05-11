@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { listen } from "@tauri-apps/api/event";
 import { SimpleSelect, Tabs, TabsList, TabsTrigger } from "@eop/ui";
 import { LOCALE_LABELS, SUPPORTED_LOCALES, type Locale } from "@eop/i18n";
 import { preflightRun } from "../shared/api/tauri";
 import { StatusPage } from "../pages/status";
 import { OnboardingPage } from "../pages/onboarding";
+import { SettingsPage } from "../pages/settings";
 
-type Tab = "status" | "setup";
+type Tab = "status" | "setup" | "settings";
 
 const LOCALE_OPTIONS = SUPPORTED_LOCALES.map((lng) => ({
   value: lng,
@@ -31,6 +33,13 @@ export function App() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const unlisten = listen("auth-required", () => setTab("settings"));
+    return () => {
+      void unlisten.then((fn) => fn());
+    };
+  }, []);
+
   return (
     <main className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-2xl space-y-4">
@@ -53,12 +62,19 @@ export function App() {
                   {t("tab_setup")}
                   {hasIssues ? t("tab_setup_marker") : ""}
                 </TabsTrigger>
+                <TabsTrigger value="settings">{t("tab_settings")}</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
         </header>
 
-        {tab === "setup" ? <OnboardingPage /> : <StatusPage />}
+        {tab === "setup" ? (
+          <OnboardingPage />
+        ) : tab === "settings" ? (
+          <SettingsPage />
+        ) : (
+          <StatusPage />
+        )}
       </div>
     </main>
   );

@@ -1,5 +1,6 @@
 // Cross-platform core: event schema, SQLite буфер, ingest pump, watcher loop.
 
+pub mod auth;
 pub mod event;
 pub mod ingest;
 pub mod local_api;

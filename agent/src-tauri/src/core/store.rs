@@ -16,23 +16,42 @@ pub struct LocalStore {
 impl LocalStore {
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let conn = Connection::open(path)?;
-        conn.execute_batch(
-            r#"
-            PRAGMA journal_mode = WAL;
-            PRAGMA synchronous = NORMAL;
-            CREATE TABLE IF NOT EXISTS event_buffer (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                payload TEXT NOT NULL,
-                created_at INTEGER NOT NULL,
-                lease_until INTEGER
-            );
-            CREATE INDEX IF NOT EXISTS idx_event_buffer_lease
-                ON event_buffer(lease_until);
-            "#,
-        )?;
+        conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;")?;
+        Self::migrate(&conn)?;
         Ok(Self {
             conn: Mutex::new(conn),
         })
+    }
+
+    // migrate — версионируем SQLite через PRAGMA user_version. Каждая миграция
+    // выполняется один раз; user_version подтверждает factual состояние схемы.
+    // Чтобы добавить новую — append-only: добавьте match-ветку с очередным
+    // номером, не редактируя предыдущие.
+    fn migrate(conn: &Connection) -> Result<()> {
+        let current: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+        let migrations: &[(i64, &str)] = &[
+            (
+                1,
+                r#"
+                CREATE TABLE IF NOT EXISTS event_buffer (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    payload TEXT NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    lease_until INTEGER
+                );
+                CREATE INDEX IF NOT EXISTS idx_event_buffer_lease
+                    ON event_buffer(lease_until);
+                "#,
+            ),
+        ];
+        for (version, sql) in migrations {
+            if *version > current {
+                conn.execute_batch(sql)?;
+                conn.execute_batch(&format!("PRAGMA user_version = {}", version))?;
+                tracing::info!(version, "applied store migration");
+            }
+        }
+        Ok(())
     }
 
     pub fn push(&self, event: &Event) -> Result<()> {
@@ -141,5 +160,100 @@ impl LocalStore {
             params![cutoff],
         )?;
         Ok(n)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::event::{Category, Event};
+
+    // tmp_store — открывает SQLite на in-memory path. Для unit-тестов не
+    // нужен реальный файл; rusqlite поддерживает ":memory:" but миграции
+    // и pragma WAL требуют named file → используем tempfile.
+    fn tmp_store() -> (LocalStore, tempfile::NamedTempFile) {
+        let f = tempfile::NamedTempFile::new().unwrap();
+        let s = LocalStore::open(f.path()).unwrap();
+        (s, f)
+    }
+
+    fn ev(app: &str) -> Event {
+        Event::os_focus(app, Category::Other, 1000)
+    }
+
+    #[test]
+    fn migrations_set_user_version() {
+        let f = tempfile::NamedTempFile::new().unwrap();
+        let s = LocalStore::open(f.path()).unwrap();
+        let v: i64 = s
+            .conn
+            .lock()
+            .unwrap()
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert!(v >= 1, "user_version should be bumped after migrate, got {v}");
+    }
+
+    #[test]
+    fn push_and_pending_count() {
+        let (s, _f) = tmp_store();
+        assert_eq!(s.pending_count().unwrap(), 0);
+        s.push(&ev("a")).unwrap();
+        s.push(&ev("b")).unwrap();
+        assert_eq!(s.pending_count().unwrap(), 2);
+    }
+
+    #[test]
+    fn lease_then_commit_clears_rows() {
+        let (s, _f) = tmp_store();
+        s.push(&ev("a")).unwrap();
+        s.push(&ev("b")).unwrap();
+        let batch = s.lease_batch(10, 60).unwrap();
+        assert_eq!(batch.len(), 2);
+        let ids: Vec<i64> = batch.iter().map(|(id, _)| *id).collect();
+        s.commit(&ids).unwrap();
+        assert_eq!(s.pending_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn lease_excludes_already_leased_rows() {
+        let (s, _f) = tmp_store();
+        s.push(&ev("a")).unwrap();
+        s.push(&ev("b")).unwrap();
+        let first = s.lease_batch(10, 60).unwrap();
+        assert_eq!(first.len(), 2);
+        // Повторный lease не должен видеть свежие активные lease'ы.
+        let second = s.lease_batch(10, 60).unwrap();
+        assert_eq!(second.len(), 0);
+    }
+
+    #[test]
+    fn release_makes_rows_available_again() {
+        let (s, _f) = tmp_store();
+        s.push(&ev("a")).unwrap();
+        let first = s.lease_batch(10, 60).unwrap();
+        let ids: Vec<i64> = first.iter().map(|(id, _)| *id).collect();
+        s.release(&ids).unwrap();
+        let second = s.lease_batch(10, 60).unwrap();
+        assert_eq!(second.len(), 1);
+    }
+
+    #[test]
+    fn gc_removes_old_rows_only() {
+        let (s, _f) = tmp_store();
+        // Свежий event — должен остаться.
+        s.push(&ev("fresh")).unwrap();
+        // Имитируем старый event, выставляя created_at вручную.
+        {
+            let conn = s.conn.lock().unwrap();
+            conn.execute(
+                "INSERT INTO event_buffer (payload, created_at) VALUES ('{}', ?1)",
+                params![chrono::Utc::now().timestamp() - 99_999],
+            )
+            .unwrap();
+        }
+        let removed = s.gc(60_000).unwrap();
+        assert_eq!(removed, 1);
+        assert_eq!(s.pending_count().unwrap(), 1);
     }
 }
