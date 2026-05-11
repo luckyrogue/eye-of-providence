@@ -127,9 +127,12 @@ jobs:
       - run: pnpm -F eop-vscode compile
       - name: Package .vsix
         working-directory: ide-vscode
+        # --skip-license — vsce требует LICENSE.md, но у нас LICENSE без
+        # расширения; флаг гасит pre-publish lint. --no-dependencies — мы
+        # тащим только @types через npm, runtime-deps нет.
         run: |
           npm i -g @vscode/vsce
-          vsce package --no-dependencies -o eop-vscode.vsix
+          vsce package --no-dependencies --skip-license -o eop-vscode.vsix
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name || inputs.version }}

@@ -58,3 +58,29 @@ pnpm -r lint                    # lint (0 ошибок ожидается)
 pnpm format:check               # prettier validation
 pnpm -F @eop/dashboard build    # production build конкретного пакета
 ```
+
+## Tests
+
+Каждый пакет имеет `pnpm test` (Vitest):
+
+| Package | Что покрыто |
+| --- | --- |
+| `dashboard` | RTL component tests + zod schemas + tz utils |
+| `agent` (frontend) | tauri.ts shim mocking `@tauri-apps/api/core.invoke` |
+| `browser-extension` | `backend.ts` (config, ingest happy/retry/drop paths) с jsdom + chrome mock |
+
+Rust (`agent/src-tauri`) — `cargo test --lib` (store/preflight). VS Code — `pnpm -F eop-vscode test` (vscode-test, при наличии display).
+
+## Distribution (closed beta)
+
+Артефакты собираются в `.github/workflows/release.yml` на push тэга `v*.*.*` или ручным trigger'ом:
+
+| Артефакт | Платформы | Подпись |
+| --- | --- | --- |
+| `eop-agent_*.dmg` / `.msi` / `.AppImage` | macOS (universal: aarch64 + x86_64), Windows x64, Linux x64 | Apple Developer ID + notarization, Windows signtool (если есть secrets) — иначе unsigned |
+| `eop-vscode.vsix` | VS Code-compatible (Cursor, VS Code, VSCodium) | — |
+| `eop-browser-extension.zip` | Chrome / Edge / Brave (MV3) | Unsigned (load unpacked в Developer mode) |
+
+Все артефакты прикрепляются к draft GH Release. Maintainer вручную ревьюит и публикует.
+
+Гайд для beta-тестеров: [`docs/beta-install.md`](docs/beta-install.md).
