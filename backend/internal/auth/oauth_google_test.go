@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -150,10 +151,23 @@ func TestGoogle_Exchange_BadIDTokenSignature(t *testing.T) {
 	if testing.Short() {
 		t.Skip("requires Google JWKS fetch")
 	}
-	// Hand-crafted unsigned JWT (alg=none) — Google's validator must reject.
-	// header={"alg":"none","typ":"JWT"}, payload={"sub":"123","email":"a@b.com","email_verified":true,"aud":"test-client-id"}
-	badIDToken := "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0." +
-		"eyJzdWIiOiIxMjMiLCJlbWFpbCI6ImFAYi5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYXVkIjoidGVzdC1jbGllbnQtaWQifQ."
+	// Unsigned JWT (alg=none) built at runtime — avoid JWT-shaped literals in
+	// source (gitleaks generic-api-key false positives on base64url blobs).
+	hdr, err := json.Marshal(map[string]string{"alg": "none", "typ": "JWT"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, err := json.Marshal(map[string]any{
+		"sub":              "123",
+		"email":            "a@b.com",
+		"email_verified":   true,
+		"aud":              "test-client-id",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	badIDToken := base64.RawURLEncoding.EncodeToString(hdr) + "." +
+		base64.RawURLEncoding.EncodeToString(payload) + "."
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

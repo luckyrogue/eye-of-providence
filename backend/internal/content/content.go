@@ -684,7 +684,7 @@ func (s *Service) handleAdminDelete(c *fiber.Ctx) error {
 		meta["prior_draft_hash"] = sha256Hex(prior.DraftContent)
 	}
 	if len(prior.Content) <= 4*1024 {
-		meta["prior_content_inline"] = json.RawMessage(prior.Content)
+		meta["prior_content_inline"] = prior.Content
 	}
 	s.Audit.LogFromCtx(c, actorID, actorEmail, ActionContentRevertedDefault,
 		"content", slug+":"+locale, meta)

@@ -55,7 +55,7 @@ func newTestWebAuthn(t *testing.T, rds *redis.Client) *WebAuthnService {
 // === Config / construction ===
 
 func TestNewWebAuthnService_EmptyRPID_ReturnsNil(t *testing.T) {
-	// Documented behaviour: пустой RPID = "feature disabled", caller не
+	// Documented behavior: пустой RPID = "feature disabled", caller не
 	// регистрирует endpoints. nil, nil — explicit signal.
 	s, err := NewWebAuthnService("", "name", "http://x", nil, nil, zaptest.NewLogger(t))
 	if err != nil {

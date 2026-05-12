@@ -80,7 +80,7 @@ func (c *Cache) Lookup(ctx context.Context, slug, locale string) (*Entry, bool, 
 	}
 	var e Entry
 	if err := json.Unmarshal(raw, &e); err != nil {
-		// Corrupt entry (e.g. left over from prior serialisation scheme)
+		// Corrupt entry (e.g. left over from prior serialization scheme)
 		// → treat as miss; caller refetches from Postgres + overwrites.
 		return nil, false, nil
 	}

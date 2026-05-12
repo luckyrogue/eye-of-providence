@@ -24,6 +24,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -73,7 +74,7 @@ func setupHandoffApp(t *testing.T) (*fiber.App, *pgxpool.Pool, MeService) {
 	return app, pool, svc
 }
 
-func doHandoff(t *testing.T, app *fiber.App, cookieValue string) (*http.Response, []byte) {
+func doHandoff(t *testing.T, app *fiber.App, cookieValue string) (status int, hdr http.Header, body []byte) {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, "/v1/me/session-handoff", nil)
 	if cookieValue != "" {
@@ -83,21 +84,23 @@ func doHandoff(t *testing.T, app *fiber.App, cookieValue string) (*http.Response
 	if err != nil {
 		t.Fatalf("app.Test: %v", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
-	body := make([]byte, 8192)
-	n, _ := resp.Body.Read(body)
-	return resp, body[:n]
+	body, err = io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	return resp.StatusCode, resp.Header, body
 }
 
 // TestSessionHandoff_NoCookie_401 — без cookie endpoint должен ответить 401.
 func TestSessionHandoff_NoCookie_401(t *testing.T) {
 	app, _, _ := setupHandoffApp(t)
-	resp, body := doHandoff(t, app, "")
-	if resp.StatusCode == http.StatusNotFound {
+	status, _, body := doHandoff(t, app, "")
+	if status == http.StatusNotFound {
 		t.Skipf("GET /v1/me/session-handoff not registered yet (404). Body=%s", string(body))
 	}
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("status=%d, want 401 (body=%s)", resp.StatusCode, string(body))
+	if status != http.StatusUnauthorized {
+		t.Errorf("status=%d, want 401 (body=%s)", status, string(body))
 	}
 }
 
@@ -114,12 +117,12 @@ func TestSessionHandoff_ValidCookie_ReturnsToken(t *testing.T) {
 	// Тест допускает оба контракта: cookie value = JWT (читается напрямую) или
 	// cookie value = opaque session id (требует Redis). Для scaffold-этапа мы
 	// предполагаем "JWT прямо в cookie".
-	resp, body := doHandoff(t, app, jwt)
-	if resp.StatusCode == http.StatusNotFound {
+	status, hdr, body := doHandoff(t, app, jwt)
+	if status == http.StatusNotFound {
 		t.Skipf("endpoint not registered yet (404). Body=%s", string(body))
 	}
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status=%d body=%s, want 200", resp.StatusCode, string(body))
+	if status != http.StatusOK {
+		t.Fatalf("status=%d body=%s, want 200", status, string(body))
 	}
 
 	var out struct {
@@ -134,7 +137,7 @@ func TestSessionHandoff_ValidCookie_ReturnsToken(t *testing.T) {
 
 	// Проверяем clear-cookie header (Max-Age=0 или Expires в прошлом).
 	foundClear := false
-	for _, sc := range resp.Header.Values("Set-Cookie") {
+	for _, sc := range hdr.Values("Set-Cookie") {
 		if !contains(sc, sessionHandoffCookie) {
 			continue
 		}
@@ -144,7 +147,7 @@ func TestSessionHandoff_ValidCookie_ReturnsToken(t *testing.T) {
 	}
 	if !foundClear {
 		t.Errorf("expected Set-Cookie clear header for %s; got %v",
-			sessionHandoffCookie, resp.Header.Values("Set-Cookie"))
+			sessionHandoffCookie, hdr.Values("Set-Cookie"))
 	}
 }
 
@@ -160,27 +163,27 @@ func TestSessionHandoff_OneShot(t *testing.T) {
 	app, pool, svc := setupHandoffApp(t)
 	_, jwt := makeUserAndToken(t, pool, "oneshot@example.com", svc.JWTSecret, true)
 
-	resp1, _ := doHandoff(t, app, jwt)
-	if resp1.StatusCode == http.StatusNotFound {
+	status1, _, _ := doHandoff(t, app, jwt)
+	if status1 == http.StatusNotFound {
 		t.Skip("endpoint not registered yet")
 	}
-	if resp1.StatusCode != http.StatusOK {
-		t.Skipf("first call did not succeed (status=%d) — cannot assert one-shot behaviour", resp1.StatusCode)
+	if status1 != http.StatusOK {
+		t.Skipf("first call did not succeed (status=%d) — cannot assert one-shot behavior", status1)
 	}
 
 	// Повторный вызов с тем же cookie. Если backend использует session_id с
 	// удалением — должен быть 401. Если просто cookie-with-JWT — этот тест
 	// безопасно НЕ может фейлить (backend trusted cookie value), и мы пометим
 	// поведение как to-document.
-	resp2, body2 := doHandoff(t, app, jwt)
-	if resp2.StatusCode == http.StatusOK {
+	status2, _, body2 := doHandoff(t, app, jwt)
+	if status2 == http.StatusOK {
 		// Может означать "cookie-as-JWT" подход. Это слабее с т.з. безопасности
 		// (cookie не one-shot), но не катастрофа.
 		t.Logf("note: handoff returned 200 on second call — server is NOT enforcing single-use server-side. Body=%s", string(body2))
 		return
 	}
-	if resp2.StatusCode != http.StatusUnauthorized {
-		t.Errorf("second call status=%d, want 401 (single-use semantics)", resp2.StatusCode)
+	if status2 != http.StatusUnauthorized {
+		t.Errorf("second call status=%d, want 401 (single-use semantics)", status2)
 	}
 }
 

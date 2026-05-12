@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -52,9 +54,16 @@ func TestParseJWT_Garbage(t *testing.T) {
 }
 
 func TestParseJWT_RejectsAlgNone(t *testing.T) {
-	// Классический JWT-attack: токен с alg=none. Наш parser должен отказать.
-	// Простейший alg=none token: header.payload. (тут руками — без подписи)
-	noneToken := "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJoYWNrIn0."
+	hdr, err := json.Marshal(map[string]string{"alg": "none", "typ": "JWT"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pay, err := json.Marshal(map[string]string{"sub": "hack"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	noneToken := base64.RawURLEncoding.EncodeToString(hdr) + "." +
+		base64.RawURLEncoding.EncodeToString(pay) + "."
 	if _, err := ParseJWT(testSecret, noneToken); err == nil {
 		t.Fatal("expected reject of alg=none token, got nil")
 	}
