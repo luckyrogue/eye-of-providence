@@ -1,7 +1,10 @@
 @import "tailwindcss";
 
-/* Бумаги без перехода: в v4 default border = currentColor. Мы держим shadcn-границы
-   через --border CSS-variable, поэтому возвращаем v3-поведение явно. */
+@source "../**/*.{js,ts,jsx,tsx}";
+@source "../../../agent/src/**/*.{js,ts,jsx,tsx}";
+@source "../../../dashboard/src/**/*.{js,ts,jsx,tsx}";
+@source "../../../browser-extension/src/**/*.{js,ts,jsx,tsx}";
+
 @layer base {
   *,
   ::after,
@@ -12,8 +15,6 @@
   }
 }
 
-/* Theme — мигрировано из ui/tailwind.preset.js. shadcn-палитра через CSS-vars,
-   keyframes/animations/fonts из бывшего preset.theme.extend. */
 @theme {
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
@@ -139,12 +140,6 @@
     --ring: 240 4.9% 83.9%;
   }
 
-  /* "eop" theme — warm-dark + orange accent для landing / marketing / pricing
-     pages. Скоупится через `[data-theme="eop"]` на root-элементе страницы,
-     чтобы dashboard-internal сохранил нейтральный shadcn-цвет. */
-  /* Global bg layers для eop theme — крепятся к body, чтобы покрывать
-     ВЕСЬ app (landing, auth, dashboard internals) без per-page wrappers.
-     ::before — grid, ::after — orange/violet glow, оба fixed + behind content. */
   html[data-theme="eop"] body::before {
     content: "";
     position: fixed;
@@ -167,15 +162,10 @@
       radial-gradient(ellipse 700px 500px at 80% 20%, hsl(13 100% 55% / 0.1), transparent 70%),
       radial-gradient(ellipse 600px 400px at 10% 60%, rgba(124, 58, 237, 0.06), transparent 70%);
   }
-  /* Compact UIs (browser-extension popup ~320px, Tauri agent ~600px) — heavy
-     grid+glow layers рассчитаны на full-page viewport; в узком окне они
-     шумят. Body opts in via .eop-compact class. */
   html[data-theme="eop"] body.eop-compact::before,
   html[data-theme="eop"] body.eop-compact::after {
     display: none;
   }
-  /* App content должен лежать ВЫШЕ background-layers. Корневой #root —
-     position: relative + z-index: 1 чтобы перекрыть body::before/after. */
   html[data-theme="eop"] #root {
     position: relative;
     z-index: 1;
@@ -207,7 +197,6 @@
     --input: 0 0% 100% / 0.08;
     --ring: 13 100% 55%;
     --radius: 0.5rem;
-    /* Custom tokens только в этом theme: для eyebrow-dot, ink-mute. */
     --eop-ink-mute: 56 14% 97% / 0.38;
     --eop-line-strong: 0 0% 100% / 0.14;
     --eop-accent-soft: 13 100% 55% / 0.18;
@@ -223,20 +212,13 @@
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Mobile: убираем синюю tap-highlight рамку на iOS Safari + Android Chrome —
-       визуально дёшево, отвлекает в native-app feel'е после install PWA. */
     -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground font-sans;
     font-feature-settings: "ss01", "cv11";
-    /* Запретим pull-to-refresh + overscroll bounce на мобиле — мешают
-       sticky-header'у в standalone PWA mode. */
     overscroll-behavior-y: none;
   }
-  /* Buttons / interactive elements в native-PWA должны иметь touch-action:
-     manipulation чтобы убрать 300ms tap-delay на старых браузерах + дёшево
-     помочь ARIA. */
   button,
   a,
   [role="button"] {

@@ -4,7 +4,7 @@
 // Когда появится — вернуть пункты с явной active-проверкой по location.search.
 
 import { useTranslation } from "react-i18next";
-import { NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { Home, Plug, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -41,13 +41,12 @@ export function Sidebar({
     { to: "/team", label: t("nav.team"), icon: Users, matchExact: true },
   ];
 
-  // /settings — два sidebar-пункта (Интеграции + Настройки) ведут в одну
-  // страницу с tab'ом. NavLink по pathname матчит оба → нужна ручная
-  // проверка location.search для разделения.
-  const isIntegrations =
-    location.pathname.startsWith("/settings") && location.search.includes("tab=devices");
-  const isSettingsRoot =
-    location.pathname.startsWith("/settings") && !location.search.includes("tab=devices");
+  // /settings — два sidebar-пункта (Интеграции + Настройки) ведут на одну страницу.
+  // NavLink совпадает по pathname и игнорирует query → оба «активны» на любом /settings?...
+  // Поэтому для этих пунктов используем Link + явный tab из URLSearchParams.
+  const settingsTab = new URLSearchParams(location.search).get("tab");
+  const isIntegrations = location.pathname.startsWith("/settings") && settingsTab === "devices";
+  const isSettingsRoot = location.pathname.startsWith("/settings") && settingsTab !== "devices";
 
   const insights: NavItem[] = [
     {
@@ -135,22 +134,21 @@ export function Sidebar({
   );
 }
 
-// forceActive: если задан — active-class приклеивается по нему вместо
-// стандартного pathname-match'а NavLink.
+// forceActive: если задан — только Link + ручной active (NavLink матчит pathname
+// без query и подсветил бы оба пункта на /settings?tab=…).
 function NavItemLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
   const Icon = item.icon;
   if (item.forceActive !== undefined) {
     return (
-      <NavLink
+      <Link
         to={item.to}
         onClick={onNavigate}
-        end={item.matchExact}
         className={`nav-item ${item.forceActive ? "active" : ""}`}
       >
         <Icon className="nav-icon" />
         <span className="truncate">{item.label}</span>
         {item.badge && <span className={`badge ${item.badgeKind ?? ""}`}>{item.badge}</span>}
-      </NavLink>
+      </Link>
     );
   }
   return (

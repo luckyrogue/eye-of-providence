@@ -5,14 +5,6 @@ import { Button } from "@eop/ui";
 type Props = { children: ReactNode };
 type State = { error: Error | null };
 
-// Class component нужен для componentDidCatch — React не имеет hook'ового
-// эквивалента. Локализация через i18next.t() напрямую (не useTranslation),
-// потому что hooks внутри class. Fallback на хардкод-словарь на случай если
-// boundary словит ошибку ДО завершения i18n init (cold-start crash).
-//
-// Sanitization: error.message рендерится в <pre> через React — текстовый
-// node, XSS невозможен. Stack-trace в componentDidCatch только в console
-// (внешняя телеметрия будет позднее).
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };
 

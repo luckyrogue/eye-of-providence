@@ -41,7 +41,7 @@
     "focus_sub": "ininterrumpido · ≥ 15 min",
     "log_title": "Registro de atribución",
     "log_sub": "live · últimos 20 eventos",
-    "recap_tag": "Insight semanal · Gemini · auto",
+    "recap_tag": "Insight semanal · auto",
     "recap_placeholder": "El recap aparecerá aquí cuando Gemini genere el primer resumen semanal.",
     "no_data_yet": "Aún no hay eventos — el gráfico se llenará a medida que codees.",
     "report_generated_toast": "Informe generado. Ábrelo en Reports.",

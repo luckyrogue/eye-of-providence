@@ -14,11 +14,26 @@ import {
 } from "../shared/api/tauri";
 import { PairingWizard } from "../shared/ui/pairing-wizard";
 
+/** Совпадает с `DEFAULT_BACKEND` в agent `auth.rs` — для сравнения без показа поля всем. */
+const DEFAULT_BACKEND_URL = "https://eop.rysdavletov.org/api";
+
+function normalizeBackendUrl(url: string): string {
+  return url.trim().replace(/\/+$/, "");
+}
+
+function isNonDefaultBackend(url: string): boolean {
+  const u = normalizeBackendUrl(url);
+  if (!u) return false;
+  return u !== normalizeBackendUrl(DEFAULT_BACKEND_URL);
+}
+
 export function SettingsPage() {
   const { t } = useTranslation("agent");
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [backend, setBackend] = useState("");
   const [backendSaved, setBackendSaved] = useState(false);
+  /** Поле URL показываем только для self-hosted или по явному запросу. */
+  const [showBackendUi, setShowBackendUi] = useState(false);
   const [paused, setPausedState] = useState(false);
   const [autostart, setAutostartState] = useState(false);
 
@@ -26,7 +41,9 @@ export function SettingsPage() {
     try {
       const info = await accountInfo();
       setAccount(info);
-      setBackend(info.backend_url ?? "");
+      const url = info.backend_url ?? "";
+      setBackend(url);
+      if (isNonDefaultBackend(url)) setShowBackendUi(true);
     } catch (e) {
       console.warn("[eop] account_info failed", e);
     }
@@ -52,10 +69,13 @@ export function SettingsPage() {
       setBackendSaved(true);
       window.setTimeout(() => setBackendSaved(false), 1500);
       await refresh();
+      if (isNonDefaultBackend(backend)) setShowBackendUi(true);
     } catch (e) {
       console.warn("[eop] set_backend_url failed", e);
     }
   }, [backend, refresh]);
+
+  const backendUiVisible = showBackendUi || isNonDefaultBackend(backend);
 
   const onLogout = useCallback(async () => {
     try {
@@ -116,28 +136,54 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("settings_backend_title")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <label className="text-xs text-muted-foreground" htmlFor="backend-url">
-            {t("settings_backend_label")}
-          </label>
-          <div className="flex gap-2">
-            <Input
-              id="backend-url"
-              value={backend}
-              onChange={(e) => setBackend(e.target.value)}
-              placeholder="https://api.eop.example"
-              className="flex-1"
-            />
-            <Button size="sm" onClick={() => void onSaveBackend()}>
-              {backendSaved ? t("settings_backend_saved") : t("settings_backend_save")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {backendUiVisible ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("settings_backend_advanced_title")}</CardTitle>
+            <CardDescription>{t("settings_backend_advanced_hint")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <label className="text-xs text-muted-foreground" htmlFor="backend-url">
+              {t("settings_backend_label")}
+            </label>
+            <div className="flex gap-2">
+              <Input
+                id="backend-url"
+                value={backend}
+                onChange={(e) => setBackend(e.target.value)}
+                placeholder={DEFAULT_BACKEND_URL}
+                className="flex-1"
+              />
+              <Button size="sm" onClick={() => void onSaveBackend()}>
+                {backendSaved ? t("settings_backend_saved") : t("settings_backend_save")}
+              </Button>
+            </div>
+            {!isNonDefaultBackend(backend) && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto px-0 py-1 text-xs text-muted-foreground"
+                onClick={() => setShowBackendUi(false)}
+              >
+                {t("settings_backend_collapse")}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="rounded-lg border border-dashed border-border px-3 py-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-auto px-0 py-1 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => setShowBackendUi(true)}
+          >
+            {t("settings_backend_reveal")}
+          </Button>
+        </div>
+      )}
 
       <Card>
         <CardHeader>

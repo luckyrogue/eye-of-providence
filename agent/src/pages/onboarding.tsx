@@ -1,7 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
-import { preflightRun, type PreflightCheck, type PreflightStatus } from "../shared/api/tauri";
+import {
+  openUrl,
+  preflightRun,
+  type PreflightCheck,
+  type PreflightStatus,
+} from "../shared/api/tauri";
 
 const STATUS_DOT: Record<PreflightStatus, string> = {
   ok: "bg-success",
@@ -20,27 +25,50 @@ function badgeLabel(t: (key: string) => string, status: PreflightStatus): string
   }
 }
 
+const PREFLIGHT_TIMEOUT_MS = 25_000;
+
 export function OnboardingPage() {
   const { t } = useTranslation("agent");
   const [checks, setChecks] = useState<PreflightCheck[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Сбрасывает устаревшие ответы при повторных кликах / Strict Mode. */
+  const refreshGen = useRef(0);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
+    const id = ++refreshGen.current;
     setBusy(true);
     setError(null);
     try {
-      setChecks(await preflightRun());
+      const next = await Promise.race([
+        preflightRun(),
+        new Promise<never>((_, rej) =>
+          setTimeout(
+            () =>
+              rej(
+                new Error(
+                  t("setup_preflight_timeout", {
+                    seconds: Math.round(PREFLIGHT_TIMEOUT_MS / 1000),
+                  }),
+                ),
+              ),
+            PREFLIGHT_TIMEOUT_MS,
+          ),
+        ),
+      ]);
+      if (id !== refreshGen.current) return;
+      setChecks(next);
     } catch (e) {
+      if (id !== refreshGen.current) return;
       setError(String(e));
     } finally {
-      setBusy(false);
+      if (id === refreshGen.current) setBusy(false);
     }
-  }
+  }, [t]);
 
   useEffect(() => {
     void refresh();
-  }, []);
+  }, [refresh]);
 
   const errors = checks.filter((c) => c.status === "error");
   const warns = checks.filter((c) => c.status === "warn");
@@ -80,14 +108,14 @@ export function OnboardingPage() {
                     </div>
                     <p className="text-sm text-muted-foreground">{c.message}</p>
                     {c.action_url && (
-                      <a
-                        href={c.action_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center text-xs text-primary hover:underline"
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto px-0 py-0 text-xs font-normal"
+                        onClick={() => void openUrl(c.action_url!)}
                       >
                         {c.action_label ?? t("setup_open")} →
-                      </a>
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -101,7 +129,13 @@ export function OnboardingPage() {
           </ul>
 
           <div className="flex gap-2">
-            <Button size="sm" onClick={refresh} disabled={busy}>
+            <Button
+              type="button"
+              size="sm"
+              aria-busy={busy}
+              className={busy ? "opacity-70 cursor-wait" : undefined}
+              onClick={() => void refresh()}
+            >
               {busy ? t("setup_recheck_busy") : t("setup_recheck")}
             </Button>
           </div>

@@ -41,7 +41,7 @@
     "focus_sub": "uninterrupted · ≥ 15 min",
     "log_title": "Attribution log",
     "log_sub": "live · last 20 events",
-    "recap_tag": "Weekly insight · Gemini · auto-generated",
+    "recap_tag": "Weekly insight · auto-generated",
     "recap_placeholder": "Recap will appear here once Gemini generates the first weekly narrative from your aggregates.",
     "no_data_yet": "No events yet — chart will fill as you code.",
     "report_generated_toast": "Report generated. Open it in Reports.",

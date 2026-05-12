@@ -18,6 +18,7 @@ import { UsersTable } from "./ui/users-table";
 import { Revenue } from "./ui/revenue";
 import { SSOConfigs } from "./ui/sso";
 import { AuditLog } from "./ui/audit";
+import { AdminSkeleton } from "./ui/admin-skeleton";
 
 export function Admin({ tz }: AdminProps) {
   const { t } = useTranslation("app");
@@ -58,7 +59,6 @@ export function Admin({ tz }: AdminProps) {
           </div>
         </div>
         <div className="page-head-actions flex items-center gap-2">
-          {/* Tab segmented control в стиле topbar date-pick */}
           <div className="eop-tab-pills">
             {ADMIN_TABS.map((it) => (
               // eslint-disable-next-line no-restricted-syntax -- segmented control (artifact pattern)
@@ -132,25 +132,5 @@ export function Admin({ tz }: AdminProps) {
         </>
       )}
     </>
-  );
-}
-
-function AdminSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="kpi-grid">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="kpi">
-            <span className="block h-3 w-24 rounded" style={{ background: "hsl(var(--muted))" }} />
-            <span className="block h-8 w-16 rounded" style={{ background: "hsl(var(--muted))" }} />
-            <span className="block h-3 w-32 rounded" style={{ background: "hsl(var(--muted))" }} />
-          </div>
-        ))}
-      </div>
-      <div className="eop-card" style={{ minHeight: 320 }}>
-        <div className="h-5 w-40 rounded mb-3" style={{ background: "hsl(var(--muted))" }} />
-        <div className="h-3 w-64 rounded" style={{ background: "hsl(var(--muted))" }} />
-      </div>
-    </div>
   );
 }
