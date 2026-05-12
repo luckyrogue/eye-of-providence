@@ -904,7 +904,9 @@
   /* KPI cards */
   [data-theme="eop"] .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    /* auto-fit minmax — адаптируется к количеству tile (3 на dashboard,
+       4 в admin overview). Min 200px чтобы tile не сжимался уродливо. */
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 14px;
     margin-bottom: 18px;
   }

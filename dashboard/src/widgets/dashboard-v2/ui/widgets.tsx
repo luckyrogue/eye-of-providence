@@ -1,13 +1,15 @@
-// Dashboard widgets — KPI grid, Heatmap, Gauge, Timeline, Donut, Provider
-// list, Trend chart, Language bars, Project list, Focus sessions,
-// Attribution log, Recap card.
+// Dashboard widgets — KPI grid, Heatmap, Gauge, Donut, Trend chart,
+// Language bars, Attribution log, Recap card.
 //
-// Данные: wire'нуты к real API через react-query (useHeatmap / useTrend /
-// useSummary / useLanguages / useRecent). Где data ещё нет (focus sessions,
-// recap text, providers list) — mock с TODO для GA-итерации. Loading state
-// показывает placeholder mock-данные, чтобы layout не прыгал.
+// Все widgets wired к real API через react-query (useHeatmap / useTrend /
+// useSummary / useLanguages / useRecent). Mock-widgets удалены — см.
+// TODO ниже. i18n: все строки через t("dashboard.*") из app namespace.
 //
-// i18n: все user-facing строки через t("dashboard.*") из app namespace.
+// Удалены (вернутся когда backend добавит endpoints):
+//   - TimelineCard      — нужен /v1/timeline (events by hour)
+//   - ProvidersList     — нужен /v1/summary/categories с ai_provider breakdown
+//   - ProjectsList      — нужен /v1/summary/projects
+//   - FocusSessions     — нужен /v1/sessions/focus
 
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,29 +17,6 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { useRecent, useSummary, useLanguages, useHeatmap, useTrend } from "../../../entities/event";
 import { getTz } from "../../../shared/lib/tz";
 import type { EventRow, HeatmapCell, LangCell, TrendPoint } from "../../../entities/event";
-
-/* ============ Mini sparkline (used in KPI cards) ============ */
-export function MiniSpark({ color, points }: { color: string; points: number[] }) {
-  const W = 240,
-    H = 38;
-  const path = points
-    .map((p, i) => {
-      const x = (i / (points.length - 1)) * W;
-      const y = H - (p / 100) * H * 0.85 - 2;
-      return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
-    .join(" ");
-  return (
-    <svg className="kpi-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-      <path d={path} fill="none" stroke={color} strokeWidth="1.5" />
-      <path d={`${path} L ${W} ${H} L 0 ${H} Z`} fill={color} opacity="0.15" />
-    </svg>
-  );
-}
-
-function spark(variance: number, offset = 0): number[] {
-  return Array.from({ length: 30 }, (_, i) => 50 + Math.sin(i * 0.5) * variance + offset);
-}
 
 // formatHm — миллисекунды → "Xh Ymin", где первое — крупная цифра для KPI.
 function formatHm(ms: number): { value: string; unit: string } {
@@ -49,15 +28,14 @@ function formatHm(ms: number): { value: string; unit: string } {
 }
 
 /* ============ KPI grid ============ */
+// 3 KPI tile вместо 4 — "Focus sessions" удалён (нет /v1/sessions/focus).
+// Sparklines убраны — они показывают synthetic sine wave (не реальные данные).
+// Без spark вернёмся когда добавим /v1/trend с per-day breakdown.
 export function KpiGrid() {
   const { t } = useTranslation("app");
   const summary = useSummary(7);
-  const summaryPrev = useSummary(14); // для delta vs prior period — будем считать первые 7 дней vs последние
+  const summaryPrev = useSummary(14); // для delta vs prior period
 
-  const accent = "hsl(var(--accent))";
-  const success = "hsl(var(--success))";
-
-  // Aggregate: ms по категориям. Backend возвращает {ai, manual, ...} как ms.
   const ms = summary.data ?? {};
   const aiMs = Object.entries(ms)
     .filter(([k]) => k === "ai" || k.startsWith("ai_"))
@@ -69,7 +47,8 @@ export function KpiGrid() {
   const activeFmt = formatHm(totalMs);
   const manualFmt = formatHm(manualMs);
 
-  // Delta: грубо — diff между текущим summary(7) и summary(14) - summary(7) (= prior period).
+  // Delta vs prior 7d. summary(14) — total за 14 дней; вычитаем последние
+  // 7 → получаем prior period.
   const prevMs = summaryPrev.data ?? {};
   const prevTotal = (prevMs["ai"] ?? 0) + (prevMs["manual"] ?? prevMs["typed"] ?? 0) - totalMs;
   const totalDelta = totalMs - prevTotal;
@@ -78,6 +57,7 @@ export function KpiGrid() {
   const aiPctPrev =
     prevTotal > 0 ? Math.round((((prevMs["ai"] ?? 0) - aiMs) / prevTotal) * 100) : 0;
   const aiPctDelta = aiPct - aiPctPrev;
+  const hasData = totalMs > 0;
 
   return (
     <div className="kpi-grid">
@@ -85,35 +65,33 @@ export function KpiGrid() {
         label={t("dashboard.kpi_active")}
         value={activeFmt.value}
         unit={activeFmt.unit}
-        delta={{
-          kind: totalDelta >= 0 ? "up" : "down",
-          text: `${totalDelta >= 0 ? "+" : "−"}${totalDeltaFmt.value}${totalDeltaFmt.unit} ${t("dashboard.kpi_vs_prior")}`,
-        }}
-        spark={<MiniSpark color={accent} points={spark(15)} />}
+        delta={
+          hasData && prevTotal > 0
+            ? {
+                kind: totalDelta >= 0 ? "up" : "down",
+                text: `${totalDelta >= 0 ? "+" : "−"}${totalDeltaFmt.value}${totalDeltaFmt.unit} ${t("dashboard.kpi_vs_prior")}`,
+              }
+            : undefined
+        }
       />
       <KpiTile
         label={t("dashboard.kpi_ai_ratio")}
-        value={String(aiPct)}
-        unit="%"
-        delta={{
-          kind: aiPctDelta >= 0 ? "up" : "down",
-          text: `${aiPctDelta >= 0 ? "+" : "−"}${Math.abs(aiPctDelta)}pp ${t("dashboard.kpi_vs_prior")}`,
-        }}
-        spark={<MiniSpark color={accent} points={spark(10, 8)} />}
+        value={hasData ? String(aiPct) : "—"}
+        unit={hasData ? "%" : ""}
+        delta={
+          hasData && prevTotal > 0
+            ? {
+                kind: aiPctDelta >= 0 ? "up" : "down",
+                text: `${aiPctDelta >= 0 ? "+" : "−"}${Math.abs(aiPctDelta)}pp ${t("dashboard.kpi_vs_prior")}`,
+              }
+            : undefined
+        }
       />
       <KpiTile
         label={t("dashboard.kpi_manual")}
-        value={manualFmt.value}
-        unit={manualFmt.unit}
-        delta={{ kind: "flat", text: t("dashboard.kpi_stable") }}
-        spark={<MiniSpark color={success} points={spark(12).map((v) => 100 - v)} />}
-      />
-      <KpiTile
-        label={t("dashboard.kpi_focus")}
-        value="—"
-        unit={t("dashboard.kpi_soon")}
-        delta={{ kind: "flat", text: t("dashboard.kpi_no_data") }}
-        spark={<MiniSpark color="#c084fc" points={spark(8, -5)} />}
+        value={hasData ? manualFmt.value : "—"}
+        unit={hasData ? manualFmt.unit : ""}
+        delta={undefined}
       />
     </div>
   );
@@ -124,27 +102,26 @@ function KpiTile({
   value,
   unit,
   delta,
-  spark,
 }: {
   label: string;
   value: string;
   unit: string;
-  delta: { kind: "up" | "down" | "flat"; text: string };
-  spark: React.ReactNode;
+  delta?: { kind: "up" | "down" | "flat"; text: string };
 }) {
-  const Icon = delta.kind === "up" ? TrendingUp : delta.kind === "down" ? TrendingDown : Minus;
+  const Icon = delta?.kind === "up" ? TrendingUp : delta?.kind === "down" ? TrendingDown : Minus;
   return (
     <div className="kpi">
       <span className="kpi-label">{label}</span>
       <span className="kpi-value">
         {value}
-        <span className="unit">{unit}</span>
+        {unit && <span className="unit">{unit}</span>}
       </span>
-      <span className={`kpi-delta ${delta.kind}`}>
-        <Icon className="h-3 w-3" />
-        {delta.text}
-      </span>
-      {spark}
+      {delta && (
+        <span className={`kpi-delta ${delta.kind}`}>
+          <Icon className="h-3 w-3" />
+          {delta.text}
+        </span>
+      )}
     </div>
   );
 }
@@ -305,91 +282,8 @@ export function GaugeCard() {
   );
 }
 
-/* ============ Timeline (segmented activity) ============ */
-// Today's timeline — пока mock (нужен event-stream group'нутый по часам).
-// TODO(GA): добавить /v1/timeline endpoint и derived. Текущий — placeholder.
-const TL_LEGEND_COLORS: Record<string, string> = {
-  typed: "#4ade80",
-  inline: "hsl(var(--accent))",
-  paste: "#60a5fa",
-  agent: "#c084fc",
-  reading: "rgba(255,255,255,0.18)",
-  idle: "rgba(255,255,255,0.08)",
-};
-
-export function TimelineCard() {
-  const { t } = useTranslation("app");
-  const tlLegend = [
-    { kind: "typed", label: t("dashboard.legend_typed") },
-    { kind: "inline", label: t("dashboard.legend_inline") },
-    { kind: "paste", label: t("dashboard.legend_paste") },
-    { kind: "agent", label: t("dashboard.legend_agent") },
-    { kind: "reading", label: t("dashboard.legend_reading") },
-    { kind: "idle", label: t("dashboard.legend_idle") },
-  ];
-  const timeline = [
-    { kind: "idle", w: 8, label: "00:00 → 09:12 · idle" },
-    { kind: "typed", w: 14, label: "09:12 → 11:08 · Rust manual" },
-    { kind: "reading", w: 4, label: "11:08 → 11:43 · review" },
-    { kind: "inline", w: 16, label: "11:43 → 13:24 · TS + Copilot" },
-    { kind: "idle", w: 5, label: "13:24 → 13:55 · break" },
-    { kind: "agent", w: 6, label: "13:55 → 14:32 · agent" },
-    { kind: "paste", w: 4, label: "14:32 → 15:00 · chat" },
-    { kind: "typed", w: 8, label: "15:00 → 16:14 · TS manual" },
-    { kind: "inline", w: 5, label: "16:14 → 17:02 · Cursor tab" },
-    { kind: "idle", w: 30, label: "17:02 → 24:00 · off" },
-  ];
-  return (
-    <div className="eop-card col-12">
-      <div className="card-head">
-        <div>
-          <div className="card-title">{t("dashboard.timeline_title")}</div>
-          <div className="card-sub">{t("dashboard.timeline_sub")}</div>
-        </div>
-        <div
-          className="hidden md:flex gap-3.5 text-[11px]"
-          style={{
-            fontFamily: '"JetBrains Mono", monospace',
-            color: "hsl(var(--muted-foreground))",
-          }}
-        >
-          {tlLegend.map((l) => (
-            <span key={l.kind} className="inline-flex items-center gap-1.5">
-              <span
-                className="inline-block w-2 h-2 rounded-sm"
-                style={{ background: TL_LEGEND_COLORS[l.kind] }}
-              />
-              {l.label}
-            </span>
-          ))}
-        </div>
-      </div>
-      <div className="eop-timeline-wrap">
-        <div
-          className="flex justify-between text-[10px] mb-2"
-          style={{
-            fontFamily: '"JetBrains Mono", monospace',
-            color: "hsl(var(--muted-foreground))",
-          }}
-        >
-          <span>00:00</span>
-          <span>{t("dashboard.timeline_now")}</span>
-          <span>24:00</span>
-        </div>
-        <div className="timeline">
-          {timeline.map((b, i) => (
-            <div
-              key={i}
-              className={`timeline-block tl-${b.kind}`}
-              style={{ width: `${b.w}%` }}
-              title={b.label}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+/* TimelineCard — removed: нужен /v1/timeline endpoint (events grouped by hour),
+   backend ещё нет. Вернуть когда добавим endpoint. См. GA roadmap. */
 
 /* ============ Donut + legend (Code provenance) ============ */
 // Real data: useSummary(7) → Record<category, ms>. Маппим в 5 buckets.
@@ -487,56 +381,9 @@ export function ProvenanceDonut() {
   );
 }
 
-/* ============ Providers list ============ */
-// TODO(GA): backend нужно расширить /v1/summary/categories на разбивку по
-// ai_provider. Сейчас mock.
-const PROVIDERS = [
-  { name: "Anthropic", channel: "Claude Code · agent", mins: 142, pct: 38 },
-  { name: "GitHub Copilot", channel: "VS Code · inline", mins: 88, pct: 24 },
-  { name: "Cursor", channel: "IDE · tab + chat", mins: 61, pct: 16 },
-  { name: "OpenAI", channel: "chatgpt.com · chat", mins: 42, pct: 11 },
-  { name: "Gemini", channel: "gemini.google.com", mins: 28, pct: 7 },
-  { name: "Aider", channel: "CLI · agent", mins: 14, pct: 4 },
-];
-
-export function ProvidersList() {
-  const { t } = useTranslation("app");
-  return (
-    <div className="eop-card col-7">
-      <div className="card-head">
-        <div>
-          <div className="card-title">{t("dashboard.providers_title")}</div>
-          <div className="card-sub">{t("dashboard.providers_sub")}</div>
-        </div>
-      </div>
-      <div className="prov-list">
-        {PROVIDERS.map((p) => (
-          <div key={p.name} className="prov-item">
-            <div className="prov-logo">
-              <span
-                className="text-[11px] font-mono"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
-                {p.name.slice(0, 2).toUpperCase()}
-              </span>
-            </div>
-            <div>
-              <div className="prov-name">{p.name}</div>
-              <div className="prov-chan">{p.channel}</div>
-            </div>
-            <span className="prov-time">
-              {Math.floor(p.mins / 60)}h {String(p.mins % 60).padStart(2, "0")}m
-            </span>
-            <div className="prov-bar">
-              <i style={{ width: `${p.pct * 2.6}%` }} />
-            </div>
-            <span className="prov-pct">{p.pct}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+/* ProvidersList — removed: backend нужно расширить /v1/summary/categories
+   на breakdown по ai_provider field. Сейчас events содержат ai_provider
+   но aggregate endpoint его игнорирует. Вернуть после backend changes. */
 
 /* ============ Trend chart (AI ratio 30d) ============ */
 // useTrend returns TrendPoint[] (date, category, chars, ms). Группируем
@@ -569,26 +416,41 @@ export function TrendChart() {
   const tz = useMemo(() => getTz(), []);
   const trend = useTrend(30, tz);
   const series = useMemo(() => reshapeTrend(trend.data), [trend.data]);
+  const hasData = series.length >= 2;
+
+  // Если данных нет — показываем empty state, БЕЗ синтетического sine wave.
+  // Раньше fake sine вводил в заблуждение (выглядит как реальные метрики).
+  if (!hasData) {
+    return (
+      <div className="eop-card col-12">
+        <div className="card-head">
+          <div>
+            <div className="card-title">{t("dashboard.trend_title")}</div>
+            <div className="card-sub">{t("dashboard.trend_sub")}</div>
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-12 text-[13px] text-muted-foreground">
+          {t("dashboard.no_data_yet")}
+        </div>
+      </div>
+    );
+  }
 
   const W = 720,
     H = 180;
-  // Fallback на synthetic если данных нет.
-  const aiSeries =
-    series.length > 0
-      ? series.map((s) => s.ai)
-      : Array.from({ length: 30 }, (_, i) => 40 + Math.sin(i * 0.4) * 8 + i * 0.7);
-  const manSeries = series.length > 0 ? series.map((s) => s.manual) : aiSeries.map((v) => 100 - v);
+  const aiSeries = series.map((s) => s.ai);
+  const manSeries = series.map((s) => s.manual);
   const days = aiSeries.length;
   const toPath = (s: number[]) =>
     s
       .map((v, i) => {
-        const x = (i / (days - 1)) * (W - 40) + 30;
+        const x = days === 1 ? W / 2 : (i / (days - 1)) * (W - 40) + 30;
         const y = H - 24 - (v / 100) * (H - 50);
         return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
       })
       .join(" ");
   const fillPath = `${toPath(aiSeries)} L ${W - 10} ${H - 24} L 30 ${H - 24} Z`;
-  const avgAi = aiSeries.reduce((acc, v) => acc + v, 0) / Math.max(1, aiSeries.length);
+  const avgAi = aiSeries.reduce((acc, v) => acc + v, 0) / aiSeries.length;
   const avgMan = 100 - avgAi;
 
   return (
@@ -687,7 +549,7 @@ export function LanguageBars() {
   const lang = useLanguages(7);
   const langs = useMemo(() => reshapeLanguages(lang.data), [lang.data]);
   return (
-    <div className="eop-card col-6">
+    <div className="eop-card col-7">
       <div className="card-head">
         <div>
           <div className="card-title">{t("dashboard.langs_title")}</div>
@@ -717,108 +579,11 @@ export function LanguageBars() {
   );
 }
 
-/* ============ Projects list ============ */
-// TODO(GA): добавить /v1/summary/projects на backend (есть commits table
-// с project_id). Сейчас mock.
-const PROJECTS_DATA = [
-  {
-    name: "eye-of-providence",
-    meta: "github.com/eop/agent",
-    hours: "18h 02m",
-    color: "hsl(var(--accent))",
-    ai: 55,
-  },
-  { name: "parser-core", meta: "private", hours: "7h 41m", color: "#60a5fa", ai: 38 },
-  { name: "dashboard-web", meta: "github.com/eop/web", hours: "5h 16m", color: "#4ade80", ai: 72 },
-];
+/* ProjectsList — removed: нужен /v1/summary/projects endpoint (есть
+   commits table с project_id, можно агрегировать). Вернуть после backend. */
 
-export function ProjectsList() {
-  const { t } = useTranslation("app");
-  return (
-    <div className="eop-card col-6">
-      <div className="card-head">
-        <div>
-          <div className="card-title">{t("dashboard.projects_title")}</div>
-          <div className="card-sub">{t("dashboard.projects_sub")}</div>
-        </div>
-      </div>
-      <div className="proj-list">
-        {PROJECTS_DATA.map((p) => (
-          <div key={p.name} className="proj-row">
-            <div className="proj-icon" style={{ background: `${p.color}22`, color: p.color }}>
-              {p.name[0].toUpperCase()}
-            </div>
-            <div>
-              <div className="proj-name">{p.name}</div>
-              <div className="proj-meta">{p.meta}</div>
-            </div>
-            <div className="mini-bar">
-              <i style={{ width: `${p.ai}%`, background: "hsl(var(--accent))", height: "100%" }} />
-              <i
-                style={{
-                  width: `${100 - p.ai}%`,
-                  background: "#4ade80",
-                  opacity: 0.6,
-                  height: "100%",
-                }}
-              />
-            </div>
-            <span className="proj-time">{p.hours}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ============ Focus sessions ============ */
-// TODO(GA): wire к /v1/sessions/focus (нет endpoint'а). Mock.
-const FOCUS = [
-  {
-    app: "VS Code · parser-core",
-    detail: "TypeScript · 78% AI-assist",
-    dur: "1h 41m",
-    color: "hsl(var(--accent))",
-  },
-  {
-    app: "Cursor · eye-of-providence",
-    detail: "Rust · 22% AI-assist",
-    dur: "1h 56m",
-    color: "#4ade80",
-  },
-  {
-    app: "iTerm2 · claude code",
-    detail: "agent run · 41 file edits",
-    dur: "32m",
-    color: "#c084fc",
-  },
-];
-
-export function FocusSessions() {
-  const { t } = useTranslation("app");
-  return (
-    <div className="eop-card col-5">
-      <div className="card-head">
-        <div>
-          <div className="card-title">{t("dashboard.focus_title")}</div>
-          <div className="card-sub">{t("dashboard.focus_sub")}</div>
-        </div>
-      </div>
-      <div className="focus-list">
-        {FOCUS.map((f) => (
-          <div key={f.app} className="focus-item">
-            <span className="focus-bar" style={{ background: f.color }} />
-            <div className="min-w-0">
-              <div className="focus-app truncate">{f.app}</div>
-              <div className="focus-detail truncate">{f.detail}</div>
-            </div>
-            <span className="focus-dur">{f.dur}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+/* FocusSessions — removed: нет /v1/sessions/focus endpoint'а (нужен
+   group-by сессий ≥15min uninterrupted). Вернуть после backend. */
 
 /* ============ Attribution log ============ */
 // useRecent — live event stream. Refetch interval 10s для near-live.
@@ -855,7 +620,7 @@ export function AttributionLog() {
   const rows = useMemo(() => (recent.data ?? []).map(formatLogRow), [recent.data]);
 
   return (
-    <div className="eop-card col-7">
+    <div className="eop-card col-12">
       <div className="card-head">
         <div>
           <div className="card-title">{t("dashboard.log_title")}</div>

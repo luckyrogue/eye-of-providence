@@ -10,13 +10,9 @@ import {
   RecapCard,
   HeatmapCard,
   GaugeCard,
-  TimelineCard,
   ProvenanceDonut,
-  ProvidersList,
   TrendChart,
   LanguageBars,
-  ProjectsList,
-  FocusSessions,
   AttributionLog,
 } from "../../widgets/dashboard-v2/ui/widgets";
 
@@ -86,16 +82,18 @@ export function DashboardRoute() {
         </div>
       </div>
 
+      {/* Layout: Heatmap 8 + Gauge 4 (top row) → Donut 5 + Languages 7
+          (middle) → Trend 12 (full width) → Attribution 12 (live).
+          Удалены TimelineCard/ProvidersList/ProjectsList/FocusSessions —
+          нет backend endpoints, mock data вводила в заблуждение.
+          Вернутся когда добавим /v1/timeline /v1/summary/providers
+          /v1/summary/projects /v1/sessions/focus. */}
       <div className="eop-grid">
         <HeatmapCard />
         <GaugeCard />
-        <TimelineCard />
         <ProvenanceDonut />
-        <ProvidersList />
-        <TrendChart />
         <LanguageBars />
-        <ProjectsList />
-        <FocusSessions />
+        <TrendChart />
         <AttributionLog />
       </div>
     </>
