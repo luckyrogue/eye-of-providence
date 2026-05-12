@@ -35,6 +35,30 @@ function setToken(token: string) {
   localStorage.setItem(SESSION_KEYS.token, token);
 }
 
+// fetchSessionHandoff — reads the one-shot HttpOnly cookie set by the backend
+// after an OAuth/passkey login redirect lands on `/auth/complete`. The backend
+// clears the cookie on read (one-shot), so this call must happen exactly once
+// per redirect.
+//
+// withCredentials: true — cookie lives on the API origin, axios needs the
+// flag to send cross-site credentials when dashboard and API are on different
+// hosts. The endpoint ignores Authorization headers, so a stale localStorage
+// token doesn't poison the handoff.
+export async function fetchSessionHandoff(): Promise<{ token: string }> {
+  const { data } = await http.get<{ token: string }>("/v1/me/session-handoff", {
+    withCredentials: true,
+  });
+  return data;
+}
+
+// completeSessionHandoff — full flow used by the `/auth/complete` route:
+// read the cookie-backed JWT, persist it to localStorage, return it.
+export async function completeSessionHandoff(): Promise<string> {
+  const { token } = await fetchSessionHandoff();
+  setToken(token);
+  return token;
+}
+
 export async function register(
   email: string,
   password: string,
@@ -65,7 +89,13 @@ export async function fetchAuthConfig(): Promise<AuthConfig> {
     const { data } = await http.get<AuthConfig>("/v1/auth/config");
     return data;
   } catch {
-    return { invite_only: false, is_first_user: false };
+    // TODO: remove default providers once backend ships providers in /v1/auth/config.
+    return {
+      invite_only: false,
+      is_first_user: false,
+      providers: ["github"],
+      passkey_enabled: false,
+    };
   }
 }
 
@@ -145,7 +175,13 @@ export async function deleteMyData(): Promise<void> {
 export const useAuthConfig = () =>
   useQuery({ queryKey: userKeys.authConfig, queryFn: fetchAuthConfig, staleTime: Infinity });
 
-export const useMe = () => useQuery({ queryKey: userKeys.me, queryFn: fetchMe });
+export const useMe = () =>
+  useQuery({
+    queryKey: userKeys.me,
+    queryFn: fetchMe,
+    // 1 повторный запрос; если снова 5xx — useAuthRedirect сбрасывает сессию.
+    retry: 1,
+  });
 export const useProfile = () => useQuery({ queryKey: userKeys.profile, queryFn: fetchProfile });
 
 // useOnboardingStatus — wizard'у нужен polling на step 4 (ждём первое событие).
@@ -231,8 +267,8 @@ export function useChangeMyEmail() {
     mutationFn: ({ currentPassword, email }: { currentPassword: string; email: string }) =>
       changeMyEmail(currentPassword, email),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: userKeys.me });
-      qc.invalidateQueries({ queryKey: userKeys.profile });
+      void qc.invalidateQueries({ queryKey: userKeys.me });
+      void qc.invalidateQueries({ queryKey: userKeys.profile });
     },
   });
 }
@@ -255,8 +291,8 @@ export function useChangeMyName() {
     mutationFn: ({ displayName, lastName }: { displayName: string; lastName: string | null }) =>
       changeMyName(displayName, lastName),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: userKeys.me });
-      qc.invalidateQueries({ queryKey: userKeys.profile });
+      void qc.invalidateQueries({ queryKey: userKeys.me });
+      void qc.invalidateQueries({ queryKey: userKeys.profile });
     },
   });
 }

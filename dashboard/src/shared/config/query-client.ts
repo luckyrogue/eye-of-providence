@@ -1,9 +1,9 @@
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "@eop/ui";
 
-// extractStatus — частая форма HTTP-ошибки (axios / fetch wrapper):
+// httpErrorStatus — частая форма HTTP-ошибки (axios / fetch wrapper):
 // у объекта может быть .status / .response.status / .code.
-function extractStatus(err: unknown): number | undefined {
+export function httpErrorStatus(err: unknown): number | undefined {
   if (typeof err !== "object" || err === null) return undefined;
   const e = err as { status?: number; response?: { status?: number } };
   return e.status ?? e.response?.status;
@@ -26,8 +26,10 @@ export const queryClient = new QueryClient({
   // спамить тостами.
   queryCache: new QueryCache({
     onError: (error, query) => {
-      const status = extractStatus(error);
+      const status = httpErrorStatus(error);
       if (status === 401 || status === 403) return;
+      // 5xx на /me → сессия сбрасывается в useAuthRedirect; тост не нужен.
+      if (status != null && status >= 500 && query.queryKey[0] === "me") return;
       if (!navigator.onLine) return;
       // Игнорируем background refetch — initial load уже показал error UI.
       if (query.state.data !== undefined) return;
