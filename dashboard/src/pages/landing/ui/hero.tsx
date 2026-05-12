@@ -69,14 +69,14 @@ export function Hero() {
         <div className="flex flex-wrap gap-3 items-center">
           <a
             href="/dashboard"
-            className="btn-eop-primary inline-flex items-center gap-2 px-[18px] py-[11px] rounded-lg text-[14px] font-medium"
+            className="btn-eop-primary inline-flex h-10 items-center gap-2 rounded-lg px-[18px] text-[14px] font-medium"
           >
             <Download className="h-[18px] w-[18px]" />
             {t("hero.ctaPrimary")}
           </a>
           <a
             href="#how"
-            className="inline-flex items-center gap-2 px-[18px] py-[11px] rounded-lg text-[14px] font-medium border transition-colors hover:bg-foreground/5"
+            className="inline-flex h-10 items-center gap-2 rounded-lg px-[18px] text-[14px] font-medium border transition-colors hover:bg-foreground/5"
             style={{
               borderColor: "hsl(var(--eop-line-strong))",
               background: "rgba(255,255,255,0.02)",

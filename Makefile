@@ -1,26 +1,8 @@
 .PHONY: help doctor dev dev-up dev-down dev-logs docker-build infra-up infra-down backend-ingest backend-auth backend-reports proto-gen agent-dev dashboard-dev clean
 
-doctor:
-	@./scripts/doctor.sh
-
-# Локальный dev стек: postgres + clickhouse + redis + api (hot-reload) + dashboard (HMR)
-dev: dev-up
-
-dev-up:
-	docker compose -f infra/docker-compose.dev.yml up --build
-
-dev-down:
-	docker compose -f infra/docker-compose.dev.yml down
-
-dev-logs:
-	docker compose -f infra/docker-compose.dev.yml logs -f api dashboard
-
-# Production Docker image (combined api + dashboard, для Dokploy/Coolify/любой Docker host)
-docker-build:
-	docker build -t eop:latest \
-		--build-arg VITE_BACKEND_URL=$${VITE_BACKEND_URL:-/api} \
-		--build-arg CSP_CONNECT_SRC=$${CSP_CONNECT_SRC:-'self'} \
-		.
+# Подхват `.env` из корня репозитория для docker compose (интерполяция в infra/docker-compose.dev.yml).
+ENV_FILE := $(wildcard $(CURDIR)/.env)
+COMPOSE_ENV_FILE := $(if $(ENV_FILE),--env-file $(CURDIR)/.env,)
 
 help:
 	@echo "Eye of Providence — dev targets"
@@ -37,6 +19,20 @@ help:
 	@echo "  make proto-gen          — сгенерировать proto-код для Go и TS"
 	@echo "  make agent-dev          — запустить Tauri agent в dev"
 	@echo "  make dashboard-dev      — запустить web dashboard"
+
+doctor:
+	@./scripts/doctor.sh
+
+dev: dev-up
+
+dev-up:
+	docker compose $(COMPOSE_ENV_FILE) -f infra/docker-compose.dev.yml up --build
+
+dev-down:
+	docker compose $(COMPOSE_ENV_FILE) -f infra/docker-compose.dev.yml down
+
+dev-logs:
+	docker compose $(COMPOSE_ENV_FILE) -f infra/docker-compose.dev.yml logs -f api dashboard
 
 infra-up:
 	docker compose -f infra/docker-compose.yml up -d

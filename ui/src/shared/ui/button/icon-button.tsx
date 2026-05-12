@@ -25,7 +25,7 @@ export function IconButton({
       aria-label={title}
       disabled={disabled}
       className={cn(
-        "rounded-md p-1.5 text-muted-foreground transition-colors disabled:opacity-50",
+        "inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors disabled:opacity-50",
         danger
           ? "hover:text-destructive hover:bg-destructive/10"
           : "hover:text-foreground hover:bg-secondary",

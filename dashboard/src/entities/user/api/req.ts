@@ -100,6 +100,32 @@ export async function resetPassword(token: string, password: string): Promise<vo
   await http.post("/v1/auth/reset-password", { token, password });
 }
 
+export async function changeMyEmail(currentPassword: string, email: string): Promise<void> {
+  const { data } = await http.patch<{ token: string; email: string }>("/v1/me/email", {
+    current_password: currentPassword,
+    email,
+  });
+  setToken(data.token);
+}
+
+export async function changeMyPassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const { data } = await http.patch<{ token: string }>("/v1/me/password", {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+  setToken(data.token);
+}
+
+export async function changeMyName(displayName: string, lastName: string | null): Promise<void> {
+  await http.patch("/v1/me/name", {
+    display_name: displayName,
+    last_name: lastName,
+  });
+}
+
 export const fetchTokens = () =>
   http.get<{ tokens: APIToken[] }>("/v1/me/tokens").then((r) => r.data.tokens ?? []);
 
@@ -196,5 +222,41 @@ export function useDeleteMyData() {
   return useMutation({
     mutationFn: deleteMyData,
     onSuccess: () => qc.clear(),
+  });
+}
+
+export function useChangeMyEmail() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ currentPassword, email }: { currentPassword: string; email: string }) =>
+      changeMyEmail(currentPassword, email),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: userKeys.me });
+      qc.invalidateQueries({ queryKey: userKeys.profile });
+    },
+  });
+}
+
+export function useChangeMyPassword() {
+  return useMutation({
+    mutationFn: ({
+      currentPassword,
+      newPassword,
+    }: {
+      currentPassword: string;
+      newPassword: string;
+    }) => changeMyPassword(currentPassword, newPassword),
+  });
+}
+
+export function useChangeMyName() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ displayName, lastName }: { displayName: string; lastName: string | null }) =>
+      changeMyName(displayName, lastName),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: userKeys.me });
+      qc.invalidateQueries({ queryKey: userKeys.profile });
+    },
   });
 }

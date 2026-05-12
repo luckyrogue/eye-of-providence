@@ -13,21 +13,16 @@ export function TimezoneSelect() {
   }
 
   return (
-    <>
-      <SimpleSelect
-        value={tz}
-        onValueChange={change}
-        triggerClassName="w-full max-w-sm"
-        options={[
-          ...(UNIQUE_TIMEZONES.find((x) => x.value === tz)
-            ? []
-            : [{ value: tz, label: t("settings.timezone_current", { tz }) }]),
-          ...UNIQUE_TIMEZONES.map((tzo) => ({ value: tzo.value, label: tzo.label })),
-        ]}
-      />
-      <p className="mt-2 text-xs text-muted-foreground">
-        {t("settings.timezone_now")} <span className="font-mono">{tz}</span>
-      </p>
-    </>
+    <SimpleSelect
+      value={tz}
+      onValueChange={change}
+      triggerClassName="w-full"
+      options={[
+        ...(UNIQUE_TIMEZONES.find((x) => x.value === tz)
+          ? []
+          : [{ value: tz, label: t("settings.timezone_current", { tz }) }]),
+        ...UNIQUE_TIMEZONES.map((tzo) => ({ value: tzo.value, label: tzo.label })),
+      ]}
+    />
   );
 }

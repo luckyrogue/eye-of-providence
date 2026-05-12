@@ -31,7 +31,7 @@ export function MemberRoleSelect({
       value={value}
       onValueChange={changeRole}
       disabled={disabled || updateRole.isPending}
-      triggerClassName="h-8 w-32 font-mono text-xs"
+      triggerClassName="h-10 w-32 font-mono text-xs"
       options={[
         { value: "owner", label: t("team_detail.role.owner") },
         { value: "admin", label: t("team_detail.role.admin") },

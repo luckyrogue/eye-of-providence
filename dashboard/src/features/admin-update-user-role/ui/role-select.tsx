@@ -21,7 +21,7 @@ export function UserRoleSelect({ userID, value }: { userID: string; value: strin
       value={value}
       onValueChange={setRole}
       disabled={update.isPending}
-      triggerClassName="h-8 w-36 font-mono text-xs"
+      triggerClassName="h-10 w-36 font-mono text-xs"
       options={[
         { value: "user", label: t("admin.users_role_user") },
         { value: "super_admin", label: t("admin.users_role_super_admin") },

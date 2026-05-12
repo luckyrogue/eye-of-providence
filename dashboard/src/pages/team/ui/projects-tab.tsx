@@ -12,7 +12,11 @@ export function ProjectsTab({ teamID, role, tz }: { teamID: string; role: string
 
   return (
     <div className="space-y-3">
-      {canCreate && <CreateProjectButton teamID={teamID} />}
+      {canCreate && (
+        <div className="flex justify-end">
+          <CreateProjectButton teamID={teamID} />
+        </div>
+      )}
       {list.length === 0 ? (
         <EmptyState
           eyebrow={t("team_detail.projects_empty_eyebrow")}

@@ -97,10 +97,10 @@ export function Teams({ tz }: { tz: string }) {
                   <TabsTrigger
                     key={team.id}
                     value={team.id}
-                    className="border data-[state=active]:border-primary"
+                    className="border data-[state=active]:border-primary inline-flex max-w-full min-w-0 flex-nowrap items-end gap-2 whitespace-nowrap"
                   >
-                    {team.name}
-                    <span className="ml-2 font-mono text-[10px] uppercase tracking-widest2 opacity-70">
+                    <span className="min-w-0 truncate">{team.name}</span>
+                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest2 opacity-70">
                       {t(`team_detail.role.${team.role}` as const)}
                     </span>
                   </TabsTrigger>

@@ -48,7 +48,7 @@ export function DashboardRoute() {
           <button
             type="button"
             onClick={handleExport}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-[13px] hover:bg-foreground/5"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[13px] hover:bg-foreground/5"
             style={{ borderColor: "hsl(var(--eop-line-strong))" }}
           >
             <Upload className="h-3.5 w-3.5" />
@@ -59,7 +59,7 @@ export function DashboardRoute() {
             type="button"
             onClick={handleGenerate}
             disabled={generate.isPending}
-            className="btn-eop-primary inline-flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+            className="btn-eop-primary inline-flex h-10 items-center gap-2 rounded-lg px-3 text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {generate.isPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />

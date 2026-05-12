@@ -64,7 +64,7 @@ export function Nav() {
           )}
           <a
             href="/dashboard"
-            className="btn-eop-primary inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[14px] font-medium whitespace-nowrap"
+            className="btn-eop-primary inline-flex h-10 items-center gap-2 rounded-lg px-4 text-[14px] font-medium whitespace-nowrap"
           >
             {isAuthed ? t("nav.open_dashboard") : t("nav.get_started")}
           </a>

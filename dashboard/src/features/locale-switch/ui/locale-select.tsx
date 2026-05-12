@@ -26,7 +26,7 @@ export function LocaleSelect() {
     <SimpleSelect
       value={locale}
       onValueChange={(v) => change(v as Locale)}
-      triggerClassName="w-full max-w-sm"
+      triggerClassName="w-full"
       options={SUPPORTED_LOCALES.map((code) => ({ value: code, label: LOCALE_LABELS[code] }))}
     />
   );

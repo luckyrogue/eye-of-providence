@@ -60,15 +60,13 @@ export function CreateWebhookDialog({ open, onClose }: { open: boolean; onClose:
             <DialogTitle>{t("webhooks_create")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div>
-              <label className="text-xs text-muted-foreground">{t("webhooks_url")}</label>
-              <Input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder={t("webhooks_url_placeholder")}
-              />
-            </div>
+            <Input
+              label={t("webhooks_url")}
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder={t("webhooks_url_placeholder")}
+            />
             <div>
               <label className="text-xs text-muted-foreground">{t("webhooks_format")}</label>
               <SimpleSelect

@@ -1,7 +1,7 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import { Skeleton } from "@eop/ui";
 import { AppShellV2 } from "../widgets/app-shell-v2";
+import { RouteFallback } from "./route-fallback";
 import { NotFound } from "../pages/not-found";
 import { RouteError } from "../pages/route-error";
 
@@ -29,24 +29,13 @@ const TeamRoute = lazy(() => import("../pages/team").then((m) => ({ default: m.T
 const SettingsRoute = lazy(() =>
   import("../pages/settings").then((m) => ({ default: m.SettingsRoute })),
 );
+const IntegrationsRoute = lazy(() =>
+  import("../pages/integrations").then((m) => ({ default: m.IntegrationsRoute })),
+);
 const AdminRoute = lazy(() => import("../pages/admin").then((m) => ({ default: m.AdminRoute })));
-
-function RouteFallback() {
-  return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 space-y-4">
-      <Skeleton className="h-10 w-48" />
-      <Skeleton className="h-32 w-full" />
-      <Skeleton className="h-32 w-full" />
-    </div>
-  );
-}
 
 const wrap = (node: ReactNode) => <Suspense fallback={<RouteFallback />}>{node}</Suspense>;
 
-// errorElement: один RouteError на каждый route — при unhandled rejection
-// в loader/render показывает retry UI вместо белой страницы. Дублируем явно,
-// чтобы каждый route имел свой boundary (иначе ошибка в /dashboard свалит
-// и /landing — все маршруты разделяют root).
 const eb = { errorElement: <RouteError /> };
 
 export const router = createBrowserRouter([
@@ -65,6 +54,7 @@ export const router = createBrowserRouter([
     children: [
       { path: "/dashboard", element: wrap(<DashboardRoute />), ...eb },
       { path: "/team", element: wrap(<TeamRoute />), ...eb },
+      { path: "/integrations", element: wrap(<IntegrationsRoute />), ...eb },
       { path: "/settings", element: wrap(<SettingsRoute />), ...eb },
       { path: "/admin", element: wrap(<AdminRoute />), ...eb },
     ],

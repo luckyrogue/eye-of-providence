@@ -52,15 +52,13 @@ export function CreateTokenDialog({ open, onClose }: { open: boolean; onClose: (
             <DialogTitle>{t("tokens_create")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div>
-              <label className="text-xs text-muted-foreground">{t("tokens_name")}</label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t("tokens_name_placeholder")}
-                maxLength={64}
-              />
-            </div>
+            <Input
+              label={t("tokens_name")}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("tokens_name_placeholder")}
+              maxLength={64}
+            />
             <div>
               <label className="text-xs text-muted-foreground">{t("tokens_scope")}</label>
               <SimpleSelect
@@ -74,16 +72,14 @@ export function CreateTokenDialog({ open, onClose }: { open: boolean; onClose: (
                 ]}
               />
             </div>
-            <div>
-              <label className="text-xs text-muted-foreground">{t("tokens_ttl")}</label>
-              <Input
-                type="number"
-                min={0}
-                max={365}
-                value={ttl}
-                onChange={(e) => setTtl(Math.max(0, Math.min(365, Number(e.target.value) || 0)))}
-              />
-            </div>
+            <Input
+              label={t("tokens_ttl")}
+              type="number"
+              min={0}
+              max={365}
+              value={ttl}
+              onChange={(e) => setTtl(Math.max(0, Math.min(365, Number(e.target.value) || 0)))}
+            />
           </div>
           <DialogFooter>
             <Button variant="ghost" size="sm" onClick={close}>

@@ -29,7 +29,7 @@ export {
   DialogDescription,
 } from "./shared/ui/dialog";
 export { Stepper, type StepperItem } from "./widgets/stepper";
-export { Input, InputField, type InputFieldProps } from "./shared/ui/input";
+export { Input, InputField, type InputFieldProps, type InputProps } from "./shared/ui/input";
 export { Label } from "./shared/ui/label";
 export {
   Form,

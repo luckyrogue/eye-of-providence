@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, PromptDialog } from "@eop/ui";
+import { Button, cn, PromptDialog } from "@eop/ui";
 import { Plus } from "lucide-react";
 import { useCreateTeam } from "../../../entities/team";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
@@ -44,13 +44,19 @@ export function CreateTeamButton({
   return (
     <>
       <Button
+        type="button"
         size="sm"
         onClick={() => setOpen(true)}
         disabled={create.isPending || disabled}
-        className={className}
-        title={blockedReason}
+        className={cn(
+          "justify-center gap-2 sm:h-10 sm:w-10 sm:min-w-10 sm:max-w-10 sm:shrink-0 sm:gap-0 sm:px-0",
+          className,
+        )}
+        title={blockedReason ?? t("app:teams.new_team")}
+        aria-label={t("app:teams.new_team")}
       >
-        <Plus className="h-3.5 w-3.5 mr-1" /> {t("app:teams.new_team")}
+        <Plus className="hidden h-4 w-4 shrink-0 sm:block" aria-hidden />
+        <span className="sm:hidden">{t("common:actions.add")}</span>
       </Button>
 
       <PromptDialog

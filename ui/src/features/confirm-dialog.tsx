@@ -11,6 +11,7 @@ import {
 } from "../shared/ui/alert-dialog";
 import { buttonVariants } from "../shared/ui/button";
 import { cn } from "../shared/lib/cn";
+import { Input } from "../shared/ui/input";
 
 // typeToConfirm: для destructive-операций — confirm заблокирован, пока
 // пользователь не введёт точную строку ("Введи название чтобы удалить").
@@ -62,17 +63,13 @@ export function ConfirmDialog({
           {description && <AlertDialogDescription>{description}</AlertDialogDescription>}
         </AlertDialogHeader>
         {typeToConfirm && (
-          <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
-              Введи «{typeToConfirm}» чтобы подтвердить
-            </label>
-            <input
-              autoFocus
-              value={typed}
-              onChange={(e) => setTyped(e.target.value)}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
+          <Input
+            label={<>Введи «{typeToConfirm}» чтобы подтвердить</>}
+            labelClassName="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground"
+            autoFocus
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+          />
         )}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={busy}>{cancelText}</AlertDialogCancel>

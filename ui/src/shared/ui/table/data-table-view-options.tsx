@@ -22,7 +22,7 @@ export function DataTableViewOptions<TData>({ table, labels }: DataTableViewOpti
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="ml-auto h-8">
+        <Button variant="outline" size="sm" className="ml-auto">
           <Settings2 className="mr-1 h-3.5 w-3.5" />
           {labels?.columnsButton ?? "Columns"}
         </Button>

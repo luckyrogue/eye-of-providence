@@ -24,7 +24,7 @@ export function Topbar({
       <button
         type="button"
         onClick={onMenuClick}
-        className="md:hidden grid place-items-center w-9 h-9 rounded-lg border"
+        className="md:hidden grid place-items-center h-10 w-10 rounded-lg border"
         style={{ borderColor: "hsl(var(--border))" }}
         aria-label={t("topbar.menu_toggle")}
       >

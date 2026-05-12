@@ -1,10 +1,5 @@
-// Показываем ТОЛЬКО реальные routes. Раньше были 7 "tab"-пунктов вида
-// /dashboard?tab=foo — NavLink матчит по pathname (игнорируя query) и
-// подсвечивал все 7 одновременно; tab-routing внутри /dashboard не реализован.
-// Когда появится — вернуть пункты с явной active-проверкой по location.search.
-
 import { useTranslation } from "react-i18next";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { Home, Plug, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -14,11 +9,6 @@ type NavItem = {
   icon: ComponentType<{ className?: string }>;
   badge?: string;
   badgeKind?: "new";
-  // forceActive — кастомная проверка (для query-param tab'ов). Если undefined
-  // → используется стандартная NavLink isActive (path match).
-  forceActive?: boolean;
-  // matchExact — NavLink end={true}. Нужно когда у двух пунктов общий префикс,
-  // чтобы оба не подсвечивались (e.g. /settings vs /settings?tab=devices).
   matchExact?: boolean;
 };
 
@@ -34,32 +24,24 @@ export function Sidebar({
   onNavigate?: () => void;
 }) {
   const { t } = useTranslation(["common", "app"]);
-  const location = useLocation();
 
   const workspace: NavItem[] = [
     { to: "/dashboard", label: t("nav.dashboard"), icon: Home, matchExact: true },
     { to: "/team", label: t("nav.team"), icon: Users, matchExact: true },
   ];
 
-  // /settings — два sidebar-пункта (Интеграции + Настройки) ведут на одну страницу.
-  // NavLink совпадает по pathname и игнорирует query → оба «активны» на любом /settings?...
-  // Поэтому для этих пунктов используем Link + явный tab из URLSearchParams.
-  const settingsTab = new URLSearchParams(location.search).get("tab");
-  const isIntegrations = location.pathname.startsWith("/settings") && settingsTab === "devices";
-  const isSettingsRoot = location.pathname.startsWith("/settings") && settingsTab !== "devices";
-
   const insights: NavItem[] = [
     {
-      to: "/settings?tab=devices",
+      to: "/integrations",
       label: t("sidebar.integrations"),
       icon: Plug,
-      forceActive: isIntegrations,
+      matchExact: true,
     },
     {
       to: "/settings",
       label: t("nav.settings"),
       icon: SettingsIcon,
-      forceActive: isSettingsRoot,
+      matchExact: true,
     },
   ];
 
@@ -134,23 +116,8 @@ export function Sidebar({
   );
 }
 
-// forceActive: если задан — только Link + ручной active (NavLink матчит pathname
-// без query и подсветил бы оба пункта на /settings?tab=…).
 function NavItemLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
   const Icon = item.icon;
-  if (item.forceActive !== undefined) {
-    return (
-      <Link
-        to={item.to}
-        onClick={onNavigate}
-        className={`nav-item ${item.forceActive ? "active" : ""}`}
-      >
-        <Icon className="nav-icon" />
-        <span className="truncate">{item.label}</span>
-        {item.badge && <span className={`badge ${item.badgeKind ?? ""}`}>{item.badge}</span>}
-      </Link>
-    );
-  }
   return (
     <NavLink
       to={item.to}

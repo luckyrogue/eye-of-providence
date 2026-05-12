@@ -78,7 +78,7 @@ export function Admin({ tz }: AdminProps) {
             onClick={() => void refresh()}
             disabled={isFetching}
             aria-label={t("admin.refresh") || "Refresh"}
-            className="inline-flex items-center justify-center w-9 h-9 rounded-lg border transition-colors hover:bg-foreground/5 disabled:opacity-60"
+            className="inline-flex items-center justify-center h-10 w-10 rounded-lg border transition-colors hover:bg-foreground/5 disabled:opacity-60"
             style={{ borderColor: "hsl(var(--border))" }}
           >
             {isFetching ? (

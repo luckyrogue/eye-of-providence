@@ -50,6 +50,30 @@ export const resetPasswordSchema = z
   });
 export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
 
+export const changeEmailSchema = z.object({
+  currentPassword: passwordLogin,
+  email,
+});
+export type ChangeEmailValues = z.infer<typeof changeEmailSchema>;
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: passwordLogin,
+    newPassword: passwordRegister,
+    confirmPassword: z.string().min(1, "auth:validation_password_required"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "auth:reset_passwords_mismatch",
+    path: ["confirmPassword"],
+  });
+export type ChangePasswordValues = z.infer<typeof changePasswordSchema>;
+
+export const changeNameSchema = z.object({
+  displayName,
+  lastName: z.string().max(64, "auth:validation_name_max"),
+});
+export type ChangeNameValues = z.infer<typeof changeNameSchema>;
+
 const teamName = z
   .string()
   .min(1, "team:validation_name_required")

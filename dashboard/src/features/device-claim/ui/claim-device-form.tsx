@@ -1,30 +1,37 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
-import { Button, Input, toast } from "@eop/ui";
-import { Plug } from "lucide-react";
+import { z } from "zod";
+import { Button, Form, InputField, toast } from "@eop/ui";
 import { useClaimDevice } from "../../../entities/device";
 
 const CODE_LEN = 6;
 
-// Compact inline form: 6-char code + optional name. Дублирует «магазинный»
-// UX устройств — pairing wizard'а в самой апке (extension/agent) показывает
-// код, юзер вбивает его в dashboard.
+const claimDeviceSchema = z.object({
+  code: z
+    .string()
+    .length(CODE_LEN, "developer:devices_claim_code_invalid")
+    .regex(/^[A-Z0-9]+$/, "developer:devices_claim_code_invalid"),
+  name: z.string().max(64, "developer:devices_claim_name_max"),
+});
+
+type ClaimDeviceValues = z.infer<typeof claimDeviceSchema>;
+
 export function ClaimDeviceForm() {
   const { t } = useTranslation("developer");
   const claim = useClaimDevice();
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
+  const form = useForm<ClaimDeviceValues>({
+    resolver: zodResolver(claimDeviceSchema),
+    defaultValues: { code: "", name: "" },
+    mode: "onChange",
+  });
+  const tr = (msg?: string) => (msg ? t(msg as never, { defaultValue: msg }) : msg);
 
-  const trimmed = code.trim().toUpperCase();
-  const canSubmit = trimmed.length === CODE_LEN && !claim.isPending;
-
-  async function submit() {
-    if (!canSubmit) return;
+  async function onSubmit(values: ClaimDeviceValues) {
     try {
-      await claim.mutateAsync({ code: trimmed, name });
+      await claim.mutateAsync({ code: values.code, name: values.name });
       toast.success(t("devices_claim_success"));
-      setCode("");
-      setName("");
+      form.reset({ code: "", name: "" });
     } catch (e) {
       const err = e as Error & { code?: string };
       if (err.code === "code_already_claimed") {
@@ -35,46 +42,49 @@ export function ClaimDeviceForm() {
     }
   }
 
+  const submitting = form.formState.isSubmitting || claim.isPending;
+
   return (
-    <form
-      className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end"
-      onSubmit={(e) => {
-        e.preventDefault();
-        void submit();
-      }}
-    >
-      <div className="flex-1">
-        <label htmlFor="device-code" className="text-xs text-muted-foreground block mb-1">
-          {t("devices_claim_code")}
-        </label>
-        <Input
-          id="device-code"
-          value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\s/g, "").toUpperCase())}
-          placeholder={t("devices_claim_code_placeholder")}
-          maxLength={CODE_LEN}
-          autoComplete="off"
-          autoCapitalize="characters"
-          spellCheck={false}
-          className="font-mono uppercase tracking-widest text-center"
-        />
-      </div>
-      <div className="flex-[1.5]">
-        <label htmlFor="device-name" className="text-xs text-muted-foreground block mb-1">
-          {t("devices_claim_name")}
-        </label>
-        <Input
-          id="device-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t("devices_claim_name_placeholder")}
-          maxLength={64}
-        />
-      </div>
-      <Button type="submit" disabled={!canSubmit} className="sm:self-stretch">
-        <Plug className="h-3.5 w-3.5 mr-1.5" />
-        {t("devices_claim_submit")}
-      </Button>
-    </form>
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex flex-col gap-3 pb-1 pt-0.5 sm:flex-row sm:flex-nowrap sm:items-end sm:gap-2 sm:overflow-x-auto"
+      >
+        <div className="w-full min-w-0 sm:flex-1 sm:basis-0 sm:min-w-[9rem]">
+          <InputField
+            control={form.control}
+            name="code"
+            label={t("devices_claim_code")}
+            placeholder={t("devices_claim_code_placeholder")}
+            maxLength={CODE_LEN}
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            className="font-mono uppercase tracking-widest text-center"
+            transform={(raw: string) => raw.replace(/\s/g, "").toUpperCase()}
+            translateError={tr}
+            hideMessage
+          />
+        </div>
+        <div className="w-full min-w-0 sm:flex-[1.5] sm:basis-0 sm:min-w-[10rem]">
+          <InputField
+            control={form.control}
+            name="name"
+            label={t("devices_claim_name")}
+            placeholder={t("devices_claim_name_placeholder")}
+            maxLength={64}
+            translateError={tr}
+            hideMessage
+          />
+        </div>
+        <Button
+          type="submit"
+          disabled={submitting || !form.formState.isValid}
+          className="w-full shrink-0 sm:w-auto"
+        >
+          {t("devices_claim_submit")}
+        </Button>
+      </form>
+    </Form>
   );
 }

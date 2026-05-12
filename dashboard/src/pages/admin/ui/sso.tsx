@@ -78,7 +78,7 @@ export function SSOConfigs({ tz }: { tz: string }) {
               }}
             >
               <div
-                className="w-9 h-9 rounded-md grid place-items-center shrink-0"
+                className="h-10 w-10 rounded-md grid place-items-center shrink-0"
                 style={{
                   background: cfg.enabled ? "hsl(var(--success) / 0.12)" : "rgba(255,255,255,0.05)",
                   color: cfg.enabled ? "hsl(var(--success))" : "hsl(var(--muted-foreground))",

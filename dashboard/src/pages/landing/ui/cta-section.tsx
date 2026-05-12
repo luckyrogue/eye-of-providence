@@ -35,7 +35,7 @@ export function CTASection() {
             <div className="flex flex-wrap gap-3 justify-center">
               <a
                 href="/dashboard"
-                className="btn-eop-primary inline-flex items-center gap-2 px-[18px] py-[11px] rounded-lg text-[14px] font-medium"
+                className="btn-eop-primary inline-flex h-10 items-center gap-2 rounded-lg px-[18px] text-[14px] font-medium"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px]">
                   <path d="M17.05 12.5c0-2.7 2.2-4 2.3-4-1.3-1.8-3.2-2-3.9-2-1.6-.2-3.2 1-4 1-.8 0-2.1-1-3.4-1-1.8 0-3.4 1-4.3 2.6-1.8 3.2-.5 7.9 1.3 10.5.9 1.3 1.9 2.7 3.3 2.6 1.3-.05 1.8-.85 3.4-.85s2 .85 3.4.85c1.4 0 2.3-1.3 3.2-2.6 1-1.5 1.4-3 1.4-3-.1 0-2.7-1.05-2.7-4.1zM14.6 4.7c.7-.85 1.2-2.05 1.05-3.25-1 0-2.3.7-3 1.55-.65.75-1.3 2-1.1 3.15 1.15.1 2.35-.6 3.05-1.45z" />
@@ -44,7 +44,7 @@ export function CTASection() {
               </a>
               <a
                 href="/dashboard"
-                className="inline-flex items-center gap-2 px-[18px] py-[11px] rounded-lg text-[14px] font-medium border transition-colors hover:bg-foreground/5"
+                className="inline-flex h-10 items-center gap-2 rounded-lg px-[18px] text-[14px] font-medium border transition-colors hover:bg-foreground/5"
                 style={{
                   borderColor: "hsl(var(--eop-line-strong))",
                   background: "rgba(255,255,255,0.02)",

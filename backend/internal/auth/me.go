@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -42,10 +43,14 @@ func RegisterMeRoutes(app *fiber.App, s MeService) {
 				var ghLogin *string
 				var globalRole *string
 				var displayName *string
+				var lastName *string
+				var phone *string
 				var locale *string
+				var hasPassword bool
+				var createdAt time.Time
 				_ = s.Pool.QueryRow(c.Context(),
-					"SELECT github_login, global_role, display_name, locale FROM users WHERE id = $1", uid).
-					Scan(&ghLogin, &globalRole, &displayName, &locale)
+					"SELECT github_login, global_role, display_name, last_name, phone, locale, password_hash IS NOT NULL, created_at FROM users WHERE id = $1", uid).
+					Scan(&ghLogin, &globalRole, &displayName, &lastName, &phone, &locale, &hasPassword, &createdAt)
 				if ghLogin != nil {
 					out["github_login"] = *ghLogin
 				}
@@ -55,8 +60,18 @@ func RegisterMeRoutes(app *fiber.App, s MeService) {
 				if displayName != nil {
 					out["display_name"] = *displayName
 				}
+				if lastName != nil {
+					out["last_name"] = *lastName
+				}
+				if phone != nil {
+					out["phone"] = *phone
+				}
 				if locale != nil {
 					out["locale"] = *locale
+				}
+				out["has_password"] = hasPassword
+				if !createdAt.IsZero() {
+					out["created_at"] = createdAt.UTC().Format(time.RFC3339)
 				}
 			}
 		}

@@ -4,13 +4,16 @@ RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
 
 WORKDIR /repo
 
+COPY tsconfig.base.json ./
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY ui/package.json ui/
+COPY i18n/package.json i18n/
 COPY dashboard/package.json dashboard/
 
 RUN pnpm install --frozen-lockfile=false
 
 COPY ui ui
+COPY i18n i18n
 COPY dashboard dashboard
 
 EXPOSE 5173

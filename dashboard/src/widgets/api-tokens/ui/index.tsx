@@ -27,17 +27,23 @@ export function APITokensWidget() {
           </div>
           <CardDescription className="mt-1">{t("tokens_lead")}</CardDescription>
         </div>
-        <Button size="sm" onClick={() => setShowCreate(true)} className="w-full sm:w-auto shrink-0">
-          <Plus className="h-3.5 w-3.5 mr-1" />
-          {t("tokens_create")}
+        <Button
+          type="button"
+          size="sm"
+          variant="default"
+          onClick={() => setShowCreate(true)}
+          className="w-full shrink-0 justify-center gap-2 sm:h-10 sm:w-10 sm:min-w-10 sm:max-w-10 sm:gap-0 sm:px-0"
+          title={t("tokens_create")}
+          aria-label={t("tokens_create")}
+        >
+          <Plus className="h-4 w-4 shrink-0" aria-hidden />
+          <span className="sm:hidden">{t("tokens_create")}</span>
         </Button>
       </CardHeader>
       <CardContent>
         {tokens.isPending ? (
           <p className="text-sm text-muted-foreground">…</p>
-        ) : !tokens.data || tokens.data.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("tokens_empty")}</p>
-        ) : (
+        ) : !tokens.data || tokens.data.length === 0 ? null : (
           <ul className="divide-y">
             {tokens.data.map((tok) => (
               <TokenRow key={tok.id} token={tok} />

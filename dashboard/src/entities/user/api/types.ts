@@ -5,8 +5,13 @@ type Me = {
   email: string;
   provider: string;
   display_name?: string;
+  last_name?: string;
+  phone?: string;
   github_login?: string;
   global_role?: "user" | "super_admin";
+  has_password?: boolean;
+  locale?: string;
+  created_at?: string;
 };
 
 type Profile = {
@@ -14,6 +19,13 @@ type Profile = {
   email?: string;
   provider?: string;
   github_login?: string;
+  has_password?: boolean;
+  display_name?: string;
+  last_name?: string;
+  phone?: string;
+  global_role?: "user" | "super_admin";
+  locale?: string;
+  created_at?: string;
 };
 
 type AuthResponse = {

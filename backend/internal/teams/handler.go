@@ -139,6 +139,10 @@ func RegisterRoutes(app *fiber.App, s Service) {
 	g.Post("/teams", s.handleCreateTeam)
 	g.Get("/beta/info", s.handleBetaInfo)
 
+	g.Patch("/me/email", s.handleChangeMyEmail)
+	g.Patch("/me/password", s.handleChangeMyPassword)
+	g.Patch("/me/name", s.handleChangeMyName)
+
 	t := g.Group("/teams/:id")
 	t.Get("/", s.handleTeamDetail)
 	t.Patch("/", s.handleUpdateTeam)

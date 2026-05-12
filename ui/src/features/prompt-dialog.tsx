@@ -53,20 +53,19 @@ export function PromptDialog({
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
-        <div className="space-y-1">
-          {label && (
-            <label className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
-              {label}
-            </label>
-          )}
-          <Input
-            autoFocus
-            placeholder={placeholder}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-          />
-        </div>
+        <Input
+          label={label}
+          labelClassName={
+            label
+              ? "font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground"
+              : undefined
+          }
+          autoFocus
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+        />
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={busy}>
             {cancelText}

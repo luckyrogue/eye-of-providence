@@ -19,7 +19,7 @@ type Config struct {
 	GeminiAPIKey    string
 	GitHubClientID  string
 	GitHubClientSec string
-	GitHubCallback  string // полный URL https://api.../v1/auth/github/callback
+	GitHubCallback  string
 	JWTSecret       string
 	AllowedOrigins  string // CORS, comma-separated, "*" разрешено
 	BodyLimitBytes  int    // глобальный лимит тела запроса
@@ -40,7 +40,7 @@ type Config struct {
 	// endpoints возвращают 503 "push not configured".
 	VAPIDPublicKey  string
 	VAPIDPrivateKey string
-	VAPIDSubject    string // RFC 8292: "mailto:admin@..." or app URL
+	VAPIDSubject    string
 }
 
 func FromEnv() Config {
@@ -62,7 +62,7 @@ func FromEnv() Config {
 		InviteOnly:      getenv("EOP_INVITE_ONLY", "true") != "false",
 		AutoMigrate:     boolEnv("EOP_AUTO_MIGRATE", env != "production"),
 		EnableDevToken:  boolEnv("EOP_ENABLE_DEV_TOKEN", env != "production"),
-		BetaTeamLimit:   atoiOr(os.Getenv("EOP_BETA_TEAM_LIMIT"), 3),
+		BetaTeamLimit:   atoiOr(os.Getenv("EOP_BETA_TEAM_LIMIT"), 5),
 		PlanLimitsEnforced: boolEnv("EOP_PLAN_LIMITS_ENFORCED", false),
 		ResendAPIKey:    os.Getenv("EOP_RESEND_API_KEY"),
 		MailFrom:        getenv("EOP_MAIL_FROM", "Eye of Providence <noreply@example.com>"),

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "@eop/ui";
-import { Button, SecretField } from "@eop/ui";
+import { Button, SecretField, toast } from "@eop/ui";
 import { Plus } from "lucide-react";
 import { useCreateInvite } from "../../../entities/team";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
@@ -22,23 +21,37 @@ export function CreateInviteBlock({ teamID }: { teamID: string }) {
   }
 
   return (
-    <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <Plus className="h-4 w-4" /> {t("team_detail.invite_section_title")}
+    <div className="rounded-lg border bg-muted/30 p-3">
+      <div className="flex flex-row items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="text-sm font-medium">{t("team_detail.invite_section_title")}</div>
+          <p className="text-xs text-muted-foreground">{t("team_detail.invite_lead")}</p>
+        </div>
+        {!code && (
+          <Button
+            type="button"
+            size="icon"
+            variant="default"
+            onClick={() => void generate()}
+            disabled={createInvite.isPending}
+            className="shrink-0"
+            aria-label={t("team_detail.invite_create_link")}
+            title={t("team_detail.invite_create_link")}
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+          </Button>
+        )}
       </div>
       {code ? (
-        <SecretField
-          value={inviteUrl}
-          copyLabel={t("team_detail.invite_copy")}
-          copiedLabel={t("team_detail.invite_copied")}
-          onCopy={() => toast.success(t("team_detail.invite_copied"))}
-        />
-      ) : (
-        <Button size="sm" onClick={generate} disabled={createInvite.isPending}>
-          {t("team_detail.invite_create_link")}
-        </Button>
-      )}
-      <p className="text-xs text-muted-foreground">{t("team_detail.invite_lead")}</p>
+        <div className="mt-3">
+          <SecretField
+            value={inviteUrl}
+            copyLabel={t("team_detail.invite_copy")}
+            copiedLabel={t("team_detail.invite_copied")}
+            onCopy={() => toast.success(t("team_detail.invite_copied"))}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

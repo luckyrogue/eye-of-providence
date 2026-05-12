@@ -1,16 +1,21 @@
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Settings } from "./settings";
 import { useAuth } from "../../entities/session";
 
 export function SettingsRoute() {
+  const [search] = useSearchParams();
   const { logout } = useAuth();
   const navigate = useNavigate();
-  // Изменение tz — пока no-op, getTz читает локально каждый раз.
+
+  if (search.get("tab") === "devices") {
+    return <Navigate to="/integrations" replace />;
+  }
+
   return (
     <Settings
       onWiped={() => {
-        logout();
-        navigate("/login", { replace: true });
+        void logout();
+        void navigate("/login", { replace: true });
       }}
     />
   );

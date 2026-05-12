@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# scripts/doctor.sh — проверяет всё что нужно для разработки и деплоя.
-# Print status table, exit 0 если ok, 1 если что-то критичное отсутствует.
 
 set -uo pipefail
 

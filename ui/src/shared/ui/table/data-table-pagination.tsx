@@ -46,7 +46,7 @@ export function DataTablePagination<TData>({
             value={`${table.getState().pagination.pageSize}`}
             onValueChange={(v) => table.setPageSize(Number(v))}
           >
-            <SelectTrigger className="h-7 w-[4.5rem] text-xs">
+            <SelectTrigger className="h-10 w-[4.5rem] text-xs">
               <SelectValue placeholder={`${table.getState().pagination.pageSize}`} />
             </SelectTrigger>
             <SelectContent side="top">
@@ -69,7 +69,6 @@ export function DataTablePagination<TData>({
           <Button
             variant="outline"
             size="icon"
-            className="h-7 w-7"
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
             aria-label={labels?.firstPage ?? "First page"}
@@ -79,7 +78,6 @@ export function DataTablePagination<TData>({
           <Button
             variant="outline"
             size="icon"
-            className="h-7 w-7"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
             aria-label={labels?.previous ?? "Previous"}
@@ -89,7 +87,6 @@ export function DataTablePagination<TData>({
           <Button
             variant="outline"
             size="icon"
-            className="h-7 w-7"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
             aria-label={labels?.next ?? "Next"}
@@ -99,7 +96,6 @@ export function DataTablePagination<TData>({
           <Button
             variant="outline"
             size="icon"
-            className="h-7 w-7"
             onClick={() => table.setPageIndex(pageCount - 1)}
             disabled={!table.getCanNextPage()}
             aria-label={labels?.lastPage ?? "Last page"}

@@ -141,10 +141,13 @@ export function SubscriptionModal({
                 />
               </div>
               <div className="space-y-1">
-                <label className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
-                  {t("app:admin.subscription_until_label")}
-                </label>
-                <Input type="date" {...register("until")} className="w-full" />
+                <Input
+                  type="date"
+                  label={t("app:admin.subscription_until_label")}
+                  labelClassName="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground"
+                  className="w-full"
+                  {...register("until")}
+                />
                 <div className="flex gap-1.5 pt-1">
                   {[1, 3, 6, 12].map((m) => (
                     <Button
@@ -162,15 +165,12 @@ export function SubscriptionModal({
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground">
-                {t("app:admin.subscription_note_label")}
-              </label>
-              <Input
-                placeholder={t("app:admin.subscription_note_placeholder")}
-                {...register("note")}
-              />
-            </div>
+            <Input
+              label={t("app:admin.subscription_note_label")}
+              labelClassName="font-mono text-[10px] uppercase tracking-widest2 text-muted-foreground"
+              placeholder={t("app:admin.subscription_note_placeholder")}
+              {...register("note")}
+            />
 
             {plan !== "free" && (
               <SubscriptionPaymentFields control={control} enabled={recordPayment} />

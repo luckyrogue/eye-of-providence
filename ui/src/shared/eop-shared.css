@@ -1,0 +1,167 @@
+@layer components {
+  /* === eyebrow === */
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-widest3 text-muted-foreground;
+  }
+  .eyebrow::before {
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 1px;
+    background: hsl(var(--border));
+    vertical-align: middle;
+    margin-right: 8px;
+    transform: translateY(-1px);
+  }
+  [data-theme="eop"] .eyebrow {
+    @apply text-[hsl(var(--accent))];
+    letter-spacing: 0.18em;
+  }
+  [data-theme="eop"] .eyebrow::before {
+    width: 6px;
+    height: 6px;
+    border-radius: 2px;
+    background: hsl(var(--accent));
+    box-shadow: 0 0 12px hsl(var(--eop-accent-glow));
+    transform: none;
+  }
+
+  /* === display-head === */
+  .display-head {
+    @apply font-display font-bold tracking-tightest leading-[0.95];
+  }
+  .display-head em {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--foreground)) 0%,
+      hsl(var(--muted-foreground)) 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-style: normal;
+  }
+  [data-theme="eop"] .display-head em {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    color: hsl(var(--accent));
+    font-family: "Instrument Serif", "Times New Roman", serif;
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  /* === card-hover === */
+  .card-hover {
+    @apply transition-all duration-300 ease-out-expo;
+  }
+  .card-hover:hover {
+    @apply -translate-y-0.5 shadow-lg;
+    border-color: hsl(var(--ring) / 0.4);
+  }
+
+  /* === reveal === */
+  .reveal {
+    @apply animate-fade-up;
+  }
+  .reveal-delay-1 {
+    animation-delay: 60ms;
+  }
+  .reveal-delay-2 {
+    animation-delay: 120ms;
+  }
+  .reveal-delay-3 {
+    animation-delay: 180ms;
+  }
+  .reveal-delay-4 {
+    animation-delay: 240ms;
+  }
+  .reveal-delay-5 {
+    animation-delay: 300ms;
+  }
+
+  /* === header-blur === */
+  .header-blur {
+    @apply backdrop-blur-md bg-background/70;
+  }
+
+  /* === dot-grid === */
+  .dot-grid {
+    background-image: radial-gradient(hsl(var(--foreground) / 0.06) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* === pill === */
+  [data-theme="eop"] .pill {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid hsl(var(--eop-line-strong));
+    color: hsl(var(--muted-foreground));
+  }
+  [data-theme="eop"] .pill.accent {
+    color: hsl(var(--accent));
+    border-color: hsl(var(--accent));
+    background: hsl(var(--eop-accent-soft));
+  }
+
+  /* === Card primitive override under eop-theme === */
+  [data-theme="eop"] .bg-card.text-card-foreground {
+    background: hsl(232 16% 10%);
+    border-color: hsl(var(--border));
+    box-shadow: none;
+  }
+  [data-theme="eop"] .bg-card.text-card-foreground > .p-6 {
+    padding: 20px;
+  }
+  [data-theme="eop"] .bg-card.text-card-foreground > .p-6.pt-0 {
+    padding: 0 20px 20px;
+  }
+  [data-theme="eop"] .bg-card.text-card-foreground .font-semibold.leading-none.tracking-tight {
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  /* === page-head (hoisted from .eop-dash-content) === */
+  [data-theme="eop"] .page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  [data-theme="eop"] .page-head h1 {
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  [data-theme="eop"] .page-head .sub {
+    color: hsl(var(--muted-foreground));
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  /* === skip-link (a11y keyboard nav) === */
+  .skip-link {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 0.5rem 0.75rem;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.375rem;
+    z-index: 100;
+    transform: translateY(-200%);
+    transition: transform 0.15s ease-out;
+  }
+  .skip-link:focus {
+    transform: translateY(0.25rem);
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}

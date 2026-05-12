@@ -19,10 +19,16 @@ export function InputField<
   type = "text",
   placeholder,
   autoComplete,
+  autoCapitalize,
+  spellCheck,
+  maxLength,
+  minLength,
+  inputMode,
   disabled,
   className,
   translateError,
   hideMessage,
+  transform,
 }: InputFieldProps<TFieldValues, TName>) {
   return (
     <FormField
@@ -36,9 +42,18 @@ export function InputField<
               type={type}
               placeholder={placeholder}
               autoComplete={autoComplete}
+              autoCapitalize={autoCapitalize}
+              spellCheck={spellCheck}
+              maxLength={maxLength}
+              minLength={minLength}
+              inputMode={inputMode}
               disabled={disabled}
               className={cn(className)}
               {...field}
+              onChange={(e) => {
+                const raw = e.target.value;
+                field.onChange(transform ? transform(raw) : raw);
+              }}
             />
           </FormControl>
           {!hideMessage && (

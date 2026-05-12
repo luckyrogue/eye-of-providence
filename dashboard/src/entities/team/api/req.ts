@@ -90,7 +90,14 @@ export const listTeamCommits = (teamID: string) =>
   http.get<ListCommitsRes>(`/v1/teams/${enc(teamID)}/commits`).then((r) => r.data.commits ?? []);
 
 export const useTeams = () => useQuery({ queryKey: teamsKeys.list(), queryFn: listMyTeams });
-export const useBetaInfo = () => useQuery({ queryKey: teamsKeys.beta(), queryFn: fetchBetaInfo });
+
+/** Лимит и слоты только с `/v1/beta/info` — не дублируем число в Vite/env. Короткий stale: после смены `EOP_BETA_TEAM_LIMIT` баннер не «залипает» на старом значении из кэша. */
+export const useBetaInfo = () =>
+  useQuery({
+    queryKey: teamsKeys.beta(),
+    queryFn: fetchBetaInfo,
+    staleTime: 0,
+  });
 
 export const useMembers = (teamID: string | null) =>
   useQuery({

@@ -91,7 +91,7 @@ function PriceCard({
       <a
         href={isEnterprise ? "mailto:sales@eop.rysdavletov.org" : "/dashboard"}
         className={cn(
-          "mt-7 w-full inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-[14px] font-medium transition-colors",
+          "mt-7 inline-flex h-10 w-full items-center justify-center rounded-lg px-4 text-[14px] font-medium transition-colors",
           highlight ? "btn-eop-primary" : "border hover:bg-foreground/5",
         )}
         style={

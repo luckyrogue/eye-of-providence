@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { getInitials } from "@eop/ui";
 import { useAuth } from "../../../entities/session";
 import { useMe } from "../../../entities/user";
+import { formatShortDisplayName } from "../../../shared/lib/display-name";
 import { useAuthRedirect } from "../../app-layout/lib/use-auth-redirect";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
@@ -18,9 +20,14 @@ export function AppShellV2() {
 
   if (!isAuthed) return null;
 
+  const first = me.data?.display_name?.trim();
+  const last = me.data?.last_name?.trim();
   const userName =
-    me.data?.display_name || me.data?.email?.split("@")[0] || t("topbar.user_default");
-  const avatarLabel = userName.slice(0, 2).toUpperCase();
+    first || last
+      ? formatShortDisplayName(first, last)
+      : (me.data?.email?.split("@")[0] ?? t("topbar.user_default"));
+  const avatarLabel =
+    first && last ? getInitials(`${first} ${last}`) : userName.slice(0, 2).toUpperCase();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[248px_1fr] min-h-screen">
@@ -63,6 +70,7 @@ export function AppShellV2() {
 function sectionLabel(path: string, t: (k: string) => string): string {
   if (path.startsWith("/dashboard") || path.startsWith("/team"))
     return t("topbar.section_workspace");
+  if (path.startsWith("/integrations")) return t("topbar.section_integrations");
   if (path.startsWith("/settings")) return t("topbar.section_settings");
   if (path.startsWith("/admin")) return t("topbar.section_admin");
   return t("topbar.section_workspace");
