@@ -1,16 +1,16 @@
 import { useTranslation } from "react-i18next";
-import { Chrome, Cpu, Code2 } from "lucide-react";
+import { Globe, Cpu, Code2 } from "lucide-react";
 import type { Device } from "../../../entities/device";
 
-const ICON: Record<string, typeof Chrome> = {
-  ext: Chrome,
+const ICON: Record<string, typeof Globe> = {
+  ext: Globe,
   agent: Cpu,
   ide: Code2,
 };
 
 export function DeviceKindBadge({ kind }: { kind: Device["kind"] }) {
   const { t } = useTranslation("developer");
-  const Icon = ICON[kind] ?? Chrome;
+  const Icon = ICON[kind] ?? Globe;
   const label =
     kind === "ext" || kind === "agent" || kind === "ide"
       ? t(`devices_kind_${kind}`)
