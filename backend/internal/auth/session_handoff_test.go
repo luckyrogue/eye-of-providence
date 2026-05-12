@@ -85,7 +85,9 @@ func doHandoff(t *testing.T, app *fiber.App, cookieValue string) (status int, hd
 		t.Fatalf("app.Test: %v", err)
 	}
 	body, err = io.ReadAll(resp.Body)
-	_ = resp.Body.Close()
+	if closeErr := resp.Body.Close(); closeErr != nil && err == nil {
+		err = closeErr
+	}
 	if err != nil {
 		t.Fatalf("read body: %v", err)
 	}
