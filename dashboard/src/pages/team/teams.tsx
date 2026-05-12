@@ -63,6 +63,13 @@ export function Teams({ tz }: { tz: string }) {
 
   return (
     <div className="space-y-4">
+      <div className="page-head">
+        <div>
+          <h1>{t("nav.team", { ns: "common" })}</h1>
+          <div className="sub font-mono">{t("teams.lead")}</div>
+        </div>
+      </div>
+
       {beta.data && beta.data.limit > 0 && <BetaBanner beta={beta.data} />}
 
       <Card className="card-hover">

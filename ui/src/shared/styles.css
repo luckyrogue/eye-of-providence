@@ -84,6 +84,13 @@
       radial-gradient(ellipse 700px 500px at 80% 20%, hsl(13 100% 55% / 0.1), transparent 70%),
       radial-gradient(ellipse 600px 400px at 10% 60%, rgba(124, 58, 237, 0.06), transparent 70%);
   }
+  /* Compact UIs (browser-extension popup ~320px, Tauri agent ~600px) — heavy
+     grid+glow layers рассчитаны на full-page viewport; в узком окне они
+     шумят. Body opts in via .eop-compact class. */
+  html[data-theme="eop"] body.eop-compact::before,
+  html[data-theme="eop"] body.eop-compact::after {
+    display: none;
+  }
   /* App content должен лежать ВЫШЕ background-layers. Корневой #root —
      position: relative + z-index: 1 чтобы перекрыть body::before/after. */
   html[data-theme="eop"] #root {
@@ -1555,6 +1562,46 @@
   .dot-grid {
     background-image: radial-gradient(hsl(var(--foreground) / 0.06) 1px, transparent 1px);
     background-size: 24px 24px;
+  }
+
+  /* Unified design: align shadcn `<Card>` with `.eop-card` under eop-theme so
+     Settings/Team/Admin tiles match Dashboard v2 tiles. Selector targets the
+     unique class pair emitted by `<Card>` (bg-card + text-card-foreground). */
+  [data-theme="eop"] .bg-card.text-card-foreground {
+    background: hsl(232 16% 10%);
+    border-color: hsl(var(--border));
+    box-shadow: none;
+  }
+  [data-theme="eop"] .bg-card.text-card-foreground > .p-6 {
+    padding: 20px;
+  }
+  [data-theme="eop"] .bg-card.text-card-foreground > .p-6.pt-0 {
+    padding: 0 20px 20px;
+  }
+  [data-theme="eop"] .bg-card.text-card-foreground .font-semibold.leading-none.tracking-tight {
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  /* Hoist `.page-head` out of `.eop-dash-content` scope so internal pages
+     (Settings/Team) can opt in with the same heading rhythm as Dashboard v2. */
+  [data-theme="eop"] .page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  [data-theme="eop"] .page-head h1 {
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  [data-theme="eop"] .page-head .sub {
+    color: hsl(var(--muted-foreground));
+    font-size: 13px;
+    margin-top: 4px;
   }
 }
 

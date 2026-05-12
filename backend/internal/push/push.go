@@ -54,7 +54,7 @@ const maxConcurrentSend = 64
 
 // Init — должен быть вызван caller'ом ДО первого SendToUser. Создаёт
 // shutdown context + semaphore. Если не вызвать, SendToUser fall back на
-// background ctx без bounded pool (legacy behaviour) — для in-memory tests.
+// background ctx без bounded pool (legacy behavior) — для in-memory tests.
 func (s *Service) Init() {
 	if s.shutdownCtx != nil {
 		return // idempotent

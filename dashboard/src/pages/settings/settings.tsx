@@ -23,6 +23,12 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
 
   return (
     <div className="space-y-4">
+      <div className="page-head">
+        <div>
+          <h1>{t("settings.title")}</h1>
+          <div className="sub font-mono">{t("nav.settings")}</div>
+        </div>
+      </div>
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">

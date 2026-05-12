@@ -121,7 +121,12 @@ export function Hero() {
         </div>
       </div>
 
-      <EyeScene />
+      {/* Desktop offset: translate-y, не margin — чтобы не подталкивать */}
+      {/* нижний stat-row и не ломать grid items-center на mobile. Верх */}
+      {/* орбиты иначе обрезается nav-bar'ом на коротких viewport'ах. */}
+      <div className="w-full lg:justify-self-end lg:translate-y-12 xl:translate-y-16">
+        <EyeScene />
+      </div>
 
       {/* Hero stats: 4-col flat-grid, 1px lines между секциями */}
       <div
