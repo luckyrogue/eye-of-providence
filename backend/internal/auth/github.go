@@ -5,12 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 )
 
+// GitHubUser — raw payload из GitHub /user endpoint. Используется внутри
+// github.go и в тестах. External consumers получают нормализованный
+// *ExternalUser через GitHubOAuth.Exchange (OAuthProvider interface).
 type GitHubUser struct {
 	ID    int64  `json:"id"`
 	Login string `json:"login"`
@@ -21,6 +25,9 @@ type GitHubUser struct {
 type GitHubOAuth struct {
 	cfg *oauth2.Config
 }
+
+// статический check — *GitHubOAuth удовлетворяет OAuthProvider.
+var _ OAuthProvider = (*GitHubOAuth)(nil)
 
 func NewGitHubOAuth(clientID, clientSecret, redirectURL string) *GitHubOAuth {
 	return &GitHubOAuth{
@@ -34,11 +41,38 @@ func NewGitHubOAuth(clientID, clientSecret, redirectURL string) *GitHubOAuth {
 	}
 }
 
+// Name — provider key для interface OAuthProvider. Совпадает со значением
+// колонки `provider` в user_identities.
+func (g *GitHubOAuth) Name() string { return "github" }
+
 func (g *GitHubOAuth) AuthCodeURL(state string) string {
 	return g.cfg.AuthCodeURL(state)
 }
 
-func (g *GitHubOAuth) Exchange(ctx context.Context, code string) (*GitHubUser, error) {
+// Exchange — реализация OAuthProvider.Exchange. Внутри использует
+// exchangeRaw для обратной совместимости (тесты + handler сохраняют доступ
+// к numeric GitHub ID через Subject = strconv.FormatInt).
+//
+// Subject = "<github numeric id>" (стабилен между переименованиями login'а).
+// Login = github username (для UI отображения).
+// Email = primary verified email из /user/emails (security guard).
+func (g *GitHubOAuth) Exchange(ctx context.Context, code string) (*ExternalUser, error) {
+	u, err := g.exchangeRaw(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+	return &ExternalUser{
+		Subject: strconv.FormatInt(u.ID, 10),
+		Email:   u.Email,
+		Name:    u.Name,
+		Login:   u.Login,
+	}, nil
+}
+
+// exchangeRaw — низкоуровневый обмен code → GitHubUser. Сохранён как
+// internal API для тестов и для обратной совместимости (handler.go
+// преобразует Subject обратно в int64 при derivation UUID).
+func (g *GitHubOAuth) exchangeRaw(ctx context.Context, code string) (*GitHubUser, error) {
 	if g.cfg.ClientID == "" {
 		return nil, errors.New("github oauth not configured (set EOP_GITHUB_CLIENT_ID)")
 	}

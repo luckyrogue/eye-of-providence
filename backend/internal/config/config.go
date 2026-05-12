@@ -11,78 +11,103 @@ import (
 const defaultJWTSecret = "dev-only-secret-change-me"
 
 type Config struct {
-	Env             string
-	HTTPAddr        string
-	PostgresDSN     string
-	ClickHouseDSN   string
-	RedisAddr       string
-	GeminiAPIKey    string
-	GitHubClientID  string
-	GitHubClientSec string
-	GitHubCallback  string
+	Env                string
+	HTTPAddr           string
+	PostgresDSN        string
+	ClickHouseDSN      string
+	RedisAddr          string
+	GeminiAPIKey       string
+	GitHubClientID     string
+	GitHubClientSec    string
+	GitHubCallback     string
+	// Google OAuth — все опциональны. Provider регистрируется только при
+	// непустом GoogleClientID (см. cmd/api/main.go в Phase 2).
+	GoogleClientID  string
+	GoogleClientSec string
+	GoogleCallback  string
+	// Apple Sign-in — все опциональны. AppleClientID = Services ID
+	// (например, "com.eop.web"). AppleTeamID/KeyID/PrivateKey используются
+	// для подписи client_secret JWT (см. internal/auth/apple.go Phase 2).
+	AppleClientID   string
+	AppleTeamID     string
+	AppleKeyID      string
+	ApplePrivateKey string
+	AppleCallback   string
+	// WebAuthn / Passkey — все опциональны. Provider/endpoints регистрируются
+	// только если WebAuthnRPID != "" (см. cmd/api/main.go). RPID = effective
+	// domain в проде (например "eop.rysdavletov.org"), "localhost" в dev.
+	// Origins — comma-separated полные origin'ы для CORS-валидации (например
+	// "https://eop.rysdavletov.org,http://localhost:5173").
+	WebAuthnRPID    string
+	WebAuthnRPName  string
+	WebAuthnOrigins string
 	JWTSecret       string
-	AllowedOrigins  string // CORS, comma-separated, "*" разрешено
-	BodyLimitBytes  int    // глобальный лимит тела запроса
-	ReportsCronSec  int    // 0 = выключено
-	InviteOnly      bool   // true = регистрация только по invite (первый user всегда может)
-	AutoMigrate     bool   // true = прогнать .sql миграции на старте
-	EnableDevToken  bool   // true = роут /v1/auth/dev-token зарегистрирован
-	BetaTeamLimit   int    // максимальное число команд в бете (0 = без лимита). Super_admin может больше.
-	// PlanLimitsEnforced — kill-switch для feature gates (plans package).
-	// false (default в бете) = все проверки no-op'ятся, всем доступны все фичи.
-	// true (на GA) = enforces Limits.MaxUsersPerTeam, MaxWebhooks, SSO, AuditLog.
+	AllowedOrigins     string
+	BodyLimitBytes     int
+	ReportsCronSec     int
+	InviteOnly         bool
+	AutoMigrate        bool
+	EnableDevToken     bool
+	BetaTeamLimit      int
 	PlanLimitsEnforced bool
-	ResendAPIKey    string // если пустой — Mailer = Noop (только лог, без HTTP-вызовов)
-	MailFrom        string // RFC-5322 from-address: `Eye of Providence <noreply@app.example.com>`
-	PublicURL       string // base URL дашборда для ссылок в email'ах
-	// Web Push (PWA notifications) — VAPID ECDSA P-256 keypair. Генерируется
-	// один раз через `cmd/vapid-gen`. Если public/private пусты — push
-	// endpoints возвращают 503 "push not configured".
-	VAPIDPublicKey  string
-	VAPIDPrivateKey string
-	VAPIDSubject    string
+	ResendAPIKey       string
+	MailFrom           string
+	PublicURL          string
+	VAPIDPublicKey     string
+	VAPIDPrivateKey    string
+	VAPIDSubject       string
 }
 
 func FromEnv() Config {
 	env := getenv("EOP_ENV", "development")
 	return Config{
-		Env:             env,
-		HTTPAddr:        resolveAddr(),
-		PostgresDSN:     getenv("EOP_POSTGRES_DSN", "postgres://eop:eop_dev@localhost:5432/eop?sslmode=disable"),
-		ClickHouseDSN:   getenv("EOP_CLICKHOUSE_DSN", "clickhouse://eop:eop_dev@localhost:9000/eop"),
-		RedisAddr:       getenv("EOP_REDIS_ADDR", "localhost:6379"),
-		GeminiAPIKey:    os.Getenv("EOP_GEMINI_API_KEY"),
-		GitHubClientID:  os.Getenv("EOP_GITHUB_CLIENT_ID"),
-		GitHubClientSec: os.Getenv("EOP_GITHUB_CLIENT_SECRET"),
-		GitHubCallback:  getenv("EOP_GITHUB_CALLBACK_URL", "http://localhost:8080/v1/auth/github/callback"),
-		JWTSecret:       getenv("EOP_JWT_SECRET", defaultJWTSecret),
-		AllowedOrigins:  getenv("EOP_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174"),
-		BodyLimitBytes:  atoiOr(os.Getenv("EOP_BODY_LIMIT_BYTES"), 1<<20), // 1 MiB
-		ReportsCronSec:  atoi(os.Getenv("EOP_REPORTS_CRON_SEC")),
-		InviteOnly:      getenv("EOP_INVITE_ONLY", "true") != "false",
-		AutoMigrate:     boolEnv("EOP_AUTO_MIGRATE", env != "production"),
-		EnableDevToken:  boolEnv("EOP_ENABLE_DEV_TOKEN", env != "production"),
-		BetaTeamLimit:   atoiOr(os.Getenv("EOP_BETA_TEAM_LIMIT"), 5),
+		Env:                env,
+		HTTPAddr:           resolveAddr(),
+		PostgresDSN:        getenv("EOP_POSTGRES_DSN", "postgres://eop:eop_dev@localhost:5432/eop?sslmode=disable"),
+		ClickHouseDSN:      getenv("EOP_CLICKHOUSE_DSN", "clickhouse://eop:eop_dev@localhost:9000/eop"),
+		RedisAddr:          getenv("EOP_REDIS_ADDR", "localhost:6379"),
+		GeminiAPIKey:       os.Getenv("EOP_GEMINI_API_KEY"),
+		GitHubClientID:     os.Getenv("EOP_GITHUB_CLIENT_ID"),
+		GitHubClientSec:    os.Getenv("EOP_GITHUB_CLIENT_SECRET"),
+		GitHubCallback:     getenv("EOP_GITHUB_CALLBACK_URL", "http://localhost:8080/v1/auth/github/callback"),
+		GoogleClientID:     os.Getenv("EOP_GOOGLE_CLIENT_ID"),
+		GoogleClientSec:    os.Getenv("EOP_GOOGLE_CLIENT_SECRET"),
+		GoogleCallback:     getenv("EOP_GOOGLE_CALLBACK_URL", "http://localhost:8080/v1/auth/google/callback"),
+		AppleClientID:      os.Getenv("EOP_APPLE_CLIENT_ID"),
+		AppleTeamID:        os.Getenv("EOP_APPLE_TEAM_ID"),
+		AppleKeyID:         os.Getenv("EOP_APPLE_KEY_ID"),
+		ApplePrivateKey:    os.Getenv("EOP_APPLE_PRIVATE_KEY"),
+		AppleCallback:      getenv("EOP_APPLE_CALLBACK_URL", "http://localhost:8080/v1/auth/apple/callback"),
+		WebAuthnRPID:       os.Getenv("EOP_WEBAUTHN_RPID"),
+		WebAuthnRPName:     getenv("EOP_WEBAUTHN_RPNAME", "Eye of Providence"),
+		WebAuthnOrigins:    os.Getenv("EOP_WEBAUTHN_ORIGINS"),
+		JWTSecret:          getenv("EOP_JWT_SECRET", defaultJWTSecret),
+		AllowedOrigins:     getenv("EOP_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174"),
+		BodyLimitBytes:     atoiOr(os.Getenv("EOP_BODY_LIMIT_BYTES"), 1<<20), // 1 MiB
+		ReportsCronSec:     atoi(os.Getenv("EOP_REPORTS_CRON_SEC")),
+		InviteOnly:         getenv("EOP_INVITE_ONLY", "true") != "false",
+		AutoMigrate:        boolEnv("EOP_AUTO_MIGRATE", env != "production"),
+		EnableDevToken:     boolEnv("EOP_ENABLE_DEV_TOKEN", env != "production"),
+		BetaTeamLimit:      atoiOr(os.Getenv("EOP_BETA_TEAM_LIMIT"), 5),
 		PlanLimitsEnforced: boolEnv("EOP_PLAN_LIMITS_ENFORCED", false),
-		ResendAPIKey:    os.Getenv("EOP_RESEND_API_KEY"),
-		MailFrom:        getenv("EOP_MAIL_FROM", "Eye of Providence <noreply@example.com>"),
-		PublicURL:       getenv("EOP_PUBLIC_URL", "http://localhost:5173"),
-		VAPIDPublicKey:  os.Getenv("EOP_VAPID_PUBLIC_KEY"),
-		VAPIDPrivateKey: os.Getenv("EOP_VAPID_PRIVATE_KEY"),
-		VAPIDSubject:    getenv("EOP_VAPID_SUBJECT", "mailto:admin@example.com"),
+		ResendAPIKey:       os.Getenv("EOP_RESEND_API_KEY"),
+		MailFrom:           getenv("EOP_MAIL_FROM", "Eye of Providence <noreply@example.com>"),
+		PublicURL:          getenv("EOP_PUBLIC_URL", "http://localhost:5173"),
+		VAPIDPublicKey:     os.Getenv("EOP_VAPID_PUBLIC_KEY"),
+		VAPIDPrivateKey:    os.Getenv("EOP_VAPID_PRIVATE_KEY"),
+		VAPIDSubject:       getenv("EOP_VAPID_SUBJECT", "mailto:admin@example.com"),
 	}
 }
 
-// Validate — проверки, которые должны провалить запуск.
-//
-// Hardening: проверки JWT (default-secret, длина ≥32) теперь применяются
-// УНИВЕРСАЛЬНО, не только в production. Раньше dev-build с дефолтным
-// секретом мог по ошибке улететь на staging/prod через мисдеплой и
-// принимать любой подделанный JWT. Защитимся явно — fail fast.
+// WebAuthnEnabled — true если RPID сконфигурирован. Используется в
+// teams.handleAuthConfig для флага passkey_enabled и в main.go для
+// решения регистрировать ли webauthn-endpoints.
+func (c Config) WebAuthnEnabled() bool {
+	return c.WebAuthnRPID != ""
+}
+
 func (c Config) Validate() error {
 	var errs []string
-	// Эти проверки работают во всех env, чтобы случайно поднятый "dev" билд
-	// в публичной сети не оказался открытым.
 	if c.JWTSecret == defaultJWTSecret {
 		errs = append(errs, "EOP_JWT_SECRET must be set — default secret is unsafe in any deployment")
 	}
@@ -91,8 +116,6 @@ func (c Config) Validate() error {
 	} else if len(c.JWTSecret) < 32 {
 		errs = append(errs, "EOP_JWT_SECRET must be ≥32 chars (got "+strconv.Itoa(len(c.JWTSecret))+")")
 	}
-	// CORS: запрещаем wildcard subdomain (Fiber CORS поддерживает только exact match,
-	// "https://*.foo.com" молча НЕ матчится — даём явную ошибку при старте).
 	for _, o := range strings.Split(c.AllowedOrigins, ",") {
 		o = strings.TrimSpace(o)
 		if o == "" || o == "*" {
@@ -103,13 +126,18 @@ func (c Config) Validate() error {
 		}
 	}
 
+	// WebAuthn включён по факту EOP_WEBAUTHN_RPID. Если включён — origins тоже
+	// обязателен (без них WebAuthn library отвергнет любые ассертации).
+	if c.WebAuthnRPID != "" && strings.TrimSpace(c.WebAuthnOrigins) == "" {
+		errs = append(errs, "EOP_WEBAUTHN_ORIGINS must be set when EOP_WEBAUTHN_RPID is set")
+	}
+
 	if c.Env != "production" {
 		if len(errs) == 0 {
 			return nil
 		}
 		return errors.New("config invalid:\n  - " + strings.Join(errs, "\n  - "))
 	}
-	// Production-only проверки (JWT checks выше уже сделаны).
 	if c.AllowedOrigins == "*" {
 		errs = append(errs, "EOP_ALLOWED_ORIGINS must not be '*' in production")
 	}
@@ -119,7 +147,6 @@ func (c Config) Validate() error {
 	if c.ClickHouseDSN == "" {
 		errs = append(errs, "EOP_CLICKHOUSE_DSN must be set in production")
 	}
-	// dev-token endpoint в production = catastrophic — выдаёт JWT любому.
 	if c.EnableDevToken {
 		errs = append(errs, "EOP_ENABLE_DEV_TOKEN must be false in production")
 	}
@@ -129,10 +156,6 @@ func (c Config) Validate() error {
 	return errors.New("config invalid:\n  - " + strings.Join(errs, "\n  - "))
 }
 
-// resolveAddr — приоритет:
-//  1. EOP_HTTP_ADDR (наш контракт, ":8080" формат)
-//  2. PORT (Render/Heroku/Railway/Fly auto-inject port number)
-//  3. ":8080" default
 func resolveAddr() string {
 	if v := os.Getenv("EOP_HTTP_ADDR"); v != "" {
 		return v
@@ -175,9 +198,7 @@ func boolEnv(key string, fallback bool) bool {
 	case "0", "false", "no", "off":
 		return false
 	default:
-		// Не паникуем — но печатаем понятное сообщение в stderr,
-		// чтобы опечатка в env не игнорировалась молча.
-		fmt.Fprintf(os.Stderr, "[config] %s=%q is not a bool, using fallback=%v\n", key, v, fallback)
+		_, _ = fmt.Fprintf(os.Stderr, "[config] %s=%q is not a bool, using fallback=%v\n", key, v, fallback)
 		return fallback
 	}
 }

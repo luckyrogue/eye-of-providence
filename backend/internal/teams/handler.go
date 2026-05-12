@@ -96,6 +96,17 @@ type Service struct {
 	Webhooks      WebhookDispatcher // nil — webhook delivery выключена (in-memory mode)
 	Plans         plans.Service     // feature-gate: max users/team при Enforce=true
 	Audit         audit.Service     // append-only лог критичных действий
+	// AuthProviders — массив включённых OAuth-провайдеров ("github", "google", ...).
+	// Конструируется в main.go на основе env. Отдаётся фронту через GET /v1/auth/config
+	// для conditional рендеринга кнопок.
+	AuthProviders []string
+	// PasskeyEnabled — true если WebAuthn настроен (RPID + Origins). Frontend
+	// рендерит passkey-кнопку только если true.
+	PasskeyEnabled bool
+	// TemplateStore — Postgres-backed override store для transactional email
+	// templates (Phase 3 admin). nil = admin endpoints возвращают 503 и
+	// Mailer.Send продолжает использовать только embedded baseline.
+	TemplateStore *mailer.PGTemplateStore
 }
 
 // actorInfo — берёт текущего user_id + email для audit-trail. Email
@@ -176,6 +187,21 @@ func RegisterRoutes(app *fiber.App, s Service) {
 	g.Post("/admin/teams/:id/members", s.handleAdminAddMember)
 	g.Patch("/admin/teams/:id/subscription", s.handleSetSubscription)
 	g.Get("/admin/teams/:id/payments", s.handleListPayments)
+
+	// Phase 3 admin: email templates, team flags, plan-limit overrides,
+	// cross-team webhooks/api-tokens. Все защищены requireSuperAdmin внутри.
+	g.Get("/admin/email-templates", s.handleAdminListEmailTemplates)
+	g.Get("/admin/email-templates/:key/:locale", s.handleAdminGetEmailTemplate)
+	g.Put("/admin/email-templates/:key/:locale", s.handleAdminUpsertEmailTemplate)
+	g.Delete("/admin/email-templates/:key/:locale", s.handleAdminDeleteEmailTemplate)
+
+	g.Get("/admin/teams/:id/flags", s.handleAdminGetTeamFlags)
+	g.Patch("/admin/teams/:id/flags", s.handleAdminPatchTeamFlags)
+	g.Get("/admin/teams/:id/plan-limits", s.handleAdminGetTeamPlanLimits)
+	g.Patch("/admin/teams/:id/plan-limits", s.handleAdminPatchTeamPlanLimits)
+
+	g.Get("/admin/webhooks", s.handleAdminListAllWebhooks)
+	g.Get("/admin/api-tokens", s.handleAdminListAllAPITokens)
 }
 
 func userID(c *fiber.Ctx) uuid.UUID {

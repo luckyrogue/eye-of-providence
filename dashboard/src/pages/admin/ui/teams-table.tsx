@@ -19,6 +19,7 @@ import { SubscriptionModal } from "../../../features/admin-set-subscription";
 import { dtLabels } from "../../../shared/lib/data-table-labels";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { formatDate } from "../../../shared/lib/tz";
+import { TeamDrawer } from "./team-drawer";
 
 export function TeamsTable({
   teams,
@@ -31,6 +32,7 @@ export function TeamsTable({
 }) {
   const { t } = useTranslation(["app", "common"]);
   const [subTeam, setSubTeam] = useState<AdminTeam | null>(null);
+  const [drawerTeam, setDrawerTeam] = useState<AdminTeam | null>(null);
   const confirm = useConfirm();
   const deleteTeam = useAdminDeleteTeam();
   const runToast = useMutationToast();
@@ -116,6 +118,9 @@ export function TeamsTable({
           <div className="flex justify-end">
             <DataTableRowActions triggerLabel={t("common:data_table.open_menu")}>
               <DropdownMenuLabel>{t("app:admin.team_actions_label")}</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setDrawerTeam(row.original)}>
+                {t("app:admin.team_manage_btn")}
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setSubTeam(row.original)}>
                 {t("app:admin.team_subscribe_btn")}
               </DropdownMenuItem>
@@ -180,6 +185,7 @@ export function TeamsTable({
       </div>
 
       <SubscriptionModal team={subTeam} tz={tz} onClose={() => setSubTeam(null)} />
+      <TeamDrawer team={drawerTeam} tz={tz} onClose={() => setDrawerTeam(null)} />
     </>
   );
 }

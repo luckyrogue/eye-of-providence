@@ -35,7 +35,34 @@ type AuthResponse = {
   team_id?: string | null;
 };
 
-type AuthConfig = { invite_only: boolean; is_first_user: boolean };
+type OAuthProvider = "github" | "google" | "apple";
+
+type AuthConfig = {
+  invite_only: boolean;
+  is_first_user: boolean;
+  // TODO: remove the optional + default once backend ships /v1/auth/config with providers.
+  providers?: OAuthProvider[];
+  passkey_enabled?: boolean;
+};
+
+// Linked OAuth identity (user_identities row). Passkeys live in a separate
+// table — see Passkey below — but `CountAuthFactors` on the backend sums both
+// when evaluating last-factor lockout, so the frontend treats them as two
+// orthogonal lists.
+type Identity = {
+  id: string;
+  provider: OAuthProvider;
+  subject: string;
+  email?: string;
+  created_at: string;
+};
+
+type Passkey = {
+  id: string;
+  nickname: string;
+  created_at: string;
+  last_used_at?: string | null;
+};
 
 type OnboardingStatus = {
   teams_count: number;
@@ -71,6 +98,9 @@ export type {
   Profile,
   AuthResponse,
   AuthConfig,
+  OAuthProvider,
+  Identity,
+  Passkey,
   OnboardingStatus,
   Insight,
   APIToken,

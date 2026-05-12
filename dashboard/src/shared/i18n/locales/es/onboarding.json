@@ -40,7 +40,7 @@
     "generate": "Generar enlace de invitación",
     "copied": "¡Copiado!",
     "copy": "Copiar",
-    "url_note": "Válido durante 7 días. Hasta 10 registros. Revocar en Equipo → Miembros."
+    "url_note": "7 días, hasta 10 usos del enlace. Free: hasta 5 miembros. Revocar en Equipo → Miembros."
   },
   "event": {
     "title_waiting": "Esperando el primer evento…",

@@ -40,7 +40,7 @@
     "generate": "Generate invite link",
     "copied": "Copied!",
     "copy": "Copy",
-    "url_note": "Valid for 7 days. Up to 10 signups. Revoke in Team → Members."
+    "url_note": "7 days, up to 10 uses per link. Free: up to 5 members. Revoke in Team → Members."
   },
   "event": {
     "title_waiting": "Waiting for the first event…",

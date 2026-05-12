@@ -293,6 +293,269 @@
       "until_required": "Specify the period end date.",
       "currency_invalid": "Currency must be a 3-letter ISO code.",
       "note_too_long": "Note is too long."
+    },
+    "team_manage_btn": "Manage team",
+    "team_drawer": {
+      "close": "Close",
+      "tab_info": "Info",
+      "tab_flags": "Flags",
+      "tab_limits": "Limits",
+      "info_plan": "Plan",
+      "info_subscription_until": "Active until",
+      "info_members": "Members",
+      "info_owner": "Owner",
+      "info_created": "Created",
+      "info_note": "Note"
+    },
+    "email_templates": {
+      "tab": "Email templates",
+      "title": "Email templates",
+      "intro": "Edit the subject and body of transactional emails. The embedded baseline ships with the app and is used if no custom row exists.",
+      "empty_eyebrow": "No template",
+      "empty_title": "Select a template on the left",
+      "badge": {
+        "default": "Default",
+        "overridden": "Overridden"
+      },
+      "template": {
+        "password_reset": "Password reset",
+        "team_invite": "Team invite",
+        "subscription_activated": "Subscription activated"
+      },
+      "unsaved_dot": "Unsaved changes in this locale",
+      "field": {
+        "subject": "Subject",
+        "body_html": "HTML body",
+        "body_text": "Plain-text body (auto-derived if empty)"
+      },
+      "vars": {
+        "password_reset": "Available variables: {{name}}, {{reset_url}} (required), {{ip}}, {{user_agent}}.",
+        "team_invite": "Available variables: {{inviter_name}}, {{team_name}}, {{accept_url}} (required), {{role}}, {{expires_at}}.",
+        "subscription_activated": "Available variables: {{name}}, {{plan_name}} (required), {{next_invoice_date}}, {{billing_url}}.",
+        "required_label": "Required"
+      },
+      "cta": {
+        "preview": "Preview",
+        "hide_preview": "Hide preview",
+        "save": "Save",
+        "revert": "Revert to default",
+        "revert_confirm_title": "Revert this template?",
+        "revert_confirm_body": "The embedded baseline will be used for this locale. Your edits are kept in the audit log."
+      },
+      "error": {
+        "missing_variable": "This template must include {{variable}}.",
+        "invalid_subject_chars": "The subject cannot contain line breaks or control characters.",
+        "body_too_large": "Body exceeds 256 KB. Trim the content.",
+        "concurrent_edit": "Another admin saved changes. Reload to continue editing."
+      },
+      "preview": {
+        "title": "Preview — not sent",
+        "sample_values": "Sample values shown for variables."
+      },
+      "toast": {
+        "saved": "Template saved",
+        "save_failed": "Failed to save template",
+        "reverted": "Reverted to default",
+        "revert_failed": "Failed to revert"
+      }
+    },
+    "content": {
+      "tab_label": "Content",
+      "title": "Content (CMS-lite)",
+      "intro": "Edit landing-page copy without redeploying. Empty rows fall back to bundled i18n strings.",
+      "slug_picker_title": "Content slugs",
+      "preview_title": "Live preview",
+      "empty_eyebrow": "No slug",
+      "empty_title": "Select a slug on the left",
+      "default_badge": "Default",
+      "draft_badge": "Draft",
+      "published_badge": "Published",
+      "save_draft": "Save draft",
+      "publish": "Publish",
+      "revert": "Revert to default",
+      "preview": "Preview",
+      "save_success": "Draft saved",
+      "publish_success": "Published",
+      "conflict_error": "Content was modified by someone else, refresh",
+      "schema_error": "Invalid format: see editor highlights",
+      "confirm_revert_title": "Revert to bundled default?",
+      "confirm_revert_lead": "Deletes the CMS row for this slug + locale. The landing page will render the bundled i18n string. Audit log retains the prior content.",
+      "preview_banner": "Preview: showing unpublished draft of `{{slug}}`. Other content is live.",
+      "preview_exit": "Exit preview"
+    },
+    "team_flags": {
+      "title": "Feature flags",
+      "intro": "Override the plan defaults for this team. Changes apply within five seconds.",
+      "resolved_label": "Effective: {{state}} ({{source}})",
+      "source": {
+        "plan_default": "plan default",
+        "override": "override"
+      },
+      "enable_insights": {
+        "label": "Enable Insights",
+        "desc": "Allows team members to open the Insights tab and request aggregated analytics."
+      },
+      "enable_team_reports": {
+        "label": "Enable team reports",
+        "desc": "Allows generating weekly and on-demand team-level reports."
+      },
+      "enable_anomaly_detection": {
+        "label": "Enable anomaly detection",
+        "desc": "Surfaces unusual AI-usage spikes in the Insights view. Requires Insights to be enabled."
+      },
+      "enable_webhooks": {
+        "label": "Enable webhooks",
+        "desc": "Allows team admins to register webhook endpoints and receive event deliveries."
+      },
+      "k_anon_threshold": {
+        "label": "K-anonymity threshold",
+        "desc": "Minimum group size used to hide small cohorts in aggregate views. Higher is more private."
+      },
+      "audit_log_retention_days": {
+        "label": "Audit log retention (days)",
+        "desc": "Days to keep team audit entries before automatic deletion. Plan tier sets the maximum."
+      },
+      "placeholder": {
+        "use_plan_default": "Plan default"
+      },
+      "action": {
+        "clear": "Use plan default"
+      },
+      "cta": {
+        "save": "Save changes",
+        "reset_all": "Reset all to plan defaults"
+      },
+      "error": {
+        "unknown_flag": "Unknown flag {{key}}.",
+        "invalid_type": "Wrong type for {{key}}.",
+        "below_minimum": "{{key}} must be at least {{min}}."
+      },
+      "warning": {
+        "overrides_after_downgrade": "This team has {{count}} explicit overrides. Plan downgrade does not clear them automatically."
+      },
+      "toast": {
+        "saved": "Flags saved",
+        "save_failed": "Failed to save flags",
+        "reset": "Flags reset to plan defaults"
+      }
+    },
+    "plan_overrides": {
+      "title": "Plan limit overrides",
+      "intro": "Set custom limits for this team. Blank fields use the plan default.",
+      "max_users_per_team": {
+        "label": "Max users per team",
+        "helper": "Override the default plan limit of {{default}}."
+      },
+      "max_webhooks": {
+        "label": "Max webhooks",
+        "helper": "Override the default plan limit of {{default}}."
+      },
+      "max_api_tokens": {
+        "label": "Max API tokens",
+        "helper": "Override the default plan limit of {{default}}."
+      },
+      "event_history_days": {
+        "label": "Event history (days)",
+        "helper": "Override the default plan limit of {{default}}."
+      },
+      "max_teams_per_user": {
+        "label": "Max teams per user",
+        "helper": "Override the default plan limit of {{default}}."
+      },
+      "audit_log_retention_days": {
+        "label": "Audit log retention (days)",
+        "helper": "Override the default plan limit of {{default}}. Minimum 30 days."
+      },
+      "placeholder": {
+        "unlimited": "Unlimited",
+        "use_default": "{{default}} (plan default)"
+      },
+      "action": {
+        "clear": "Use plan default"
+      },
+      "cta": {
+        "save": "Save changes",
+        "reset_all": "Reset all to plan defaults"
+      },
+      "warning": {
+        "over_limit": "Team is {{over}} {{unit}} over its limit. New {{unit}} are blocked until cleared."
+      },
+      "error": {
+        "out_of_range": "{{field}} must be between {{min}} and {{max}}.",
+        "below_min_retention": "Audit retention cannot be lower than 30 days."
+      },
+      "toast": {
+        "saved": "Limits saved",
+        "save_failed": "Failed to save limits",
+        "reset": "Limits reset to plan defaults"
+      }
+    },
+    "webhooks_cross": {
+      "tab": "Webhooks",
+      "title": "Webhooks across all teams",
+      "lead": "{{count}} active",
+      "col_team": "Team",
+      "col_url": "URL",
+      "col_events": "Events",
+      "col_format": "Format",
+      "filter_url": "Filter URL…",
+      "actions_label": "Actions",
+      "revoke": "Revoke",
+      "revoked": "Webhook revoked",
+      "revoke_failed": "Failed to revoke webhook",
+      "revoke_confirm_title": "Revoke webhook {{url}}?",
+      "revoke_confirm_lead": "The endpoint will stop receiving events immediately.",
+      "empty_eyebrow": "No webhooks",
+      "empty_title": "No teams have configured webhooks yet"
+    },
+    "tokens_cross": {
+      "tab": "Tokens",
+      "title": "API tokens across all users",
+      "lead": "{{count}} active",
+      "col_user": "User",
+      "col_prefix": "Prefix",
+      "col_name": "Name",
+      "col_scope": "Scope",
+      "col_last_used": "Last used",
+      "filter_email": "Filter user…",
+      "actions_label": "Actions",
+      "revoke": "Revoke",
+      "revoked": "Token revoked",
+      "revoke_failed": "Failed to revoke token",
+      "revoke_confirm_title": "Revoke token {{prefix}}…?",
+      "revoke_confirm_lead": "The token will stop authenticating immediately.",
+      "empty_eyebrow": "No tokens",
+      "empty_title": "No users have created API tokens yet"
+    },
+    "observer_tooltip": "Observer role is read-only"
+  },
+  "team": {
+    "role": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member",
+      "observer": "Observer"
+    },
+    "invite": {
+      "role_hint": {
+        "observer": "Read-only access. Cannot invite, mutate settings, or submit events."
+      }
+    },
+    "role_badge": {
+      "observer": "Observer",
+      "observer_tooltip": "Observers can view team data and reports, but cannot invite, edit settings, or submit events."
+    },
+    "observer": {
+      "empty_writes": "Read-only access. Ask a team admin to make changes.",
+      "cannot_submit_events": "This team does not collect events from observer devices."
+    },
+    "role_change": {
+      "title": "Change role",
+      "confirm": "Set {{user}} as {{role}}?",
+      "last_owner": "A team must have at least one owner. Promote another member first."
+    },
+    "billing": {
+      "overrides_active": "Your team has custom limits granted by support. Contact support to change them."
     }
   },
   "team_rename": {
@@ -314,14 +577,15 @@
     "role": {
       "owner": "owner",
       "admin": "admin",
-      "member": "member"
+      "member": "member",
+      "observer": "observer"
     },
     "invite_section_title": "Invite a member",
     "invite_create_link": "Create link",
     "invite_copy": "Copy",
     "invite_copied": "Copied",
     "invite_create_failed": "Failed to create invite",
-    "invite_lead": "Link valid 7 days, up to 10 signups. Send it to whoever you want to add.",
+    "invite_lead": "Valid 7 days; the link works up to 10 times. Free teams are limited to 5 members; paid plans allow more. Send it to whoever you want to add.",
     "member_remove_title": "Remove {{name}}?",
     "member_remove_lead": "The member will lose access to this team. Their event history is not affected.",
     "member_remove_confirm": "Remove",

@@ -61,8 +61,8 @@ export function Revenue({ tz }: { tz: string }) {
         />
       </div>
 
-      <div className="eop-grid">
-        <div className="eop-card col-5">
+      <div className="eop-grid grid grid-cols-12 gap-[14px]">
+        <div className="eop-card col-span-12 min-[1181px]:col-span-5 min-w-0">
           <div className="card-head">
             <div>
               <div className="card-title">{t("admin.revenue_by_plan")}</div>
@@ -104,7 +104,7 @@ export function Revenue({ tz }: { tz: string }) {
           </div>
         </div>
 
-        <div className="eop-card col-7">
+        <div className="eop-card col-span-12 min-[1181px]:col-span-7 min-w-0">
           <div className="card-head">
             <div>
               <div className="card-title">{t("admin.revenue_recent_payments")}</div>

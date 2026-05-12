@@ -21,6 +21,22 @@ func TestEmbeddedFiles(t *testing.T) {
 		"sql/postgres/004_subscriptions.down.sql",
 		"sql/postgres/005_token_version.up.sql",
 		"sql/postgres/005_token_version.down.sql",
+		// Phase 2 SSO / passkey / observer-role migrations.
+		"sql/postgres/019_user_identities.up.sql",
+		"sql/postgres/019_user_identities.down.sql",
+		"sql/postgres/020_webauthn_credentials.up.sql",
+		"sql/postgres/020_webauthn_credentials.down.sql",
+		"sql/postgres/021_team_members_observer.up.sql",
+		"sql/postgres/021_team_members_observer.down.sql",
+		// Phase 3 admin: 022 email templates, 024 team flags + plan
+		// overrides. 023 пропущена (custom roles canceled).
+		"sql/postgres/022_email_templates.up.sql",
+		"sql/postgres/022_email_templates.down.sql",
+		"sql/postgres/024_team_flags_and_overrides.up.sql",
+		"sql/postgres/024_team_flags_and_overrides.down.sql",
+		// Phase 4 CMS-lite: 025 content_blocks (slug × locale × published/draft).
+		"sql/postgres/025_content_blocks.up.sql",
+		"sql/postgres/025_content_blocks.down.sql",
 	}
 	expectCH := []string{
 		"sql/clickhouse/001_events.up.sql",

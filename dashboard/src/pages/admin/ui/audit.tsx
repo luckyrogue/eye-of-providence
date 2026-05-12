@@ -46,7 +46,7 @@ export function AuditLog({ tz }: { tz: string }) {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="mb-4 flex w-full min-w-0 flex-nowrap items-center gap-2 overflow-x-auto">
         <SimpleSelect
           value={action}
           onValueChange={setAction}
@@ -55,7 +55,7 @@ export function AuditLog({ tz }: { tz: string }) {
             label: a || t("admin.audit_filter_any_action"),
           }))}
           placeholder={t("admin.audit_filter_any_action")}
-          triggerClassName="min-w-[200px]"
+          triggerClassName="h-10 min-w-[200px] w-auto shrink-0 py-0"
         />
         <SimpleSelect
           value={targetType}
@@ -65,14 +65,14 @@ export function AuditLog({ tz }: { tz: string }) {
             label: tt || t("admin.audit_filter_any_target"),
           }))}
           placeholder={t("admin.audit_filter_any_target")}
-          triggerClassName="min-w-[160px]"
+          triggerClassName="h-10 min-w-[160px] w-auto shrink-0 py-0"
         />
         <Input
           type="text"
           value={targetID}
           onChange={(e) => setTargetID(e.target.value)}
           placeholder={t("admin.audit_filter_target_id_ph")}
-          className="font-mono flex-1 min-w-[200px]"
+          className="font-mono h-10 flex-1 min-w-[200px] py-0 leading-5"
         />
       </div>
 

@@ -1,11 +1,28 @@
+import { useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Eyebrow, cn } from "@eop/ui";
 import { Check } from "lucide-react";
+import { useContent, type PricingTierBlock } from "../../../shared/content";
 
+// Legacy i18n shape — still used for tier name + price + period + cta,
+// plus the Enterprise tier in full (Enterprise stays out of the CMS in
+// Phase 1 per .team/product-cms-slugs.md).
+type LegacyTier = {
+  name: string;
+  price: string;
+  period: string;
+  features: string[];
+  cta: string;
+};
+
+// Merged shape consumed by PriceCard — `tagline` is a new CMS-only field
+// that the muted line under the price renders. When CMS is offline we
+// derive tagline from the legacy `period` so the card never goes blank.
 type Tier = {
   name: string;
   price: string;
   period: string;
+  tagline: string;
   features: string[];
   cta: string;
 };
@@ -29,7 +46,7 @@ function PriceCard({
   betaBadge: string;
   isPaid: boolean;
 }) {
-  const { name, price, period, features, cta } = tier;
+  const { name, price, period, tagline, features, cta } = tier;
   const isEnterprise = index === total - 1;
   return (
     <div
@@ -63,6 +80,7 @@ function PriceCard({
         </span>
         <span className="font-mono text-[12px] text-muted-foreground ml-2">{period}</span>
       </div>
+      {tagline && <div className="mt-2 text-[12px] text-muted-foreground">{tagline}</div>}
       {isPaid && (
         <span
           className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-mono uppercase tracking-widest2"
@@ -111,7 +129,44 @@ function PriceCard({
 
 export function Pricing() {
   const { t } = useTranslation("landing");
-  const tiers = t("pricing.tiers", { returnObjects: true }) as Tier[];
+  const legacyTiers = useMemo(
+    () => t("pricing.tiers", { returnObjects: true }) as LegacyTier[],
+    [t],
+  );
+
+  // Fallback PricingTierBlock derived from the legacy tier — keeps the
+  // page renderable even when the CMS is unreachable.
+  const fallbackFor = (idx: number): PricingTierBlock => {
+    const lg = legacyTiers[idx];
+    return {
+      tagline: lg?.period ?? "",
+      bullets: lg?.features ?? [],
+    };
+  };
+
+  const freeCms = useContent<PricingTierBlock>("landing.pricing.free.description", fallbackFor(0));
+  const proCms = useContent<PricingTierBlock>("landing.pricing.pro.description", fallbackFor(1));
+  const businessCms = useContent<PricingTierBlock>(
+    "landing.pricing.business.description",
+    fallbackFor(2),
+  );
+
+  // Merge CMS-managed (free/pro/business) with the legacy name/price/cta.
+  // Enterprise (idx 3) stays fully i18n-driven in Phase 1.
+  const tiers: Tier[] = useMemo(() => {
+    return legacyTiers.map((lg, i) => {
+      const cms = i === 0 ? freeCms : i === 1 ? proCms : i === 2 ? businessCms : null;
+      return {
+        name: lg.name,
+        price: lg.price,
+        period: lg.period,
+        tagline: cms?.tagline ?? "",
+        features: cms?.bullets ?? lg.features,
+        cta: lg.cta,
+      };
+    });
+  }, [legacyTiers, freeCms, proCms, businessCms]);
+
   return (
     <section id="pricing" className="py-24 sm:py-32 px-4 sm:px-8">
       <div className="mx-auto max-w-7xl">

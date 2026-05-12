@@ -2,13 +2,14 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "@eop/ui";
 import { useProjects } from "../../../entities/team";
 import { CreateProjectButton } from "../../../features/project-create";
+import { isReadOnlyRole } from "../../../shared/ui/role-tooltip";
 import { formatDate } from "../../../shared/lib/tz";
 
 export function ProjectsTab({ teamID, role, tz }: { teamID: string; role: string; tz: string }) {
   const { t } = useTranslation("app");
   const projects = useProjects(teamID);
   const list = projects.data ?? [];
-  const canCreate = role === "owner" || role === "admin";
+  const canCreate = !isReadOnlyRole(role) && (role === "owner" || role === "admin");
 
   return (
     <div className="space-y-3">

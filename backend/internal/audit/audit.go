@@ -44,6 +44,27 @@ const (
 	ActionSSODeleted      Action = "sso.deleted"
 	ActionDeviceClaimed   Action = "device.claimed"
 	ActionDeviceRevoked   Action = "device.revoked"
+
+	// Phase 3 admin actions (см. .team/product-audit-taxonomy.md).
+	ActionEmailTemplateUpdated         Action = "email_template.updated"
+	ActionEmailTemplateReverted        Action = "email_template.reverted"
+	ActionEmailTemplateUpdateRejected  Action = "email_template.update_rejected"
+	ActionEmailTemplateAccessDenied    Action = "email_template.access_denied"
+	ActionTeamFlagsUpdated             Action = "team.flags_updated"
+	ActionTeamFlagsUpdateRejected      Action = "team.flags_update_rejected"
+	ActionTeamFlagsUpdateDenied        Action = "team.flags_update_denied"
+	ActionTeamPlanOverridesUpdated     Action = "team.plan_overrides_updated"
+	ActionTeamPlanOverridesCleared     Action = "team.plan_overrides_cleared"
+	ActionTeamPlanOverridesRejected    Action = "team.plan_overrides_update_rejected"
+
+	// Phase 4 CMS-lite (Workstream 4). См.
+	// .team/product-audit-taxonomy.md §"Phase 3 append — CMS workstream".
+	ActionContentPublished       Action = "content.published"
+	ActionContentDraftSaved      Action = "content.draft_saved"
+	ActionContentRevertedDefault Action = "content.reverted_to_default"
+	ActionContentSaveRejected    Action = "content.save_rejected"
+	ActionContentAccessDenied    Action = "content.access_denied"
+	ActionContentPreviewAccessed Action = "content.preview_accessed"
 )
 
 // Entry — single audit-row для записи.

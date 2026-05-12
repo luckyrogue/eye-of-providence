@@ -13,6 +13,7 @@ import {
 } from "@eop/ui";
 import { useMembers, useTeamSummary, type Team } from "../../../entities/team";
 import { TEAM_DETAIL_TABS, type TeamDetailTabKey } from "../model/team-detail-tabs";
+import { ObserverHint, isReadOnlyRole } from "../../../shared/ui/role-tooltip";
 import { CommitsTab } from "./commits-tab";
 import { MembersTab } from "./members-tab";
 import { ProjectsTab } from "./projects-tab";
@@ -51,6 +52,14 @@ export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; t
               {memberCountLabel}
               {note ? ` · ${note}` : ""}
             </CardDescription>
+            {isReadOnlyRole(role) && (
+              <div className="mt-2">
+                <ObserverHint
+                  label={t("app:team.role_badge.observer")}
+                  hint={t("app:team.role_badge.observer_tooltip")}
+                />
+              </div>
+            )}
           </div>
           <TabsList className="justify-start lg:justify-end overflow-x-auto -mx-1 px-1">
             {visibleTabs.map((it) => {

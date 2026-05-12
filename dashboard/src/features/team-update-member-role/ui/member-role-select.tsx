@@ -36,6 +36,7 @@ export function MemberRoleSelect({
         { value: "owner", label: t("team_detail.role.owner") },
         { value: "admin", label: t("team_detail.role.admin") },
         { value: "member", label: t("team_detail.role.member") },
+        { value: "observer", label: t("team_detail.role.observer") },
       ]}
     />
   );

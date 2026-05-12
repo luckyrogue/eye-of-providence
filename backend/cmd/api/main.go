@@ -21,6 +21,7 @@ import (
 	fiberrecover "github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/analytics"
@@ -29,6 +30,7 @@ import (
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/cache"
 	"github.com/eye-of-providence/backend/internal/config"
+	"github.com/eye-of-providence/backend/internal/content"
 	"github.com/eye-of-providence/backend/internal/devices"
 	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/ingest"
@@ -202,14 +204,64 @@ func main() {
 	// последующие маршруты под префиксом. Если ingest/analytics зарегистрировать
 	// до teams, они навесят auth на весь /v1, и /v1/auth/register перестанет
 	// быть public.
-	auth.RegisterRoutes(app, auth.Service{
+
+	// OAuth providers map — собирается на основе env. Если GoogleClientID
+	// пустой, провайдер не регистрируется (graceful disable). Apple — Phase 1
+	// stub, в Phase 2 backend оставлен в коде но НЕ wired'ится (см.
+	// .team/product-decisions-confirmed.md §1).
+	oauthProviders := map[string]auth.OAuthProvider{}
+	if cfg.GitHubClientID != "" {
+		oauthProviders["github"] = auth.NewGitHubOAuth(cfg.GitHubClientID, cfg.GitHubClientSec, cfg.GitHubCallback)
+	}
+	if cfg.GoogleClientID != "" {
+		oauthProviders["google"] = auth.NewGoogleOAuth(cfg.GoogleClientID, cfg.GoogleClientSec, cfg.GoogleCallback)
+	}
+	// Apple deferred: Provider construct'ится в auth/apple.go, но Exchange
+	// возвращает "phase 1 stub" ошибку. НЕ добавляем в map чтобы avoid'ить
+	// route registration который вернёт 502 на callback.
+
+	// WebAuthn service — конструируется только если RPID настроен и Redis есть.
+	var webauthnSvc *auth.WebAuthnService
+	if cfg.WebAuthnEnabled() && pgPool != nil {
+		// Используем shared cache.Client (не создаём отдельный redis-pool).
+		// Если cache не reachable — webauthn тоже не доступен (Begin/Finish
+		// fail with "redis required"). Это acceptable: passkey требует stateful
+		// session storage.
+		var rdsClient *redis.Client
+		if cfg.RedisAddr != "" {
+			rcfg, rerr := redis.ParseURL(cfg.RedisAddr)
+			if rerr != nil {
+				rcfg = &redis.Options{Addr: cfg.RedisAddr}
+			}
+			rdsClient = redis.NewClient(rcfg)
+		}
+		ws, err := auth.NewWebAuthnService(cfg.WebAuthnRPID, cfg.WebAuthnRPName, cfg.WebAuthnOrigins, pgPool, rdsClient, log)
+		if err != nil {
+			log.Warn("webauthn init failed", zap.Error(err))
+		} else if ws != nil {
+			webauthnSvc = ws
+			log.Info("webauthn ready",
+				zap.String("rpid", cfg.WebAuthnRPID),
+				zap.String("origins", cfg.WebAuthnOrigins),
+			)
+		}
+	}
+
+	authService := auth.Service{
 		JWTSecret:      cfg.JWTSecret,
-		GitHub:         auth.NewGitHubOAuth(cfg.GitHubClientID, cfg.GitHubClientSec, cfg.GitHubCallback),
+		Providers:      oauthProviders,
 		Logger:         log,
 		Users:          auth.NewUsersPG(pgPool),
 		Pool:           pgPool,
+		WebAuthn:       webauthnSvc,
+		PublicURL:      cfg.PublicURL,
+		SecureCookies:  cfg.Env == "production",
 		EnableDevToken: cfg.EnableDevToken,
-	})
+	}
+	auth.RegisterRoutes(app, authService)
+	// Public session-handoff endpoint — читает cookie, поэтому регистрируется
+	// ДО RegisterMeRoutes (тот навешивает Middleware на /v1/me).
+	auth.RegisterSessionHandoffRoute(app, authService)
 
 	// Devices pairing — public /v1/devices/{pair,poll} + authed /v1/me/devices.
 	// Регистрируем после auth.RegisterRoutes чтобы public роуты не попали
@@ -260,18 +312,54 @@ func main() {
 	}
 
 	teams.EventStore = eventStore
+	// templateStore — Postgres override layer для transactional email
+	// templates (Phase 3 admin). nil pool ⇒ admin endpoints вернут 503;
+	// Mailer.Send продолжает работать через embedded baseline.
+	var templateStore *mailer.PGTemplateStore
+	if pgPool != nil {
+		templateStore = mailer.NewPGTemplateStore(pgPool)
+	}
+
+	// CMS-lite Phase 4 (Workstream 4) — content service. Public route
+	// GET /v1/content/:slug регистрируется ДО teams.RegisterRoutes чтобы
+	// не попасть под /v1 auth middleware (frontend читает контент анонимно).
+	// Admin routes монтируются ниже через отдельный /v1 group с явным
+	// auth.Middleware (handler-level super_admin gate).
+	contentSvc := &content.Service{
+		Store:     content.NewPGStore(pgPool),
+		Audit:     auditSvc,
+		Logger:    log,
+		JWTSecret: cfg.JWTSecret,
+		Pool:      pgPool,
+	}
+	if cfg.RedisAddr != "" {
+		// Создаём отдельный client с теми же опциями что webauthn использует.
+		rcfg, rerr := redis.ParseURL(cfg.RedisAddr)
+		if rerr != nil {
+			rcfg = &redis.Options{Addr: cfg.RedisAddr}
+		}
+		contentSvc.Cache = content.NewCache(redis.NewClient(rcfg))
+	}
+	contentSvc.RegisterPublicRoute(app)
+
 	teams.RegisterRoutes(app, teams.Service{
-		Pool:          pgPool,
-		JWTSecret:     cfg.JWTSecret,
-		Logger:        log,
-		InviteOnly:    cfg.InviteOnly,
-		BetaTeamLimit: cfg.BetaTeamLimit,
-		Mailer:        mail,
-		PublicURL:     cfg.PublicURL,
-		Webhooks:      hooksDispatcher,
-		Plans:         planSvc,
-		Audit:         auditSvc,
+		Pool:           pgPool,
+		JWTSecret:      cfg.JWTSecret,
+		Logger:         log,
+		InviteOnly:     cfg.InviteOnly,
+		BetaTeamLimit:  cfg.BetaTeamLimit,
+		Mailer:         mail,
+		PublicURL:      cfg.PublicURL,
+		Webhooks:       hooksDispatcher,
+		Plans:          planSvc,
+		Audit:          auditSvc,
+		AuthProviders:  authService.ProvidersList(),
+		PasskeyEnabled: webauthnSvc != nil,
+		TemplateStore:  templateStore,
 	})
+
+	// Identities + passkeys routes — JWT-guarded /v1/me/identities, /v1/me/passkeys.
+	auth.RegisterIdentitiesRoutes(app, authService)
 
 	// Protected routes — навешивают auth middleware на весь /v1.
 	auth.RegisterMeRoutes(app, auth.MeService{
@@ -301,6 +389,11 @@ func main() {
 		ssoAdmin := sso.AdminService{Pool: pgPool, Registry: ssoRegistry, Logger: log, Plans: planSvc, Audit: auditSvc}
 		ssoAdmin.RegisterAdminRoutes(app.Group("/v1/teams/:id/sso", auth.Middleware(cfg.JWTSecret, pgPool)))
 	}
+
+	// CMS admin endpoints — /v1/admin/content*. JWT через auth.Middleware
+	// + handler-level super_admin gate (как и phase 3 admin routes).
+	contentSvc.RegisterAdminRoutes(app.Group("/v1", auth.Middleware(cfg.JWTSecret, pgPool)))
+
 
 	// Web Push (PWA notifications) — endpoints всегда зарегистрированы; если
 	// VAPID keys пусты, vapid-key handler вернёт 503 "not configured".

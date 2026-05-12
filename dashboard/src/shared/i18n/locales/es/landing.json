@@ -290,6 +290,10 @@
       {
         "q": "¿Cuándo termina lo gratis?",
         "a": "Free para siempre. Pro/Business gratis en beta hasta Q4 2026."
+      },
+      {
+        "q": "¿Mi código sale a la nube?",
+        "a": "No. El agente calcula todo localmente; solo salen metadatos agregados."
       }
     ]
   },

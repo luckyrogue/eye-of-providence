@@ -19,6 +19,10 @@ import { Revenue } from "./ui/revenue";
 import { SSOConfigs } from "./ui/sso";
 import { AuditLog } from "./ui/audit";
 import { AdminSkeleton } from "./ui/admin-skeleton";
+import { EmailTemplatesPage } from "./ui/email-templates";
+import { ContentEditorPage } from "./ui/content-editor";
+import { WebhooksCrossTeam } from "./ui/webhooks-cross-team";
+import { APITokensCrossUser } from "./ui/api-tokens-cross-user";
 
 export function Admin({ tz }: AdminProps) {
   const { t } = useTranslation("app");
@@ -128,6 +132,10 @@ export function Admin({ tz }: AdminProps) {
           {tab === "users" && <UsersTable users={users.data ?? []} tz={tz} />}
           {tab === "revenue" && <Revenue tz={tz} />}
           {tab === "sso" && <SSOConfigs tz={tz} />}
+          {tab === "email_templates" && <EmailTemplatesPage />}
+          {tab === "content" && <ContentEditorPage />}
+          {tab === "webhooks" && <WebhooksCrossTeam tz={tz} />}
+          {tab === "tokens" && <APITokensCrossUser tz={tz} />}
           {tab === "audit" && <AuditLog tz={tz} />}
         </>
       )}

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, Download, Search } from "lucide-react";
+import { useContent, type CtaBlock, type TextBlock } from "../../../shared/content";
 import { EyeScene } from "./eye-scene";
 
 function GithubIcon({ className }: { className?: string }) {
@@ -48,41 +49,88 @@ function StatNum({ end, decimals = 0 }: { end: number; decimals?: number }) {
 
 type Stat = { label: string; value: string; unit: string };
 
+// Headline renderer: CMS stores the raw string and we tolerate exactly one
+// pair of <em>...</em> for inline italics. Everything else is plain text
+// (React auto-escapes). The fallback default from i18n keeps the same
+// contract so behaviour is identical when CMS is offline.
+function HeadlineRenderer({ text }: { text: string }) {
+  const parts = useMemo(() => {
+    // Find first <em>…</em>; anything else stays literal.
+    const m = text.match(/^([\s\S]*?)<em>([\s\S]*?)<\/em>([\s\S]*)$/);
+    if (!m) return { pre: text, em: null as string | null, post: "" };
+    return { pre: m[1], em: m[2], post: m[3] };
+  }, [text]);
+  return (
+    <>
+      {parts.pre}
+      {parts.em != null && <em>{parts.em}</em>}
+      {parts.post}
+    </>
+  );
+}
+
 export function Hero() {
   const { t } = useTranslation("landing");
   const stats = t("stats", { returnObjects: true }) as Stat[];
+
+  // CMS-managed copy with i18n fallbacks. The fallback string mirrors the
+  // legacy compound title keys so the previous render stays intact when DB
+  // is offline.
+  const headlineFallbackText = useMemo(() => {
+    // Reconstruct legacy "title1 + titleAccent + title2 + <em>titleItal</em> + title3"
+    // into a single string so the new render contract is uniform.
+    const t1 = t("hero.title1");
+    const ta = t("hero.titleAccent");
+    const t2 = t("hero.title2");
+    const ti = t("hero.titleItal");
+    const t3 = t("hero.title3");
+    return `${t1}${ta}${t2}<em>${ti}</em>${t3}`;
+  }, [t]);
+
+  const headline = useContent<TextBlock>("landing.hero.headline", { text: headlineFallbackText });
+  const subhead = useContent<TextBlock>("landing.hero.subhead", { text: t("hero.sub") });
+  const ctaPrimary = useContent<CtaBlock>("landing.hero.cta_primary", {
+    label: t("hero.ctaPrimary"),
+    href: "/dashboard",
+    external: false,
+  });
+  const ctaSecondary = useContent<CtaBlock>("landing.hero.cta_secondary", {
+    label: t("hero.ctaSecondary"),
+    href: "#how",
+    external: false,
+  });
 
   return (
     <section className="relative grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] items-center gap-10 lg:gap-[60px] pt-[120px] pb-[80px] px-4 sm:px-8 mx-auto max-w-[1400px]">
       <div className="flex flex-col gap-7">
         <span className="eyebrow">{t("hero.eyebrow")}</span>
         <h1 className="display font-display font-medium leading-[0.98] tracking-[-0.035em] text-balance text-[clamp(2.5rem,6.5vw,5.4rem)]">
-          {t("hero.title1")}
-          <span style={{ color: "hsl(var(--accent))" }}>{t("hero.titleAccent")}</span>
-          {t("hero.title2")}
-          <em>{t("hero.titleItal")}</em>
-          {t("hero.title3")}
+          <HeadlineRenderer text={headline.text} />
         </h1>
         <p className="text-muted-foreground max-w-[56ch] text-pretty text-[clamp(0.95rem,1.4vw,1.125rem)]">
-          {t("hero.sub")}
+          {subhead.text}
         </p>
         <div className="flex flex-wrap gap-3 items-center">
           <a
-            href="/dashboard"
+            href={ctaPrimary.href}
+            target={ctaPrimary.external ? "_blank" : undefined}
+            rel={ctaPrimary.external ? "noopener noreferrer" : undefined}
             className="btn-eop-primary inline-flex h-10 items-center gap-2 rounded-lg px-[18px] text-[14px] font-medium"
           >
             <Download className="h-[18px] w-[18px]" />
-            {t("hero.ctaPrimary")}
+            {ctaPrimary.label}
           </a>
           <a
-            href="#how"
+            href={ctaSecondary.href}
+            target={ctaSecondary.external ? "_blank" : undefined}
+            rel={ctaSecondary.external ? "noopener noreferrer" : undefined}
             className="inline-flex h-10 items-center gap-2 rounded-lg px-[18px] text-[14px] font-medium border transition-colors hover:bg-foreground/5"
             style={{
               borderColor: "hsl(var(--eop-line-strong))",
               background: "rgba(255,255,255,0.02)",
             }}
           >
-            {t("hero.ctaSecondary")}
+            {ctaSecondary.label}
             <ArrowRight className="h-[18px] w-[18px]" />
           </a>
           <div

@@ -323,6 +323,10 @@
       {
         "q": "When does free end?",
         "a": "Free tier stays free forever. Pro/Business free during beta until Q4 2026."
+      },
+      {
+        "q": "Is my code ever uploaded?",
+        "a": "No. The agent computes everything locally; only aggregated metadata leaves your machine."
       }
     ]
   },

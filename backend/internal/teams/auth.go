@@ -17,9 +17,16 @@ func (s Service) handleAuthConfig(c *fiber.Ctx) error {
 	if s.Pool != nil {
 		_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM users").Scan(&userCount)
 	}
+	// providers — пустой массив (а не nil) чтобы JSON shape был стабильным.
+	providers := s.AuthProviders
+	if providers == nil {
+		providers = []string{}
+	}
 	return c.JSON(fiber.Map{
-		"invite_only":   s.InviteOnly,
-		"is_first_user": userCount == 0,
+		"invite_only":     s.InviteOnly,
+		"is_first_user":   userCount == 0,
+		"providers":       providers,
+		"passkey_enabled": s.PasskeyEnabled,
 	})
 }
 

@@ -233,3 +233,274 @@ export function useAdminSetSubscription() {
       ]),
   });
 }
+
+// --- Email templates ---
+
+export type EmailTemplateKey = "password_reset" | "team_invite" | "subscription_activated";
+export type EmailTemplateLocale = "en" | "ru" | "kk" | "es";
+
+export type EmailTemplateRow = {
+  key: EmailTemplateKey;
+  locale: EmailTemplateLocale;
+  has_override: boolean;
+  updated_at: string | null;
+  updated_by: string | null;
+  updated_by_email: string | null;
+};
+
+export type EmailTemplateDetail = {
+  key: EmailTemplateKey;
+  locale: EmailTemplateLocale;
+  subject: string;
+  body_html: string;
+  body_text: string;
+  is_default: boolean;
+  updated_at: string | null;
+  updated_by: string | null;
+};
+
+export type EmailTemplateSaveReq = {
+  subject: string;
+  body_html: string;
+  body_text: string;
+};
+
+const adminEmailTemplatesKey = () => [...adminKeys.all, "email_templates"] as const;
+const adminEmailTemplateDetailKey = (k: EmailTemplateKey, l: EmailTemplateLocale) =>
+  [...adminKeys.all, "email_templates", k, l] as const;
+
+const fetchEmailTemplates = () =>
+  http
+    .get<{ templates: EmailTemplateRow[] }>("/v1/admin/email-templates")
+    .then((r) => r.data.templates ?? []);
+
+const fetchEmailTemplate = (key: EmailTemplateKey, locale: EmailTemplateLocale) =>
+  http
+    .get<EmailTemplateDetail>(
+      `/v1/admin/email-templates/${encodeURIComponent(key)}?locale=${encodeURIComponent(locale)}`,
+    )
+    .then((r) => r.data);
+
+const saveEmailTemplate = (
+  key: EmailTemplateKey,
+  locale: EmailTemplateLocale,
+  payload: EmailTemplateSaveReq,
+) =>
+  http
+    .put<EmailTemplateDetail>(
+      `/v1/admin/email-templates/${encodeURIComponent(key)}?locale=${encodeURIComponent(locale)}`,
+      payload,
+    )
+    .then((r) => r.data);
+
+const revertEmailTemplate = (key: EmailTemplateKey, locale: EmailTemplateLocale) =>
+  http
+    .delete(
+      `/v1/admin/email-templates/${encodeURIComponent(key)}?locale=${encodeURIComponent(locale)}`,
+    )
+    .then(() => undefined);
+
+export const useEmailTemplates = () =>
+  useQuery({ queryKey: adminEmailTemplatesKey(), queryFn: fetchEmailTemplates });
+
+export const useEmailTemplate = (
+  key: EmailTemplateKey | null,
+  locale: EmailTemplateLocale | null,
+) =>
+  useQuery({
+    queryKey:
+      key && locale
+        ? adminEmailTemplateDetailKey(key, locale)
+        : [...adminKeys.all, "email_templates", "disabled"],
+    queryFn: () => fetchEmailTemplate(key!, locale!),
+    enabled: !!key && !!locale,
+  });
+
+export function useSaveEmailTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      key,
+      locale,
+      payload,
+    }: {
+      key: EmailTemplateKey;
+      locale: EmailTemplateLocale;
+      payload: EmailTemplateSaveReq;
+    }) => saveEmailTemplate(key, locale, payload),
+    onSuccess: (_d, vars) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: adminEmailTemplatesKey() }),
+        qc.invalidateQueries({
+          queryKey: adminEmailTemplateDetailKey(vars.key, vars.locale),
+        }),
+      ]),
+  });
+}
+
+export function useRevertEmailTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, locale }: { key: EmailTemplateKey; locale: EmailTemplateLocale }) =>
+      revertEmailTemplate(key, locale),
+    onSuccess: (_d, vars) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: adminEmailTemplatesKey() }),
+        qc.invalidateQueries({
+          queryKey: adminEmailTemplateDetailKey(vars.key, vars.locale),
+        }),
+      ]),
+  });
+}
+
+// --- Team flags ---
+
+export type TeamFlagsPayload = Record<string, boolean | number | null>;
+
+const updateTeamFlags = (teamID: string, payload: TeamFlagsPayload) =>
+  http
+    .patch<{
+      flags: TeamFlagsPayload;
+    }>(`/v1/admin/teams/${encodeURIComponent(teamID)}/flags`, payload)
+    .then((r) => r.data);
+
+const adminTeamFlagsKey = (teamID: string) => [...adminKeys.all, "team-flags", teamID] as const;
+
+const fetchTeamFlags = (teamID: string) =>
+  http
+    .get<{ flags: TeamFlagsPayload }>(`/v1/admin/teams/${encodeURIComponent(teamID)}/flags`)
+    .then((r) => r.data.flags ?? {});
+
+export const useTeamFlags = (teamID: string | null) =>
+  useQuery({
+    queryKey: teamID ? adminTeamFlagsKey(teamID) : [...adminKeys.all, "team-flags", "disabled"],
+    queryFn: () => fetchTeamFlags(teamID!),
+    enabled: !!teamID,
+  });
+
+export function useUpdateTeamFlags() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ teamID, payload }: { teamID: string; payload: TeamFlagsPayload }) =>
+      updateTeamFlags(teamID, payload),
+    onSuccess: (_d, vars) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: adminKeys.teams() }),
+        qc.invalidateQueries({ queryKey: adminTeamFlagsKey(vars.teamID) }),
+      ]),
+  });
+}
+
+// --- Plan overrides ---
+
+export type PlanOverridesPayload = Record<string, number | null>;
+
+const adminPlanOverridesKey = (teamID: string) =>
+  [...adminKeys.all, "plan-overrides", teamID] as const;
+
+const fetchPlanOverrides = (teamID: string) =>
+  http
+    .get<{
+      overrides: PlanOverridesPayload;
+      plan_defaults: Record<string, number | null>;
+    }>(`/v1/admin/teams/${encodeURIComponent(teamID)}/plan-overrides`)
+    .then((r) => r.data);
+
+const updatePlanOverrides = (teamID: string, payload: PlanOverridesPayload) =>
+  http
+    .patch<{
+      overrides: PlanOverridesPayload;
+    }>(`/v1/admin/teams/${encodeURIComponent(teamID)}/plan-overrides`, payload)
+    .then((r) => r.data);
+
+export const usePlanOverrides = (teamID: string | null) =>
+  useQuery({
+    queryKey: teamID
+      ? adminPlanOverridesKey(teamID)
+      : [...adminKeys.all, "plan-overrides", "disabled"],
+    queryFn: () => fetchPlanOverrides(teamID!),
+    enabled: !!teamID,
+  });
+
+export function useUpdateTeamPlanLimits() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ teamID, payload }: { teamID: string; payload: PlanOverridesPayload }) =>
+      updatePlanOverrides(teamID, payload),
+    onSuccess: (_d, vars) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: adminKeys.teams() }),
+        qc.invalidateQueries({ queryKey: adminPlanOverridesKey(vars.teamID) }),
+      ]),
+  });
+}
+
+// --- Cross-team webhooks ---
+
+export type CrossTeamWebhook = {
+  id: string;
+  team_id: string;
+  team_name: string;
+  url: string;
+  events: string[];
+  format: string;
+  created_at: string;
+};
+
+const fetchCrossWebhooks = () =>
+  http
+    .get<{ webhooks: CrossTeamWebhook[] }>("/v1/admin/webhooks")
+    .then((r) => r.data.webhooks ?? []);
+
+const adminCrossWebhooksKey = () => [...adminKeys.all, "cross-webhooks"] as const;
+
+const revokeCrossWebhook = (teamID: string, webhookID: string) =>
+  http
+    .delete(
+      `/v1/admin/teams/${encodeURIComponent(teamID)}/webhooks/${encodeURIComponent(webhookID)}`,
+    )
+    .then(() => undefined);
+
+export const useAdminCrossWebhooks = () =>
+  useQuery({ queryKey: adminCrossWebhooksKey(), queryFn: fetchCrossWebhooks });
+
+export function useAdminRevokeWebhook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ teamID, webhookID }: { teamID: string; webhookID: string }) =>
+      revokeCrossWebhook(teamID, webhookID),
+    onSuccess: () => qc.invalidateQueries({ queryKey: adminCrossWebhooksKey() }),
+  });
+}
+
+// --- Cross-user API tokens ---
+
+export type CrossUserToken = {
+  id: string;
+  user_id: string;
+  user_email: string;
+  prefix: string;
+  name: string;
+  scope: string;
+  created_at: string;
+  last_used_at: string | null;
+};
+
+const fetchCrossTokens = () =>
+  http.get<{ tokens: CrossUserToken[] }>("/v1/admin/api-tokens").then((r) => r.data.tokens ?? []);
+
+const adminCrossTokensKey = () => [...adminKeys.all, "cross-tokens"] as const;
+
+const revokeCrossToken = (tokenID: string) =>
+  http.delete(`/v1/admin/api-tokens/${encodeURIComponent(tokenID)}`).then(() => undefined);
+
+export const useAdminCrossTokens = () =>
+  useQuery({ queryKey: adminCrossTokensKey(), queryFn: fetchCrossTokens });
+
+export function useAdminRevokeToken() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (tokenID: string) => revokeCrossToken(tokenID),
+    onSuccess: () => qc.invalidateQueries({ queryKey: adminCrossTokensKey() }),
+  });
+}

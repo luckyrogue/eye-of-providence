@@ -241,6 +241,269 @@
       "until_required": "Indica la fecha de fin del período.",
       "currency_invalid": "La moneda debe ser un código ISO de 3 letras.",
       "note_too_long": "La nota es demasiado larga."
+    },
+    "team_manage_btn": "Gestionar equipo",
+    "team_drawer": {
+      "close": "Cerrar",
+      "tab_info": "Info",
+      "tab_flags": "Indicadores",
+      "tab_limits": "Límites",
+      "info_plan": "Plan",
+      "info_subscription_until": "Activo hasta",
+      "info_members": "Miembros",
+      "info_owner": "Propietario",
+      "info_created": "Creado",
+      "info_note": "Nota"
+    },
+    "email_templates": {
+      "tab": "Plantillas de correo",
+      "title": "Plantillas de correo",
+      "intro": "Edita el asunto y el cuerpo de los correos transaccionales. Si no hay una versión personalizada, se usa la plantilla incrustada.",
+      "empty_eyebrow": "Sin plantilla",
+      "empty_title": "Selecciona una plantilla a la izquierda",
+      "badge": {
+        "default": "Predeterminado",
+        "overridden": "Anulado"
+      },
+      "template": {
+        "password_reset": "Restablecer contraseña",
+        "team_invite": "Invitación al equipo",
+        "subscription_activated": "Suscripción activada"
+      },
+      "unsaved_dot": "Cambios sin guardar en este idioma",
+      "field": {
+        "subject": "Asunto",
+        "body_html": "Cuerpo HTML",
+        "body_text": "Cuerpo en texto plano (se genera si está vacío)"
+      },
+      "vars": {
+        "password_reset": "Variables disponibles: {{name}}, {{reset_url}} (obligatoria), {{ip}}, {{user_agent}}.",
+        "team_invite": "Variables disponibles: {{inviter_name}}, {{team_name}}, {{accept_url}} (obligatoria), {{role}}, {{expires_at}}.",
+        "subscription_activated": "Variables disponibles: {{name}}, {{plan_name}} (obligatoria), {{next_invoice_date}}, {{billing_url}}.",
+        "required_label": "Obligatoria"
+      },
+      "cta": {
+        "preview": "Vista previa",
+        "hide_preview": "Ocultar vista previa",
+        "save": "Guardar",
+        "revert": "Restaurar predeterminado",
+        "revert_confirm_title": "¿Restaurar la plantilla?",
+        "revert_confirm_body": "Para este idioma se usará la plantilla incrustada. Tus cambios quedan en el registro de auditoría."
+      },
+      "error": {
+        "missing_variable": "La plantilla debe incluir {{variable}}.",
+        "invalid_subject_chars": "El asunto no puede contener saltos de línea ni caracteres de control.",
+        "body_too_large": "El cuerpo supera 256 KB. Reduce el contenido.",
+        "concurrent_edit": "Otro administrador guardó cambios. Recarga para continuar."
+      },
+      "preview": {
+        "title": "Vista previa — no se envía",
+        "sample_values": "Se muestran valores de ejemplo para las variables."
+      },
+      "toast": {
+        "saved": "Plantilla guardada",
+        "save_failed": "Error al guardar la plantilla",
+        "reverted": "Restaurada al predeterminado",
+        "revert_failed": "Error al restaurar"
+      }
+    },
+    "content": {
+      "tab_label": "Contenido",
+      "title": "Contenido (CMS-lite)",
+      "intro": "Edita la copia del landing sin redesplegar. Las filas vacías vuelven a las cadenas i18n incluidas.",
+      "slug_picker_title": "Slugs de contenido",
+      "preview_title": "Vista previa en vivo",
+      "empty_eyebrow": "Sin slug",
+      "empty_title": "Selecciona un slug a la izquierda",
+      "default_badge": "Predeterminado",
+      "draft_badge": "Borrador",
+      "published_badge": "Publicado",
+      "save_draft": "Guardar borrador",
+      "publish": "Publicar",
+      "revert": "Restaurar al predeterminado",
+      "preview": "Vista previa",
+      "save_success": "Borrador guardado",
+      "publish_success": "Publicado",
+      "conflict_error": "Otro administrador modificó el contenido, recarga",
+      "schema_error": "Formato inválido: revisa el resaltado del editor",
+      "confirm_revert_title": "¿Restaurar al predeterminado?",
+      "confirm_revert_lead": "Elimina la fila CMS para este slug + locale. El landing renderizará la cadena i18n incluida. El audit log conserva el contenido anterior.",
+      "preview_banner": "Vista previa: mostrando borrador no publicado de `{{slug}}`. El resto del contenido es la versión publicada.",
+      "preview_exit": "Salir de vista previa"
+    },
+    "team_flags": {
+      "title": "Indicadores de funciones",
+      "intro": "Anula los valores predeterminados del plan para este equipo. Los cambios se aplican en cinco segundos.",
+      "resolved_label": "Actual: {{state}} ({{source}})",
+      "source": {
+        "plan_default": "predeterminado del plan",
+        "override": "anulado"
+      },
+      "enable_insights": {
+        "label": "Activar Insights",
+        "desc": "Permite al equipo abrir la pestaña Insights y solicitar analíticas agregadas."
+      },
+      "enable_team_reports": {
+        "label": "Activar informes de equipo",
+        "desc": "Permite generar informes semanales y bajo demanda del equipo."
+      },
+      "enable_anomaly_detection": {
+        "label": "Activar detección de anomalías",
+        "desc": "Resalta picos inusuales de uso de IA en Insights. Requiere Insights activado."
+      },
+      "enable_webhooks": {
+        "label": "Activar webhooks",
+        "desc": "Permite a los administradores del equipo registrar webhooks y recibir entregas de eventos."
+      },
+      "k_anon_threshold": {
+        "label": "Umbral de k-anonimato",
+        "desc": "Tamaño mínimo de grupo para ocultar cohortes pequeños en las vistas agregadas. Más alto = más privado."
+      },
+      "audit_log_retention_days": {
+        "label": "Retención del registro de auditoría (días)",
+        "desc": "Días para conservar entradas de auditoría antes de la eliminación automática. El máximo lo define el plan."
+      },
+      "placeholder": {
+        "use_plan_default": "Predeterminado del plan"
+      },
+      "action": {
+        "clear": "Usar el predeterminado"
+      },
+      "cta": {
+        "save": "Guardar cambios",
+        "reset_all": "Restablecer al plan"
+      },
+      "error": {
+        "unknown_flag": "Indicador desconocido {{key}}.",
+        "invalid_type": "Tipo incorrecto para {{key}}.",
+        "below_minimum": "{{key}} debe ser al menos {{min}}."
+      },
+      "warning": {
+        "overrides_after_downgrade": "Este equipo tiene {{count}} anulaciones explícitas. La rebaja de plan no las elimina automáticamente."
+      },
+      "toast": {
+        "saved": "Indicadores guardados",
+        "save_failed": "Error al guardar los indicadores",
+        "reset": "Indicadores restablecidos al plan"
+      }
+    },
+    "plan_overrides": {
+      "title": "Anulación de límites del plan",
+      "intro": "Define límites personalizados para este equipo. Los campos vacíos usan el plan.",
+      "max_users_per_team": {
+        "label": "Usuarios máx. por equipo",
+        "helper": "Anular el límite predeterminado del plan ({{default}})."
+      },
+      "max_webhooks": {
+        "label": "Webhooks máx.",
+        "helper": "Anular el límite predeterminado del plan ({{default}})."
+      },
+      "max_api_tokens": {
+        "label": "Tokens API máx.",
+        "helper": "Anular el límite predeterminado del plan ({{default}})."
+      },
+      "event_history_days": {
+        "label": "Historial de eventos (días)",
+        "helper": "Anular el límite predeterminado del plan ({{default}})."
+      },
+      "max_teams_per_user": {
+        "label": "Equipos máx. por usuario",
+        "helper": "Anular el límite predeterminado del plan ({{default}})."
+      },
+      "audit_log_retention_days": {
+        "label": "Retención de auditoría (días)",
+        "helper": "Anular el límite predeterminado del plan ({{default}}). Mínimo 30 días."
+      },
+      "placeholder": {
+        "unlimited": "Ilimitado",
+        "use_default": "{{default}} (predeterminado)"
+      },
+      "action": {
+        "clear": "Usar el predeterminado"
+      },
+      "cta": {
+        "save": "Guardar cambios",
+        "reset_all": "Restablecer al plan"
+      },
+      "warning": {
+        "over_limit": "El equipo supera el límite por {{over}} {{unit}}. Los nuevos {{unit}} están bloqueados hasta corregirlo."
+      },
+      "error": {
+        "out_of_range": "{{field}} debe estar entre {{min}} y {{max}}.",
+        "below_min_retention": "La retención de auditoría no puede ser menor a 30 días."
+      },
+      "toast": {
+        "saved": "Límites guardados",
+        "save_failed": "Error al guardar los límites",
+        "reset": "Límites restablecidos al plan"
+      }
+    },
+    "webhooks_cross": {
+      "tab": "Webhooks",
+      "title": "Webhooks en todos los equipos",
+      "lead": "{{count}} activos",
+      "col_team": "Equipo",
+      "col_url": "URL",
+      "col_events": "Eventos",
+      "col_format": "Formato",
+      "filter_url": "Filtrar URL…",
+      "actions_label": "Acciones",
+      "revoke": "Revocar",
+      "revoked": "Webhook revocado",
+      "revoke_failed": "Error al revocar el webhook",
+      "revoke_confirm_title": "¿Revocar el webhook {{url}}?",
+      "revoke_confirm_lead": "El endpoint dejará de recibir eventos inmediatamente.",
+      "empty_eyebrow": "Sin webhooks",
+      "empty_title": "Ningún equipo ha configurado webhooks todavía"
+    },
+    "tokens_cross": {
+      "tab": "Tokens",
+      "title": "Tokens API de todos los usuarios",
+      "lead": "{{count}} activos",
+      "col_user": "Usuario",
+      "col_prefix": "Prefijo",
+      "col_name": "Nombre",
+      "col_scope": "Scope",
+      "col_last_used": "Último uso",
+      "filter_email": "Filtrar usuario…",
+      "actions_label": "Acciones",
+      "revoke": "Revocar",
+      "revoked": "Token revocado",
+      "revoke_failed": "Error al revocar el token",
+      "revoke_confirm_title": "¿Revocar el token {{prefix}}…?",
+      "revoke_confirm_lead": "El token dejará de autenticar inmediatamente.",
+      "empty_eyebrow": "Sin tokens",
+      "empty_title": "Ningún usuario ha creado tokens API todavía"
+    },
+    "observer_tooltip": "El rol Observador es de solo lectura"
+  },
+  "team": {
+    "role": {
+      "owner": "Propietario",
+      "admin": "Administrador",
+      "member": "Miembro",
+      "observer": "Observador"
+    },
+    "invite": {
+      "role_hint": {
+        "observer": "Solo lectura. No puede invitar, cambiar ajustes ni enviar eventos."
+      }
+    },
+    "role_badge": {
+      "observer": "Observador",
+      "observer_tooltip": "Los observadores pueden ver datos e informes del equipo, pero no pueden invitar, editar ajustes ni enviar eventos."
+    },
+    "observer": {
+      "empty_writes": "Solo lectura. Pide a un administrador del equipo que haga cambios.",
+      "cannot_submit_events": "Este equipo no recopila eventos desde dispositivos de observadores."
+    },
+    "role_change": {
+      "title": "Cambiar rol",
+      "confirm": "¿Asignar el rol {{role}} a {{user}}?",
+      "last_owner": "Un equipo debe tener al menos un propietario. Promueve a otro miembro primero."
+    },
+    "billing": {
+      "overrides_active": "Tu equipo tiene límites personalizados otorgados por soporte. Contacta a soporte para cambiarlos."
     }
   },
   "team_rename": {
@@ -262,14 +525,15 @@
     "role": {
       "owner": "propietario",
       "admin": "admin",
-      "member": "miembro"
+      "member": "miembro",
+      "observer": "observador"
     },
     "invite_section_title": "Invitar miembro",
     "invite_create_link": "Crear enlace",
     "invite_copy": "Copiar",
     "invite_copied": "Copiado",
     "invite_create_failed": "No se pudo crear la invitación",
-    "invite_lead": "Enlace válido 7 días, hasta 10 registros. Envíalo a quien quieras añadir.",
+    "invite_lead": "Válido 7 días; el enlace admite hasta 10 usos. En Free hay máximo 5 miembros; en planes de pago el límite es mayor. Envíalo a quien quieras añadir.",
     "member_remove_title": "¿Eliminar a {{name}}?",
     "member_remove_lead": "El miembro perderá acceso a este equipo. No afecta su historial de eventos.",
     "member_remove_confirm": "Eliminar",

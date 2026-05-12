@@ -13,6 +13,9 @@ const ForgotPasswordRoute = lazy(() =>
 const ResetPasswordRoute = lazy(() =>
   import("../pages/password-reset").then((m) => ({ default: m.ResetPasswordRoute })),
 );
+const AuthCompleteRoute = lazy(() =>
+  import("../pages/auth-complete").then((m) => ({ default: m.AuthCompleteRoute })),
+);
 const OnboardingRoute = lazy(() =>
   import("../pages/onboarding").then((m) => ({ default: m.OnboardingRoute })),
 );
@@ -45,6 +48,7 @@ export const router = createBrowserRouter([
   { path: "/signup", element: wrap(<AuthRoute mode="register" />), ...eb },
   { path: "/forgot-password", element: wrap(<ForgotPasswordRoute />), ...eb },
   { path: "/reset-password", element: wrap(<ResetPasswordRoute />), ...eb },
+  { path: "/auth/complete", element: wrap(<AuthCompleteRoute />), ...eb },
   { path: "/onboarding", element: wrap(<OnboardingRoute />), ...eb },
   { path: "/changelog", element: wrap(<ChangelogRoute />), ...eb },
   { path: "/pricing", element: wrap(<PricingRoute />), ...eb },
