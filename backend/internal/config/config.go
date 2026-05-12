@@ -74,14 +74,22 @@ func FromEnv() Config {
 }
 
 // Validate — проверки, которые должны провалить запуск.
-// Часть критериев работает во всех env'ах (default JWT secret),
-// часть только в production.
+//
+// Hardening: проверки JWT (default-secret, длина ≥32) теперь применяются
+// УНИВЕРСАЛЬНО, не только в production. Раньше dev-build с дефолтным
+// секретом мог по ошибке улететь на staging/prod через мисдеплой и
+// принимать любой подделанный JWT. Защитимся явно — fail fast.
 func (c Config) Validate() error {
 	var errs []string
 	// Эти проверки работают во всех env, чтобы случайно поднятый "dev" билд
 	// в публичной сети не оказался открытым.
 	if c.JWTSecret == defaultJWTSecret {
 		errs = append(errs, "EOP_JWT_SECRET must be set — default secret is unsafe in any deployment")
+	}
+	if c.JWTSecret == "" {
+		errs = append(errs, "EOP_JWT_SECRET must not be empty")
+	} else if len(c.JWTSecret) < 32 {
+		errs = append(errs, "EOP_JWT_SECRET must be ≥32 chars (got "+strconv.Itoa(len(c.JWTSecret))+")")
 	}
 	// CORS: запрещаем wildcard subdomain (Fiber CORS поддерживает только exact match,
 	// "https://*.foo.com" молча НЕ матчится — даём явную ошибку при старте).
@@ -101,13 +109,7 @@ func (c Config) Validate() error {
 		}
 		return errors.New("config invalid:\n  - " + strings.Join(errs, "\n  - "))
 	}
-	// Production-only проверки.
-	if c.JWTSecret == "" {
-		errs = append(errs, "EOP_JWT_SECRET must be set in production")
-	}
-	if len(c.JWTSecret) < 32 {
-		errs = append(errs, "EOP_JWT_SECRET must be ≥32 chars in production")
-	}
+	// Production-only проверки (JWT checks выше уже сделаны).
 	if c.AllowedOrigins == "*" {
 		errs = append(errs, "EOP_ALLOWED_ORIGINS must not be '*' in production")
 	}

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -64,14 +65,52 @@ type Service struct {
 	Logger     *zap.Logger
 	HTTPClient *http.Client  // если nil → дефолт с timeout 5s
 	Plans      plans.Service // feature-gate: MaxWebhooks при Enforce=true
+	// shutdownCtx — bound goroutines с lifetime app'а. Cancel при shutdown
+	// прерывает HTTP retry-loops чтобы delivery не висел вечно.
+	shutdownCtx    context.Context
+	shutdownCancel context.CancelFunc
+	// inflight — счётчик in-flight dispatch goroutines. main.go вызывает
+	// Wait() на graceful shutdown, чтобы дать delivery завершиться до exit.
+	inflight sync.WaitGroup
+	// dispatchSem — bounded semaphore (max 64 concurrent fan-out). Под burst'ом
+	// 1000 событий не spawn'им 1000 goroutines; новые Dispatch() блокируются
+	// до slot'а. Caller hot-path остаётся быстрым потому что Dispatch только
+	// acquire'ит slot — fire-and-forget делается в goroutine.
+	dispatchSem chan struct{}
 }
 
-// New — конструктор с дефолтным HTTP client.
+const maxConcurrentDispatch = 64
+
+// New — конструктор с дефолтным HTTP client + shutdown context + bounded
+// dispatch pool. Caller (main.go) должен вызвать Shutdown(ctx) на SIGTERM
+// чтобы дать in-flight delivery завершиться.
 func New(pool *pgxpool.Pool, logger *zap.Logger) *Service {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Service{
-		Pool:       pool,
-		Logger:     logger,
-		HTTPClient: &http.Client{Timeout: 5 * time.Second},
+		Pool:           pool,
+		Logger:         logger,
+		HTTPClient:     &http.Client{Timeout: 5 * time.Second},
+		shutdownCtx:    ctx,
+		shutdownCancel: cancel,
+		dispatchSem:    make(chan struct{}, maxConcurrentDispatch),
+	}
+}
+
+// Shutdown — graceful: ждёт inflight delivery до waitDeadline, потом cancel.
+// Caller вызывает с context.WithTimeout(30s) в main.go при SIGTERM.
+func (s *Service) Shutdown(ctx context.Context) error {
+	done := make(chan struct{})
+	go func() {
+		s.inflight.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		s.shutdownCancel()
+		return nil
+	case <-ctx.Done():
+		s.shutdownCancel() // hard stop — отрезаем retry-loops
+		return ctx.Err()
 	}
 }
 
@@ -155,21 +194,45 @@ func (s *Service) Delete(ctx context.Context, userID, id uuid.UUID) (bool, error
 	return tag.RowsAffected() > 0, nil
 }
 
-// Dispatch — fire-and-forget delivery всех matching webhook'ов. Spawns горутину;
-// caller не ждёт. Errors логируются, не возвращаются. Используется в hot path
-// (commit ingest, report gen) где блокировка недопустима.
+// Dispatch — fire-and-forget delivery всех matching webhook'ов. Spawns горутину
+// под bounded semaphore (max 64 concurrent). Caller не ждёт; errors логируются.
+// Используется в hot path (commit ingest, report gen) где блокировка недопустима.
+//
+// Hardening (Phase prod): goroutine attached to s.inflight WaitGroup и
+// s.shutdownCtx. main.go вызывает Shutdown() при SIGTERM — Wait() даёт
+// in-flight delivery завершиться (или прерывается через ctx-cancel).
 func (s *Service) Dispatch(userID uuid.UUID, event string, payload any) {
 	if !validEvents[event] {
 		s.Logger.Warn("unknown event for dispatch", zap.String("event", event))
 		return
 	}
-	go s.dispatchSync(userID, event, payload)
+	// Acquire slot — блокируется если pool заполнен. Hot-path caller всё равно
+	// возвращается быстро потому что dispatchSync теперь под goroutine'й.
+	select {
+	case s.dispatchSem <- struct{}{}:
+	case <-s.shutdownCtx.Done():
+		// Service shutting down — drop event. Caller (e.g. ingest handler)
+		// уже зафиксировал commit в БД, dispatch — best-effort.
+		return
+	}
+	s.inflight.Add(1)
+	go func() {
+		defer func() {
+			<-s.dispatchSem
+			s.inflight.Done()
+		}()
+		s.dispatchSync(userID, event, payload)
+	}()
 }
 
-// dispatchSync — testable inner. Background goroutine'у нужен свой context
-// (request ctx может быть canceled).
+// dispatchSync — testable inner. Использует s.shutdownCtx чтобы retry-loop'ы
+// прерывались на shutdown. Timeout 60s остаётся per-dispatch.
 func (s *Service) dispatchSync(userID uuid.UUID, event string, payload any) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	parent := s.shutdownCtx
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(parent, 60*time.Second)
 	defer cancel()
 
 	rows, err := s.Pool.Query(ctx, `

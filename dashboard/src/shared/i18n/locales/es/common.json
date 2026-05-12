@@ -49,6 +49,12 @@
     "loading": "Cargando…",
     "logout": "Salir"
   },
+  "error": {
+    "boundary_title": "Algo salió mal",
+    "boundary_lead": "Ocurrió un error de interfaz. Intenta recargar la página o volver al inicio.",
+    "boundary_reload": "Recargar",
+    "boundary_home": "Inicio"
+  },
   "settings": {
     "title": "Configuración",
     "language": "Idioma de la interfaz",

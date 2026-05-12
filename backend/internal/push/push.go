@@ -14,6 +14,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sync"
+	"time"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/google/uuid"
@@ -33,12 +35,52 @@ type Subscription struct {
 
 // Service — push delivery + DB ops. VAPID keys load'ятся из cfg.
 type Service struct {
-	Pool             *pgxpool.Pool
-	Logger           *zap.Logger
-	VAPIDPublicKey   string
-	VAPIDPrivateKey  string
-	VAPIDSubject     string // "mailto:admin@eop.example.com" — required by RFC 8292
-	HTTPClient       *http.Client
+	Pool            *pgxpool.Pool
+	Logger          *zap.Logger
+	VAPIDPublicKey  string
+	VAPIDPrivateKey string
+	VAPIDSubject    string // "mailto:admin@eop.example.com" — required by RFC 8292
+	HTTPClient      *http.Client
+	// Hardening (Phase prod): bounded goroutine pool + shutdown ctx.
+	// SendToUser fire-and-forget теперь tracked, main.go может Wait'нуть
+	// на graceful shutdown.
+	shutdownCtx    context.Context
+	shutdownCancel context.CancelFunc
+	inflight       sync.WaitGroup
+	sendSem        chan struct{}
+}
+
+const maxConcurrentSend = 64
+
+// Init — должен быть вызван caller'ом ДО первого SendToUser. Создаёт
+// shutdown context + semaphore. Если не вызвать, SendToUser fall back на
+// background ctx без bounded pool (legacy behaviour) — для in-memory tests.
+func (s *Service) Init() {
+	if s.shutdownCtx != nil {
+		return // idempotent
+	}
+	s.shutdownCtx, s.shutdownCancel = context.WithCancel(context.Background())
+	s.sendSem = make(chan struct{}, maxConcurrentSend)
+}
+
+// Shutdown — graceful: ждёт inflight delivery до ctx.Done() или sub-deadline.
+func (s *Service) Shutdown(ctx context.Context) error {
+	if s.shutdownCancel == nil {
+		return nil
+	}
+	done := make(chan struct{})
+	go func() {
+		s.inflight.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		s.shutdownCancel()
+		return nil
+	case <-ctx.Done():
+		s.shutdownCancel()
+		return ctx.Err()
+	}
 }
 
 // Payload — отправляется на subscription. JSON, доходит до sw.js push event.
@@ -109,13 +151,35 @@ func (s *Service) List(ctx context.Context, userID uuid.UUID) ([]Subscription, e
 // или любая JSON-marshallable структура) — так satisfy'ятся interface'ы
 // caller'ов (anomaly.PushSender, etc.) без import cycle.
 //
-// Background goroutine — caller не ждёт. Errors логируются.
+// Hardening: tracked в inflight WaitGroup + bounded sendSem (64 concurrent).
+// На shutdown service ждёт delivery до deadline'а. Если Init() не вызван
+// (in-memory test mode) — fallback на legacy fire-and-forget.
 func (s *Service) SendToUser(userID uuid.UUID, payload any) {
-	go s.sendSync(userID, payload)
+	if s.sendSem == nil {
+		// Legacy path для тестов / in-memory режима.
+		go s.sendSync(context.Background(), userID, payload)
+		return
+	}
+	select {
+	case s.sendSem <- struct{}{}:
+	case <-s.shutdownCtx.Done():
+		return
+	}
+	s.inflight.Add(1)
+	go func() {
+		defer func() {
+			<-s.sendSem
+			s.inflight.Done()
+		}()
+		// 60s per-send timeout, derived от shutdownCtx чтобы cancel прерывал
+		// retry-loops в webpush.SendNotification.
+		ctx, cancel := context.WithTimeout(s.shutdownCtx, 60*time.Second)
+		defer cancel()
+		s.sendSync(ctx, userID, payload)
+	}()
 }
 
-func (s *Service) sendSync(userID uuid.UUID, payload any) {
-	ctx := context.Background()
+func (s *Service) sendSync(ctx context.Context, userID uuid.UUID, payload any) {
 	rows, err := s.Pool.Query(ctx, `
 		SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = $1`, userID)
 	if err != nil {

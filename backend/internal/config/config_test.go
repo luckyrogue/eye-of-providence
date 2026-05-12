@@ -89,3 +89,26 @@ func TestValidate_ProductionShortSecretRejected(t *testing.T) {
 		t.Fatalf("expected ≥32 chars error, got %v", err)
 	}
 }
+
+// Universal hardening: короткий JWT secret должен fail'ить ВО ВСЕХ env,
+// не только в production. Раньше dev-сборка с 8-char secret'ом проходила
+// валидацию и могла улететь на staging через мисдеплой.
+func TestValidate_DevelopmentShortSecretRejected(t *testing.T) {
+	c := Config{
+		Env:            "development",
+		JWTSecret:      "short",
+		AllowedOrigins: "*",
+	}
+	err := c.Validate()
+	if err == nil || !strings.Contains(err.Error(), "≥32") {
+		t.Fatalf("expected ≥32 chars error in dev, got %v", err)
+	}
+}
+
+func TestValidate_DevelopmentEmptySecretRejected(t *testing.T) {
+	c := Config{Env: "development", JWTSecret: "", AllowedOrigins: "*"}
+	err := c.Validate()
+	if err == nil || !strings.Contains(err.Error(), "EOP_JWT_SECRET") {
+		t.Fatalf("expected empty-secret rejection, got %v", err)
+	}
+}

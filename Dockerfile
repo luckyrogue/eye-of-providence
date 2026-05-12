@@ -83,6 +83,7 @@ RUN xcaddy build v2.11.2 \
     --with github.com/go-jose/go-jose/v4@v4.1.4 \
     --with go.opentelemetry.io/otel@v1.41.0 \
     --with go.opentelemetry.io/otel/sdk@v1.43.0 \
+    --with github.com/mholt/caddy-ratelimit \
     --output /out/caddy
 
 ############################
@@ -120,11 +121,31 @@ RUN cat > /etc/caddy/Caddyfile <<'CADDY'
 	admin off
 	# Dokploy в нашей setup terminates TLS, поэтому Caddy listen plain HTTP.
 	# Если когда-то развернёмся на bare metal — раскомментить TLS via Let's Encrypt.
+	#
+	# rate_limit — global registration через "order" directive (caddy-ratelimit
+	# нестандартный, не имеет implicit priority). После этого rate_limit можно
+	# использовать в любом site block.
+	order rate_limit before reverse_proxy
 }
 
 :3000 {
 	root * /usr/share/caddy
 	encode gzip zstd
+
+	# Edge rate-limit: 1000 req/min per-IP across весь сайт. Защита от DDoS
+	# до того как запрос дойдёт до Go backend. Backend имеет свои tight limits
+	# на auth endpoints (10/min) + global /v1/ (120/min), Caddy layer —
+	# coarse-grained "noisy IP" cutoff.
+	#
+	# RFC 6585: 429 + Retry-After header возвращается клиенту.
+	# Trusted health-check (Dokploy/Docker) — UA "Wget" exempt (start-period).
+	rate_limit {
+		zone global_ip {
+			key {client_ip}
+			events 1000
+			window 1m
+		}
+	}
 
 	# Security headers — match старый nginx setup.
 	header {
@@ -191,6 +212,24 @@ EXIT=$?
 kill -TERM "$API_PID" "$CADDY_PID" 2>/dev/null || true
 exit $EXIT
 SH
+
+# Non-root user — defense-in-depth: если в API/Caddy найдут RCE,
+# атакующий не сразу получает root внутри контейнера. uid 10001
+# выбран как "high range" чтобы не пересекаться с автогенерёнными
+# system-юзерами base-image'а.
+#
+# Owner rights:
+#   /usr/share/caddy   — Caddy читает SPA-static (root:eop, mode 0755 default)
+#   /etc/caddy         — Caddyfile readable
+#   /data, /config     — Caddy persist storage (auto_https=off, но Caddy всё
+#                        равно создаёт пустые dir'ы; chown заранее)
+#   /usr/local/bin/api — Go binary executable
+RUN addgroup -g 10001 eop \
+ && adduser -D -u 10001 -G eop -s /sbin/nologin eop \
+ && mkdir -p /data /config \
+ && chown -R eop:eop /data /config /etc/caddy /usr/share/caddy
+
+USER eop:eop
 
 EXPOSE 3000
 

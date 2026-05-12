@@ -313,6 +313,10 @@ func main() {
 			VAPIDPrivateKey: cfg.VAPIDPrivateKey,
 			VAPIDSubject:    cfg.VAPIDSubject,
 		}
+		// Init() создаёт bounded send-pool + shutdown ctx — обязателен для
+		// graceful drain. Без Init() SendToUser fall back на legacy
+		// unbounded fire-and-forget (in-memory test mode).
+		pushSvc.Init()
 		push.RegisterRoutes(app, push.SvcConfig{Service: pushSvc, JWTSecret: cfg.JWTSecret})
 	}
 	_ = pushSvc // hooked в anomaly cron ниже
@@ -374,15 +378,33 @@ func main() {
 	}
 
 	// SIGTERM/SIGINT → graceful shutdown.
+	// Порядок: Fiber stops accepting new requests → ждём background workers
+	// (webhook delivery, push send) до 30s deadline → cancel root ctx.
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
 		s := <-sig
 		log.Info("shutdown signal received", zap.String("signal", s.String()))
-		cancel()
+		// 1. Fiber server — закрывает listener, ждёт in-flight HTTP до 20s.
 		if err := app.ShutdownWithTimeout(20 * time.Second); err != nil {
 			log.Warn("graceful shutdown error", zap.Error(err))
 		}
+		// 2. Background workers (webhook/push delivery). Делегируем им 30s.
+		// Hot-path Dispatch/SendToUser уже не блокирует HTTP — здесь только
+		// дренируем in-flight retry-loops.
+		bgCtx, bgCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer bgCancel()
+		if hookSvc != nil {
+			if err := hookSvc.Shutdown(bgCtx); err != nil {
+				log.Warn("webhook drain timed out", zap.Error(err))
+			}
+		}
+		if pushSvc != nil {
+			if err := pushSvc.Shutdown(bgCtx); err != nil {
+				log.Warn("push drain timed out", zap.Error(err))
+			}
+		}
+		cancel()
 	}()
 
 	log.Info("api starting",

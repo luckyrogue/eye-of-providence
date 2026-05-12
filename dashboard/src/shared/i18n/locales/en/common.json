@@ -49,6 +49,12 @@
     "loading": "Loading…",
     "logout": "Log out"
   },
+  "error": {
+    "boundary_title": "Something went wrong",
+    "boundary_lead": "An interface error occurred. Try refreshing the page or returning home.",
+    "boundary_reload": "Reload",
+    "boundary_home": "Home"
+  },
   "settings": {
     "title": "Settings",
     "language": "Interface language",
