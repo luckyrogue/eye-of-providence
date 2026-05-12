@@ -62,14 +62,11 @@ var hrefPattern = regexp.MustCompile(`^(https://|/)`)
 // anchorPattern — kebab-case slug для FAQ deep linking.
 var anchorPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
-// validateString — общий helper для string field (min length 1) и max длиной.
-func validateString(m map[string]json.RawMessage, key string, maxLen int, required bool, fieldPath string) *SchemaError {
+// validateString — общий helper для обязательного string field (min length 1) и max длиной.
+func validateString(m map[string]json.RawMessage, key string, maxLen int, fieldPath string) *SchemaError {
 	const minLen = 1
 	raw, present := m[key]
 	if !present {
-		if !required {
-			return nil
-		}
 		return &SchemaError{
 			Code:       "schema_violation",
 			Field:      fieldPath + key,
@@ -116,7 +113,7 @@ func validateTextOnly(maxLen int) ValidatorFunc {
 		if err := json.Unmarshal(raw, &m); err != nil {
 			return &SchemaError{Code: "invalid_json", Detail: err.Error()}
 		}
-		if verr := validateString(m, "text", maxLen, true, "/"); verr != nil {
+		if verr := validateString(m, "text", maxLen, "/"); verr != nil {
 			return verr
 		}
 		for k := range m {
@@ -144,10 +141,10 @@ func validateCTAButton() ValidatorFunc {
 		if err := json.Unmarshal(raw, &m); err != nil {
 			return &SchemaError{Code: "invalid_json", Detail: err.Error()}
 		}
-		if verr := validateString(m, "label", 40, true, "/"); verr != nil {
+		if verr := validateString(m, "label", 40, "/"); verr != nil {
 			return verr
 		}
-		if verr := validateString(m, "href", 500, true, "/"); verr != nil {
+		if verr := validateString(m, "href", 500, "/"); verr != nil {
 			return verr
 		}
 		var href string
@@ -195,7 +192,7 @@ func validatePricingTier() ValidatorFunc {
 		if err := json.Unmarshal(raw, &m); err != nil {
 			return &SchemaError{Code: "invalid_json", Detail: err.Error()}
 		}
-		if verr := validateString(m, "tagline", 80, true, "/"); verr != nil {
+		if verr := validateString(m, "tagline", 80, "/"); verr != nil {
 			return verr
 		}
 		bulletsRaw, ok := m["bullets"]
@@ -310,10 +307,10 @@ func validateFAQItems() ValidatorFunc {
 		}
 		for i, item := range rawItems {
 			prefix := fmt.Sprintf("/items[%d]/", i)
-			if verr := validateString(item, "q", 200, true, prefix); verr != nil {
+			if verr := validateString(item, "q", 200, prefix); verr != nil {
 				return verr
 			}
-			if verr := validateString(item, "a", 800, true, prefix); verr != nil {
+			if verr := validateString(item, "a", 800, prefix); verr != nil {
 				return verr
 			}
 			if raw, ok := item["anchor"]; ok {
