@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  tailwindcss: 3.4.19
+
 importers:
 
   .:
@@ -64,7 +67,7 @@ importers:
         specifier: ^8.5.14
         version: 8.5.14
       tailwindcss:
-        specifier: ^3.4.19
+        specifier: 3.4.19
         version: 3.4.19(yaml@2.9.0)
       typescript:
         specifier: ^5.9.3
@@ -128,7 +131,7 @@ importers:
         specifier: ^0.34.5
         version: 0.34.5
       tailwindcss:
-        specifier: ^3.4.19
+        specifier: 3.4.19
         version: 3.4.19(yaml@2.9.0)
       typescript:
         specifier: ^5.9.3
@@ -225,7 +228,7 @@ importers:
         specifier: ^8.5.14
         version: 8.5.14
       tailwindcss:
-        specifier: ^3.4.19
+        specifier: 3.4.19
         version: 3.4.19(yaml@2.9.0)
       typescript:
         specifier: ^5.9.3

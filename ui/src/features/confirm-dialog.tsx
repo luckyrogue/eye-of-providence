@@ -12,14 +12,9 @@ import {
 import { buttonVariants } from "../shared/ui/button";
 import { cn } from "../shared/lib/cn";
 
-// ConfirmDialog — модальная замена `confirm()` поверх shadcn AlertDialog.
-// Поддерживает два режима:
-// - simple: confirm/cancel
-// - typeToConfirm: юзер должен ввести строку чтобы кнопка стала active —
-//   для destructive-операций ("Введи название чтобы удалить").
-//
-// Используем AlertDialog (а не Dialog) — даёт role="alertdialog" для скрин-ридеров.
-
+// typeToConfirm: для destructive-операций — confirm заблокирован, пока
+// пользователь не введёт точную строку ("Введи название чтобы удалить").
+// Поверх AlertDialog (а не Dialog) — нужен role="alertdialog" для a11y.
 export function ConfirmDialog({
   open,
   onClose,
@@ -93,12 +88,6 @@ export function ConfirmDialog({
     </AlertDialog>
   );
 }
-
-// useConfirm — императивный хук поверх ConfirmDialog для лёгкой замены `confirm()`.
-// Использование:
-//   const confirm = useConfirm();
-//   if (await confirm({ title: "Удалить?", destructive: true })) { ... }
-
 type ConfirmFn = (
   opts: Omit<Parameters<typeof ConfirmDialog>[0], "open" | "onClose" | "onConfirm" | "busy">,
 ) => Promise<boolean>;

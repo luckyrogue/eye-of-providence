@@ -1,6 +1,3 @@
-// Nav — fixed top, blur, mono lang-switch (locale-aware), accent CTA.
-// Brand mark = pyramid с eye внутри (artifact pyramid SVG 1:1).
-
 import { useTranslation } from "react-i18next";
 import { LangSwitch } from "../../../shared/ui/lang-switch";
 

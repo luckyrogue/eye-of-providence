@@ -4,9 +4,8 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } fro
 import { ArrowRight, CheckCircle2, Loader2, Radio, SkipForward } from "lucide-react";
 import { useOnboardingStatus } from "../../../entities/user";
 
-// EventStep — последний шаг wizard'а: ждём первое событие из агента.
-// Пока агент не пришлёт событие — крутим polling каждые 5s.
-// Как только has_event === true — автоматически вызываем onFinish.
+// Polling каждые 5s до первого события от агента; при has_event=true —
+// auto-advance в onFinish (короткая задержка задаётся в эффекте ниже).
 export function EventStep({ onFinish, onSkip }: { onFinish: () => void; onSkip: () => void }) {
   const { t } = useTranslation("onboarding");
   const status = useOnboardingStatus({ refetchInterval: 5000 });

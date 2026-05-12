@@ -10,9 +10,6 @@ import {
 } from "../shared/ui/dialog";
 import { Input } from "../shared/ui/input";
 
-// PromptDialog — стилизованная замена window.prompt(): модалка с одним
-// текстовым полем + кнопками. Возвращает строку или null (cancel).
-
 export function PromptDialog({
   open,
   title,
@@ -40,7 +37,6 @@ export function PromptDialog({
 }) {
   const [value, setValue] = useState(initialValue);
 
-  // Сбрасываем значение при каждом открытии модалки.
   useEffect(() => {
     if (open) setValue(initialValue);
   }, [open, initialValue]);

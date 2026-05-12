@@ -20,9 +20,8 @@ function dashboardHost(backend: string): string {
   }
 }
 
-// PairingWizard — desktop-agent аналог расширения: показывает 6-знач код,
-// автополит до claim/expire. После успеха зовёт onClaimed (caller обновляет
-// account-info из бэка).
+// Polling до claim или expire (POLL_INTERVAL_MS). После успешного claim
+// вызывает onClaimed — caller сам перетягивает account-info из бэка.
 export function PairingWizard({ backend, onClaimed }: { backend: string; onClaimed?: () => void }) {
   const { t } = useTranslation("agent");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });

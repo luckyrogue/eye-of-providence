@@ -271,9 +271,6 @@ async function flushAll(verbose: boolean) {
   if (!verbose && !vscode.window.state.focused) {
     return;
   }
-  // Merge: in-memory bucket events + persisted queue. Bucket очищаем сразу,
-  // чтобы новые edits начали копиться в новый bucket. Persisted queue храним
-  // до подтверждения успешной отправки.
   const fresh = bucketsToEvents();
   buckets = new Map();
   const queued = loadQueue();
@@ -308,8 +305,6 @@ async function flushAll(verbose: boolean) {
     if (res.status === 401) {
       logger.warn("ingest 401 — auth required, marking token invalid");
       authRequired = true;
-      // Очищаем persisted queue: данные «висят» до re-pair, дальше events
-      // которые пришли с другим юзером смешивать нельзя.
       await saveQueue([]);
       await renderStatus();
       if (verbose) {
@@ -322,14 +317,12 @@ async function flushAll(verbose: boolean) {
       return;
     }
     if (res.status === 429 || res.status >= 500) {
-      // Retryable — persist обратно и schedule backoff.
       await saveQueue(events);
       scheduleRetry();
       logger.warn(`ingest retryable status ${res.status}, queued ${events.length} events`);
       return;
     }
     if (!res.ok) {
-      // 4xx (not 401/429) — дропаем, иначе зацикливаемся на bad data.
       logger.error(`ingest dropped ${events.length} events: status ${res.status}`);
       await saveQueue([]);
       return;
@@ -341,7 +334,6 @@ async function flushAll(verbose: boolean) {
     retryAttempt = 0;
     await saveQueue([]);
   } catch (err) {
-    // Network error — retry с backoff.
     await saveQueue(events);
     scheduleRetry();
     logger.warn(`ingest network error: ${String(err)}, queued ${events.length} events`);
@@ -358,7 +350,6 @@ function scheduleRetry() {
     retryAttempt = 0;
     return;
   }
-  // Exp backoff: 30s → 60s → 2m → 4m → 8m → 16m → 32m → 60m (cap).
   const delayMs = Math.min(30_000 * Math.pow(2, retryAttempt - 1), 60 * 60_000);
   if (retryTimer !== null) clearTimeout(retryTimer);
   retryTimer = setTimeout(() => {
@@ -377,7 +368,6 @@ async function setPaused(next: boolean) {
   );
 }
 
-// Pairing — 6-знач код, юзер вводит в dashboard. Polling каждые 2.5с.
 async function pairCmd() {
   const url = getBackendUrl();
   let begin: { pair_id: string; secret: string; code: string; expires_in: number };

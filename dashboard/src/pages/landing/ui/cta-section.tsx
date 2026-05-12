@@ -1,5 +1,3 @@
-// CTA — final card с conic-gradient halo + macOS / Windows download buttons.
-
 import { useTranslation } from "react-i18next";
 
 export function CTASection() {

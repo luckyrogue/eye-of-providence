@@ -1,13 +1,8 @@
-// Topbar — фокус на работающих контролах. Убрано:
-//   - Search ⌘K          (command palette не реализован)
-//   - Date picker         (range не подсоединён к widgets — каждый виджет
-//                          использует свой fixed days; вернём когда будет
-//                          shared date-range context)
-//   - Bell notifications  (notification system не реализован)
-//   - Pause/Tracking      (паузить tracking — это agent-side фича в Tauri,
-//                          в web dashboard паузить нечего)
-//
-// Остаются: mobile menu toggle, breadcrumb (display-only), LangSwitch, Logout.
+// Намеренно отсутствуют (не реализовано / out of scope для web-dashboard):
+//   - Search ⌘K          — command palette ещё не реализован
+//   - Date picker         — нет shared date-range context, каждый виджет фиксит days сам
+//   - Bell notifications — notification system не реализована
+//   - Pause/Tracking     — agent-side фича в Tauri; в web-дашборде паузить нечего
 
 import { useTranslation } from "react-i18next";
 import { Menu } from "lucide-react";

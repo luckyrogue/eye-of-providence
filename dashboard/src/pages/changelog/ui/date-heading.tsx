@@ -1,5 +1,3 @@
-// DateHeading — формат YYYY-MM-DD → "10 May 2026" в локали юзера.
-
 export function DateHeading({ date }: { date: string }) {
   const d = new Date(date + "T00:00:00Z");
   const formatted = d.toLocaleDateString(undefined, {

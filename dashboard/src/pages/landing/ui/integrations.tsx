@@ -1,6 +1,3 @@
-// Integrations — 6-col grid of provider tiles. "Ready" = green dot,
-// "Soon" = v1 badge. Icons inline SVG (artifact 1:1).
-
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 

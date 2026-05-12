@@ -5,9 +5,9 @@ import { Plus } from "lucide-react";
 import { useCreateTeam } from "../../../entities/team";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 
-// CreateTeamButton — кнопка + PromptDialog. После успешного создания
-// вызывает `onCreated(teamID)` для side-effects (выбор активной команды,
-// switchTeam и т.п.). Сама фича не знает, что делать с id — это композитор.
+// Side-effects после создания (выбор активной команды, switchTeam, …)
+// решает родитель через `onCreated(teamID)` — фича сама не знает, что
+// делать с id.
 export function CreateTeamButton({
   disabled,
   blockedReason,

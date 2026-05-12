@@ -163,7 +163,7 @@ export function HeatmapCard() {
   const hasData = cells.some((v) => v > 0);
 
   return (
-    <div className="eop-card col-8">
+    <div className="eop-card col-span-12 min-[1181px]:col-span-8">
       <div className="card-head">
         <div>
           <div className="card-title">{t("dashboard.heatmap_title")}</div>
@@ -230,7 +230,7 @@ export function GaugeCard() {
   const y2 = cy + r * Math.sin(rad(angle));
   const largeArc = angle > 180 ? 1 : 0;
   return (
-    <div className="eop-card col-4">
+    <div className="eop-card col-span-12 min-[1181px]:col-span-4">
       <div className="card-head">
         <div>
           <div className="card-title">{t("dashboard.gauge_title")}</div>
@@ -321,7 +321,7 @@ export function ProvenanceDonut() {
   const c = 2 * Math.PI * r;
   let offset = 0;
   return (
-    <div className="eop-card col-5">
+    <div className="eop-card col-span-12 min-[1181px]:col-span-5">
       <div className="card-head">
         <div>
           <div className="card-title">{t("dashboard.donut_title")}</div>
@@ -422,7 +422,7 @@ export function TrendChart() {
   // Раньше fake sine вводил в заблуждение (выглядит как реальные метрики).
   if (!hasData) {
     return (
-      <div className="eop-card col-12">
+      <div className="eop-card col-span-12">
         <div className="card-head">
           <div>
             <div className="card-title">{t("dashboard.trend_title")}</div>
@@ -454,7 +454,7 @@ export function TrendChart() {
   const avgMan = 100 - avgAi;
 
   return (
-    <div className="eop-card col-12">
+    <div className="eop-card col-span-12">
       <div className="card-head">
         <div>
           <div className="card-title">{t("dashboard.trend_title")}</div>
@@ -549,7 +549,7 @@ export function LanguageBars() {
   const lang = useLanguages(7);
   const langs = useMemo(() => reshapeLanguages(lang.data), [lang.data]);
   return (
-    <div className="eop-card col-7">
+    <div className="eop-card col-span-12 min-[1181px]:col-span-7">
       <div className="card-head">
         <div>
           <div className="card-title">{t("dashboard.langs_title")}</div>
@@ -620,7 +620,7 @@ export function AttributionLog() {
   const rows = useMemo(() => (recent.data ?? []).map(formatLogRow), [recent.data]);
 
   return (
-    <div className="eop-card col-12">
+    <div className="eop-card col-span-12">
       <div className="card-head">
         <div>
           <div className="card-title">{t("dashboard.log_title")}</div>

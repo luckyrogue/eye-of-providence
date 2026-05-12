@@ -1,7 +1,3 @@
-// Attribution — split: copy + tags слева, live tail-f-стиль лог справа.
-// Каждый log-item получает colored tag (typed/ai-inline/paste-ai/ai-agent/refactor)
-// из .tag.* классов в styles.css.
-
 import { useTranslation } from "react-i18next";
 
 type StreamRow = { ts: string; tag: string; msg: string };

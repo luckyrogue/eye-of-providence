@@ -16,8 +16,7 @@ import { useGenerateReport, type Report } from "../../../entities/report";
 import { Markdown } from "../../../shared/lib/markdown";
 import { formatDate } from "../../../shared/lib/tz";
 
-// ReportsCard — список AI-отчётов со табами + содержимое выбранного.
-// Если ничего не выбрано — отдаём первый из списка (свежий).
+// Если активный таб не выбран — показываем первый (свежий) отчёт из списка.
 export function ReportsCard({ reports, tz }: { reports: Report[]; tz: string }) {
   const { t } = useTranslation("app");
   const genReport = useGenerateReport();

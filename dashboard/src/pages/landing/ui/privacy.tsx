@@ -1,5 +1,3 @@
-// Privacy — split: principles list слева, shield-card "что отправляем / что нет" справа.
-
 import { useTranslation } from "react-i18next";
 import { Shield, Lock, GitBranch, Users, Trash2 } from "lucide-react";
 

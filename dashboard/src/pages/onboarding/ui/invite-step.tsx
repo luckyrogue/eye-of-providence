@@ -15,11 +15,10 @@ import {
 } from "@eop/ui";
 import { ArrowRight, Loader2, Mail, SkipForward } from "lucide-react";
 
-// InviteStep — два режима:
-//   1) link-only (по умолчанию): сгенерить ссылку, скопировать руками
-//   2) email-driven: ввести email, backend сам отправит письмо
-//
-// max_uses=10 для link-only, max_uses=1 для email-driven (см. handler).
+// Два режима:
+//   1) link-only (default): max_uses=10, ссылку копируем руками
+//   2) email-driven: max_uses=1, backend сам отправляет письмо
+// (max_uses-cap'ы выставлены на стороне handler'а.)
 export function InviteStep({
   busy,
   inviteUrl,

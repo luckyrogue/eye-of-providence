@@ -1,8 +1,7 @@
 import { FolderGit2, GitCommit, Settings, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-// TEAM_DETAIL_TABS — список табов на детали команды. owner-only фильтруется
-// в page-shell. id используется как `TabKey`, i18nKey/icon — для рендера.
+// `ownerOnly: true` фильтруется в page-shell (не тут).
 export const TEAM_DETAIL_TABS = [
   { id: "members", i18nKey: "team_detail.tabs.members", icon: Users },
   { id: "projects", i18nKey: "team_detail.tabs.projects", icon: FolderGit2 },

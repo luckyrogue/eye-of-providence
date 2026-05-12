@@ -31,15 +31,14 @@ type OnboardingStatus = {
   dismissed: boolean;
 };
 
-// Insight — narrative-карточка с i18n key + variables. Frontend резолвит
-// локализованную строку через t(`insights:${key}`, vars).
+// Frontend резолвит локализованную строку через t(`insights:${key}`, vars).
 type Insight = {
   key: string;
   vars?: Record<string, string | number | boolean>;
 };
 
-// APIToken — public API token (для интеграций). Plaintext возвращается ровно
-// раз при создании; UI показывает prefix ("eop_a4f3…") после.
+// Plaintext возвращается ровно один раз — при создании (см. CreateAPITokenRes).
+// После этого UI имеет только prefix вида "eop_a4f3…".
 type APIToken = {
   id: string;
   name: string;

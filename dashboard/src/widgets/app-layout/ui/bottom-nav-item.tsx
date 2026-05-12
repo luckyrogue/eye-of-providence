@@ -1,6 +1,4 @@
-// BottomNavItem — mobile-only tab. Min-height 56px (Material Design /
-// iOS-стиль), tap-target ≥ 44px. Active state — primary-color подсветка
-// + top accent bar для visual feedback.
+// Min-height 56px и tap-target ≥ 44px — по Material Design / iOS HIG.
 
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";

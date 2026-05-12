@@ -14,9 +14,8 @@ import {
 import { useCreateToken, type APIToken } from "../../../entities/user";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 
-// CreateTokenDialog — модалка с двумя стадиями: форма → отображение plaintext
-// secret'а ровно один раз. Plaintext доступен ТОЛЬКО на момент создания
-// (backend хранит только хеш).
+// Plaintext secret отображается ТОЛЬКО на момент создания: backend хранит
+// только хеш. Поэтому диалог двустадийный — форма → одноразовый показ token.
 export function CreateTokenDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation("developer");
   const create = useCreateToken();

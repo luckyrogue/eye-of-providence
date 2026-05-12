@@ -6,12 +6,8 @@ import { useSubscribePush, useVAPIDKey } from "../../../entities/push";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { urlBase64ToUint8Array } from "../../../shared/lib/push";
 
-// EnablePushButton — обёртка над browser API:
-// `Notification.requestPermission()` → `pushManager.subscribe()` → POST на
-// backend через мутацию.
-//
-// `variant`: `"primary"` — крупная кнопка для пустого state, `"ghost"` —
-// мелкая для добавления второго устройства.
+// variant: "primary" — крупная кнопка для пустого state, "ghost" — мелкая
+// для добавления второго устройства.
 export function EnablePushButton({ variant = "primary" }: { variant?: "primary" | "ghost" }) {
   const { t } = useTranslation("pwa");
   const vapid = useVAPIDKey();

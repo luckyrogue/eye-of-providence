@@ -1,6 +1,3 @@
-// AppShellV2 — новый layout с Sidebar + Topbar. Используется AppLayout
-// (widgets/app-layout) если флаг включён, либо как явная альтернатива.
-
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -37,8 +34,6 @@ export function AppShellV2() {
         open={sidebarOpen}
         onNavigate={() => setSidebarOpen(false)}
       />
-      {/* Backdrop overlay для mobile drawer — click outside закрывает sidebar.
-          Скрыт на md+ где sidebar — sticky column а не off-canvas. */}
       {sidebarOpen && (
         // eslint-disable-next-line no-restricted-syntax -- backdrop overlay; IconButton не подходит (full-screen click target)
         <button
@@ -48,7 +43,7 @@ export function AppShellV2() {
           className="md:hidden fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm"
         />
       )}
-      <main className="flex flex-col min-w-0">
+      <main className="flex min-h-0 w-full min-w-0 flex-col">
         <Topbar
           crumb={{ section, now: "" }}
           onMenuClick={() => setSidebarOpen((s) => !s)}

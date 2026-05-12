@@ -9,8 +9,6 @@ import { useInvitePreview } from "./model/use-invite-preview";
 
 type Mode = "login" | "register";
 
-// Auth — page-shell: заголовок, переключатель режима, invite-preview,
-// invite-only баннер. Сами формы — features/auth-login/register.
 export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
   const { t } = useTranslation("auth");
   const [mode, setMode] = useState<Mode>("login");

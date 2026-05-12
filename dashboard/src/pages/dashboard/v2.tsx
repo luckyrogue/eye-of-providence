@@ -1,6 +1,3 @@
-// Dashboard v2 — полная реплика artifact'а (Eye of Providence (1)).
-// Структура: page-head + KPI grid + Recap + 12-col grid из cards.
-
 import { useTranslation } from "react-i18next";
 import { Sparkles, Upload, Loader2 } from "lucide-react";
 import { toast } from "@eop/ui";
@@ -76,8 +73,8 @@ export function DashboardRoute() {
 
       <KpiGrid />
 
-      <div className="eop-grid" style={{ marginBottom: 14 }}>
-        <div className="col-12">
+      <div className="eop-grid grid grid-cols-12 gap-[14px]" style={{ marginBottom: 14 }}>
+        <div className="col-span-12">
           <RecapCard />
         </div>
       </div>
@@ -88,7 +85,7 @@ export function DashboardRoute() {
           нет backend endpoints, mock data вводила в заблуждение.
           Вернутся когда добавим /v1/timeline /v1/summary/providers
           /v1/summary/projects /v1/sessions/focus. */}
-      <div className="eop-grid">
+      <div className="eop-grid grid grid-cols-12 gap-[14px]">
         <HeatmapCard />
         <GaugeCard />
         <ProvenanceDonut />

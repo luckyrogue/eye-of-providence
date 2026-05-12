@@ -1,13 +1,7 @@
-// Sidebar — brand + user card + 2 nav groups + privacy pill.
-//
-// Принцип: ТОЛЬКО реальные routes. Раньше показывали 7 "tab"-пунктов
-// вида /dashboard?tab=foo — все они вели на /dashboard и NavLink (которая
-// матчит по pathname, игнорируя query) считала их одновременно активными
-// → 7 подсвеченных оранжевым пунктов. Plus tab routing внутри dashboard
-// не реализован — клик никуда не вёл.
-//
-// Когда tab-routing появится (отдельный issue) — вернуть пункты с
-// явной active-проверкой по location.search.
+// Показываем ТОЛЬКО реальные routes. Раньше были 7 "tab"-пунктов вида
+// /dashboard?tab=foo — NavLink матчит по pathname (игнорируя query) и
+// подсвечивал все 7 одновременно; tab-routing внутри /dashboard не реализован.
+// Когда появится — вернуть пункты с явной active-проверкой по location.search.
 
 import { useTranslation } from "react-i18next";
 import { NavLink, useLocation } from "react-router-dom";
@@ -141,8 +135,8 @@ export function Sidebar({
   );
 }
 
-// NavItemLink — wrapper над NavLink с поддержкой forceActive. Если задан,
-// active-class приклеивается по нему вместо стандартного pathname match.
+// forceActive: если задан — active-class приклеивается по нему вместо
+// стандартного pathname-match'а NavLink.
 function NavItemLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
   const Icon = item.icon;
   if (item.forceActive !== undefined) {

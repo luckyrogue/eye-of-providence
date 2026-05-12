@@ -2,11 +2,9 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@eop/ui";
 import { useOnlineStatus, useUpdatePrompt } from "../../../shared/lib/pwa";
 
-// ResilienceBanners — два sticky-баннера наверху layout'а:
-// 1) Offline — пока navigator.onLine === false, событие online/offline.
-// 2) SW update available — после регистрации нового sw.js (см. pwa.ts).
-// Скрываются автоматически когда условие пропало; reload триггерит активацию
-// нового SW и подхватывает свежие assets.
+// Sticky offline-баннер (navigator.onLine === false) и SW-update-баннер
+// (новый sw.js зарегистрирован — см. pwa.ts). Reload активирует новый SW
+// и подтягивает свежие assets.
 export function ResilienceBanners() {
   const { t } = useTranslation("common");
   const online = useOnlineStatus();

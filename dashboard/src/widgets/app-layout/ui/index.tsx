@@ -1,6 +1,5 @@
-// AppLayout — главный chrome для авторизованной части приложения.
-// Bottom-nav на mobile (PWA-style) + top-nav на desktop. Содержимое
-// заворачиваем в pb-16 чтобы bottom-nav не накрывал последний row.
+// pb-16 на content-обёртке — чтобы mobile bottom-nav не перекрывал
+// последний row контента.
 
 import { Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";

@@ -1,6 +1,3 @@
-// Audit log tab — paginated filterable table. Wired к GET /v1/admin/audit.
-// Filters: action (dropdown), target_type, search by target_id.
-
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Input, SimpleSelect } from "@eop/ui";

@@ -20,9 +20,9 @@ type Phase =
 
 const POLL_INTERVAL_MS = 2_500;
 
-// PairingWizard — единый flow для popup и options: показывает 6-знач код,
-// автополит до claim/expire. После успеха вызывает onClaimed (caller сохраняет
-// token + редиректит UI в connected-state).
+// Единый flow для popup и options. Polling до claim или expire (POLL_INTERVAL_MS).
+// После успешного claim — onClaimed; в нём caller сохраняет token и
+// переключает UI в connected-state.
 export function PairingWizard({
   backend = DEFAULT_BACKEND,
   onClaimed,

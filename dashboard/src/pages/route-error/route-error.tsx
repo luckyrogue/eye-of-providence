@@ -2,10 +2,8 @@ import { useTranslation } from "react-i18next";
 import { Link, useRouteError } from "react-router-dom";
 import { Button } from "@eop/ui";
 
-// RouteError — общий errorElement для всех routes. Заменяет
-// `window.location.reload()` на soft retry: пользователь видит сообщение,
-// при желании может вернуться или попробовать ещё раз (повторный mount
-// перезапускает loaders и react-query queries).
+// Soft retry вместо `window.location.reload()`: повторный mount перезапускает
+// loaders и react-query queries без полного перезагрузки страницы.
 export function RouteError() {
   const error = useRouteError();
   const { t } = useTranslation("common");

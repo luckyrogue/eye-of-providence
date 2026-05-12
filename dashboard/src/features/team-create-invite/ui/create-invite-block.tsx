@@ -6,9 +6,7 @@ import { Plus } from "lucide-react";
 import { useCreateInvite } from "../../../entities/team";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 
-// CreateInviteBlock — встраиваемый блок: «Сгенерировать invite-link»
-// → показать read-only поле с URL и кнопкой Copy. Только для owner/admin
-// (родительский гард решает).
+// Видимость по роли решает родитель: owner/admin-гард тут не дублируется.
 export function CreateInviteBlock({ teamID }: { teamID: string }) {
   const { t } = useTranslation("app");
   const createInvite = useCreateInvite(teamID);

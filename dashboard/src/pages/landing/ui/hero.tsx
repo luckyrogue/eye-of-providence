@@ -1,6 +1,3 @@
-// Hero: split-grid (copy слева, 3D eye справа), hero-stats внизу 4-col grid
-// с анимированным live-counter. Дизайн 1:1 с Claude artifact (Eye of Providence).
-
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, Download, Search } from "lucide-react";
@@ -14,9 +11,8 @@ function GithubIcon({ className }: { className?: string }) {
   );
 }
 
-// StatNum — анимированный count-up с intersection-observer (трек на первое
-// появление в viewport'е). Иначе число "прыгает" каждый раз когда секция
-// скроллится в фокус.
+// Запускаем один раз на первое появление в viewport — иначе число «прыгает»
+// каждый раз, когда секция возвращается в фокус при скролле.
 function StatNum({ end, decimals = 0 }: { end: number; decimals?: number }) {
   const [val, setVal] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
