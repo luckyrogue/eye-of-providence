@@ -181,7 +181,7 @@ func TestGoogle_Exchange_BadIDTokenSignature(t *testing.T) {
 	defer srv.Close()
 
 	g := newGoogleWithMockEndpoint(t, srv.URL+"/token")
-	_, err := g.Exchange(context.Background(), "code")
+	_, err = g.Exchange(context.Background(), "code")
 	if err == nil {
 		t.Fatal("expected validate error on alg=none id_token, got nil")
 	}
