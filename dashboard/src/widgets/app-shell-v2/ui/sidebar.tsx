@@ -1,21 +1,17 @@
-// Sidebar (artifact: Eye of Providence (1) — dashboard.jsx).
-// Brand + user-card + 2 nav groups (Workspace / Insights) + privacy pill.
+// Sidebar — brand + user card + 2 nav groups + privacy pill.
+//
+// Принцип: ТОЛЬКО реальные routes. Раньше показывали 7 "tab"-пунктов
+// вида /dashboard?tab=foo — все они вели на /dashboard и NavLink (которая
+// матчит по pathname, игнорируя query) считала их одновременно активными
+// → 7 подсвеченных оранжевым пунктов. Plus tab routing внутри dashboard
+// не реализован — клик никуда не вёл.
+//
+// Когда tab-routing появится (отдельный issue) — вернуть пункты с
+// явной active-проверкой по location.search.
 
 import { useTranslation } from "react-i18next";
-import { NavLink } from "react-router-dom";
-import {
-  Activity,
-  Brain,
-  Code2,
-  FolderOpen,
-  Home,
-  Languages,
-  Plug,
-  Settings as SettingsIcon,
-  Shield,
-  Users,
-  FileText,
-} from "lucide-react";
+import { NavLink, useLocation } from "react-router-dom";
+import { Home, Plug, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import type { ComponentType } from "react";
 
 type NavItem = {
@@ -24,6 +20,12 @@ type NavItem = {
   icon: ComponentType<{ className?: string }>;
   badge?: string;
   badgeKind?: "new";
+  // forceActive — кастомная проверка (для query-param tab'ов). Если undefined
+  // → используется стандартная NavLink isActive (path match).
+  forceActive?: boolean;
+  // matchExact — NavLink end={true}. Нужно когда у двух пунктов общий префикс,
+  // чтобы оба не подсвечивались (e.g. /settings vs /settings?tab=devices).
+  matchExact?: boolean;
 };
 
 export function Sidebar({
@@ -35,43 +37,37 @@ export function Sidebar({
   user: { name: string; handle: string; avatarLabel: string };
   isSuperAdmin: boolean;
   open?: boolean;
-  // onNavigate — закрываем mobile drawer после клика на nav-item, иначе
-  // юзер должен сам закрыть drawer вручную. На desktop no-op.
   onNavigate?: () => void;
 }) {
   const { t } = useTranslation(["common", "app"]);
+  const location = useLocation();
+
   const workspace: NavItem[] = [
-    { to: "/dashboard", label: t("nav.dashboard"), icon: Home },
-    {
-      to: "/dashboard?tab=activity",
-      label: t("app:dashboard.stat_active"),
-      icon: Activity,
-    },
-    {
-      to: "/dashboard?tab=ai",
-      label: t("app:dashboard.stat_ai_share"),
-      icon: Brain,
-      badge: t("topbar.badge_live"),
-    },
-    {
-      to: "/dashboard?tab=provenance",
-      label: t("sidebar.code_provenance"),
-      icon: Code2,
-    },
-    { to: "/dashboard?tab=projects", label: t("nav.projects"), icon: FolderOpen },
-    { to: "/dashboard?tab=languages", label: t("sidebar.languages"), icon: Languages },
+    { to: "/dashboard", label: t("nav.dashboard"), icon: Home, matchExact: true },
+    { to: "/team", label: t("nav.team"), icon: Users, matchExact: true },
   ];
+
+  // /settings — два sidebar-пункта (Интеграции + Настройки) ведут в одну
+  // страницу с tab'ом. NavLink по pathname матчит оба → нужна ручная
+  // проверка location.search для разделения.
+  const isIntegrations =
+    location.pathname.startsWith("/settings") && location.search.includes("tab=devices");
+  const isSettingsRoot =
+    location.pathname.startsWith("/settings") && !location.search.includes("tab=devices");
+
   const insights: NavItem[] = [
     {
-      to: "/dashboard?tab=reports",
-      label: t("nav.reports"),
-      icon: FileText,
-      badge: t("topbar.badge_new"),
-      badgeKind: "new",
+      to: "/settings?tab=devices",
+      label: t("sidebar.integrations"),
+      icon: Plug,
+      forceActive: isIntegrations,
     },
-    { to: "/team", label: t("nav.team"), icon: Users },
-    { to: "/settings?tab=devices", label: t("sidebar.integrations"), icon: Plug },
-    { to: "/settings", label: t("nav.settings"), icon: SettingsIcon },
+    {
+      to: "/settings",
+      label: t("nav.settings"),
+      icon: SettingsIcon,
+      forceActive: isSettingsRoot,
+    },
   ];
 
   return (
@@ -114,33 +110,14 @@ export function Sidebar({
       <div className="nav-group">
         <h6>{t("sidebar.workspace")}</h6>
         {workspace.map((it) => (
-          <NavLink
-            key={it.to + it.label}
-            to={it.to}
-            end={it.to === "/dashboard"}
-            onClick={onNavigate}
-            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
-          >
-            <it.icon className="nav-icon" />
-            <span className="truncate">{it.label}</span>
-            {it.badge && <span className={`badge ${it.badgeKind ?? ""}`}>{it.badge}</span>}
-          </NavLink>
+          <NavItemLink key={it.to + it.label} item={it} onNavigate={onNavigate} />
         ))}
       </div>
 
       <div className="nav-group">
         <h6>{t("sidebar.insights")}</h6>
         {insights.map((it) => (
-          <NavLink
-            key={it.to + it.label}
-            to={it.to}
-            onClick={onNavigate}
-            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
-          >
-            <it.icon className="nav-icon" />
-            <span className="truncate">{it.label}</span>
-            {it.badge && <span className={`badge ${it.badgeKind ?? ""}`}>{it.badge}</span>}
-          </NavLink>
+          <NavItemLink key={it.to + it.label} item={it} onNavigate={onNavigate} />
         ))}
         {isSuperAdmin && (
           <NavLink
@@ -161,5 +138,37 @@ export function Sidebar({
         </div>
       </div>
     </aside>
+  );
+}
+
+// NavItemLink — wrapper над NavLink с поддержкой forceActive. Если задан,
+// active-class приклеивается по нему вместо стандартного pathname match.
+function NavItemLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
+  const Icon = item.icon;
+  if (item.forceActive !== undefined) {
+    return (
+      <NavLink
+        to={item.to}
+        onClick={onNavigate}
+        end={item.matchExact}
+        className={`nav-item ${item.forceActive ? "active" : ""}`}
+      >
+        <Icon className="nav-icon" />
+        <span className="truncate">{item.label}</span>
+        {item.badge && <span className={`badge ${item.badgeKind ?? ""}`}>{item.badge}</span>}
+      </NavLink>
+    );
+  }
+  return (
+    <NavLink
+      to={item.to}
+      onClick={onNavigate}
+      end={item.matchExact}
+      className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+    >
+      <Icon className="nav-icon" />
+      <span className="truncate">{item.label}</span>
+      {item.badge && <span className={`badge ${item.badgeKind ?? ""}`}>{item.badge}</span>}
+    </NavLink>
   );
 }
