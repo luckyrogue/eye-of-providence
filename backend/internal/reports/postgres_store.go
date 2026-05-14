@@ -17,7 +17,6 @@ type PostgresStore struct {
 	pool *pgxpool.Pool
 }
 
-// NewPostgresStore — обёртка над уже открытым pool. Закрывать pool — обязанность caller.
 func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
 	return &PostgresStore{pool: pool}
 }

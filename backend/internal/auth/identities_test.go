@@ -1,18 +1,5 @@
 //go:build integration
 
-// Запуск:
-//   EOP_TEST_PG_DSN=postgres://eop:eop_dev@localhost:5432/eop_test \
-//     go test -tags=integration ./internal/auth/...
-//
-// Phase 2 endpoint tests — /v1/me/identities GET/DELETE.
-//
-// Backend status (2026-05-12): endpoints не зарегистрированы. Тесты ниже —
-// scaffold; они скипаются с понятным сообщением, пока backend-channel не
-// добавит routes в RegisterMeRoutes (см. .team/backend-progress.md "Phase 2 in
-// flight").
-//
-// Источник правды: .team/qa-testplans/identity-linking.md.
-
 package auth
 
 import (
@@ -104,10 +91,6 @@ func makeUserAndToken(t *testing.T, pool *pgxpool.Pool, email, secret string, ha
 	return id, tok
 }
 
-// ---- Scaffold tests: they probe the route ahead of implementation. ----
-
-// TestListIdentities_OwnUserOnly — пользователь видит только свои identities,
-// не чужие. Базовый authz check.
 func TestListIdentities_OwnUserOnly(t *testing.T) {
 	app, pool, svc := setupIdentitiesApp(t)
 	uidA, tokA := makeUserAndToken(t, pool, "a@example.com", svc.JWTSecret, false)
@@ -139,9 +122,6 @@ func TestListIdentities_OwnUserOnly(t *testing.T) {
 	}
 }
 
-// TestDeleteIdentity_LastFactorRejected — 4a из identity-linking.md: 1 identity,
-// нет password, нет passkey → DELETE отдаёт 400 last_auth_factor (или 409 по
-// договорённости — handler выбирает code, тест допускает оба).
 func TestDeleteIdentity_LastFactorRejected(t *testing.T) {
 	app, pool, svc := setupIdentitiesApp(t)
 	uid, tok := makeUserAndToken(t, pool, "lock@example.com", svc.JWTSecret, false)
@@ -154,8 +134,7 @@ func TestDeleteIdentity_LastFactorRejected(t *testing.T) {
 	if status != http.StatusBadRequest && status != http.StatusConflict {
 		t.Fatalf("status=%d body=%s, want 400 or 409 (last_auth_factor)", status, string(body))
 	}
-	// Code должен быть стабильным машинно-парсимым строкой — frontend по нему
-	// показывает CTA "set a password first".
+
 	var out map[string]string
 	if err := json.Unmarshal(body, &out); err == nil {
 		if out["code"] != "" && out["code"] != "last_auth_factor" {
@@ -163,7 +142,6 @@ func TestDeleteIdentity_LastFactorRejected(t *testing.T) {
 		}
 	}
 
-	// Row не должна быть удалена.
 	var cnt int
 	_ = pool.QueryRow(context.Background(),
 		"SELECT count(*) FROM user_identities WHERE id=$1", identID).Scan(&cnt)
@@ -172,8 +150,6 @@ func TestDeleteIdentity_LastFactorRejected(t *testing.T) {
 	}
 }
 
-// TestDeleteIdentity_OtherFactorsExist_Succeeds — у юзера есть password +
-// 1 identity. DELETE identity → 204, row исчезла, password остаётся.
 func TestDeleteIdentity_OtherFactorsExist_Succeeds(t *testing.T) {
 	app, pool, svc := setupIdentitiesApp(t)
 	uid, tok := makeUserAndToken(t, pool, "ok@example.com", svc.JWTSecret, true)
@@ -194,8 +170,6 @@ func TestDeleteIdentity_OtherFactorsExist_Succeeds(t *testing.T) {
 	}
 }
 
-// TestDeleteIdentity_NotOwn — попытка удалить чужую identity → 404 или 403,
-// не 200. Защита от IDOR.
 func TestDeleteIdentity_NotOwn(t *testing.T) {
 	app, pool, svc := setupIdentitiesApp(t)
 	uidA, tokA := makeUserAndToken(t, pool, "a@example.com", svc.JWTSecret, true)
@@ -205,21 +179,20 @@ func TestDeleteIdentity_NotOwn(t *testing.T) {
 
 	status, body := doIdent(t, app, "DELETE", "/v1/me/identities/"+identB.String(), tokA)
 	if status == http.StatusNotFound {
-		// 404 — корректный negative ответ (не leak'аем существование).
+
 		return
 	}
 	if status == http.StatusForbidden {
-		// 403 — тоже корректно.
+
 		return
 	}
 	if status >= 200 && status < 300 {
 		t.Fatalf("IDOR: deleted other user's identity (status=%d). body=%s", status, string(body))
 	}
-	// Любой другой код — flag for review.
+
 	t.Logf("unexpected status %d (acceptable: 403/404). body=%s", status, string(body))
 }
 
-// TestDeleteIdentity_Unauth — без JWT → 401.
 func TestDeleteIdentity_Unauth(t *testing.T) {
 	app, _, _ := setupIdentitiesApp(t)
 	status, _ := doIdent(t, app, "DELETE", "/v1/me/identities/"+uuid.New().String(), "")

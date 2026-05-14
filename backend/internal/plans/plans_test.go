@@ -11,10 +11,10 @@ func TestFor_KnownPlans(t *testing.T) {
 		{"pro", PlanPro},
 		{"business", PlanBusiness},
 		{"enterprise", PlanEnterprise},
-		{"PRO", PlanPro},        // case-insensitive
-		{"  business  ", PlanBusiness}, // trim
-		{"", PlanFree},          // empty → free
-		{"garbage", PlanFree},   // unknown → free
+		{"PRO", PlanPro},
+		{"  business  ", PlanBusiness},
+		{"", PlanFree},
+		{"garbage", PlanFree},
 	}
 	for _, tc := range cases {
 		got := For(tc.in)

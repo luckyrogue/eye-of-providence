@@ -11,9 +11,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
-// Cron — фоновый генератор weekly отчётов.
-// Раз в `interval` тикает: для каждого активного user (за последние 7 дней)
-// проверяет, есть ли отчёт за текущую ISO week, если нет — генерирует.
 type Cron struct {
 	Interval   time.Duration
 	Store      ReportStore
@@ -29,7 +26,7 @@ func (c *Cron) Run(ctx context.Context) {
 	t := time.NewTicker(c.Interval)
 	defer t.Stop()
 
-	c.tick(ctx) // первый прогон на старте
+	c.tick(ctx)
 	for {
 		select {
 		case <-ctx.Done():
@@ -103,4 +100,3 @@ func weeklyPeriod(now time.Time) (time.Time, time.Time, string) {
 	to := from.AddDate(0, 0, 7).Add(-time.Second)
 	return from, to, fmt.Sprintf("weekly_%04d_W%02d", year, week)
 }
-

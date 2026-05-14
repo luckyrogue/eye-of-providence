@@ -8,7 +8,7 @@ import (
 )
 
 func TestResolveWeekly(t *testing.T) {
-	now := time.Date(2026, 5, 14, 12, 0, 0, 0, time.UTC) // Thursday
+	now := time.Date(2026, 5, 14, 12, 0, 0, 0, time.UTC)
 	from, to, key := periodapp.Resolve("weekly", now)
 	if key == "" || !from.Before(to) {
 		t.Fatalf("from=%v to=%v key=%s", from, to, key)

@@ -37,7 +37,7 @@ func TestValidateFlag_UnknownKey(t *testing.T) {
 }
 
 func TestValidateFlag_IntMinMax(t *testing.T) {
-	// k_anon_threshold has min=1, max=50.
+
 	if err := ValidateFlag(FlagKAnonThreshold, 5); err != nil {
 		t.Errorf("expected ok for 5: %v", err)
 	}
@@ -47,11 +47,11 @@ func TestValidateFlag_IntMinMax(t *testing.T) {
 	if err := ValidateFlag(FlagKAnonThreshold, 51); err == nil {
 		t.Error("expected error for 51 (above max 50)")
 	}
-	// JSON float64 with integer value — must coerce.
+
 	if err := ValidateFlag(FlagKAnonThreshold, float64(10)); err != nil {
 		t.Errorf("expected ok for float64(10), got %v", err)
 	}
-	// Non-integer float — reject.
+
 	if err := ValidateFlag(FlagKAnonThreshold, 5.5); err == nil {
 		t.Error("expected error for float 5.5 (not integer)")
 	}
@@ -72,8 +72,8 @@ func TestMergeFlags_ShallowMerge(t *testing.T) {
 		FlagEnableTeamReports: true,
 	}
 	patch := map[string]any{
-		FlagEnableInsights: true, // change
-		FlagKAnonThreshold: 10,   // add
+		FlagEnableInsights: true,
+		FlagKAnonThreshold: 10,
 	}
 	out := MergeFlags(existing, patch)
 	if out[FlagEnableInsights] != true {
@@ -85,7 +85,7 @@ func TestMergeFlags_ShallowMerge(t *testing.T) {
 	if out[FlagKAnonThreshold] != 10 {
 		t.Errorf("merge: k_anon_threshold = %v, want 10", out[FlagKAnonThreshold])
 	}
-	// existing must not mutate.
+
 	if existing[FlagEnableInsights] != false {
 		t.Error("existing mutated — must be immutable")
 	}
@@ -165,9 +165,9 @@ func TestFlagsDiff_DetectsChanges(t *testing.T) {
 		FlagKAnonThreshold: 5,
 	}
 	after := map[string]any{
-		FlagEnableInsights: true, // changed
-		FlagKAnonThreshold: 5,    // same
-		FlagEnableWebhooks: true, // added
+		FlagEnableInsights: true,
+		FlagKAnonThreshold: 5,
+		FlagEnableWebhooks: true,
 	}
 	diff := FlagsDiff(before, after)
 	if _, ok := diff[FlagEnableInsights]; !ok {

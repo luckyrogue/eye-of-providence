@@ -27,9 +27,6 @@ func TestRender_BasicSubstitution(t *testing.T) {
 	}
 }
 
-// TestRender_HTMLAutoEscape — критический guard: html/template должен
-// автоматически escape'ить user-controlled value в HTML body, даже если
-// admin-template содержит `{{.team_name}}` без явного `htmlEscape`.
 func TestRender_HTMLAutoEscape(t *testing.T) {
 	tpl := Template{
 		Subject:  "Invite to {{.TeamName}}",
@@ -47,13 +44,12 @@ func TestRender_HTMLAutoEscape(t *testing.T) {
 	if !strings.Contains(out.HTML, "&lt;script&gt;") {
 		t.Errorf("html escape missing &lt;script&gt;: %q", out.HTML)
 	}
-	// text body — text/template НЕ escape'ит, raw passthrough.
+
 	if !strings.Contains(out.Text, "<script>") {
 		t.Errorf("text body should keep raw chars: %q", out.Text)
 	}
 }
 
-// TestRender_SubjectStripsCRLF — anti header-injection.
 func TestRender_SubjectStripsCRLF(t *testing.T) {
 	tpl := Template{
 		Subject:  "Subj\r\nBcc: attacker@evil.com\r\n",
@@ -68,16 +64,11 @@ func TestRender_SubjectStripsCRLF(t *testing.T) {
 		t.Errorf("subject still has CR/LF: %q", out.Subject)
 	}
 	if out.Subject != "Subj"+"Bcc: attacker@evil.com" {
-		// Strip removes CR/LF only — content stays joined. Subject is fully
-		// sanitized at storage level в admin endpoint; here we just ensure
-		// the wire-level guard fires.
+
 		t.Logf("subject after sanitize: %q (CR/LF stripped, content joined)", out.Subject)
 	}
 }
 
-// TestRender_MissingVariable_ZeroValue — Option("missingkey=zero") ⇒
-// неизвестная переменная рендерится как пустая строка, не error.
-// Защищает send pipeline от падения если admin забыл какую-то переменную.
 func TestRender_MissingVariable_ZeroValue(t *testing.T) {
 	tpl := Template{
 		Subject:  "X",
@@ -93,8 +84,6 @@ func TestRender_MissingVariable_ZeroValue(t *testing.T) {
 	}
 }
 
-// TestRender_ParseError_BadSyntax — sanity: некорректный template syntax
-// должен вернуть error, а не render заглушку.
 func TestRender_ParseError_BadSyntax(t *testing.T) {
 	tpl := Template{
 		Subject:  "X",

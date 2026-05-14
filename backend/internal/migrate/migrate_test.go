@@ -6,9 +6,6 @@ import (
 	"testing"
 )
 
-// TestEmbeddedFiles — sanity-check, что embed.FS видит весь набор миграций.
-// Если кто-то перенесёт файл и забудет про //go:embed pattern — этот тест
-// поймает в unit-фазе, до того как production deploy запустит RunPostgres.
 func TestEmbeddedFiles(t *testing.T) {
 	expectPG := []string{
 		"sql/postgres/001_init.up.sql",
@@ -21,20 +18,19 @@ func TestEmbeddedFiles(t *testing.T) {
 		"sql/postgres/004_subscriptions.down.sql",
 		"sql/postgres/005_token_version.up.sql",
 		"sql/postgres/005_token_version.down.sql",
-		// Phase 2 SSO / passkey / observer-role migrations.
+
 		"sql/postgres/019_user_identities.up.sql",
 		"sql/postgres/019_user_identities.down.sql",
 		"sql/postgres/020_webauthn_credentials.up.sql",
 		"sql/postgres/020_webauthn_credentials.down.sql",
 		"sql/postgres/021_team_members_observer.up.sql",
 		"sql/postgres/021_team_members_observer.down.sql",
-		// Phase 3 admin: 022 email templates, 024 team flags + plan
-		// overrides. 023 пропущена (custom roles canceled).
+
 		"sql/postgres/022_email_templates.up.sql",
 		"sql/postgres/022_email_templates.down.sql",
 		"sql/postgres/024_team_flags_and_overrides.up.sql",
 		"sql/postgres/024_team_flags_and_overrides.down.sql",
-		// Phase 4 CMS-lite: 025 content_blocks (slug × locale × published/draft).
+
 		"sql/postgres/025_content_blocks.up.sql",
 		"sql/postgres/025_content_blocks.down.sql",
 	}
@@ -56,8 +52,6 @@ func TestEmbeddedFiles(t *testing.T) {
 	}
 }
 
-// TestUpDownPairing — каждой .up.sql миграции соответствует .down.sql.
-// Без этого гарантии "rollback safe" нет.
 func TestUpDownPairing(t *testing.T) {
 	for _, dir := range []string{"sql/postgres", "sql/clickhouse"} {
 		entries, err := fs.ReadDir(fsys, dir)
@@ -88,8 +82,6 @@ func TestUpDownPairing(t *testing.T) {
 	}
 }
 
-// TestRunPostgresEmptyDSN — без DSN это no-op (используется в API-init,
-// когда юзер ещё не настроил env var).
 func TestRunPostgresEmptyDSN(t *testing.T) {
 	if err := RunPostgres(t.Context(), ""); err != nil {
 		t.Errorf("expected nil for empty dsn, got: %v", err)
@@ -99,8 +91,6 @@ func TestRunPostgresEmptyDSN(t *testing.T) {
 	}
 }
 
-// TestNewPostgresEmptyDSN — для CLI: явный empty DSN это пользовательская
-// ошибка, должна возвращаться error.
 func TestNewPostgresEmptyDSN(t *testing.T) {
 	if _, err := NewPostgres(""); err == nil {
 		t.Error("expected error for empty dsn")

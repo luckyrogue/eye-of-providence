@@ -12,9 +12,6 @@ import (
 	"golang.org/x/oauth2/github"
 )
 
-// GitHubUser — raw payload из GitHub /user endpoint. Используется внутри
-// github.go и в тестах. External consumers получают нормализованный
-// *ExternalUser через GitHubOAuth.Exchange (OAuthProvider interface).
 type GitHubUser struct {
 	ID    int64  `json:"id"`
 	Login string `json:"login"`
@@ -26,7 +23,6 @@ type GitHubOAuth struct {
 	cfg *oauth2.Config
 }
 
-// статический check — *GitHubOAuth удовлетворяет OAuthProvider.
 var _ OAuthProvider = (*GitHubOAuth)(nil)
 
 func NewGitHubOAuth(clientID, clientSecret, redirectURL string) *GitHubOAuth {
@@ -41,21 +37,12 @@ func NewGitHubOAuth(clientID, clientSecret, redirectURL string) *GitHubOAuth {
 	}
 }
 
-// Name — provider key для interface OAuthProvider. Совпадает со значением
-// колонки `provider` в user_identities.
 func (g *GitHubOAuth) Name() string { return "github" }
 
 func (g *GitHubOAuth) AuthCodeURL(state string) string {
 	return g.cfg.AuthCodeURL(state)
 }
 
-// Exchange — реализация OAuthProvider.Exchange. Внутри использует
-// exchangeRaw для обратной совместимости (тесты + handler сохраняют доступ
-// к numeric GitHub ID через Subject = strconv.FormatInt).
-//
-// Subject = "<github numeric id>" (стабилен между переименованиями login'а).
-// Login = github username (для UI отображения).
-// Email = primary verified email из /user/emails (security guard).
 func (g *GitHubOAuth) Exchange(ctx context.Context, code string) (*ExternalUser, error) {
 	u, err := g.exchangeRaw(ctx, code)
 	if err != nil {
@@ -69,9 +56,6 @@ func (g *GitHubOAuth) Exchange(ctx context.Context, code string) (*ExternalUser,
 	}, nil
 }
 
-// exchangeRaw — низкоуровневый обмен code → GitHubUser. Сохранён как
-// internal API для тестов и для обратной совместимости (handler.go
-// преобразует Subject обратно в int64 при derivation UUID).
 func (g *GitHubOAuth) exchangeRaw(ctx context.Context, code string) (*GitHubUser, error) {
 	if g.cfg.ClientID == "" {
 		return nil, errors.New("github oauth not configured (set EOP_GITHUB_CLIENT_ID)")
@@ -97,10 +81,6 @@ func (g *GitHubOAuth) exchangeRaw(ctx context.Context, code string) (*GitHubUser
 		return nil, err
 	}
 
-	// Заменяем email на primary verified из /user/emails. Поле user.email из /user
-	// может быть public-email профиля и не верифицированным — доверять ему нельзя
-	// (security: иначе чужак с GitHub-аккаунтом, где email = чужой_email, мог бы
-	// присвоить чужую идентичность в нашей системе).
 	emailReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/user/emails", nil)
 	emailResp, err := client.Do(emailReq)
 	if err != nil {
@@ -126,7 +106,7 @@ func (g *GitHubOAuth) exchangeRaw(ctx context.Context, code string) (*GitHubUser
 		}
 	}
 	if verified == "" {
-		// Fallback: любой verified non-primary, если primary не verified.
+
 		for _, e := range emails {
 			if e.Verified {
 				verified = e.Email

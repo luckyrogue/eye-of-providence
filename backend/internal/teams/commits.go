@@ -1,4 +1,3 @@
-// commits.go — git commit ingestion + queries (project-scoped и team-scoped).
 package teams
 
 import (
@@ -11,10 +10,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
-// WebhookDispatcher — interface для outbound delivery. Inject'ится в Service
-// при construction, nil — webhook integration выключена. Pkg `webhooks` в
-// backend/internal реализует эту interface; объявлена тут чтобы избежать
-// import cycle teams → webhooks → teams.
 type WebhookDispatcher interface {
 	Dispatch(userID uuid.UUID, event string, payload any)
 }
@@ -41,9 +36,7 @@ func (s Service) handleIngestCommit(c *fiber.Ctx) error {
 	if err != nil {
 		return httperr.BadRequest(c, "invalid_project_id", "bad project_id")
 	}
-	// Достаём team_id проекта и проверяем что юзер в этой команде.
-	// Если team_id IS NULL (проект осиротел после удаления команды) — отказываем,
-	// иначе любой авторизованный юзер мог бы писать commit'ы в orphan-проект.
+
 	var teamID *uuid.UUID
 	if err := s.Pool.QueryRow(c.Context(),
 		"SELECT team_id FROM projects WHERE id=$1", projID).Scan(&teamID); err != nil {
@@ -69,18 +62,15 @@ func (s Service) handleIngestCommit(c *fiber.Ctx) error {
 	if err != nil {
 		return s.internalErr(c, err)
 	}
-	// Webhook firing только на новый INSERT (ON CONFLICT возвращает
-	// RowsAffected=0). Идемпотентность ingest'а сохраняется на receiver-side.
+
 	if tag.RowsAffected() > 0 && s.Webhooks != nil {
 		dispatchCommitWebhook(c.Context(), s, uid, projID, *teamID, req, authoredAt)
 	}
 	return c.JSON(fiber.Map{"ok": true})
 }
 
-// dispatchCommitWebhook — формирует payload и шлёт через injected
-// dispatcher. Не блокирует: dispatcher.Dispatch fire-and-forget.
 func dispatchCommitWebhook(ctx context.Context, s Service, userID, projectID, teamID uuid.UUID, req commitReq, authoredAt time.Time) {
-	_ = ctx // payload в reverse — может пригодиться для future enrichment
+	_ = ctx
 	s.Webhooks.Dispatch(userID, "commit.ingested", map[string]any{
 		"user_id":       userID,
 		"project_id":    projectID,

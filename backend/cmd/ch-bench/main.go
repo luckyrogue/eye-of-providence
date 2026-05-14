@@ -1,14 +1,3 @@
-// ch-bench — synthesizes events, runs hot queries в две версии (events
-// table vs events_hourly_agg MV) и сравнивает latency.
-//
-// Usage:
-//
-//	EOP_CH_DSN="clickhouse://default:@localhost:9000/eop_test" \
-//	  go run ./cmd/ch-bench --users=10 --days=30 --events-per-user-per-day=1000
-//
-// Default: 10 users × 30 days × 1000 events = 300K events, ~5min на CH Cloud.
-// На локальной CH (docker) обычно <30s. Larger sample (--events-per-user-per-day=10000)
-// для real 10M-в-день simulation.
 package main
 
 import (
@@ -71,9 +60,7 @@ func run() error {
 		if err := seed(conn, uids, *days, *perDay); err != nil {
 			return fmt.Errorf("seed: %w", err)
 		}
-		// Force MV catch-up + flush merges. SummingMergeTree merge'ит в
-		// background; OPTIMIZE FINAL ускоряет для бенчмарка чтобы измерять
-		// merged-state latency.
+
 		fmt.Println("OPTIMIZE FINAL events_hourly_agg ...")
 		if err := conn.Exec(context.Background(), "OPTIMIZE TABLE events_hourly_agg FINAL"); err != nil {
 			log.Printf("optimize hourly: %v", err)
@@ -171,7 +158,6 @@ func seed(conn driver.Conn, uids []uuid.UUID, days, perDay int) error {
 	return nil
 }
 
-// bench — runs query 5 раз, returns sorted latencies в asc.
 func bench(conn driver.Conn, query string, uid uuid.UUID, since time.Time, runs int) []time.Duration {
 	out := make([]time.Duration, runs)
 	for i := 0; i < runs; i++ {
@@ -183,7 +169,7 @@ func bench(conn driver.Conn, query string, uid uuid.UUID, since time.Time, runs 
 			continue
 		}
 		for rows.Next() {
-			// drain
+
 		}
 		if err := rows.Close(); err != nil {
 			log.Printf("close rows: %v", err)
@@ -192,7 +178,7 @@ func bench(conn driver.Conn, query string, uid uuid.UUID, since time.Time, runs 
 		}
 		out[i] = time.Since(start)
 	}
-	// insertion sort — runs малое число
+
 	for i := 1; i < len(out); i++ {
 		for j := i; j > 0 && out[j-1] > out[j]; j-- {
 			out[j-1], out[j] = out[j], out[j-1]

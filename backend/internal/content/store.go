@@ -1,17 +1,3 @@
-// store.go — Postgres-backed storage layer для content_blocks (migration 025).
-//
-// Дизайн:
-//   * Store interface — для тестов (mock) и future swap.
-//   * PGStore — production implementation. Pool nil допустим в no-DB mode
-//     (все методы возвращают ErrUnavailable; Service-handlers ловят и
-//     возвращают 503).
-//   * Block — runtime-shape, готовый к JSON-encode. Content / DraftContent
-//     остаются raw JSONB чтобы public endpoint мог стримить без re-marshal.
-//   * Lookup — generic getter; includeDraft контролирует видим ли draft_content.
-//
-// Locale fallback chain (kk → en) НЕ применяется внутри store — это делает
-// Service.resolvePublished. Store читает строго запрошенный (slug, locale).
-
 package content
 
 import (
@@ -26,16 +12,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// ErrUnavailable — backend в no-DB mode. Handler возвращает 503; frontend
-// fall back на bundled i18n.
 var ErrUnavailable = errors.New("content store unavailable: pool nil")
 
-// ErrNotFound — нет row для (slug, locale). Service конвертит в 404
-// или продолжает fallback chain.
 var ErrNotFound = errors.New("content block not found")
 
-// Block — full row. PublishedAt nil = только draft. Content всегда не-nil
-// (default '{}'::jsonb из migration), DraftContent nullable.
 type Block struct {
 	Slug          string          `json:"slug"`
 	Locale        string          `json:"locale"`
@@ -47,7 +27,6 @@ type Block struct {
 	UpdatedBy     *uuid.UUID      `json:"updated_by,omitempty"`
 }
 
-// MatrixEntry — admin /v1/admin/content row.
 type MatrixEntry struct {
 	Slug         string     `json:"slug"`
 	Locale       string     `json:"locale"`
@@ -57,9 +36,6 @@ type MatrixEntry struct {
 	UpdatedBy    *uuid.UUID `json:"updated_by,omitempty"`
 }
 
-// UpsertParams — encapsulated args для Upsert. If-Match precondition
-// через PriorUpdatedAt: non-nil => store atomically проверяет existing
-// row.updated_at == *PriorUpdatedAt. Mismatch => *ErrPrecondition.
 type UpsertParams struct {
 	Slug           string
 	Locale         string
@@ -67,10 +43,9 @@ type UpsertParams struct {
 	Publish        bool
 	SchemaVersion  int
 	UpdatedBy      uuid.UUID
-	PriorUpdatedAt *time.Time // nil = bypass If-Match check
+	PriorUpdatedAt *time.Time
 }
 
-// ErrPrecondition — If-Match не совпал с current row.updated_at.
 type ErrPrecondition struct {
 	CurrentUpdatedAt time.Time
 }
@@ -80,7 +55,6 @@ func (e *ErrPrecondition) Error() string {
 		e.CurrentUpdatedAt.UTC().Format(time.RFC3339Nano))
 }
 
-// Store — DI interface для тестов. Service использует только этот контракт.
 type Store interface {
 	Lookup(ctx context.Context, slug, locale string, includeDraft bool) (*Block, error)
 	Upsert(ctx context.Context, p UpsertParams) (*Block, error)
@@ -88,12 +62,10 @@ type Store interface {
 	ListMatrix(ctx context.Context) ([]MatrixEntry, error)
 }
 
-// PGStore — Postgres implementation. Nil pool допустим (ErrUnavailable).
 type PGStore struct {
 	Pool *pgxpool.Pool
 }
 
-// NewPGStore — конструктор. Pool nil OK (degraded mode).
 func NewPGStore(pool *pgxpool.Pool) *PGStore {
 	return &PGStore{Pool: pool}
 }
@@ -125,7 +97,6 @@ func (s *PGStore) Lookup(ctx context.Context, slug, locale string, includeDraft 
 	return &b, nil
 }
 
-// currentUpdatedAt — для If-Match проверки внутри Upsert.
 func (s *PGStore) currentUpdatedAt(ctx context.Context, slug, locale string) (time.Time, error) {
 	var t time.Time
 	err := s.Pool.QueryRow(ctx,
@@ -141,14 +112,13 @@ func (s *PGStore) Upsert(ctx context.Context, p UpsertParams) (*Block, error) {
 	if s == nil || s.Pool == nil {
 		return nil, ErrUnavailable
 	}
-	// If-Match guard.
+
 	if p.PriorUpdatedAt != nil {
 		cur, err := s.currentUpdatedAt(ctx, p.Slug, p.Locale)
 		if err != nil && !errors.Is(err, ErrNotFound) {
 			return nil, err
 		}
-		// Если row не существует, If-Match считается выполненным (нет
-		// prior state to clash). Иначе сравниваем.
+
 		if err == nil && !cur.Equal(*p.PriorUpdatedAt) {
 			return nil, &ErrPrecondition{CurrentUpdatedAt: cur}
 		}
@@ -184,9 +154,7 @@ func (s *PGStore) Upsert(ctx context.Context, p UpsertParams) (*Block, error) {
 			return nil, err
 		}
 	} else {
-		// Draft save: для нового row ставим content '{}'::jsonb (тесты
-		// проверяют что content IS NULL или пустой, и что published_at
-		// NULL — оба условия выполняются).
+
 		err := s.Pool.QueryRow(ctx, `
 			INSERT INTO content_blocks (slug, locale, content, schema_version,
 				published_at, draft_content, updated_at, updated_by)

@@ -8,11 +8,8 @@ import (
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
-// NumericContext — что мы шлём в Gemini.
-// Жёсткое правило: только числа и метки (категория, провайдер, язык).
-// Никакого контента файлов, промптов, заголовков, меты с url/title.
 type NumericContext struct {
-	Period            string                       `json:"period"`             // weekly_2026_W18
+	Period            string                       `json:"period"`
 	From              time.Time                    `json:"from"`
 	To                time.Time                    `json:"to"`
 	TotalActiveMS     uint64                       `json:"total_active_ms"`
@@ -30,10 +27,8 @@ type LanguageBreakdown struct {
 	TotalMS     uint64 `json:"total_ms"`
 }
 
-// BuildContext — собирает агрегаты из EventStore за указанный период.
 func BuildContext(ctx context.Context, st store.EventStore, userID string, period string, from, to time.Time) (*NumericContext, error) {
-	// Используем универсальный путь: ListRecent по большому limit, фильтруем по from/to.
-	// В Phase 4 заменяется на правильные ClickHouse aggregations.
+
 	events, err := st.ListRecent(ctx, userID, 10_000)
 	if err != nil {
 		return nil, err
@@ -82,7 +77,6 @@ func BuildContext(ctx context.Context, st store.EventStore, userID string, perio
 	return c, nil
 }
 
-// TopLanguages — для удобства промпта: top-N языков по сумме chars (manual+ai).
 func (c *NumericContext) TopLanguages(n int) []LanguageStat {
 	stats := make([]LanguageStat, 0, len(c.ByLanguageChars))
 	for lang, b := range c.ByLanguageChars {

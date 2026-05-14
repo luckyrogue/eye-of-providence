@@ -5,8 +5,6 @@ import (
 	"strings"
 )
 
-// Locale — поддерживаемые языки. Синхронизированы с
-// dashboard/src/shared/i18n/index.ts SUPPORTED_LOCALES.
 type Locale string
 
 const (
@@ -16,7 +14,6 @@ const (
 	LocaleES Locale = "es"
 )
 
-// NormalizeLocale — fallback на ru, если локаль пустая или неподдерживаемая.
 func NormalizeLocale(s string) Locale {
 	switch Locale(s) {
 	case LocaleRU, LocaleEN, LocaleKK, LocaleES:
@@ -25,30 +22,25 @@ func NormalizeLocale(s string) Locale {
 	return LocaleRU
 }
 
-// Все шаблоны inline, без template-engine: их пока 3, держим вместе чтобы
-// видеть весь outbound surface в одном файле. Стиль — minimal HTML с
-// inline CSS (gmail/outlook не любят <style>), text-fallback всегда есть.
-
 const baseStyle = `font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;` +
 	`max-width:560px;margin:0 auto;padding:24px;line-height:1.5;color:#0a0a0a;`
 const buttonStyle = `display:inline-block;background:#0a0a0a;color:#fff;text-decoration:none;` +
 	`padding:10px 16px;border-radius:6px;font-weight:600;font-size:14px;`
 const subtleStyle = `color:#666;font-size:13px;margin-top:24px;border-top:1px solid #eee;padding-top:16px;`
 
-// inviteCopy — все строки приглашения по локалям.
 type inviteCopy struct {
-	Subject       string // %s = team name
-	Heading       string // %s = team name
-	Greeting      string // %s%s — by-line + team name (e.g. "Иван приглашает в Acme")
-	GreetingNoBy  string // %s — only team name when inviter unknown
-	ButtonAccept  string
-	IgnoreNote    string
-	ValidNote     string
-	TextHeader    string // %s = team name
-	TextLine      string // %s%s = inviter + team
-	TextLineNoBy  string // %s = team
-	TextAccept    string
-	TextIgnore    string
+	Subject      string
+	Heading      string
+	Greeting     string
+	GreetingNoBy string
+	ButtonAccept string
+	IgnoreNote   string
+	ValidNote    string
+	TextHeader   string
+	TextLine     string
+	TextLineNoBy string
+	TextAccept   string
+	TextIgnore   string
 }
 
 var inviteCopies = map[Locale]inviteCopy{
@@ -110,12 +102,6 @@ var inviteCopies = map[Locale]inviteCopy{
 	},
 }
 
-// InviteEmail — приглашение в команду.
-//
-//	teamName    "Acme Inc."
-//	inviteURL   "https://app.example.com/?invite=CODE"
-//	inviterName "Темирлан" (опционально)
-//	locale      "ru" | "en" | "kk" | "es" (пустой = ru)
 func InviteEmail(teamName, inviteURL, inviterName string, locale Locale) (subject, html, text string) {
 	c := inviteCopies[NormalizeLocale(string(locale))]
 
@@ -167,16 +153,15 @@ func InviteEmail(teamName, inviteURL, inviterName string, locale Locale) (subjec
 	return
 }
 
-// resetCopy — строки сброса пароля.
 type resetCopy struct {
-	Subject     string
-	Heading     string
-	Lead        string
-	Button      string
-	ValidNote   string
-	TextHeader  string
-	TextLead    string
-	TextValid   string
+	Subject    string
+	Heading    string
+	Lead       string
+	Button     string
+	ValidNote  string
+	TextHeader string
+	TextLead   string
+	TextValid  string
 }
 
 var resetCopies = map[Locale]resetCopy{
@@ -222,10 +207,6 @@ var resetCopies = map[Locale]resetCopy{
 	},
 }
 
-// PasswordResetEmail — ссылка для сброса пароля.
-//
-//	resetURL "https://app.example.com/reset?token=..."
-//	locale   "ru" | "en" | "kk" | "es"
 func PasswordResetEmail(resetURL string, locale Locale) (subject, html, text string) {
 	c := resetCopies[NormalizeLocale(string(locale))]
 	subject = c.Subject
@@ -256,17 +237,16 @@ func PasswordResetEmail(resetURL string, locale Locale) (subject, html, text str
 	return
 }
 
-// digestCopy — еженедельный отчёт.
 type digestCopy struct {
 	Subject     string
-	Heading     string // %s = displayName
+	Heading     string
 	Lead        string
 	Button      string
-	Unsubscribe string // %s = settings URL
-	TextHello   string // %s = displayName
+	Unsubscribe string
+	TextHello   string
 	TextLead    string
 	TextOpen    string
-	TextUnsub   string // %s = settings URL
+	TextUnsub   string
 }
 
 var digestCopies = map[Locale]digestCopy{
@@ -316,8 +296,6 @@ var digestCopies = map[Locale]digestCopy{
 	},
 }
 
-// WeeklyDigestEmail — короткий push о готовом еженедельном AI-отчёте.
-// Сам отчёт находится в дашборде; в письме только ссылка + summary.
 func WeeklyDigestEmail(displayName, dashboardURL, summaryLine string, locale Locale) (subject, html, text string) {
 	c := digestCopies[NormalizeLocale(string(locale))]
 	subject = c.Subject
@@ -360,8 +338,6 @@ func WeeklyDigestEmail(displayName, dashboardURL, summaryLine string, locale Loc
 	return
 }
 
-// htmlEscape — точечный escape для значений из user-input в HTML body.
-// Используется только для display_name (нет полного template engine).
 func htmlEscape(s string) string {
 	r := strings.NewReplacer(
 		"&", "&amp;",

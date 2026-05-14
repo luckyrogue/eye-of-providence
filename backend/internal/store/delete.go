@@ -6,8 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// DeleteUserData — добавочный contract: удаление всех событий пользователя.
-// Не часть EventStore интерфейса (опциональная capability).
 type UserDeleter interface {
 	DeleteUserData(ctx context.Context, userID string) error
 }
@@ -30,6 +28,6 @@ func (s *ClickHouseStore) DeleteUserData(ctx context.Context, userID string) err
 	if err != nil {
 		return err
 	}
-	// ALTER TABLE … DELETE — асинхронная mutation, но мы не ждём materializ-ции.
+
 	return s.conn.Exec(ctx, "ALTER TABLE events DELETE WHERE user_id = ?", uid)
 }

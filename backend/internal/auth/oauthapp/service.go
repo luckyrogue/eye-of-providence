@@ -6,17 +6,14 @@ import (
 	"github.com/google/uuid"
 )
 
-// Service — upsert пользователя после OAuth callback.
 type Service struct {
 	store Store
 }
 
-// New — конструктор. store == nil → in-memory режим (детерминированный UUID).
 func New(store Store) *Service {
 	return &Service{store: store}
 }
 
-// UpsertOAuthUser — шаги 1–3 из прежнего handler.go: identity → email → create.
 func (s *Service) UpsertOAuthUser(ctx context.Context, provider string, ext ExternalUser) (uuid.UUID, error) {
 	if s.store == nil {
 		return uuid.NewSHA1(uuid.NameSpaceURL, []byte(provider+":"+ext.Subject)), nil

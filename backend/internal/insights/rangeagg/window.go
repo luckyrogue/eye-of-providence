@@ -7,12 +7,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Store — минимум для окна [since, until) через diff двух AggregateByCategory.
 type Store interface {
 	AggregateByCategory(ctx context.Context, userID string, since time.Time) (map[string]uint64, error)
 }
 
-// AggregateWindow — agg(since) − agg(until) (см. insights handler).
 func AggregateWindow(ctx context.Context, st Store, userID string, since, until time.Time) (map[string]uint64, error) {
 	var full, tail map[string]uint64
 	g, gctx := errgroup.WithContext(ctx)

@@ -11,23 +11,20 @@ import (
 	"github.com/eye-of-providence/backend/internal/teams/teamflags"
 )
 
-// Service — super_admin plan limit overrides.
 type Service struct {
-	store   OverrideStore
-	plans   PlanDefaults
-	audit   AuditSink
+	store     OverrideStore
+	plans     PlanDefaults
+	audit     AuditSink
 	limitsMap func(plans.Limits) map[string]any
 }
 
-// Deps — wiring.
 type Deps struct {
-	Store      OverrideStore
-	Plans      PlanDefaults
-	Audit      AuditSink
+	Store       OverrideStore
+	Plans       PlanDefaults
+	Audit       AuditSink
 	LimitsAsMap func(plans.Limits) map[string]any
 }
 
-// New — constructor.
 func New(d Deps) *Service {
 	fn := d.LimitsAsMap
 	if fn == nil {
@@ -57,7 +54,6 @@ func keysOf(m map[string]any) []string {
 	return out
 }
 
-// Get — overrides + effective defaults.
 func (s *Service) Get(ctx context.Context, teamID uuid.UUID) (*PlanLimitsView, error) {
 	ov, plan, err := s.store.Read(ctx, teamID)
 	if err != nil {
@@ -72,13 +68,11 @@ func (s *Service) Get(ctx context.Context, teamID uuid.UUID) (*PlanLimitsView, e
 	}, nil
 }
 
-// PatchOutcome — результат PATCH (full reset vs partial).
 type PatchOutcome struct {
 	FullReset bool
 	Overrides map[string]any
 }
 
-// Patch — apply limits patch, full reset, or validation errors.
 func (s *Service) Patch(ctx context.Context, meta RequestMeta, actorID uuid.UUID, actorEmail string, teamID uuid.UUID, cmd PatchLimitsCmd) (*PatchOutcome, error) {
 	if !cmd.FullReset && cmd.Patch == nil {
 		return nil, ErrMissingLimits

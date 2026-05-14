@@ -9,7 +9,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// captureMailer — Mailer-spy для тестов: запоминает последний Send-вызов.
 type captureMailer struct {
 	gotTo, gotSubject, gotHTML, gotText string
 	failNext                            error
@@ -25,14 +24,12 @@ func (c *captureMailer) Send(_ context.Context, to, subject, html, text string) 
 	return nil
 }
 
-// errStore — store, всегда возвращает error. Симулирует DB outage.
 type errStore struct{}
 
 func (errStore) Lookup(_ context.Context, _ string, _ Locale) (*Template, error) {
 	return nil, errors.New("db down")
 }
 
-// staticStore — возвращает заранее заданный шаблон.
 type staticStore struct {
 	tpl *Template
 }

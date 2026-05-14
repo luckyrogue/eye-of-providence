@@ -5,14 +5,11 @@ import (
 	"strings"
 )
 
-// mockReport — детерминистичный отчёт для dev-режима, когда нет API key.
-// Имитирует стиль реального Gemini-отчёта (эмодзи, дружелюбный тон).
 func mockReport(nc *NumericContext) string {
 	totalSec := nc.TotalActiveMS / 1000
 	aiSec := nc.ByCategoryMS["ai"] / 1000
 	manualSec := nc.ByCategoryMS["manual"] / 1000
 
-	// Empty state — короткий, без формальной структуры
 	if totalSec == 0 && nc.EventsTotal == 0 {
 		return fmt.Sprintf(
 			"# 📊 Отчёт за %s\n\n"+
@@ -33,7 +30,6 @@ func mockReport(nc *NumericContext) string {
 	fmt.Fprintf(&sb, "# 📊 Отчёт за %s\n\n", nc.Period)
 	sb.WriteString("_Mock-режим: реальный Gemini не вызывался (нет API key)._\n\n")
 
-	// TL;DR
 	sb.WriteString("## ⚡ TL;DR\n\n")
 	if ratio >= 70 {
 		fmt.Fprintf(&sb, "Ты сильно полагался на AI — **%d%%** времени с подсказками. Активного времени **%s**.\n\n", ratio, formatDuration(totalSec))
@@ -45,7 +41,6 @@ func mockReport(nc *NumericContext) string {
 		fmt.Fprintf(&sb, "100%% ручной код за этот период. Активного времени **%s**.\n\n", formatDuration(totalSec))
 	}
 
-	// Ключевые цифры
 	sb.WriteString("## 📈 Ключевые цифры\n\n")
 	fmt.Fprintf(&sb, "- ⏱️ Активное время: **%s**\n", formatDuration(totalSec))
 	if aiSec > 0 {
@@ -57,7 +52,6 @@ func mockReport(nc *NumericContext) string {
 	fmt.Fprintf(&sb, "- 📊 Событий обработано: **%d**\n", nc.EventsTotal)
 	sb.WriteString("\n")
 
-	// Провайдеры
 	if len(nc.AICharsByProvider) > 0 {
 		sb.WriteString("## 🤖 По провайдерам AI\n\n")
 		for p, c := range nc.AICharsByProvider {
@@ -68,7 +62,6 @@ func mockReport(nc *NumericContext) string {
 		sb.WriteString("\n")
 	}
 
-	// Языки
 	top := nc.TopLanguages(5)
 	if len(top) > 0 {
 		sb.WriteString("## 🎯 По языкам\n\n")
@@ -83,7 +76,6 @@ func mockReport(nc *NumericContext) string {
 		sb.WriteString("\n")
 	}
 
-	// Рекомендация
 	sb.WriteString("## 🚀 Рекомендация\n\n")
 	if ratio > 70 {
 		sb.WriteString("AI-зависимость высокая. Попробуй раз в день написать функцию полностью руками — мышца не должна атрофироваться. ✨\n")

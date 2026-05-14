@@ -65,7 +65,7 @@ func TestCreateAPIToken_Format(t *testing.T) {
 	if !strings.HasPrefix(plain, "eop_") {
 		t.Errorf("plaintext = %q, want eop_ prefix", plain)
 	}
-	if len(plain) != 4+48 { // "eop_" + 24 bytes hex
+	if len(plain) != 4+48 {
 		t.Errorf("plaintext len = %d, want 52", len(plain))
 	}
 	if !strings.HasPrefix(plain, row.Prefix) || len(row.Prefix) != 8 {
@@ -123,7 +123,6 @@ func TestVerifyAPIToken_HappyPath(t *testing.T) {
 		t.Errorf("scope=%q, want read", gotScope)
 	}
 
-	// last_used_at должен быть set'нут
 	var lastUsed *time.Time
 	_ = pool.QueryRow(context.Background(),
 		"SELECT last_used_at FROM api_tokens WHERE user_id=$1", uid).Scan(&lastUsed)
@@ -165,7 +164,7 @@ func TestVerifyAPIToken_Expired(t *testing.T) {
 	pool := setupAuthDB(t)
 	uid := makeUser(t, pool)
 	plain, row, _ := CreateAPIToken(context.Background(), pool, uid, "e", "read", time.Hour)
-	// Force-expire через UPDATE — TTL минимум 1 час, тест не может ждать.
+
 	_, _ = pool.Exec(context.Background(),
 		"UPDATE api_tokens SET expires_at = now() - interval '1 second' WHERE id = $1", row.ID)
 	_, _, err := VerifyAPIToken(context.Background(), pool, plain)

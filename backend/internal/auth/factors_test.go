@@ -1,15 +1,5 @@
 //go:build integration
 
-// Запуск:
-//   EOP_TEST_PG_DSN=postgres://eop:eop_dev@localhost:5432/eop_test \
-//     go test -tags=integration ./internal/auth/...
-//
-// Тесты для CountAuthFactors — lockout-protection helper.
-//
-// Источник правды: factors.go + .team/qa-testplans/identity-linking.md §4 +
-// .team/product-decisions-confirmed.md (CountAuthFactors суммирует identities
-// + passkeys + password — passkeys в отдельной таблице).
-
 package auth
 
 import (
@@ -40,7 +30,7 @@ func setupFactorsDB(t *testing.T) *pgxpool.Pool {
 	if err := migrate.RunPostgres(ctx, dsn); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
-	// Чистим все таблицы, относящиеся к юзерам.
+
 	if _, err := pool.Exec(ctx, "TRUNCATE users, user_identities, webauthn_credentials CASCADE"); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
@@ -89,7 +79,7 @@ func insertPasskey(t *testing.T, pool *pgxpool.Pool, userID uuid.UUID) (passkeyI
 		t.Fatalf("rand: %v", err)
 	}
 	passkeyID = uuid.New()
-	// public_key — placeholder bytes (verify не вызывается в этом тесте).
+
 	pubKey := make([]byte, 65)
 	_, err := pool.Exec(context.Background(), `
 		INSERT INTO webauthn_credentials
@@ -170,13 +160,11 @@ func TestCountAuthFactors_ExcludeIdentity(t *testing.T) {
 	idGH := insertIdentity(t, pool, uid, "github", "gh-9")
 	insertIdentity(t, pool, uid, "google", "goog-9")
 
-	// Без exclude — 2 identities (no password).
 	f1, _ := CountAuthFactors(context.Background(), pool, uid, nil, nil)
 	if f1.Total() != 2 {
 		t.Fatalf("baseline Total=%d, want 2", f1.Total())
 	}
 
-	// Исключаем github identity → 1 identity remains.
 	f2, err := CountAuthFactors(context.Background(), pool, uid, &idGH, nil)
 	if err != nil {
 		t.Fatalf("count with exclude: %v", err)
@@ -195,13 +183,11 @@ func TestCountAuthFactors_ExcludePasskey(t *testing.T) {
 	insertIdentity(t, pool, uid, "github", "gh-only")
 	_, credID := insertPasskey(t, pool, uid)
 
-	// Baseline: 1 identity + 1 passkey = 2.
 	f1, _ := CountAuthFactors(context.Background(), pool, uid, nil, nil)
 	if f1.Total() != 2 {
 		t.Fatalf("baseline Total=%d, want 2", f1.Total())
 	}
 
-	// Exclude passkey (предстоящее удаление) → 1 identity remains.
 	f2, err := CountAuthFactors(context.Background(), pool, uid, nil, credID)
 	if err != nil {
 		t.Fatalf("count: %v", err)
@@ -219,8 +205,6 @@ func TestCountAuthFactors_ExcludeLast_TotalZero(t *testing.T) {
 	uid := insertUserWithPassword(t, pool, "last-id@example.com", false)
 	idOnly := insertIdentity(t, pool, uid, "github", "only-one")
 
-	// Удаление этой identity = lockout. CountAuthFactors должен показать Total()==0,
-	// чтобы handler.go вернул 400 last_auth_factor.
 	f, err := CountAuthFactors(context.Background(), pool, uid, &idOnly, nil)
 	if err != nil {
 		t.Fatalf("count: %v", err)
@@ -230,9 +214,6 @@ func TestCountAuthFactors_ExcludeLast_TotalZero(t *testing.T) {
 	}
 }
 
-// TestCountAuthFactors_PasswordPlusSingleIdentity_DropIdentity_StillSafe — 4c
-// сценарий из identity-linking.md: юзер с password + 1 identity, удаляет
-// identity → password остаётся, lockout не наступает.
 func TestCountAuthFactors_PasswordPlusSingleIdentity_DropIdentity_StillSafe(t *testing.T) {
 	pool := setupFactorsDB(t)
 	uid := insertUserWithPassword(t, pool, "safe@example.com", true)
@@ -250,7 +231,6 @@ func TestCountAuthFactors_PasswordPlusSingleIdentity_DropIdentity_StillSafe(t *t
 	}
 }
 
-// TestCountAuthFactors_NilPool — graceful degrade в in-memory mode.
 func TestCountAuthFactors_NilPool(t *testing.T) {
 	f, err := CountAuthFactors(context.Background(), nil, uuid.New(), nil, nil)
 	if err != nil {

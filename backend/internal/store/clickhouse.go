@@ -16,8 +16,6 @@ type ClickHouseStore struct {
 	conn driver.Conn
 }
 
-// OpenClickHouse — DSN формата clickhouse://user:pass@host:port/db[?secure=true].
-// Использует ParseDSN из clickhouse-go, чтобы поддерживать TLS (Cloud), compression, и другие опции.
 func OpenClickHouse(dsn string) (*ClickHouseStore, error) {
 	opts, err := clickhouse.ParseDSN(dsn)
 	if err != nil {
@@ -30,8 +28,7 @@ func OpenClickHouse(dsn string) (*ClickHouseStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Bounded ping — DialTimeout защищает только сам коннект, для read'а
-	// после установки соединения нужен явный deadline.
+
 	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := conn.Ping(pingCtx); err != nil {
@@ -122,9 +119,6 @@ func (s *ClickHouseStore) ListRecent(ctx context.Context, userID string, limit i
 	return out, rows.Err()
 }
 
-// dailyAggThreshold — окно после которого читать из events_daily_agg
-// (UTC-day granularity, 24× compression поверх hourly). Для коротких range'ей
-// продолжаем hourly т.к. tz-correct + точнее на edge-cases (вчера/сегодня).
 const dailyAggThreshold = 30 * 24 * time.Hour
 
 func (s *ClickHouseStore) AggregateByCategory(ctx context.Context, userID string, since time.Time) (map[string]uint64, error) {
@@ -133,9 +127,7 @@ func (s *ClickHouseStore) AggregateByCategory(ctx context.Context, userID string
 	if err != nil {
 		return nil, err
 	}
-	// Smart routing: long-range (≥30d) — daily MV (840× compressed); short-range
-	// — hourly MV (35×). SummingMergeTree держит partial rows до background
-	// merge'а — sum() даёт корректный результат всегда.
+
 	var query string
 	var arg time.Time
 	if time.Since(since) >= dailyAggThreshold {
@@ -165,8 +157,6 @@ func (s *ClickHouseStore) AggregateByCategory(ctx context.Context, userID string
 	return out, rows.Err()
 }
 
-// AggregateByCategoryBulk — один CH-запрос для всех userIDs.
-// Возвращает map[userID]map[category]ms. Если userIDs пустой — пустую map.
 func (s *ClickHouseStore) AggregateByCategoryBulk(ctx context.Context, userIDs []string, since time.Time) (map[string]map[string]uint64, error) {
 	defer metrics.ClickHouseRead.ObserveSince(time.Now())
 	out := map[string]map[string]uint64{}
@@ -184,7 +174,7 @@ func (s *ClickHouseStore) AggregateByCategoryBulk(ctx context.Context, userIDs [
 	if len(uids) == 0 {
 		return out, nil
 	}
-	// Same routing logic как в AggregateByCategory: long-range → daily MV.
+
 	var query string
 	var arg time.Time
 	if time.Since(since) >= dailyAggThreshold {
@@ -246,7 +236,7 @@ func (s *ClickHouseStore) Heatmap(ctx context.Context, userID string, since time
 		if err := rows.Scan(&dow, &hour, &cell.Category, &cell.MS); err != nil {
 			return nil, err
 		}
-		// ClickHouse toDayOfWeek: 1=Monday … 7=Sunday → конвертим в 0=Sunday … 6=Saturday
+
 		cell.DayOfWeek = int(dow % 7)
 		cell.Hour = int(hour)
 		out = append(out, cell)
@@ -338,7 +328,6 @@ func (s *ClickHouseStore) Close() error {
 	return s.conn.Close()
 }
 
-// Ping — для /healthz. Дешёвая проверка что коннект жив.
 func (s *ClickHouseStore) Ping(ctx context.Context) error {
 	return s.conn.Ping(ctx)
 }

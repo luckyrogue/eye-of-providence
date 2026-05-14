@@ -1,8 +1,5 @@
 //go:build integration
 
-// Запуск: EOP_TEST_PG_DSN=postgres://eop:eop_dev@localhost:5432/eop_test \
-//   go test -tags=integration ./internal/auth/...
-
 package auth
 
 import (
@@ -25,7 +22,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
-// setupAuthTestApp — Fiber app с MeRoutes + middleware.
 func setupAuthTestApp(t *testing.T) (*fiber.App, *pgxpool.Pool, MeService) {
 	t.Helper()
 	dsn := os.Getenv("EOP_TEST_PG_DSN")
@@ -59,7 +55,6 @@ func setupAuthTestApp(t *testing.T) (*fiber.App, *pgxpool.Pool, MeService) {
 	return app, pool, svc
 }
 
-// createTestUser — вставляет user в БД и issue'ит JWT.
 func createTestUser(t *testing.T, pool *pgxpool.Pool, secret, email string) (uuid.UUID, string) {
 	t.Helper()
 	id := uuid.New()
@@ -101,8 +96,6 @@ func doAuth(t *testing.T, app *fiber.App, method, path, token string, body any) 
 	return resp.StatusCode, raw
 }
 
-// --- /v1/me ---
-
 func TestMe_ReturnsProfile(t *testing.T) {
 	app, _, svc := setupAuthTestApp(t)
 	_, tok := createTestUser(t, svc.Pool, svc.JWTSecret, "me@example.com")
@@ -130,8 +123,6 @@ func TestMe_NoToken_401(t *testing.T) {
 		t.Errorf("status = %d, want 401", status)
 	}
 }
-
-// --- /v1/me/onboarding-status ---
 
 func TestOnboardingStatus_FreshUser(t *testing.T) {
 	app, _, svc := setupAuthTestApp(t)
@@ -168,7 +159,6 @@ func TestOnboardingDismiss_PersistsToDB(t *testing.T) {
 		t.Fatal("onboarding_dismissed_at не set")
 	}
 
-	// status теперь возвращает dismissed=true
 	_, body := doAuth(t, app, "GET", "/v1/me/onboarding-status", tok, nil)
 	var out struct {
 		Dismissed bool `json:"dismissed"`
@@ -183,15 +173,13 @@ func TestOnboardingDismiss_Idempotent(t *testing.T) {
 	app, pool, svc := setupAuthTestApp(t)
 	uid, tok := createTestUser(t, svc.Pool, svc.JWTSecret, "idem@example.com")
 
-	// Первый dismiss
 	doAuth(t, app, "POST", "/v1/me/onboarding/dismiss", tok, nil)
 	var first *time.Time
 	_ = pool.QueryRow(context.Background(),
 		"SELECT onboarding_dismissed_at FROM users WHERE id=$1", uid).Scan(&first)
 
-	time.Sleep(50 * time.Millisecond) // чтобы видна была разница, если бы она была
+	time.Sleep(50 * time.Millisecond)
 
-	// Второй dismiss — не должен затереть первый timestamp
 	status, _ := doAuth(t, app, "POST", "/v1/me/onboarding/dismiss", tok, nil)
 	if status != 200 {
 		t.Errorf("second dismiss status = %d", status)
@@ -203,8 +191,6 @@ func TestOnboardingDismiss_Idempotent(t *testing.T) {
 		t.Error("повторный dismiss переписал timestamp — не идемпотентно")
 	}
 }
-
-// --- /v1/me/locale ---
 
 func TestLocale_PatchesUserRow(t *testing.T) {
 	app, pool, svc := setupAuthTestApp(t)

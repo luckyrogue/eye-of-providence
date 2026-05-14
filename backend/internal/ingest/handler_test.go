@@ -23,7 +23,7 @@ func setupApp(t *testing.T) (*fiber.App, store.EventStore, string) {
 	st := store.NewMemory()
 	logger, _ := zap.NewDevelopment()
 	app := fiber.New()
-	RegisterRoutes(app, st, logger, testSecret, nil) // pool=nil → middleware skip's revocation
+	RegisterRoutes(app, st, logger, testSecret, nil)
 	tok, err := auth.IssueJWT(testSecret, "test-user-uuid", "u@example.com", "test", 0, time.Hour)
 	if err != nil {
 		t.Fatalf("issue jwt: %v", err)
@@ -48,8 +48,6 @@ func post(t *testing.T, app *fiber.App, tok string, body any) (int, []byte) {
 	return resp.StatusCode, out
 }
 
-// --- validEvent ---
-
 func TestValidEvent_HappyPath(t *testing.T) {
 	e := store.Event{AppBundle: "code", Source: "ide", Category: "manual", DurationMS: 1000}
 	if !batchapp.ValidEvent(e) {
@@ -59,12 +57,12 @@ func TestValidEvent_HappyPath(t *testing.T) {
 
 func TestValidEvent_RejectsMissingFields(t *testing.T) {
 	cases := []store.Event{
-		{Source: "ide", Category: "manual"},                         // empty bundle
-		{AppBundle: "code", Category: "manual"},                     // empty source
-		{AppBundle: "code", Source: "ide"},                          // empty category
-		{AppBundle: "code", Source: "x", Category: "manual"},        // unknown source
-		{AppBundle: "code", Source: "ide", Category: "spam"},        // unknown category
-		{AppBundle: "code", Source: "ide", Category: "manual", DurationMS: 25 * 60 * 60 * 1000}, // >24h (25h)
+		{Source: "ide", Category: "manual"},
+		{AppBundle: "code", Category: "manual"},
+		{AppBundle: "code", Source: "ide"},
+		{AppBundle: "code", Source: "x", Category: "manual"},
+		{AppBundle: "code", Source: "ide", Category: "spam"},
+		{AppBundle: "code", Source: "ide", Category: "manual", DurationMS: 25 * 60 * 60 * 1000},
 	}
 	for i, e := range cases {
 		if batchapp.ValidEvent(e) {
@@ -72,8 +70,6 @@ func TestValidEvent_RejectsMissingFields(t *testing.T) {
 		}
 	}
 }
-
-// --- HTTP ---
 
 func TestIngest_Unauthorized(t *testing.T) {
 	app, _, _ := setupApp(t)
@@ -100,7 +96,7 @@ func TestIngest_HappyPath(t *testing.T) {
 	if resp.Accepted != 2 || resp.Rejected != 0 {
 		t.Errorf("accepted=%d rejected=%d, want 2/0", resp.Accepted, resp.Rejected)
 	}
-	// store должен иметь 2 события
+
 	events, _ := st.ListRecent(t.Context(), "test-user-uuid", 10)
 	if len(events) != 2 {
 		t.Errorf("store has %d events, want 2", len(events))
@@ -123,9 +119,9 @@ func TestIngest_MixOfValidAndInvalid(t *testing.T) {
 	app, _, tok := setupApp(t)
 	body := map[string]any{
 		"events": []map[string]any{
-			{"app_bundle": "code", "source": "ide", "category": "manual", "duration_ms": 1000}, // valid
-			{"app_bundle": "code", "source": "fake", "category": "manual"},                    // invalid source
-			{"app_bundle": "code", "source": "ide", "category": "manual", "duration_ms": 1000}, // valid
+			{"app_bundle": "code", "source": "ide", "category": "manual", "duration_ms": 1000},
+			{"app_bundle": "code", "source": "fake", "category": "manual"},
+			{"app_bundle": "code", "source": "ide", "category": "manual", "duration_ms": 1000},
 		},
 	}
 	status, raw := post(t, app, tok, body)
@@ -143,7 +139,7 @@ func TestIngest_MixOfValidAndInvalid(t *testing.T) {
 }
 
 func TestIngest_OverridesUserIDFromToken(t *testing.T) {
-	// Клиент пытается выдать чужой user_id; должен быть переписан токеном.
+
 	app, st, tok := setupApp(t)
 	body := map[string]any{
 		"events": []map[string]any{

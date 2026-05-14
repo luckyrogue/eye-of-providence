@@ -46,7 +46,7 @@ func TestVerifySignature_BadFormat(t *testing.T) {
 		"",
 		"sha256=notHex",
 		"md5=" + signPayload("k", []byte("x")),
-		signPayload("k", []byte("x")), // без префикса
+		signPayload("k", []byte("x")),
 	}
 	for _, h := range cases {
 		if VerifySignature("k", []byte("x"), h) {
@@ -76,7 +76,7 @@ func TestSignPayload_Format(t *testing.T) {
 }
 
 func TestSignPayload_KnownVector(t *testing.T) {
-	// Known answer: HMAC-SHA256("key", "data") = 5031fe3d989c6d1537a013fa6e739da23463fdaec3b70137d828e36ace221bd0
+
 	mac := hmac.New(sha256.New, []byte("key"))
 	mac.Write([]byte("data"))
 	want := hex.EncodeToString(mac.Sum(nil))
@@ -95,7 +95,7 @@ func TestGenerateSecret_Unique(t *testing.T) {
 	if !strings.HasPrefix(a, "whk_") {
 		t.Errorf("secret %q missing whk_ prefix", a)
 	}
-	if len(a) != 4+64 { // whk_ + 32 bytes hex
+	if len(a) != 4+64 {
 		t.Errorf("secret len=%d, want 68", len(a))
 	}
 }

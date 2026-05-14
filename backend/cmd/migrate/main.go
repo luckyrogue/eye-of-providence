@@ -1,21 +1,3 @@
-// cmd/migrate — CLI для ручного управления миграциями (up / down / force / version).
-//
-// Auto-migrate при старте API делает только Up. Down и Force — деструктивны
-// и должны идти через ручной запуск с человеком в loop'е.
-//
-// Usage:
-//
-//	migrate -db postgres up
-//	migrate -db postgres down 1            # шаг назад на 1 миграцию
-//	migrate -db postgres goto 3            # привести БД к версии 3 (вверх или вниз)
-//	migrate -db postgres force 5           # пометить N как applied БЕЗ запуска SQL
-//	                                       # (нужно при первом deploy этой версии
-//	                                       # на старую БД, где schema_migrations
-//	                                       # ещё нет, но таблицы уже накачены)
-//	migrate -db postgres version           # показать текущую версию + dirty flag
-//	migrate -db clickhouse up
-//
-// DSN читаются из EOP_POSTGRES_DSN / EOP_CLICKHOUSE_DSN, либо передаётся флагом -dsn.
 package main
 
 import (
@@ -37,8 +19,6 @@ func main() {
 	}
 }
 
-// run возвращает ошибку вместо os.Exit'а — это даёт defer'ам корректно
-// отработать и упрощает тестирование (в будущем).
 func run() error {
 	db := flag.String("db", "", "target database: postgres | clickhouse")
 	dsn := flag.String("dsn", "", "DSN; default: EOP_POSTGRES_DSN или EOP_CLICKHOUSE_DSN")
@@ -48,7 +28,7 @@ func run() error {
 	args := flag.Args()
 	if *db == "" || len(args) == 0 {
 		usage()
-		os.Exit(2) //nolint:gocritic // намеренный exit: usage без defer'ов
+		os.Exit(2)
 	}
 
 	if *dsn == "" {
@@ -79,8 +59,7 @@ func run() error {
 		}
 		return reportErr(cmd, m.Up())
 	case "down":
-		// `down N` → шаг на N миграций назад. Без аргумента — ВСЁ. Опасно;
-		// требуем явный confirm через env var.
+
 		if len(rest) == 0 {
 			return errors.New("down without arg = revert ALL migrations.\n  Если ты уверен — `down all` (требует EOP_MIGRATE_CONFIRM=yes-i-mean-it)")
 		}
@@ -144,7 +123,6 @@ func newMigrator(db, dsn string) (*migrate.Migrate, error) {
 	return nil, fmt.Errorf("unknown db %q", db)
 }
 
-// reportErr — печатает короткий success-сигнал и возвращает err для main.
 func reportErr(cmd string, err error) error {
 	if err == nil {
 		fmt.Printf("%s: ok\n", cmd)

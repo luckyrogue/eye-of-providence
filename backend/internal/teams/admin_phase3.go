@@ -1,19 +1,3 @@
-// admin_phase3.go — super_admin endpoints для Phase 3 admin workstream.
-//
-// Покрывает:
-//   * /v1/admin/email-templates       — matrix + read/upsert/delete (override
-//                                       layer над embedded baseline)
-//   * /v1/admin/teams/:id/flags       — JSONB feature flags per-team
-//   * /v1/admin/teams/:id/plan-limits — JSONB numeric overrides per-team
-//   * /v1/admin/webhooks              — cross-team webhooks view (read-only)
-//   * /v1/admin/api-tokens            — cross-user tokens view (prefix only)
-//
-// Все mutation endpoints пишут audit log через s.Audit (action names per
-// .team/product-audit-taxonomy.md). Все защищены requireSuperAdmin.
-//
-// Admin email templates — application layer в internal/teams/emailtemplates;
-// HTTP handlers здесь только парсят запрос и маппят ошибки в httperr.
-
 package teams
 
 import (
@@ -33,8 +17,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/teams/teamflags"
 	"github.com/eye-of-providence/backend/internal/teams/teamplanlimits"
 )
-
-// --- Email templates (thin HTTP adapters → emailtemplates.Service) ---
 
 func (s Service) handleAdminListEmailTemplates(c *fiber.Ctx) error {
 	if !s.requireSuperAdmin(c) {
@@ -140,8 +122,6 @@ func (s Service) mapEmailTemplateHTTPError(c *fiber.Ctx, err error) error {
 	}
 }
 
-// --- Team flags (thin HTTP → teamflags.Service) ---
-
 func (s Service) handleAdminGetTeamFlags(c *fiber.Ctx) error {
 	if !s.requireSuperAdmin(c) {
 		return nil
@@ -206,7 +186,6 @@ func (s Service) handleAdminPatchTeamFlags(c *fiber.Ctx) error {
 	})
 }
 
-// mapFlagError — переводит plans.FlagError → httperr response.
 func mapFlagError(c *fiber.Ctx, err error) error {
 	var fe *plans.FlagError
 	if !errors.As(err, &fe) {
@@ -232,8 +211,6 @@ func mapFlagError(c *fiber.Ctx, err error) error {
 	}
 	return httperr.Send(c, pd)
 }
-
-// --- Plan-limit overrides (thin HTTP → teamplanlimits.Service) ---
 
 func (s Service) handleAdminGetTeamPlanLimits(c *fiber.Ctx) error {
 	if !s.requireSuperAdmin(c) {
@@ -313,8 +290,6 @@ func (s Service) handleAdminPatchTeamPlanLimits(c *fiber.Ctx) error {
 		"overrides": out.Overrides,
 	})
 }
-
-// --- Cross-team webhooks / API tokens (thin HTTP → adminlists.Service) ---
 
 func (s Service) handleAdminListAllWebhooks(c *fiber.Ctx) error {
 	if !s.requireSuperAdmin(c) {

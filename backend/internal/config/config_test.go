@@ -6,7 +6,7 @@ import (
 )
 
 func TestValidate_DevelopmentRejectsDefaultSecret(t *testing.T) {
-	// Default JWT secret опасен в любом env — даже dev может случайно оказаться в публике.
+
 	c := Config{Env: "development", JWTSecret: defaultJWTSecret, AllowedOrigins: "*"}
 	if err := c.Validate(); err == nil {
 		t.Fatal("dev with default JWT secret should fail validation")
@@ -90,9 +90,6 @@ func TestValidate_ProductionShortSecretRejected(t *testing.T) {
 	}
 }
 
-// Universal hardening: короткий JWT secret должен fail'ить ВО ВСЕХ env,
-// не только в production. Раньше dev-сборка с 8-char secret'ом проходила
-// валидацию и могла улететь на staging через мисдеплой.
 func TestValidate_DevelopmentShortSecretRejected(t *testing.T) {
 	c := Config{
 		Env:            "development",

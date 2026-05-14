@@ -19,8 +19,6 @@ func main() {
 		return c.JSON(fiber.Map{"status": "ok", "service": "auth"})
 	})
 
-	// TODO Phase 1: GitHub OAuth, JWT issue, sessions в Postgres.
-
 	logger.Info("auth starting", zap.String("addr", cfg.HTTPAddr))
 	if err := app.Listen(cfg.HTTPAddr); err != nil {
 		logger.Fatal("auth exited", zap.Error(err))

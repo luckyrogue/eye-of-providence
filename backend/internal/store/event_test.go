@@ -7,9 +7,6 @@ import (
 	"time"
 )
 
-// TestEventCrossPlatformContract — фиксирует JSON-схему Event, чтобы macOS и
-// Windows agents (Rust) генерили эквивалентный payload. Если полей или формата
-// изменилось — тест падает, и agent code должен быть обновлён.
 func TestEventCrossPlatformContract(t *testing.T) {
 	e := Event{
 		TS:           time.Date(2026, 5, 4, 16, 0, 0, 0, time.UTC),
@@ -30,15 +27,12 @@ func TestEventCrossPlatformContract(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Контракт: snake_case JSON, omitempty для опциональных AI/project полей.
 	want := `{"ts":"2026-05-04T16:00:00Z","user_id":"12345678-1234-1234-1234-123456789012","device_id":"00000000-0000-0000-0000-000000000001","session_id":"","app_bundle":"com.microsoft.VSCode","category":"manual","source":"os","file_lang":"rust","duration_ms":30000,"chars_in":120,"lines_added":5,"lines_removed":2}`
 	if string(got) != want {
 		t.Errorf("contract drift detected\n got: %s\nwant: %s", got, want)
 	}
 }
 
-// TestEventStoreInsertContract — все реализации EventStore должны принимать
-// одинаковую структуру и возвращать её без потерь.
 func TestEventStoreInsertContract(t *testing.T) {
 	ctx := context.Background()
 	mem := NewMemory()

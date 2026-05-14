@@ -12,30 +12,12 @@ import (
 	"github.com/eye-of-providence/backend/internal/cache"
 )
 
-// CachedEventStore — decorator поверх EventStore. Read-heavy aggregations
-// идут через Redis cache (TTL 5-10 мин). Mutating ops (Insert) проходят сквозь
-// напрямую — eventual consistency приемлема для dashboard'а.
-//
-// Methods для cache (most-expensive aggregations):
-//
-//	AggregateByCategory       — TTL 10m
-//	AggregateByCategoryBulk   — TTL 5m (multi-user, скорее меняется)
-//	LanguageBreakdown         — TTL 10m
-//	DailyTrend                — TTL 5m
-//	Heatmap                   — TTL 10m
-//
-// Skipped (always-fresh OR low value):
-//
-//	ListRecent                — events меняются constantly
-//	ActiveUserIDs             — admin-only, infrequent
-//	Insert / DeleteUserData   — mutating, no point
 type CachedEventStore struct {
 	Inner  EventStore
 	Cache  *cache.Cache
 	Logger *zap.Logger
 }
 
-// NewCached — wraps store с cache. Если c == nil — возвращает store as-is.
 func NewCached(inner EventStore, c *cache.Cache, logger *zap.Logger) EventStore {
 	if c == nil || c.Client == nil {
 		return inner
@@ -67,9 +49,6 @@ func (s *CachedEventStore) Close() error {
 	return s.Inner.Close()
 }
 
-// DeleteUserData — pass-through если inner store implements UserDeleter.
-// Также инвалидируем cached entries за этого user'а через scan + delete
-// (best-effort; если scan падает, TTL очистит eventually).
 func (s *CachedEventStore) DeleteUserData(ctx context.Context, userID string) error {
 	d, ok := s.Inner.(UserDeleter)
 	if !ok {
@@ -82,9 +61,6 @@ func (s *CachedEventStore) DeleteUserData(ctx context.Context, userID string) er
 	return nil
 }
 
-// invalidateUser — best-effort удаление всех cache keys для user'а. Match по
-// suffix ":{userID}:" (мы пишем prefix:UID:since в SET). Использует SCAN
-// (не KEYS) чтобы не блокировать Redis на большом keyspace.
 func (s *CachedEventStore) invalidateUser(ctx context.Context, userID string) {
 	if s.Cache == nil || s.Cache.Client == nil {
 		return
@@ -117,7 +93,7 @@ func (s *CachedEventStore) AggregateByCategory(ctx context.Context, userID strin
 }
 
 func (s *CachedEventStore) AggregateByCategoryBulk(ctx context.Context, userIDs []string, since time.Time) (map[string]map[string]uint64, error) {
-	// Стабильный key из sorted userIDs — порядок caller'а не важен.
+
 	sorted := append([]string(nil), userIDs...)
 	sort.Strings(sorted)
 	key := fmt.Sprintf("aggbulk:%s:%d", strings.Join(sorted, ","), since.Unix())

@@ -25,7 +25,7 @@ func (p pgMeProfile) LoadExtras(ctx context.Context, userID uuid.UUID) (*meapp.P
 		"SELECT github_login, global_role, display_name, last_name, phone, locale, password_hash IS NOT NULL, created_at FROM users WHERE id = $1", userID,
 	).Scan(&ghLogin, &globalRole, &displayName, &lastName, &phone, &locale, &hasPassword, &createdAt)
 	if err != nil {
-		// Совместимость с прежним handler: ошибки обогащения профиля не ломают GET /v1/me.
+
 		return nil, nil
 	}
 	ex := &meapp.ProfileExtras{

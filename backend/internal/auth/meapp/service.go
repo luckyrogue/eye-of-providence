@@ -10,24 +10,20 @@ import (
 
 var supportedLocales = map[string]bool{"ru": true, "en": true, "kk": true, "es": true}
 
-// Service — GET /v1/me profile + locale + API tokens use cases.
 type Service struct {
 	profile ProfileReader
 	tokens  TokenWriter
 }
 
-// Deps — wiring.
 type Deps struct {
 	Profile ProfileReader
 	Tokens  TokenWriter
 }
 
-// New — constructor.
 func New(d Deps) *Service {
 	return &Service{profile: d.Profile, tokens: d.Tokens}
 }
 
-// GetProfile — JWT claims + optional DB extras.
 func (s *Service) GetProfile(ctx context.Context, claims SessionClaims) (map[string]any, error) {
 	out := map[string]any{
 		"user_id":  claims.UserID,
@@ -73,7 +69,6 @@ func (s *Service) GetProfile(ctx context.Context, claims SessionClaims) (map[str
 	return out, nil
 }
 
-// PatchLocale — валидация + UPDATE.
 func (s *Service) PatchLocale(ctx context.Context, userID uuid.UUID, locale string) (string, error) {
 	if !supportedLocales[locale] {
 		return "", ErrUnsupportedLocale
@@ -87,7 +82,6 @@ func (s *Service) PatchLocale(ctx context.Context, userID uuid.UUID, locale stri
 	return locale, nil
 }
 
-// ListAPITokens — пустой slice если repo nil.
 func (s *Service) ListAPITokens(ctx context.Context, userID uuid.UUID) ([]TokenRow, error) {
 	if s.tokens == nil {
 		return []TokenRow{}, nil
@@ -95,14 +89,12 @@ func (s *Service) ListAPITokens(ctx context.Context, userID uuid.UUID) ([]TokenR
 	return s.tokens.List(ctx, userID)
 }
 
-// CreateAPITokenInput — POST body.
 type CreateAPITokenInput struct {
 	Name    string
 	Scope   string
 	TTLDays int
 }
 
-// CreateAPIToken — возвращает plaintext + metadata row.
 func (s *Service) CreateAPIToken(ctx context.Context, userID uuid.UUID, in CreateAPITokenInput) (plaintext string, meta TokenRow, err error) {
 	if s.tokens == nil {
 		return "", TokenRow{}, ErrDBNotConfigured
@@ -122,7 +114,6 @@ func (s *Service) CreateAPIToken(ctx context.Context, userID uuid.UUID, in Creat
 	return s.tokens.Create(ctx, userID, name, scope, ttl)
 }
 
-// RevokeAPIToken — soft revoke.
 func (s *Service) RevokeAPIToken(ctx context.Context, userID, tokenID uuid.UUID) (bool, error) {
 	if s.tokens == nil {
 		return false, ErrDBNotConfigured

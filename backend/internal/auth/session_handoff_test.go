@@ -1,25 +1,5 @@
 //go:build integration
 
-// Запуск:
-//   EOP_TEST_PG_DSN=postgres://eop:eop_dev@localhost:5432/eop_test \
-//     go test -tags=integration ./internal/auth/...
-//
-// Phase 2 endpoint — GET /v1/me/session-handoff.
-//
-// Контракт (из .team/product-decisions-confirmed.md §3):
-//   1. OAuth callback ставит HttpOnly cookie `eop_session_handoff` (TTL 30 sec)
-//      и редиректит на /auth/complete?return_to=...
-//   2. Frontend на /auth/complete делает GET /v1/me/session-handoff с cookie
-//   3. Backend:
-//      - читает cookie, валидирует ([id, JWT body])
-//      - возвращает {token: "<JWT>"}
-//      - очищает cookie (Set-Cookie: eop_session_handoff=; Max-Age=0)
-//   4. Single-use — повторный вызов → 401
-//   5. TTL ≤ 30 секунд
-//
-// Backend: GET /v1/me/session-handoff регистрируется до /v1/me + JWT middleware
-// (см. auth.RegisterSessionHandoffRoute в cmd/api); тест повторяет тот же порядок.
-
 package auth
 
 import (
@@ -97,7 +77,6 @@ func doHandoff(t *testing.T, app *fiber.App, cookieValue string) (status int, hd
 	return resp.StatusCode, resp.Header, body
 }
 
-// TestSessionHandoff_NoCookie_401 — без cookie endpoint должен ответить 401.
 func TestSessionHandoff_NoCookie_401(t *testing.T) {
 	app, _, _ := setupHandoffApp(t)
 	status, _, body := doHandoff(t, app, "")
@@ -109,19 +88,11 @@ func TestSessionHandoff_NoCookie_401(t *testing.T) {
 	}
 }
 
-// TestSessionHandoff_ValidCookie_ReturnsToken — happy path.
-// Endpoint должен возвратить { token: "<JWT>" } и установить Set-Cookie с
-// Max-Age=0 (one-shot — клиент дальше использует только LocalStorage).
 func TestSessionHandoff_ValidCookie_ReturnsToken(t *testing.T) {
 	app, pool, svc := setupHandoffApp(t)
 	uid, jwt := makeUserAndToken(t, pool, "handoff@example.com", svc.JWTSecret, true)
 	_ = uid
 
-	// Бекенду нужен какой-то server-side state для cookie value (мы храним JWT
-	// прямо в cookie body — самый простой вариант, либо session_id → Redis).
-	// Тест допускает оба контракта: cookie value = JWT (читается напрямую) или
-	// cookie value = opaque session id (требует Redis). Для scaffold-этапа мы
-	// предполагаем "JWT прямо в cookie".
 	status, hdr, body := doHandoff(t, app, jwt)
 	if status == http.StatusNotFound {
 		t.Skipf("endpoint not registered yet (404). Body=%s", string(body))
@@ -140,7 +111,6 @@ func TestSessionHandoff_ValidCookie_ReturnsToken(t *testing.T) {
 		t.Error("response missing token")
 	}
 
-	// Проверяем clear-cookie header (Max-Age=0 или Expires в прошлом).
 	foundClear := false
 	for _, sc := range hdr.Values("Set-Cookie") {
 		if !contains(sc, sessionHandoffCookie) {
@@ -158,14 +128,6 @@ func TestSessionHandoff_ValidCookie_ReturnsToken(t *testing.T) {
 	}
 }
 
-// TestSessionHandoff_OneShot — после успешного handoff повторный вызов с тем же
-// cookie должен дать 401 (cookie очищена backend'ом, клиент его уже отбросил).
-//
-// В реальности тест проверяет server-side state: если cookie = JWT прямо,
-// "one-shot" логика может быть лишь cookie-side (клиент перестал слать).
-// Если cookie = session_id в Redis, backend удаляет ключ и 2-й call вернёт 401.
-//
-// Для строгости теста подразумеваем второй вариант (Redis-backed).
 func TestSessionHandoff_OneShot(t *testing.T) {
 	app, pool, svc := setupHandoffApp(t)
 	_, jwt := makeUserAndToken(t, pool, "oneshot@example.com", svc.JWTSecret, true)
@@ -178,14 +140,9 @@ func TestSessionHandoff_OneShot(t *testing.T) {
 		t.Skipf("first call did not succeed (status=%d) — cannot assert one-shot behavior", status1)
 	}
 
-	// Повторный вызов с тем же cookie. Если backend использует session_id с
-	// удалением — должен быть 401. Если просто cookie-with-JWT — этот тест
-	// безопасно НЕ может фейлить (backend trusted cookie value), и мы пометим
-	// поведение как to-document.
 	status2, _, body2 := doHandoff(t, app, jwt)
 	if status2 == http.StatusOK {
-		// Может означать "cookie-as-JWT" подход. Это слабее с т.з. безопасности
-		// (cookie не one-shot), но не катастрофа.
+
 		t.Logf("note: handoff returned 200 on second call — server is NOT enforcing single-use server-side. Body=%s", string(body2))
 		return
 	}
@@ -194,17 +151,9 @@ func TestSessionHandoff_OneShot(t *testing.T) {
 	}
 }
 
-// TestSessionHandoff_ExpiredCookie — cookie старше 30 секунд → 401.
-//
-// Этот тест должен инжектить "stale" cookie. Если backend хранит TTL в Redis
-// (session_id → JWT), миниредис FastForward делает свою работу. Если backend
-// хранит TTL прямо в cookie (Max-Age via Set-Cookie), browser-side reject —
-// тест не может это эмулировать без MITM, поэтому скипаем с пояснением.
 func TestSessionHandoff_ExpiredCookie(t *testing.T) {
 	t.Skip("requires Redis-backed session_id (otherwise TTL enforced browser-side via Max-Age; out of scope for httptest)")
 }
-
-// === helper ===
 
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || stringContains(s, sub))

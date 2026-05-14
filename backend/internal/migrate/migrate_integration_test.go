@@ -1,13 +1,5 @@
 //go:build integration
 
-// Запуск:
-//   EOP_TEST_PG_MIGRATE_DSN=postgres://eop:eop_dev@localhost:5432/eop_migrate_test \
-//     go test -tags=integration ./internal/migrate/...
-//
-// ВАЖНО: эти тесты deлают `m.Down()` (полный сброс схемы) и должны работать
-// против ВЫДЕЛЕННОЙ БД. Если запустить против общего EOP_TEST_PG_DSN, с которым
-// идут teams-integration-тесты, будут гонки. Поэтому отдельный env var.
-
 package migrate
 
 import (
@@ -29,19 +21,15 @@ func dsnFromEnv(t *testing.T) string {
 	return dsn
 }
 
-// TestPostgresRoundtrip — up до головы, потом down all, потом up снова.
-// Если хоть одна .down.sql битая — тест поймает.
 func TestPostgresRoundtrip(t *testing.T) {
 	dsn := dsnFromEnv(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	// 1) Up — должен сходиться к latest.
 	if err := RunPostgres(ctx, dsn); err != nil {
 		t.Fatalf("first up: %v", err)
 	}
 
-	// 2) Снять текущую версию.
 	m, err := NewPostgres(dsn)
 	if err != nil {
 		t.Fatalf("new migrator: %v", err)
@@ -60,12 +48,10 @@ func TestPostgresRoundtrip(t *testing.T) {
 	}
 	t.Logf("after up: version=%d", v)
 
-	// 3) Down all.
 	if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		t.Fatalf("down all: %v", err)
 	}
 
-	// 4) Up снова — должно быть ровно как было.
 	if err := RunPostgres(ctx, dsn); err != nil {
 		t.Fatalf("second up: %v", err)
 	}
@@ -88,8 +74,6 @@ func TestPostgresRoundtrip(t *testing.T) {
 	}
 }
 
-// TestPostgresStepByStep — гарантирует, что каждая отдельная up.sql + down.sql
-// валидна в обе стороны. Идём по одной от 0 до head, потом обратно по одной.
 func TestPostgresStepByStep(t *testing.T) {
 	dsn := dsnFromEnv(t)
 
@@ -99,12 +83,10 @@ func TestPostgresStepByStep(t *testing.T) {
 	}
 	defer func() { _, _ = m.Close() }()
 
-	// Сбросить в 0.
 	if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		t.Fatalf("reset down: %v", err)
 	}
 
-	// Up по одной.
 	for i := 0; i < 100; i++ {
 		err := m.Steps(1)
 		if errors.Is(err, migrate.ErrNoChange) || errors.Is(err, os.ErrNotExist) {
@@ -119,7 +101,6 @@ func TestPostgresStepByStep(t *testing.T) {
 		t.Fatalf("head version: %v", err)
 	}
 
-	// Down по одной до 0.
 	for i := 0; i < 100; i++ {
 		err := m.Steps(-1)
 		if errors.Is(err, migrate.ErrNoChange) {
@@ -128,13 +109,12 @@ func TestPostgresStepByStep(t *testing.T) {
 		if err != nil {
 			t.Fatalf("step down #%d: %v", i+1, err)
 		}
-		// После полного отката Version() возвращает ErrNilVersion — выходим.
+
 		if _, _, verr := m.Version(); errors.Is(verr, migrate.ErrNilVersion) {
 			break
 		}
 	}
 
-	// Up обратно до head.
 	for i := 0; i < 100; i++ {
 		err := m.Steps(1)
 		if errors.Is(err, migrate.ErrNoChange) || errors.Is(err, os.ErrNotExist) {

@@ -1,16 +1,3 @@
-// Package prcomment — постит комментарии в PR/MR с aggregate AI-attribution
-// данными по commits. Pull-based (user owns provider token):
-//
-//	POST /v1/integrations/pr-comment
-//	  Authorization: Bearer <eop_token>
-//	  body: {
-//	    provider: "github" | "gitlab",
-//	    host:     "https://gitlab.example.com" (для self-hosted GL; GH default api.github.com)
-//	    repo:     "owner/name" (GitHub) | "namespace/project" (GitLab)
-//	    pr_number: int (GitHub PR | GitLab MR IID)
-//	    shas:     ["abc1234", ...] commits в PR
-//	    provider_token: "ghp_xxx" / "glpat-xxx"
-//	  }
 package prcomment
 
 import (
@@ -20,25 +7,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Aggregate — итоговые числа по PR/MR. Frontend / Slack / comment-formatter
-// все используют один shape.
 type Aggregate struct {
-	TotalCommits   int    `json:"total_commits"`
-	WithAttribution int   `json:"with_attribution"` // commits где ai_lines_pct != null
-	LinesAdded     int    `json:"lines_added"`
-	LinesRemoved   int    `json:"lines_removed"`
-	// AIPercentWeighted — weighted average ai_lines_pct по lines_added.
-	// nil если все commits без attribution (агент не установлен / скан ещё не
-	// прошёл).
+	TotalCommits    int `json:"total_commits"`
+	WithAttribution int `json:"with_attribution"`
+	LinesAdded      int `json:"lines_added"`
+	LinesRemoved    int `json:"lines_removed"`
+
 	AIPercentWeighted *float64 `json:"ai_percent,omitempty"`
 }
 
-// AggregateBySHA — query commits по списку SHA для конкретного user'а
-// (auth-context). Скоп — last 100 commits через user_id ownership.
-//
-// Defensive: SHA matching сделан через ANY($1) чтобы избежать SQL-injection
-// + дешёвой памяти. Дубликаты в shas игнорируются (DISTINCT не нужен —
-// commits уникальны по (project_id, sha)).
 func AggregateBySHA(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, shas []string) (Aggregate, error) {
 	if len(shas) == 0 {
 		return Aggregate{}, nil

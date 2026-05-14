@@ -34,7 +34,7 @@ func TestHash_DifferentEachTime(t *testing.T) {
 	if h1 == h2 {
 		t.Error("bcrypt should produce different hashes for the same password (salt)")
 	}
-	// Но оба должны проверяться корректно.
+
 	if !VerifyPassword(h1, "same-pass") || !VerifyPassword(h2, "same-pass") {
 		t.Error("both hashes should verify the same password")
 	}

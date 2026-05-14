@@ -1,24 +1,3 @@
-// store.go — DB-backed override layer для transactional email templates.
-//
-// Дизайн (Phase 3 admin):
-//   * Embedded baseline в templates.go — source of truth для всех новых
-//     инсталляций; код-deploys обновляют baseline без миграций.
-//   * `email_templates` table (migration 022) — super_admin overrides per
-//     (key, locale). Row exists ⇒ rendering use её subject+body; row missing
-//     или DB unreachable ⇒ fallback на embedded baseline (см.
-//     .team/product-acceptance/admin-email-templates.md Scenarios 2, 3).
-//   * `TemplateStore` interface — позволяет тестам подменить хранилище без
-//     запуска Postgres. `NilStore` всегда возвращает (nil, nil) ⇒ caller
-//     знает, что нужно fallback.
-//
-// Render: `subject` через `text/template`, `body_html` через `html/template`
-// (auto-escapes user input — критично для recipient-controlled vars типа
-// {{team_name}} в team_invite, см. QA bug review). `body_text` тоже через
-// `text/template`. Variable substitution — стандартный Go template (`{{.ResetURL}}`
-// и т.д.). В `body_html` избегайте полей вроде `.Name`: `html/template` трактует
-// их в HTML-контексте и парсинг падает. Mailer caller передаёт map[string]any с
-// уже подготовленными ключами.
-
 package mailer
 
 import (
@@ -35,25 +14,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// TemplateKey — известные имена шаблонов. Они же значения колонки `key` в
-// email_templates table (migration 022). Список фиксирован — adding a new
-// kind email требует backend changes (см. admin-email-templates.md scope).
 const (
 	TemplateKeyPasswordReset         = "password_reset"
 	TemplateKeyTeamInvite            = "team_invite"
 	TemplateKeySubscriptionActivated = "subscription_activated"
 )
 
-// SupportedTemplateKeys — для валидации входа в admin endpoints. Hardcoded
-// allowlist; модификация только через миграцию + backend code.
 var SupportedTemplateKeys = []string{
 	TemplateKeyPasswordReset,
 	TemplateKeyTeamInvite,
 	TemplateKeySubscriptionActivated,
 }
 
-// SupportedLocales — те же 4 локали, что в Locale enum. Returning string
-// чтобы caller'у было удобно сравнивать без NormalizeLocale.
 var SupportedLocales = []string{
 	string(LocaleRU),
 	string(LocaleEN),
@@ -61,8 +33,6 @@ var SupportedLocales = []string{
 	string(LocaleES),
 }
 
-// IsSupportedTemplateKey — для admin handler validation. Returns false для
-// произвольных строк типа "; DROP TABLE".
 func IsSupportedTemplateKey(s string) bool {
 	for _, k := range SupportedTemplateKeys {
 		if s == k {
@@ -72,7 +42,6 @@ func IsSupportedTemplateKey(s string) bool {
 	return false
 }
 
-// IsSupportedLocale — same, для locale ввода.
 func IsSupportedLocale(s string) bool {
 	for _, l := range SupportedLocales {
 		if s == l {
@@ -82,7 +51,6 @@ func IsSupportedLocale(s string) bool {
 	return false
 }
 
-// Template — overrideROW, как хранится в DB и возвращается админ-UI.
 type Template struct {
 	Key       string
 	Locale    string
@@ -93,43 +61,29 @@ type Template struct {
 	UpdatedBy *uuid.UUID
 }
 
-// TemplateStore — интерфейс для DB layer. Mailer вызывает Lookup на каждом
-// Send (с graceful fallback) — реализация должна быть быстрой и tolerant к
-// DB ошибкам (возвращать nil, nil лучше чем error для cache-miss path).
 type TemplateStore interface {
 	Lookup(ctx context.Context, key string, locale Locale) (*Template, error)
 }
 
-// Sentinel errors — PGTemplateStore.Upsert returns these before hitting the DB
-// so admin handlers can answer 400 instead of a constraint-violation 500.
 var (
 	ErrInvalidEmailTemplateKey    = errors.New("invalid email template key")
 	ErrInvalidEmailTemplateLocale = errors.New("invalid email template locale")
 )
 
-// NilStore — для тестов / dev mode без DB. Возвращает (nil, nil) на всё,
-// заставляя caller'а fallback на embedded baseline.
 type NilStore struct{}
 
 func (NilStore) Lookup(_ context.Context, _ string, _ Locale) (*Template, error) {
 	return nil, nil
 }
 
-// PGTemplateStore — Postgres implementation. Использует тот же pool, что и
-// teams/auth — нет отдельного connection.
 type PGTemplateStore struct {
 	Pool *pgxpool.Pool
 }
 
-// NewPGTemplateStore — конструктор. Если Pool nil, методы no-op возвращают
-// (nil, nil).
 func NewPGTemplateStore(pool *pgxpool.Pool) *PGTemplateStore {
 	return &PGTemplateStore{Pool: pool}
 }
 
-// Lookup — single row read. Не возвращает error на pgx.ErrNoRows — это
-// expected (нет override ⇒ baseline). DB error возвращается, caller решает
-// fallback.
 func (s *PGTemplateStore) Lookup(ctx context.Context, key string, locale Locale) (*Template, error) {
 	if s == nil || s.Pool == nil {
 		return nil, nil
@@ -151,7 +105,6 @@ func (s *PGTemplateStore) Lookup(ctx context.Context, key string, locale Locale)
 	return &t, nil
 }
 
-// Upsert — INSERT ... ON CONFLICT для admin save endpoint.
 func (s *PGTemplateStore) Upsert(ctx context.Context, t Template, actor uuid.UUID) (*Template, error) {
 	if s == nil || s.Pool == nil {
 		return nil, errors.New("template store: nil pool")
@@ -190,9 +143,6 @@ func (s *PGTemplateStore) Upsert(ctx context.Context, t Template, actor uuid.UUI
 	return &out, nil
 }
 
-// Delete — revert override ⇒ fallback to embedded baseline. Возвращает
-// предыдущий row для audit log payload'а (per admin-email-templates.md
-// Scenario 6).
 func (s *PGTemplateStore) Delete(ctx context.Context, key, locale string) (*Template, error) {
 	if s == nil || s.Pool == nil {
 		return nil, errors.New("template store: nil pool")
@@ -215,8 +165,6 @@ func (s *PGTemplateStore) Delete(ctx context.Context, key, locale string) (*Temp
 	return &t, nil
 }
 
-// ListOverrides — все existing rows. Используется admin matrix endpoint
-// для определения `has_override` per (key, locale) пары.
 func (s *PGTemplateStore) ListOverrides(ctx context.Context) ([]Template, error) {
 	if s == nil || s.Pool == nil {
 		return nil, nil
@@ -240,24 +188,12 @@ func (s *PGTemplateStore) ListOverrides(ctx context.Context) ([]Template, error)
 	return out, rows.Err()
 }
 
-// --- Rendering ---
-
-// RenderedTemplate — финальный output после substitution. Caller передаёт
-// этот struct в mailer.Send().
 type RenderedTemplate struct {
 	Subject string
 	HTML    string
 	Text    string
 }
 
-// Render — substitution + auto-escape. `subject` и `body_text` через
-// text/template (no escape, line-safe), `body_html` через html/template
-// (auto-escapes user input). Если кто-то напишет `{{.team_name}}` со
-// значением `<script>`, html/template вернёт `&lt;script&gt;` в HTML body
-// автоматически — критично т.к. admin-edited templates могут содержать
-// recipient-controlled vars типа team_name.
-//
-// Subject sanitized отдельно: CR/LF удаляется (anti header-injection).
 func Render(t Template, vars map[string]any) (RenderedTemplate, error) {
 	if vars == nil {
 		vars = map[string]any{}
@@ -283,8 +219,6 @@ func Render(t Template, vars map[string]any) (RenderedTemplate, error) {
 	}, nil
 }
 
-// renderText — text/template execution. Имя шаблона `tpl` фиксировано
-// (Parse требует unique name; для one-shot render это не важно).
 func renderText(src string, vars map[string]any) (string, error) {
 	tpl, err := texttpl.New("tpl").Option("missingkey=zero").Parse(src)
 	if err != nil {
@@ -297,7 +231,6 @@ func renderText(src string, vars map[string]any) (string, error) {
 	return buf.String(), nil
 }
 
-// renderHTML — html/template (auto-escape).
 func renderHTML(src string, vars map[string]any) (string, error) {
 	tpl, err := htmltpl.New("tpl").Option("missingkey=zero").Parse(src)
 	if err != nil {
@@ -310,18 +243,11 @@ func renderHTML(src string, vars map[string]any) (string, error) {
 	return buf.String(), nil
 }
 
-// sanitizeSubject — strip CR/LF (anti header-injection). Subject поле в
-// SMTP не должно содержать переводов строк; Resend API игнорирует, но
-// мы strict.
 func sanitizeSubject(s string) string {
 	r := strings.NewReplacer("\r", "", "\n", "")
 	return r.Replace(s)
 }
 
-// LookupOrFallback — convenience helper для caller'ов (mailer.SendTemplate).
-// Если store == nil, возвращает nil без ошибки — caller use embedded
-// baseline. На DB error возвращает (nil, err), но caller рекомендуется
-// просто log + fallback.
 func LookupOrFallback(ctx context.Context, store TemplateStore, key string, locale Locale) (*Template, error) {
 	if store == nil {
 		return nil, nil

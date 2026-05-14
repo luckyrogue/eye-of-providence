@@ -8,8 +8,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// UsersPG — лёгкий upsert users для dev-token и github oauth.
-// Полная users-таблица расширяется в Phase 7 (teams, role, profile).
 type UsersPG struct {
 	pool *pgxpool.Pool
 }
@@ -34,8 +32,6 @@ func (u *UsersPG) Upsert(ctx context.Context, userID uuid.UUID, email, githubLog
 	return err
 }
 
-// TokenVersion — текущий счётчик версии JWT для юзера. Middleware сравнивает
-// его с `tv` claim'ом и rejects старые токены.
 func TokenVersion(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) (int, error) {
 	var tv int
 	err := pool.QueryRow(ctx,
@@ -43,8 +39,6 @@ func TokenVersion(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) (in
 	return tv, err
 }
 
-// BumpTokenVersion — инкрементирует counter, инвалидируя все ранее выпущенные JWT.
-// Вызывать при: смене global_role, удалении юзера (best-effort), wipe данных.
 func BumpTokenVersion(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) error {
 	if pool == nil {
 		return nil

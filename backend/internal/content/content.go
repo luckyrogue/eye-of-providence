@@ -1,42 +1,3 @@
-// Package content — CMS-lite Phase 1 (Workstream 4).
-//
-// Архитектура:
-//
-//	┌──────────────┐    GET /v1/content/:slug   ┌──────────────┐
-//	│ frontend     ├──────────────────────────▶│ Service.Public│
-//	└──────────────┘                            └───────┬───────┘
-//	                                                    │
-//	                       cache hit ←─────────────┐    │ cache miss
-//	                                               │    ▼
-//	                                          ┌────┴────────┐
-//	                                          │ Redis Cache  │
-//	                                          └────┬────────┘
-//	                                               │  miss
-//	                                               ▼
-//	                                          ┌─────────────┐
-//	                                          │  PGStore     │
-//	                                          │ content_blocks│
-//	                                          └─────────────┘
-//
-// Public path:
-//   - Validates slug (allowlist) и locale (en/ru/kk/es).
-//   - Cache check by (slug, requested locale).
-//   - Cache miss => Store.Lookup; если no row, walk fallback chain (kk → en).
-//   - Только rows с published_at IS NOT NULL отдаются на public path.
-//   - Cache hit / fresh fetch — set ETag, Cache-Control 5 min,
-//     Content-Language, X-Eop-Content-Source, Last-Modified, Surrogate-Key.
-//
-// Admin path:
-//   - super_admin gate через Service.SuperAdminCheck callback.
-//   - Все mutation пишут audit log (content.published / content.draft_saved
-//     / content.reverted_to_default / content.save_rejected).
-//   - If-Match header: <RFC3339-nano-timestamp>; mismatch => 412.
-//
-// Preview path (?preview=1 на public endpoint):
-//   - Требует JWT с super_admin role.
-//   - Возвращает draft_content ?? content. Cache-Control: no-store.
-//   - Анонимный + ?preview=1 = silently отдаём published (Scenario 5).
-
 package content
 
 import (
@@ -60,8 +21,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
-// Phase 4 audit-taxonomy.md CMS section — экспортируем как audit.Action
-// чтобы тесты могли использовать `string(content.ActionContentPublished)`.
 const (
 	ActionContentPublished       = audit.ActionContentPublished
 	ActionContentDraftSaved      = audit.ActionContentDraftSaved
@@ -71,11 +30,8 @@ const (
 	ActionContentPreviewAccessed = audit.ActionContentPreviewAccessed
 )
 
-// MaxContentBytes — write-time cap (admin spec edge-case "Very large content").
 const MaxContentBytes = 256 * 1024
 
-// Service — DI bundle. Store/Cache nil допустимы (graceful degradation:
-// без Store endpoints возвращают 503; без Cache читаем напрямую из БД).
 type Service struct {
 	Store     Store
 	Cache     *Cache
@@ -83,24 +39,15 @@ type Service struct {
 	Logger    *zap.Logger
 	JWTSecret string
 
-	// SuperAdminCheck — pluggable auth callback. Если nil И Pool задан,
-	// делаем SELECT global_role FROM users; иначе считаем что НЕ super_admin.
 	SuperAdminCheck func(ctx context.Context, userID uuid.UUID) bool
 
-	// Pool — опционально. Используется только для default SuperAdminCheck
-	// (если callback не задан). Production main.go обычно задаёт callback
-	// явно; тесты могут полагаться на Pool fallback.
 	Pool *pgxpool.Pool
 }
 
-// RegisterPublicRoute — GET /v1/content/:slug. NO auth middleware.
 func (s *Service) RegisterPublicRoute(app *fiber.App) {
 	app.Get("/v1/content/:slug", s.handlePublicGet)
 }
 
-// RegisterAdminRoutes — все admin endpoints под `/v1/admin/content*`. Caller
-// должен передать router уже с auth middleware (Authorization Bearer JWT).
-// Handler-level super_admin gate срабатывает после auth.Middleware.
 func (s *Service) RegisterAdminRoutes(router fiber.Router) {
 	router.Get("/admin/content", s.handleAdminMatrix)
 	router.Get("/admin/content/:slug/:locale", s.handleAdminGet)
@@ -108,9 +55,6 @@ func (s *Service) RegisterAdminRoutes(router fiber.Router) {
 	router.Delete("/admin/content/:slug/:locale", s.handleAdminDelete)
 }
 
-// --- Public ---
-
-// publicResponse — JSON-shape для GET /v1/content/:slug.
 type publicResponse struct {
 	Slug          string          `json:"slug"`
 	Locale        string          `json:"locale"`
@@ -128,8 +72,7 @@ func (s *Service) handlePublicGet(c *fiber.Ctx) error {
 	}
 	locale := c.Query("locale")
 	if locale == "" {
-		// Default ru (per task brief). Handler_test TestContentPublic_DefaultLocale
-		// проверяет этот фолбэк.
+
 		locale = "ru"
 	}
 	if !IsSupportedLocale(locale) {
@@ -138,7 +81,6 @@ func (s *Service) handlePublicGet(c *fiber.Ctx) error {
 			"locale must be one of: en, ru, kk, es")
 	}
 
-	// Preview branch.
 	if c.Query("preview") == "1" {
 		return s.handlePublicPreview(c, slug, locale)
 	}
@@ -148,7 +90,6 @@ func (s *Service) handlePublicGet(c *fiber.Ctx) error {
 		return httperr.Unavailable(c, "content_store_unavailable", "content service unavailable")
 	}
 
-	// Cache check first.
 	if entry, hit, err := s.Cache.Lookup(c.Context(), slug, locale); hit && err == nil {
 		s.writePublicHeaders(c, entry.Slug, entry.Locale, entry.ETag, entry.Source, entry.UpdatedAt)
 		if reqETag := c.Get("If-None-Match"); reqETag != "" && etagsMatch(reqETag, entry.ETag) {
@@ -166,7 +107,6 @@ func (s *Service) handlePublicGet(c *fiber.Ctx) error {
 		s.warn("cache lookup failed", zap.String("slug", slug), zap.Error(err))
 	}
 
-	// Cache miss — walk fallback chain.
 	block, effectiveLocale, source, err := s.resolvePublished(c.Context(), slug, locale)
 	if err != nil {
 		if errors.Is(err, ErrUnavailable) {
@@ -185,7 +125,6 @@ func (s *Service) handlePublicGet(c *fiber.Ctx) error {
 
 	etag := computeETag(slug, effectiveLocale, block.Content, block.PublishedAt)
 
-	// Write to cache (best-effort).
 	_ = s.Cache.Store(c.Context(), slug, locale, &Entry{
 		Slug:          slug,
 		Locale:        effectiveLocale,
@@ -213,13 +152,11 @@ func (s *Service) handlePublicGet(c *fiber.Ctx) error {
 	})
 }
 
-// resolvePublished — ищет published row по requested locale, fallback'ается
-// если нет. Возвращает (block, effective_locale, source_label, err).
 func (s *Service) resolvePublished(ctx context.Context, slug, requestedLocale string) (*Block, string, string, error) {
 	if s.Store == nil {
 		return nil, "", "", ErrUnavailable
 	}
-	// Direct lookup.
+
 	block, err := s.Store.Lookup(ctx, slug, requestedLocale, false)
 	if err == nil && block.PublishedAt != nil {
 		return block, requestedLocale, "direct", nil
@@ -227,7 +164,7 @@ func (s *Service) resolvePublished(ctx context.Context, slug, requestedLocale st
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return nil, "", "", err
 	}
-	// Walk fallback chain.
+
 	for _, fb := range FallbackLocales(requestedLocale) {
 		fbBlock, ferr := s.Store.Lookup(ctx, slug, fb, false)
 		if ferr == nil && fbBlock.PublishedAt != nil {
@@ -240,15 +177,6 @@ func (s *Service) resolvePublished(ctx context.Context, slug, requestedLocale st
 	return nil, "", "", ErrNotFound
 }
 
-// writePublicHeaders — общие headers для public response (200 / 304).
-//
-// Cache-Control: public, max-age=300, s-maxage=600 (per Scenario 1).
-// ETag — sha256-prefixed weak-equality.
-// Content-Language — effective locale (после fallback).
-// Vary — Accept-Language для CDN/cache fanout.
-// X-Eop-Content-Source — direct | locale_fallback:<l>.
-// Last-Modified — RFC 1123 от updated_at.
-// Surrogate-Key — для CDN purge runbook (DevOps deliverable).
 func (s *Service) writePublicHeaders(c *fiber.Ctx, _slug, effective, etag, source string, updatedAt time.Time) {
 	c.Set(fiber.HeaderCacheControl, "public, max-age=300, s-maxage=600")
 	c.Set("ETag", `"`+etag+`"`)
@@ -261,13 +189,11 @@ func (s *Service) writePublicHeaders(c *fiber.Ctx, _slug, effective, etag, sourc
 	}
 }
 
-// handlePublicPreview — preview branch с cookie/JWT auth. Returns draft if
-// exists, else published, else 404. No-cache headers.
 func (s *Service) handlePublicPreview(c *fiber.Ctx, slug, locale string) error {
 	c.Set(fiber.HeaderCacheControl, "no-store")
 	userID, isAdmin := s.previewActor(c)
 	if !isAdmin {
-		// Anonymous / non-admin: silently render published (Scenario 5).
+
 		if s.Store == nil {
 			return httperr.Unavailable(c, "content_store_unavailable", "content service unavailable")
 		}
@@ -287,7 +213,6 @@ func (s *Service) handlePublicPreview(c *fiber.Ctx, slug, locale string) error {
 		})
 	}
 
-	// super_admin: include_draft, no fallback (strict per locale).
 	if s.Store == nil {
 		return httperr.Unavailable(c, "content_store_unavailable", "content service unavailable")
 	}
@@ -321,11 +246,10 @@ func (s *Service) handlePublicPreview(c *fiber.Ctx, slug, locale string) error {
 	})
 }
 
-// previewActor — пробует распарсить JWT и проверить super_admin role.
 func (s *Service) previewActor(c *fiber.Ctx) (uuid.UUID, bool) {
 	uid, ok := s.parseBearerJWT(c)
 	if !ok {
-		// Может быть auth.Middleware уже положил claims в context.
+
 		if claims := auth.ClaimsFromCtx(c); claims != nil {
 			parsed, perr := uuid.Parse(claims.UserID)
 			if perr == nil {
@@ -363,7 +287,6 @@ func (s *Service) parseBearerJWT(c *fiber.Ctx) (uuid.UUID, bool) {
 	return uid, true
 }
 
-// checkSuperAdmin — callback first, fallback на Pool query.
 func (s *Service) checkSuperAdmin(ctx context.Context, uid uuid.UUID) bool {
 	if s.SuperAdminCheck != nil {
 		return s.SuperAdminCheck(ctx, uid)
@@ -375,8 +298,6 @@ func (s *Service) checkSuperAdmin(ctx context.Context, uid uuid.UUID) bool {
 	err := s.Pool.QueryRow(ctx, "SELECT global_role FROM users WHERE id=$1", uid).Scan(&role)
 	return err == nil && role == "super_admin"
 }
-
-// --- Admin ---
 
 type adminMatrixResponse struct {
 	Entries []MatrixEntry `json:"entries"`
@@ -411,7 +332,6 @@ func (s *Service) handleAdminMatrix(c *fiber.Ctx) error {
 	return c.JSON(adminMatrixResponse{Entries: full})
 }
 
-// adminBlockResponse — single-row view for admin editor.
 type adminBlockResponse struct {
 	Slug          string          `json:"slug"`
 	Locale        string          `json:"locale"`
@@ -442,8 +362,7 @@ func (s *Service) handleAdminGet(c *fiber.Ctx) error {
 	}
 	b, err := s.Store.Lookup(c.Context(), slug, locale, true)
 	if errors.Is(err, ErrNotFound) {
-		// Не существует row — "default" badge state. Возвращаем 200 с
-		// пустыми полями чтобы UI отрисовал editor с placeholder'ом.
+
 		desc, _ := LookupSlug(slug)
 		return c.JSON(adminBlockResponse{
 			Slug:          slug,
@@ -476,8 +395,6 @@ func (s *Service) handleAdminGet(c *fiber.Ctx) error {
 	return c.JSON(resp)
 }
 
-// adminUpsertReq — body для PUT. Локаль приходит через path param,
-// content + publish — через body. If-Match — через header.
 type adminUpsertReq struct {
 	Content json.RawMessage `json:"content"`
 	Publish bool            `json:"publish"`
@@ -530,7 +447,7 @@ func (s *Service) handleAdminUpsert(c *fiber.Ctx) error {
 		return httperr.TooLarge(c, "too_large",
 			fmt.Sprintf("content exceeds %d KB", MaxContentBytes/1024))
 	}
-	// Schema validation.
+
 	if verr := desc.Validate(req.Content); verr != nil {
 		meta := map[string]any{
 			"error_code":   verr.Code,
@@ -556,17 +473,13 @@ func (s *Service) handleAdminUpsert(c *fiber.Ctx) error {
 		return httperr.Send(c, pd)
 	}
 
-	// If-Match precondition (HTTP header, RFC3339Nano timestamp).
 	var priorTS *time.Time
 	if rawIM := c.Get("If-Match"); rawIM != "" {
 		ts, ok := parseIfMatchTimestamp(rawIM)
 		if ok {
 			priorTS = &ts
 		}
-		// Если value не парсится как timestamp, мы всё равно отдадим row's
-		// current updated_at и сравним. Stale string => 412.
-		// Реализовано через явный pre-check ниже (когда parseIfMatchTimestamp
-		// fail'ит).
+
 		if !ok {
 			cur, err := s.currentUpdatedAt(c.Context(), slug, locale)
 			if err == nil {
@@ -577,7 +490,7 @@ func (s *Service) handleAdminUpsert(c *fiber.Ctx) error {
 					})
 				return s.precondFailedResp(c, cur)
 			}
-			// Row не существует => no clash, продолжаем.
+
 		}
 	}
 
@@ -607,10 +520,8 @@ func (s *Service) handleAdminUpsert(c *fiber.Ctx) error {
 		return httperr.Internal(c)
 	}
 
-	// Cache invalidation.
 	_ = s.Cache.InvalidateSlug(c.Context(), slug)
 
-	// Audit log (success).
 	if req.Publish {
 		s.Audit.LogFromCtx(c, actorID, actorEmail, ActionContentPublished,
 			"content", targetID, map[string]any{
@@ -692,11 +603,6 @@ func (s *Service) handleAdminDelete(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"reverted": true})
 }
 
-// --- guard / helpers ---
-
-// guardSuperAdmin — централизованная проверка. Также пишет
-// content.access_denied audit row для non-super_admin attempts (admin-cms-publish.md
-// Scenario 8).
 func (s *Service) guardSuperAdmin(c *fiber.Ctx, method, path string) bool {
 	uid, ok := s.parseBearerJWT(c)
 	if !ok {
@@ -741,8 +647,6 @@ func (s *Service) warn(msg string, fields ...zap.Field) {
 	s.Logger.Warn(msg, fields...)
 }
 
-// currentUpdatedAt — peek для If-Match pre-check (когда client прислал
-// нераспаршеный string и мы знаем что row точно есть).
 func (s *Service) currentUpdatedAt(ctx context.Context, slug, locale string) (time.Time, error) {
 	if s.Store == nil {
 		return time.Time{}, ErrUnavailable
@@ -754,7 +658,6 @@ func (s *Service) currentUpdatedAt(ctx context.Context, slug, locale string) (ti
 	return b.UpdatedAt, nil
 }
 
-// precondFailedResp — общий 412 response builder.
 func (s *Service) precondFailedResp(c *fiber.Ctx, cur time.Time) error {
 	pd := httperr.ProblemDetails{
 		Status: fiber.StatusPreconditionFailed,
@@ -767,9 +670,6 @@ func (s *Service) precondFailedResp(c *fiber.Ctx, cur time.Time) error {
 	return httperr.Send(c, pd)
 }
 
-// --- ETag helpers ---
-
-// computeETag — sha256 over slug + effective_locale + content + published_at.
 func computeETag(slug, locale string, content json.RawMessage, publishedAt *time.Time) string {
 	h := sha256.New()
 	h.Write([]byte(slug))
@@ -784,8 +684,6 @@ func computeETag(slug, locale string, content json.RawMessage, publishedAt *time
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// etagsMatch — match client's If-None-Match против server ETag (strip quotes,
-// W/ prefix, * wildcard).
 func etagsMatch(clientHeader, serverETag string) bool {
 	parts := strings.Split(clientHeader, ",")
 	for _, p := range parts {
@@ -802,8 +700,6 @@ func etagsMatch(clientHeader, serverETag string) bool {
 	return false
 }
 
-// parseIfMatchTimestamp — accept RFC3339Nano / RFC3339 (с/без quotes,
-// с/без W/ prefix).
 func parseIfMatchTimestamp(raw string) (time.Time, bool) {
 	v := strings.TrimSpace(raw)
 	v = strings.TrimPrefix(v, "W/")

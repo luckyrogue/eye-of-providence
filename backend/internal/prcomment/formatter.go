@@ -5,15 +5,6 @@ import (
 	"strings"
 )
 
-// FormatComment — markdown comment для PR/MR. Tone: factual, не judgey
-// ("AI added 80%" а не "проблема: 80% от AI").
-//
-// Two states:
-//   - Аттрибуция есть: показываем %, breakdown, link на dashboard
-//   - Аттрибуция отсутствует: graceful — просим установить агент
-//
-// Dashboard URL — для click-through retention. Без dashboardURL footer
-// пропускается.
 func FormatComment(agg Aggregate, dashboardURL string) string {
 	var b strings.Builder
 	b.WriteString("### :eye: Eye of Providence — coding attribution\n\n")
@@ -50,7 +41,6 @@ func FormatComment(agg Aggregate, dashboardURL string) string {
 	return b.String()
 }
 
-// progressBar — 10-char unicode bar, e.g. "████░░░░░░" для 40%.
 func progressBar(pct float64) string {
 	if pct < 0 {
 		pct = 0

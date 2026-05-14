@@ -14,7 +14,6 @@ import (
 
 const stateTTL = 10 * time.Minute
 
-// State — CSRF token + nonce + return URL для одной in-flight авторизации.
 type State struct {
 	Value    string
 	TeamID   uuid.UUID
@@ -24,9 +23,6 @@ type State struct {
 
 var ErrStateInvalid = errors.New("sso state invalid or expired")
 
-// CreateState — генерит state+nonce и сохраняет в sso_states. Caller вернёт
-// state в IdP authorization URL. Возвращает оба, nonce нужен для OIDC ID
-// token validation (claim "nonce" должен совпасть).
 func CreateState(
 	ctx context.Context,
 	pool *pgxpool.Pool,
@@ -52,9 +48,6 @@ func CreateState(
 	return &State{Value: state, TeamID: teamID, Nonce: nonce, ReturnTo: returnTo}, nil
 }
 
-// ConsumeState — atomically находит и удаляет state. Если expired или не
-// существует — ErrStateInvalid. Удаление гарантирует one-time-use (защита
-// от code-replay).
 func ConsumeState(
 	ctx context.Context,
 	pool *pgxpool.Pool,
@@ -77,8 +70,6 @@ func ConsumeState(
 	return &s, nil
 }
 
-// CleanupExpired — удаляет stale state-rows (TTL прошёл). Вызывается из
-// background goroutine в cmd/api startup (раз в час).
 func CleanupExpired(ctx context.Context, pool *pgxpool.Pool) (int64, error) {
 	tag, err := pool.Exec(ctx, `DELETE FROM sso_states WHERE expires_at <= now()`)
 	if err != nil {

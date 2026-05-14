@@ -97,7 +97,7 @@ func TestInternal_GenericDetail(t *testing.T) {
 	if !strings.Contains(string(body), `"code":"internal_error"`) {
 		t.Errorf("missing code: %s", body)
 	}
-	// Detail генерик, не leak'ает internal info
+
 	if !strings.Contains(string(body), `"detail":"internal error"`) {
 		t.Errorf("detail leaked: %s", body)
 	}
@@ -113,11 +113,11 @@ func TestSend_AutoFillsDefaults(t *testing.T) {
 	body, _ := io.ReadAll(res.Body)
 	var p ProblemDetails
 	_ = json.Unmarshal(body, &p)
-	// Title autofill from net/http.StatusText
+
 	if p.Title != "I'm a teapot" {
 		t.Errorf("title=%q", p.Title)
 	}
-	// Type autofill from code
+
 	if p.Type != "https://eop.rysdavletov.org/errors/i_am_teapot" {
 		t.Errorf("type=%q", p.Type)
 	}

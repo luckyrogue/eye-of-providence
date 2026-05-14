@@ -12,8 +12,6 @@ import (
 	"time"
 )
 
-// PostError — wrap провайдерных HTTP error'ов. Status и raw body — для UI
-// debugging (frontend показывает code + первые 200 chars).
 type PostError struct {
 	Status int
 	Body   string
@@ -27,14 +25,10 @@ func (e *PostError) Error() string {
 	return fmt.Sprintf("provider %d: %s", e.Status, short)
 }
 
-// HTTPClient — interface для testability. http.Client satisfies it.
 type HTTPClient interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-// PostGitHub — POST https://{host}/repos/{repo}/issues/{pr}/comments.
-// Default host = api.github.com (для Cloud); enterprise users указывают свой
-// (например api.github.example.com).
 func PostGitHub(ctx context.Context, hc HTTPClient, host, repo string, prNumber int, token, body string) error {
 	if host == "" {
 		host = "https://api.github.com"
@@ -53,9 +47,6 @@ func PostGitHub(ctx context.Context, hc HTTPClient, host, repo string, prNumber 
 	return doPost(hc, req)
 }
 
-// PostGitLab — POST https://{host}/api/v4/projects/{repo-encoded}/merge_requests/{iid}/notes.
-// Default host = https://gitlab.com; self-hosted users указывают свой URL.
-// repo URL-encoded целиком ("namespace/project" → "namespace%2Fproject").
 func PostGitLab(ctx context.Context, hc HTTPClient, host, repo string, mrIID int, token, body string) error {
 	if host == "" {
 		host = "https://gitlab.com"
@@ -68,8 +59,7 @@ func PostGitLab(ctx context.Context, hc HTTPClient, host, repo string, mrIID int
 	if err != nil {
 		return err
 	}
-	// GitLab принимает либо "PRIVATE-TOKEN: xxx" header, либо "Authorization:
-	// Bearer". Bearer работает и с PAT, и с OAuth — выбираем его.
+
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 	return doPost(hc, req)

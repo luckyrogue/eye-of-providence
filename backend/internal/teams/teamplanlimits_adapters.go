@@ -92,6 +92,6 @@ func (s Service) newTeamPlanLimitsService() *teamplanlimits.Service {
 		Store:       pgPlanOverrideStore{pool: s.Pool},
 		Plans:       planLimitsDefaultsAdapter{svc: s.Plans},
 		Audit:       teamplanlimitsAuditAdapter{svc: s.Audit},
-		LimitsAsMap: nil, // use package default
+		LimitsAsMap: nil,
 	})
 }

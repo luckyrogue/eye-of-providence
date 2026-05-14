@@ -33,11 +33,11 @@ func TestOIDCProvider_CheckEmailDomain(t *testing.T) {
 
 func TestEmailLocalPart(t *testing.T) {
 	tests := map[string]string{
-		"alice@acme.com":      "alice",
-		"a.b+c@example.org":   "a.b+c",
-		"":                    "",
-		"noatsign":            "noatsign",
-		"@only":               "@only", // edge: at < 0 в LastIndex был бы 0
+		"alice@acme.com":    "alice",
+		"a.b+c@example.org": "a.b+c",
+		"":                  "",
+		"noatsign":          "noatsign",
+		"@only":             "@only",
 	}
 	for in, want := range tests {
 		got := emailLocalPart(in)
@@ -49,11 +49,11 @@ func TestEmailLocalPart(t *testing.T) {
 
 func TestEscapePath(t *testing.T) {
 	tests := map[string]string{
-		"/dashboard":            "/dashboard",
-		"/path#fragment":        "/path%23fragment",
-		"/path&query":           "/path%26query",
-		"/with spaces":          "/with%20spaces",
-		"/clean?keep=ok":        "/clean?keep=ok", // ? not escaped
+		"/dashboard":     "/dashboard",
+		"/path#fragment": "/path%23fragment",
+		"/path&query":    "/path%26query",
+		"/with spaces":   "/with%20spaces",
+		"/clean?keep=ok": "/clean?keep=ok",
 	}
 	for in, want := range tests {
 		got := escapePath(in)

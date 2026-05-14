@@ -1,15 +1,3 @@
-// Package audit — append-only лог "consequential" действий: super_admin
-// удалил юзера, owner поменял роль, кто-то сохранил SSO config, и т.п.
-//
-// Design:
-//   - Один Service с методом Log(ctx, entry) — non-blocking-ish (использует
-//     основной pool, ошибки логируются но не блокируют caller'а).
-//   - Action — машинно-читаемый код в формате "<domain>.<verb>"
-//     (team.deleted, user.role_changed, sso.saved, subscription.set).
-//   - Metadata — произвольный JSON со специфичными деталями (e.g. role_from,
-//     role_to, plan_from, plan_to).
-//
-// Storage: audit_log table (migration 016). Read endpoints в audit_handler.go.
 package audit
 
 import (
@@ -27,38 +15,33 @@ import (
 	"go.uber.org/zap"
 )
 
-// Action — типизированные имена событий. Хранятся как text в БД, но
-// константы помогают избежать typo (e.g. "team.delted" vs "team.deleted").
 type Action string
 
 const (
-	ActionTeamDeleted     Action = "team.deleted"
-	ActionTeamCreated     Action = "team.created"
-	ActionUserDeleted     Action = "user.deleted"
-	ActionUserRoleChanged Action = "user.role_changed"
-	ActionMemberAdded     Action = "team.member_added"
-	ActionMemberRemoved   Action = "team.member_removed"
+	ActionTeamDeleted       Action = "team.deleted"
+	ActionTeamCreated       Action = "team.created"
+	ActionUserDeleted       Action = "user.deleted"
+	ActionUserRoleChanged   Action = "user.role_changed"
+	ActionMemberAdded       Action = "team.member_added"
+	ActionMemberRemoved     Action = "team.member_removed"
 	ActionMemberRoleChanged Action = "team.member_role_changed"
-	ActionSubscriptionSet Action = "subscription.set"
-	ActionSSOSaved        Action = "sso.saved"
-	ActionSSODeleted      Action = "sso.deleted"
-	ActionDeviceClaimed   Action = "device.claimed"
-	ActionDeviceRevoked   Action = "device.revoked"
+	ActionSubscriptionSet   Action = "subscription.set"
+	ActionSSOSaved          Action = "sso.saved"
+	ActionSSODeleted        Action = "sso.deleted"
+	ActionDeviceClaimed     Action = "device.claimed"
+	ActionDeviceRevoked     Action = "device.revoked"
 
-	// Phase 3 admin actions (см. .team/product-audit-taxonomy.md).
-	ActionEmailTemplateUpdated         Action = "email_template.updated"
-	ActionEmailTemplateReverted        Action = "email_template.reverted"
-	ActionEmailTemplateUpdateRejected  Action = "email_template.update_rejected"
-	ActionEmailTemplateAccessDenied    Action = "email_template.access_denied"
-	ActionTeamFlagsUpdated             Action = "team.flags_updated"
-	ActionTeamFlagsUpdateRejected      Action = "team.flags_update_rejected"
-	ActionTeamFlagsUpdateDenied        Action = "team.flags_update_denied"
-	ActionTeamPlanOverridesUpdated     Action = "team.plan_overrides_updated"
-	ActionTeamPlanOverridesCleared     Action = "team.plan_overrides_cleared"
-	ActionTeamPlanOverridesRejected    Action = "team.plan_overrides_update_rejected"
+	ActionEmailTemplateUpdated        Action = "email_template.updated"
+	ActionEmailTemplateReverted       Action = "email_template.reverted"
+	ActionEmailTemplateUpdateRejected Action = "email_template.update_rejected"
+	ActionEmailTemplateAccessDenied   Action = "email_template.access_denied"
+	ActionTeamFlagsUpdated            Action = "team.flags_updated"
+	ActionTeamFlagsUpdateRejected     Action = "team.flags_update_rejected"
+	ActionTeamFlagsUpdateDenied       Action = "team.flags_update_denied"
+	ActionTeamPlanOverridesUpdated    Action = "team.plan_overrides_updated"
+	ActionTeamPlanOverridesCleared    Action = "team.plan_overrides_cleared"
+	ActionTeamPlanOverridesRejected   Action = "team.plan_overrides_update_rejected"
 
-	// Phase 4 CMS-lite (Workstream 4). См.
-	// .team/product-audit-taxonomy.md §"Phase 3 append — CMS workstream".
 	ActionContentPublished       Action = "content.published"
 	ActionContentDraftSaved      Action = "content.draft_saved"
 	ActionContentRevertedDefault Action = "content.reverted_to_default"
@@ -67,27 +50,22 @@ const (
 	ActionContentPreviewAccessed Action = "content.preview_accessed"
 )
 
-// Entry — single audit-row для записи.
 type Entry struct {
-	ActorID     uuid.UUID
-	ActorEmail  string
-	Action      Action
-	TargetType  string
-	TargetID    string
-	Metadata    map[string]any
-	IP          string
-	UserAgent   string
+	ActorID    uuid.UUID
+	ActorEmail string
+	Action     Action
+	TargetType string
+	TargetID   string
+	Metadata   map[string]any
+	IP         string
+	UserAgent  string
 }
 
-// Service — DI bundle. Pool nil = no-op (для in-memory dev mode).
 type Service struct {
 	Pool   *pgxpool.Pool
 	Logger *zap.Logger
 }
 
-// Log — non-blocking insert audit row. Ошибки только в zap, не возвращаем
-// caller'у — audit failure не должен ломать main flow (e.g. если log table
-// пропала из-за миграции, delete команды должен пройти всё равно).
 func (s Service) Log(ctx context.Context, e Entry) {
 	if s.Pool == nil {
 		return
@@ -116,8 +94,6 @@ func (s Service) Log(ctx context.Context, e Entry) {
 	}
 }
 
-// LogFromCtx — удобный wrapper: берёт ActorID / IP / User-Agent из fiber ctx.
-// Caller передаёт только action + target + metadata.
 func (s Service) LogFromCtx(c *fiber.Ctx, actorID uuid.UUID, actorEmail string, action Action, targetType, targetID string, metadata map[string]any) {
 	s.Log(c.Context(), Entry{
 		ActorID:    actorID,
@@ -131,12 +107,9 @@ func (s Service) LogFromCtx(c *fiber.Ctx, actorID uuid.UUID, actorEmail string, 
 	})
 }
 
-// ClientIP — берёт IP из X-Forwarded-For (если за reverse proxy) или RemoteAddr.
-// Стрипает port если есть. Truncate'им до 64 chars на всякий — длинная XFF
-// chain может пойти на килобайты.
 func ClientIP(c *fiber.Ctx) string {
 	if xff := c.Get("X-Forwarded-For"); xff != "" {
-		// XFF может быть list "client, proxy1, proxy2" — берём первый.
+
 		first := strings.SplitN(xff, ",", 2)[0]
 		first = strings.TrimSpace(first)
 		if first != "" {
@@ -156,8 +129,6 @@ func ClientIP(c *fiber.Ctx) string {
 	return ip
 }
 
-// Row — single audit-row для read endpoints. Денормализованные actor_email
-// + metadata через json.RawMessage чтобы не парсить на сервере.
 type Row struct {
 	ID         uuid.UUID       `json:"id"`
 	ActorID    *uuid.UUID      `json:"actor_id,omitempty"`
@@ -171,7 +142,6 @@ type Row struct {
 	CreatedAt  time.Time       `json:"created_at"`
 }
 
-// ListFilter — параметры фильтрации для GET /v1/admin/audit.
 type ListFilter struct {
 	Action     string
 	TargetType string
@@ -181,7 +151,6 @@ type ListFilter struct {
 	Offset     int
 }
 
-// List — paginated read с filtering. По умолчанию 100 rows, max 500.
 func (s Service) List(ctx context.Context, f ListFilter) ([]Row, error) {
 	if s.Pool == nil {
 		return nil, errors.New("audit unavailable: pool nil")
@@ -257,8 +226,6 @@ func (s Service) List(ctx context.Context, f ListFilter) ([]Row, error) {
 	return out, rows.Err()
 }
 
-// itoaArg — узкий хелпер для построения "$N" в parametrised queries.
-// strconv.Itoa был бы дороже импорта; здесь N всегда 1..10.
 func itoaArg(n int) string {
 	switch n {
 	case 1:
@@ -282,11 +249,10 @@ func itoaArg(n int) string {
 	case 10:
 		return "10"
 	default:
-		return "?" // pgx сломается явно вместо silent bug; protected by max 4 фильтров
+		return "?"
 	}
 }
 
-// GC — фоновая зачистка audit-row старше retentionDays. Cron'ом раз в день.
 func (s Service) GC(ctx context.Context, retentionDays int) (int64, error) {
 	if s.Pool == nil || retentionDays <= 0 {
 		return 0, nil
@@ -300,6 +266,4 @@ func (s Service) GC(ctx context.Context, retentionDays int) (int64, error) {
 	return tag.RowsAffected(), nil
 }
 
-// Эта функция нужна чтобы pgx.ErrNoRows был доступен при импорте — если
-// какой-то caller хочет различать "audit table пуст" от "пол сломался".
 var _ = pgx.ErrNoRows

@@ -14,11 +14,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/plans"
 )
 
-// effectiveUserPlan — возвращает "лучший" план среди команд, в которых юзер
-// состоит. Используется для webhook plan-gate (webhooks per-user, plan
-// per-team — несогласованный scope, см. handler.go createHandler TODO).
-//
-// Иерархия: enterprise > business > pro > free.
 func effectiveUserPlan(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) string {
 	rows, err := pool.Query(ctx, `
 		SELECT t.subscription_plan
@@ -43,11 +38,8 @@ func effectiveUserPlan(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID
 	return best
 }
 
-// itoa — локальный alias чтобы не тащить strconv в каждый callsite.
 func itoa(n int) string { return strconv.Itoa(n) }
 
-// RegisterRoutes — /v1/me/webhooks CRUD. JWT-only (anti-bootstrap, как с
-// api_tokens — webhook secret = elevation primitive).
 func RegisterRoutes(app *fiber.App, svc *Service, jwtSecret string, pool *pgxpool.Pool) {
 	g := app.Group("/v1/me/webhooks", auth.Middleware(jwtSecret, pool))
 	g.Get("/", listHandler(svc))
@@ -55,8 +47,6 @@ func RegisterRoutes(app *fiber.App, svc *Service, jwtSecret string, pool *pgxpoo
 	g.Delete("/:id", deleteHandler(svc))
 }
 
-// authErr — sentinel-обёртка чтобы handler мог распознать "не auth-баг" vs
-// "конкретный httperr response уже отправлен". Возвращаем код+detail.
 type authErr struct {
 	code   string
 	detail string
@@ -77,8 +67,6 @@ func requireJWT(c *fiber.Ctx) (uuid.UUID, error) {
 	return uid, nil
 }
 
-// sendAuthErr — translate authErr → httperr response. Caller pattern:
-// `if err != nil { return sendAuthErr(c, err) }`.
 func sendAuthErr(c *fiber.Ctx, err error) error {
 	var ae *authErr
 	if errors.As(err, &ae) {
@@ -107,11 +95,7 @@ func createHandler(svc *Service) fiber.Handler {
 		if err != nil {
 			return sendAuthErr(c, err)
 		}
-		// Plan gate: webhooks per-user count vs Limits.MaxWebhooks. План берём
-		// от "лучшей" команды юзера (см. effectiveUserPlan); при Enforce=false
-		// возвращается Enterprise (limit=0, gate skip'ается).
-		// TODO: на GA — определиться: webhook-per-team scope или per-user.
-		// Сейчас per-user с эффективным планом — это допустимая интерпретация.
+
 		if limits := svc.Plans.Limits(effectiveUserPlan(c.Context(), svc.Pool, uid)); limits.MaxWebhooks > 0 {
 			var count int
 			if err := svc.Pool.QueryRow(c.Context(),

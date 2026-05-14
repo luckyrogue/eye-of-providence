@@ -1,26 +1,3 @@
-// eop-hook — Claude Code PostToolUse hook → /v1/ingest.
-//
-// Устанавливается через Claude Code settings (~/.claude/settings.json или
-// .claude/settings.json в репо):
-//
-//	{
-//	  "hooks": {
-//	    "PostToolUse": [{
-//	      "matcher": "Edit|Write|MultiEdit",
-//	      "hooks": [{ "type": "command", "command": "eop-hook" }]
-//	    }]
-//	  }
-//	}
-//
-// Claude Code пишет JSON в stdin при каждом вызове Edit/Write/MultiEdit.
-// Hook извлекает chars/lines/lang и POST'ит в EOP backend как ai_agent event.
-//
-// Env vars:
-//
-//	EOP_BACKEND  (default: https://eop.rysdavletov.org/api)
-//	EOP_TOKEN    (required — JWT, выдаваемый dashboard'ом или /v1/auth/dev-token)
-//
-// Hook idempotent: если token не задан — silently exit 0 чтобы не ломать tool-flow.
 package main
 
 import (
@@ -40,8 +17,6 @@ const (
 	timeout        = 5 * time.Second
 )
 
-// hookInput — schema от Claude Code PostToolUse.
-// Документация: https://docs.claude.com/en/docs/claude-code/hooks
 type hookInput struct {
 	HookEventName string         `json:"hook_event_name"`
 	ToolName      string         `json:"tool_name"`
@@ -49,9 +24,6 @@ type hookInput struct {
 	ToolResponse  map[string]any `json:"tool_response"`
 }
 
-// eventOut — формат /v1/ingest. Сохраняется как category=ai, ai_channel=agent,
-// ai_provider=claude-code. Это самый сильный сигнал в attribution v2 — Claude
-// Code сам триггерит hook, ambiguity нулевая.
 type eventOut struct {
 	AppBundle    string `json:"app_bundle"`
 	Source       string `json:"source"`
@@ -68,8 +40,7 @@ type eventOut struct {
 func main() {
 	token := os.Getenv("EOP_TOKEN")
 	if token == "" {
-		// Молча выходим — hook не должен ломать Claude Code workflow если
-		// EOP не настроен.
+
 		os.Exit(0)
 	}
 	backend := os.Getenv("EOP_BACKEND")
@@ -85,7 +56,7 @@ func main() {
 	}
 	var in hookInput
 	if err := json.Unmarshal(raw, &in); err != nil {
-		// Не падаем — Claude Code мог поменять schema, hook не должен ломать tool.
+
 		os.Exit(0)
 	}
 
@@ -99,9 +70,6 @@ func main() {
 	}
 }
 
-// buildEvent — извлекает chars/lines из tool_input/tool_response.
-// Возвращает (event, true) если есть что слать; false если no-op (Read,
-// failed Edit, etc.).
 func buildEvent(in hookInput) (eventOut, bool) {
 	ev := eventOut{
 		AppBundle:  "claude-code",
@@ -158,8 +126,6 @@ func buildEvent(in hookInput) (eventOut, bool) {
 	return ev, ev.CharsIn > 0
 }
 
-// langFromPath — простой mapper расширения → languageId. Совпадает с
-// VS Code languageId для основных расширений.
 func langFromPath(path string) string {
 	if path == "" {
 		return ""

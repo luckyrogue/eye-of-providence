@@ -15,28 +15,6 @@ import (
 	"google.golang.org/api/idtoken"
 )
 
-// Google OAuth tests.
-//
-// Strategy:
-//   - Tests that don't need JWKS signature verification are unit tests.
-//   - Tests that need full id_token verification mock the OAuth2 token endpoint
-//     via httptest.NewServer + override of `g.cfg.Endpoint`. id_token validation
-//     is harder because `idtoken.Validate` fetches Google's public JWKS — see
-//     TestGoogle_Exchange_HitsTokenEndpoint for how far we can go without that.
-//
-// NOTE TO BACKEND: GoogleOAuth has no DI hook for the idtoken validator. To
-// unit-test the `email_verified=false` path and bad-signature path, please add:
-//
-//     type GoogleOAuth struct {
-//         cfg       *oauth2.Config
-//         validator func(ctx context.Context, raw, aud string) (map[string]any, error) // injectable
-//     }
-//
-// Until that exists, deep happy-path / negative-path coverage is documented as
-// a discrepancy in `.team/qa-bugs.md` and skipped here.
-
-// helper — собирает GoogleOAuth с подменённым OAuth2 endpoint (TokenURL),
-// чтобы Exchange ходил в httptest сервер, а не в Google.
 func newGoogleWithMockEndpoint(t *testing.T, tokenURL string) *GoogleOAuth {
 	t.Helper()
 	g := NewGoogleOAuth("test-client-id", "test-client-secret", "https://eop.example/cb")
@@ -84,8 +62,6 @@ func TestGoogle_AuthCodeURL_IncludesState(t *testing.T) {
 	}
 }
 
-// TestGoogle_Exchange_NotConfigured — basic guard: пустой ClientID = ранний exit.
-// Защищает от misconfigured deploy, где случайно вызывают Exchange без env.
 func TestGoogle_Exchange_NotConfigured(t *testing.T) {
 	g := NewGoogleOAuth("", "secret", "https://eop.example/cb")
 	_, err := g.Exchange(context.Background(), "any-code")
@@ -97,8 +73,6 @@ func TestGoogle_Exchange_NotConfigured(t *testing.T) {
 	}
 }
 
-// TestGoogle_Exchange_TokenEndpoint5xx — если Google upstream падает,
-// GoogleOAuth должен вернуть ошибку, а не панику или nil ExternalUser.
 func TestGoogle_Exchange_TokenEndpoint5xx(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "internal", http.StatusInternalServerError)
@@ -110,19 +84,16 @@ func TestGoogle_Exchange_TokenEndpoint5xx(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error on 5xx token endpoint, got nil")
 	}
-	// oauth2 lib обёртывает ошибку — ищем общий маркер.
+
 	if !strings.Contains(strings.ToLower(err.Error()), "token") &&
 		!strings.Contains(strings.ToLower(err.Error()), "exchange") {
 		t.Errorf("error should reference token exchange; got %q", err.Error())
 	}
 }
 
-// TestGoogle_Exchange_MissingIDToken — Google всегда возвращает id_token при
-// scope=openid. Если ответ пришёл без id_token (баг провайдера / прокси),
-// мы не должны выдавать ExternalUser.
 func TestGoogle_Exchange_MissingIDToken(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		// Returning access_token but NOT id_token (which violates OIDC).
+
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "ya29.fake",
@@ -142,26 +113,20 @@ func TestGoogle_Exchange_MissingIDToken(t *testing.T) {
 	}
 }
 
-// TestGoogle_Exchange_BadIDTokenSignature — id_token present but signed with
-// non-Google key. idtoken.Validate should reject it.
-//
-// Это integration-ish тест: idtoken.Validate ходит за Google JWKS, поэтому
-// требует сети. Под `-short` пропускаем.
 func TestGoogle_Exchange_BadIDTokenSignature(t *testing.T) {
 	if testing.Short() {
 		t.Skip("requires Google JWKS fetch")
 	}
-	// Unsigned JWT (alg=none) built at runtime — avoid JWT-shaped literals in
-	// source (gitleaks generic-api-key false positives on base64url blobs).
+
 	hdr, err := json.Marshal(map[string]string{"alg": "none", "typ": "JWT"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	payload, err := json.Marshal(map[string]any{
-		"sub":              "123",
-		"email":            "a@b.com",
-		"email_verified":   true,
-		"aud":              "test-client-id",
+		"sub":            "123",
+		"email":          "a@b.com",
+		"email_verified": true,
+		"aud":            "test-client-id",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -187,13 +152,6 @@ func TestGoogle_Exchange_BadIDTokenSignature(t *testing.T) {
 	}
 }
 
-// === Tests using injectable validator (B-001 resolved) ===
-//
-// Validator DI добавлен через WithGoogleValidator. Тесты подменяют функцию
-// валидации id_token'а — больше не нужны live Google JWKS / сеть.
-
-// newGoogleWithMockTokenAndValidator — собирает GoogleOAuth с мок-endpoint'ом
-// для token exchange + кастомным id_token validator.
 func newGoogleWithMockTokenAndValidator(t *testing.T, tokenURL string, validator GoogleIDTokenValidator) *GoogleOAuth {
 	t.Helper()
 	g := NewGoogleOAuth("test-client-id", "test-client-secret", "https://eop.example/cb", WithGoogleValidator(validator))
@@ -204,8 +162,6 @@ func newGoogleWithMockTokenAndValidator(t *testing.T, tokenURL string, validator
 	return g
 }
 
-// mockTokenServer — httptest сервер, отдающий валидный OAuth2 response с
-// id_token = idToken (мы его не парсим — validator замокан).
 func mockTokenServer(t *testing.T, idToken string) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -288,7 +244,6 @@ func TestGoogle_Exchange_AudMismatch(t *testing.T) {
 	srv := mockTokenServer(t, "fake-id-token")
 	defer srv.Close()
 
-	// Validator surfaces aud-mismatch error (mimics idtoken.Validate behavior).
 	validator := func(_ context.Context, _, _ string) (*idtoken.Payload, error) {
 		return nil, errors.New("idtoken: audience provided does not match aud claim in the JWT")
 	}
@@ -313,7 +268,6 @@ func TestGoogle_Exchange_MissingEmail(t *testing.T) {
 			Subject: "12345",
 			Claims: map[string]any{
 				"email_verified": true,
-				// no email claim
 			},
 		}, nil
 	}

@@ -1,4 +1,3 @@
-// projects.go — список + создание project'ов команды.
 package teams
 
 import (

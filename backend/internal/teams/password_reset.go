@@ -21,18 +21,11 @@ import (
 	"github.com/eye-of-providence/backend/internal/mailer"
 )
 
-// resetTokenTTL — короткий, чтоб украденный email-перехват не давал длинного окна.
 const resetTokenTTL = 1 * time.Hour
 
-// handleForgotPassword — POST /v1/auth/forgot-password.
-// Тело: {"email": "..."}.
-//
-// Поведение: всегда 200 OK (не палим существование email'а).
-// Внутри: ищем юзера по email; если есть — генерим токен и отсылаем письмо.
-// Rate-limit (10/min/IP) уже навешан в cmd/api для /v1/auth/* endpoints.
 func (s Service) handleForgotPassword(c *fiber.Ctx) error {
 	if s.Pool == nil {
-		// Без БД нет учёток — генерим тот же 200, не подавая сигнала наружу.
+
 		return c.JSON(fiber.Map{"status": "ok"})
 	}
 	var req struct {
@@ -41,7 +34,7 @@ func (s Service) handleForgotPassword(c *fiber.Ctx) error {
 	_ = c.BodyParser(&req)
 	email, ok := validateEmail(req.Email)
 	if !ok {
-		return c.JSON(fiber.Map{"status": "ok"}) // та же реакция
+		return c.JSON(fiber.Map{"status": "ok"})
 	}
 
 	user, err := auth.FindUserByEmail(c.Context(), s.Pool, email)
@@ -66,7 +59,7 @@ func (s Service) handleForgotPassword(c *fiber.Ctx) error {
 	}
 
 	if s.Mailer != nil {
-		// Берём locale из user-row — у юзера уже точно есть аккаунт (мы его нашли).
+
 		var userLocale *string
 		_ = s.Pool.QueryRow(c.Context(), `SELECT locale FROM users WHERE id = $1`, user.ID).Scan(&userLocale)
 		loc := mailer.Locale("")
@@ -77,18 +70,13 @@ func (s Service) handleForgotPassword(c *fiber.Ctx) error {
 		subject, html, text := mailer.PasswordResetEmail(resetURL, loc)
 		if err := s.Mailer.Send(c.Context(), email, subject, html, text); err != nil {
 			s.Logger.Warn("forgot-password email send failed", zap.String("to", email), zap.Error(err))
-			// Письмо не ушло — токен в БД остался, юзер может попросить повторно.
-			// Не возвращаем 500: атакующему всё равно отдадим 200.
+
 		}
 	}
 
 	return c.JSON(fiber.Map{"status": "ok"})
 }
 
-// handleResetPassword — POST /v1/auth/reset-password.
-// Тело: {"token": "...", "password": "..."}.
-//
-// На успех bumpит token_version → старые сессии становятся невалидными.
 func (s Service) handleResetPassword(c *fiber.Ctx) error {
 	if s.Pool == nil {
 		return httperr.Unavailable(c, "db_required", "auth requires postgres")
@@ -110,7 +98,7 @@ func (s Service) handleResetPassword(c *fiber.Ctx) error {
 	hash := hashResetToken(req.Token)
 	uid, err := consumeResetToken(c.Context(), s.Pool, hash)
 	if err != nil {
-		// Валидно отдаём общую формулировку — не помогаем перебирать токены.
+
 		return httperr.BadRequest(c, "reset_token_invalid", "invalid or expired reset token")
 	}
 
@@ -119,7 +107,6 @@ func (s Service) handleResetPassword(c *fiber.Ctx) error {
 		return s.internalErr(c, err)
 	}
 
-	// Транзакция: апдейт хэша + bump token_version (инвалидация старых сессий).
 	tx, err := s.Pool.Begin(c.Context())
 	if err != nil {
 		return s.internalErr(c, err)
@@ -137,8 +124,6 @@ func (s Service) handleResetPassword(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"status": "ok"})
 }
 
-// newResetToken — 32 random bytes → hex (64 chars). Возвращает plaintext (для email)
-// и hash (для БД).
 func newResetToken() (token, hash string, err error) {
 	b := make([]byte, 32)
 	if _, err = rand.Read(b); err != nil {
@@ -154,8 +139,6 @@ func hashResetToken(token string) string {
 	return hex.EncodeToString(h[:])
 }
 
-// consumeResetToken — atomically находит активный токен и помечает used_at.
-// Возвращает user_id или ошибку.
 func consumeResetToken(ctx context.Context, pool *pgxpool.Pool, tokenHash string) (uuid.UUID, error) {
 	tx, err := pool.Begin(ctx)
 	if err != nil {

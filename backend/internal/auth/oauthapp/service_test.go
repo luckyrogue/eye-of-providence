@@ -21,7 +21,7 @@ type fakeStore struct {
 }
 
 type linkCall struct {
-	userID                      uuid.UUID
+	userID                   uuid.UUID
 	provider, subject, email string
 }
 

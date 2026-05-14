@@ -4,11 +4,6 @@ import (
 	"testing"
 )
 
-// buildOptions должен принимать оба формата:
-//   - host:port (in-cluster docker)
-//   - redis://user:pass@host:port (managed Redis: Dokploy, Heroku, Upstash)
-// go-redis в .Addr ждёт host:port; полный URL без ParseURL приводит к
-// "too many colons in address" — это и было причиной prod-инцидента.
 func TestBuildOptions_HostPort(t *testing.T) {
 	opts, err := buildOptions("redis:6379")
 	if err != nil {

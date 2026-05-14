@@ -9,15 +9,14 @@ import (
 func TestHistogram_Observe_BucketsCumulative(t *testing.T) {
 	h := newHistogram("test_h", "test")
 
-	h.Observe(3 * time.Millisecond)  // → 5ms, 10ms, 25ms, ... все верхние bucket'ы
-	h.Observe(50 * time.Millisecond) // → 50ms, 100ms, 250ms, ...
-	h.Observe(2 * time.Second)       // → 2.5s, 5s, 10s
+	h.Observe(3 * time.Millisecond)
+	h.Observe(50 * time.Millisecond)
+	h.Observe(2 * time.Second)
 
 	if h.totalCount.Load() != 3 {
 		t.Errorf("totalCount=%d, want 3", h.totalCount.Load())
 	}
 
-	// 3ms падает в КАЖДЫЙ bucket (все ≥ 3ms).
 	for i, b := range h.buckets {
 		got := h.bucketCounts[i].Load()
 		want := uint64(0)

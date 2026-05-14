@@ -63,8 +63,7 @@ func TestPostGitLab_PathEncoding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Repo "team/sub-group/project" должен быть URL-encoded в path:
-	// "team%2Fsub-group%2Fproject"
+
 	if !strings.Contains(gotPath, "team%2Fsub-group%2Fproject") {
 		t.Errorf("path=%q (no URL-encode of slashes)", gotPath)
 	}
@@ -98,11 +97,10 @@ func TestPost_4xxError(t *testing.T) {
 }
 
 func TestPost_DefaultHosts(t *testing.T) {
-	// Just verify default host strings — нет network, проверяем что
-	// функция не паникует на пустом host.
+
 	type roundTripFn func(*http.Request) (*http.Response, error)
 	rt := roundTripFn(func(r *http.Request) (*http.Response, error) {
-		// Capture URL to assert default hostnames.
+
 		got := r.URL.String()
 		if !strings.HasPrefix(got, "https://api.github.com/") &&
 			!strings.HasPrefix(got, "https://gitlab.com/") {
@@ -120,7 +118,6 @@ func TestPost_DefaultHosts(t *testing.T) {
 	}
 }
 
-// roundTripperFn — http.RoundTripper из функции, для in-memory testing.
 type roundTripperFn func(*http.Request) (*http.Response, error)
 
 func (f roundTripperFn) RoundTrip(r *http.Request) (*http.Response, error) {

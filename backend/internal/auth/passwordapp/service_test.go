@@ -13,8 +13,8 @@ import (
 
 type fakeReader struct {
 	em, dn, hash string
-	uid           uuid.UUID
-	err           error
+	uid          uuid.UUID
+	err          error
 }
 
 func (f fakeReader) LookupByEmail(ctx context.Context, email string) (string, string, string, uuid.UUID, error) {

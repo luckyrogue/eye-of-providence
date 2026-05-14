@@ -35,7 +35,7 @@ func TestAITrend_Down(t *testing.T) {
 }
 
 func TestAITrend_Flat(t *testing.T) {
-	// 5% change → flat
+
 	in := Inputs{
 		Last7d: map[string]uint64{"ai": 105 * 60 * 1000},
 		Prev7d: map[string]uint64{"ai": 100 * 60 * 1000},
@@ -109,7 +109,7 @@ func TestTopLang(t *testing.T) {
 	if l, _ := got.Vars["lang"].(string); l != "python" {
 		t.Errorf("lang=%v, want python", l)
 	}
-	// python = 8h из 12h total = 66%
+
 	if pct, _ := got.Vars["pct"].(int); pct < 60 || pct > 70 {
 		t.Errorf("pct=%v, want 60-70", pct)
 	}
@@ -131,16 +131,16 @@ func TestTopLang_SkipsEmpty(t *testing.T) {
 func TestProductiveDay(t *testing.T) {
 	in := Inputs{
 		Trend: []store.TrendPoint{
-			{Date: "2026-05-04", Category: "manual", MS: 1 * 60 * 60 * 1000}, // Monday
-			{Date: "2026-05-08", Category: "manual", MS: 5 * 60 * 60 * 1000}, // Friday
-			{Date: "2026-05-08", Category: "ai", MS: 1 * 60 * 60 * 1000},     // Friday +1h
+			{Date: "2026-05-04", Category: "manual", MS: 1 * 60 * 60 * 1000},
+			{Date: "2026-05-08", Category: "manual", MS: 5 * 60 * 60 * 1000},
+			{Date: "2026-05-08", Category: "ai", MS: 1 * 60 * 60 * 1000},
 		},
 	}
 	got := productiveDayInsight(in)
 	if got == nil || got.Key != "productive_day" {
 		t.Fatalf("got %+v", got)
 	}
-	// Friday = 5 (Mon=1, Tue=2, ..., Fri=5, Sat=6, Sun=0)
+
 	if dow, _ := got.Vars["dow"].(int); dow != 5 {
 		t.Errorf("dow=%v, want 5 (Friday)", dow)
 	}
@@ -191,7 +191,7 @@ func TestGenerate_DeterministicOrder(t *testing.T) {
 	if len(out) < 4 {
 		t.Fatalf("got %d insights, want >=4", len(out))
 	}
-	// Order: ai_trend → ai_ratio → top_lang → productive_day → total_activity
+
 	wantOrder := []string{"ai_trend_up", "ai_ratio", "top_lang", "productive_day", "total_activity"}
 	for i, k := range wantOrder {
 		if out[i].Key != k {

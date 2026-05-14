@@ -8,8 +8,6 @@ import (
 	"testing"
 )
 
-// --- /v1/teams/:id/members ---
-
 func TestListMembers_HappyPath(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -48,8 +46,6 @@ func TestListMembers_NotMember_403(t *testing.T) {
 	}
 }
 
-// --- /v1/teams/:id PATCH (rename) ---
-
 func TestUpdateTeam_RenameByOwner(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -84,8 +80,6 @@ func TestUpdateTeam_NonOwner_403(t *testing.T) {
 	}
 }
 
-// --- /v1/teams/:id DELETE (owner-side) ---
-
 func TestDeleteTeam_OwnerCascades(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -102,15 +96,13 @@ func TestDeleteTeam_OwnerCascades(t *testing.T) {
 	if count != 0 {
 		t.Error("team не удалена")
 	}
-	// Cascade — team_members тоже исчезли
+
 	var memberCount int
 	_ = pool.QueryRow(context.Background(), "SELECT count(*) FROM team_members WHERE team_id=$1", team).Scan(&memberCount)
 	if memberCount != 0 {
 		t.Errorf("team_members count=%d, FK cascade сломан?", memberCount)
 	}
 }
-
-// --- /v1/teams/:id/members/:user_id DELETE ---
 
 func TestRemoveMember_OwnerCanRemoveMember(t *testing.T) {
 	pool := setupTestDB(t)
@@ -188,8 +180,6 @@ func TestRemoveMember_MemberCannotRemove(t *testing.T) {
 	}
 }
 
-// --- Member role updates ---
-
 func TestUpdateMemberRole_OwnerPromotesMemberToAdmin(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -246,8 +236,6 @@ func TestUpdateMemberRole_BadRole_400(t *testing.T) {
 		t.Errorf("status=%d, want 400", status)
 	}
 }
-
-// --- /v1/teams/:id/projects ---
 
 func TestListProjects_Empty(t *testing.T) {
 	pool := setupTestDB(t)
@@ -310,8 +298,6 @@ func TestCreateProject_MemberCannot(t *testing.T) {
 	}
 }
 
-// --- /v1/commits ingest + queries ---
-
 func TestIngestCommit_HappyPath(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -319,7 +305,6 @@ func TestIngestCommit_HappyPath(t *testing.T) {
 	team := createTeamDirect(t, pool, "IC", ownerID)
 	tok := loginAs(t, pool, svc.JWTSecret, ownerID, "owner-ic@example.com")
 
-	// Создаём проект
 	var projID string
 	_ = pool.QueryRow(context.Background(),
 		`INSERT INTO projects (id, user_id, team_id, name, root_path_hash)
@@ -438,8 +423,6 @@ func TestTeamCommits_List(t *testing.T) {
 	}
 }
 
-// --- /v1/teams/:id/summary ---
-
 func TestTeamSummary_NoEvents(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -458,7 +441,7 @@ func TestTeamSummary_NoEvents(t *testing.T) {
 	if len(out.Members) != 1 {
 		t.Errorf("members count = %d, want 1 (owner)", len(out.Members))
 	}
-	// Без EventStore агрегаты должны быть нулевые
+
 	if total, ok := out.Members[0]["total_ms"].(float64); ok && total != 0 {
 		t.Errorf("total_ms = %v, want 0 (no EventStore)", total)
 	}

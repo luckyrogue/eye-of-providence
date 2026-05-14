@@ -1,9 +1,3 @@
-// Package metrics — минимальный Prometheus-совместимый text exposition format
-// без внешних зависимостей. Достаточно для Phase 7+; реальный Prometheus client
-// можно подключить позже без изменения публичного API.
-//
-// Counters: ингест-события, ошибки, gemini calls (input/output tokens).
-// Histograms: request latency, ClickHouse insert/query latency.
 package metrics
 
 import (
@@ -24,13 +18,6 @@ func (c *Counter) Inc()          { c.val.Add(1) }
 func (c *Counter) Add(v uint64)  { c.val.Add(v) }
 func (c *Counter) Value() uint64 { return c.val.Load() }
 
-//
-// Bucketed observe в наносекундах для точности; рендерится в seconds-format
-// (Prometheus convention).
-//
-// Buckets: 5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2.5s, 5s, 10s.
-// +Inf bucket — сумма всех наблюдений.
-
 var defaultBuckets = []time.Duration{
 	5 * time.Millisecond,
 	10 * time.Millisecond,
@@ -49,8 +36,7 @@ type Histogram struct {
 	name    string
 	help    string
 	buckets []time.Duration
-	// Один atomic counter на каждый bucket (cumulative — observation падает
-	// в каждый bucket >= её значения).
+
 	bucketCounts []atomic.Uint64
 	totalCount   atomic.Uint64
 	sumNS        atomic.Uint64
@@ -71,7 +57,7 @@ func (h *Histogram) Observe(d time.Duration) {
 	}
 	h.totalCount.Add(1)
 	h.sumNS.Add(uint64(d))
-	// Cumulative buckets: каждое наблюдение падает в каждый bucket с le ≥ d.
+
 	for i, b := range h.buckets {
 		if d <= b {
 			h.bucketCounts[i].Add(1)
@@ -79,7 +65,6 @@ func (h *Histogram) Observe(d time.Duration) {
 	}
 }
 
-// ObserveSince — удобная обёртка для defer метрик: defer h.ObserveSince(start).
 func (h *Histogram) ObserveSince(start time.Time) {
 	h.Observe(time.Since(start))
 }
@@ -115,9 +100,6 @@ func allHistograms() []*Histogram {
 	return []*Histogram{RequestLatency, ClickHouseWrite, ClickHouseRead}
 }
 
-// renderMu — защищаем от concurrent чтения histogram'ов. Каждый bucket atomic,
-// но чтобы snapshot был согласованным (count соответствует bucket-counts),
-// берём mutex.
 var renderMu sync.Mutex
 
 func Render() string {
@@ -138,7 +120,7 @@ func Render() string {
 			fmt.Fprintf(&sb, "%s_bucket{le=\"%g\"} %d\n", h.name, b.Seconds(), h.bucketCounts[i].Load())
 		}
 		total := h.totalCount.Load()
-		// +Inf bucket — total count.
+
 		fmt.Fprintf(&sb, "%s_bucket{le=\"+Inf\"} %d\n", h.name, total)
 		fmt.Fprintf(&sb, "%s_sum %g\n", h.name, time.Duration(h.sumNS.Load()).Seconds())
 		fmt.Fprintf(&sb, "%s_count %d\n", h.name, total)
@@ -147,8 +129,6 @@ func Render() string {
 	return sb.String()
 }
 
-// Snapshot — JSON-friendly карта для /v1/admin/cost. Histogram'ы экспонируем
-// как count + sum_ms (детальные buckets — только в Render для Prometheus).
 func Snapshot() map[string]uint64 {
 	out := make(map[string]uint64, len(allCounters())+len(allHistograms())*2)
 	for _, c := range allCounters() {

@@ -1,21 +1,3 @@
-// changelog-gen — парсит git log и генерит JSON-changelog, который frontend
-// рендерит на public /changelog page.
-//
-// Usage:
-//
-//	go run ./cmd/changelog-gen --out ../dashboard/public/changelog.json --since 2026-05-01
-//
-// Default: parses last 200 commits, skips merges + ignored types (chore,
-// style, test). Supports conventional commits: type(scope): subject.
-//
-// Output schema (stable contract — frontend reads):
-//
-//	{
-//	  "generated_at": "2026-05-10T18:23:00Z",
-//	  "entries": [
-//	    {"hash":"abc1234","date":"2026-05-10","type":"feat","scope":"auth","summary":"..."}
-//	  ]
-//	}
 package main
 
 import (
@@ -30,8 +12,6 @@ import (
 	"time"
 )
 
-// Categories которые показываем юзерам. Остальные (chore, style, test, build,
-// ci) — internal noise, не интересны end-user'ам.
 var publicTypes = map[string]bool{
 	"feat":     true,
 	"fix":      true,
@@ -40,13 +20,11 @@ var publicTypes = map[string]bool{
 	"docs":     true,
 }
 
-// Conventional-commit re: `<type>(<scope>)?<!>?: <summary>`.
-// `!` после scope/type помечает breaking change.
 var convRe = regexp.MustCompile(`^(\w+)(?:\(([^)]+)\))?(!)?:\s*(.+)$`)
 
 type entry struct {
 	Hash     string `json:"hash"`
-	Date     string `json:"date"` // YYYY-MM-DD UTC
+	Date     string `json:"date"`
 	Type     string `json:"type"`
 	Scope    string `json:"scope,omitempty"`
 	Breaking bool   `json:"breaking,omitempty"`
@@ -98,8 +76,7 @@ func main() {
 		if !publicTypes[typ] {
 			continue
 		}
-		// Dependabot bumps (chore type обычно отфильтрован выше, но в редких
-		// случаях dependabot подаёт fix(deps)) — игнорим.
+
 		if strings.Contains(strings.ToLower(subject), "dependabot[bot]") {
 			continue
 		}
@@ -113,8 +90,6 @@ func main() {
 		})
 	}
 
-	// Stable order: newest first by date+hash. Уже идёт в порядке git log
-	// (newest first), но защищаемся через sort.
 	sort.SliceStable(entries, func(i, j int) bool {
 		if entries[i].Date != entries[j].Date {
 			return entries[i].Date > entries[j].Date

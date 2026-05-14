@@ -8,8 +8,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
-// onboardingStatus — то, что фронт показывает в wizard'е и что лежит
-// в основе routing-решения "редиректить ли на /onboarding после login".
 type onboardingStatus struct {
 	TeamsCount int  `json:"teams_count"`
 	HasEvent   bool `json:"has_event"`
@@ -27,14 +25,13 @@ func onboardingStatusHandler(s MeService) fiber.Handler {
 		out := onboardingStatus{}
 
 		if s.Pool != nil {
-			// teams_count — сколько команд юзер участник.
+
 			if err := s.Pool.QueryRow(c.Context(),
 				`SELECT COUNT(*) FROM team_members WHERE user_id = $1`, uid,
 			).Scan(&out.TeamsCount); err != nil {
 				s.Logger.Warn("onboarding teams count failed", zap.Error(err))
 			}
 
-			// dismissed — флаг, что юзер прошёл/закрыл wizard.
 			var dismissedAt *string
 			if err := s.Pool.QueryRow(c.Context(),
 				`SELECT onboarding_dismissed_at::text FROM users WHERE id = $1`, uid,
@@ -44,7 +41,6 @@ func onboardingStatusHandler(s MeService) fiber.Handler {
 			out.Dismissed = dismissedAt != nil
 		}
 
-		// has_event — пришло ли хоть одно событие. Дешевле всего: ListRecent(limit=1).
 		if s.EventStore != nil {
 			events, err := s.EventStore.ListRecent(c.Context(), claims.UserID, 1)
 			if err != nil {
@@ -58,7 +54,6 @@ func onboardingStatusHandler(s MeService) fiber.Handler {
 	}
 }
 
-
 func onboardingDismissHandler(s MeService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		claims := ClaimsFromCtx(c)
@@ -67,10 +62,10 @@ func onboardingDismissHandler(s MeService) fiber.Handler {
 			return httperr.Unauthorized(c, "invalid_subject", "invalid token subject")
 		}
 		if s.Pool == nil {
-			// Без БД нечего сохранять; возвращаем ok, фронт переключит state локально.
+
 			return c.JSON(fiber.Map{"status": "ok"})
 		}
-		// Идемпотентно: повторный dismiss оставляет первую дату.
+
 		if _, err := s.Pool.Exec(c.Context(),
 			`UPDATE users SET onboarding_dismissed_at = COALESCE(onboarding_dismissed_at, now()) WHERE id = $1`, uid,
 		); err != nil {

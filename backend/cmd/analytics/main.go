@@ -19,8 +19,6 @@ func main() {
 		return c.JSON(fiber.Map{"status": "ok", "service": "analytics"})
 	})
 
-	// TODO Phase 1+: ClickHouse queries для дашборда (heatmap, AI ratio, top providers).
-
 	logger.Info("analytics starting", zap.String("addr", cfg.HTTPAddr))
 	if err := app.Listen(cfg.HTTPAddr); err != nil {
 		logger.Fatal("analytics exited", zap.Error(err))

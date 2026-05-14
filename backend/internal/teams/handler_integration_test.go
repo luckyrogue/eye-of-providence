@@ -1,10 +1,5 @@
 //go:build integration
 
-// Запуск: EOP_TEST_PG_DSN=postgres://eop:eop_dev@localhost:5432/eop_test \
-//   go test -tags=integration ./internal/teams/...
-//
-// Эти тесты требуют живой Postgres. Без env var все они пропускаются.
-
 package teams
 
 import (
@@ -15,8 +10,6 @@ import (
 
 	"github.com/eye-of-providence/backend/internal/auth"
 )
-
-// --- handleCreateTeam (P0 #3 — atomic beta limit + 1-owner) ---
 
 func TestCreateTeam_HappyPath(t *testing.T) {
 	pool := setupTestDB(t)
@@ -55,7 +48,7 @@ func TestCreateTeam_OneOwnerPerUser(t *testing.T) {
 func TestCreateTeam_BetaLimitReached(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
-	// 3 чужих команды от 3 разных юзеров — beta limit (по умолчанию 3) выбран.
+
 	for i := 0; i < 3; i++ {
 		other := createUser(t, pool, "u"+string(rune('0'+i))+"@example.com")
 		createTeamDirect(t, pool, "Team "+string(rune('A'+i)), other)
@@ -75,7 +68,7 @@ func TestCreateTeam_BetaLimitReached(t *testing.T) {
 func TestCreateTeam_SuperAdminBypassesBeta(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
-	// 3 чужих команды — beta full для regular users.
+
 	for i := 0; i < 3; i++ {
 		other := createUser(t, pool, "u"+string(rune('0'+i))+"@x.com")
 		createTeamDirect(t, pool, "Team "+string(rune('A'+i)), other)
@@ -90,17 +83,15 @@ func TestCreateTeam_SuperAdminBypassesBeta(t *testing.T) {
 	}
 }
 
-// --- handleUpdateMemberRole (P0 #4 — promote-to-owner check) ---
-
 func TestUpdateRole_PromoteToOwner_RefusesIfTargetOwnsAnother(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
-	// alice owns Team A; bob owns Team B and is added as member of Team A.
+
 	alice := createUser(t, pool, "alice@x.com")
 	bob := createUser(t, pool, "bob@x.com")
 	teamA := createTeamDirect(t, pool, "A", alice)
 	createTeamDirect(t, pool, "B", bob)
-	// bob -> member of A
+
 	_, err := pool.Exec(context.Background(),
 		"INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, 'member')", teamA, bob)
 	if err != nil {
@@ -108,7 +99,6 @@ func TestUpdateRole_PromoteToOwner_RefusesIfTargetOwnsAnother(t *testing.T) {
 	}
 	tok := loginAs(t, pool, svc.JWTSecret, alice, "alice@x.com")
 
-	// Alice пытается promote'нуть bob'а в owner Team A — но bob уже owner Team B.
 	status, body := do(t, app, "PATCH", "/v1/teams/"+teamA.String()+"/members/"+bob.String(),
 		tok, map[string]string{"role": "owner"})
 	if status != 409 {
@@ -133,8 +123,6 @@ func TestUpdateRole_CannotDemoteLastOwner(t *testing.T) {
 	}
 }
 
-// --- handleSetSubscription (P0 — atomic + validation before tx) ---
-
 func TestSetSubscription_RollbackOnBadPayment(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -144,9 +132,6 @@ func TestSetSubscription_RollbackOnBadPayment(t *testing.T) {
 	teamID := createTeamDirect(t, pool, "Acme", target)
 	tok := loginAs(t, pool, svc.JWTSecret, admin, "admin@x.com")
 
-	// Bad covers_until — должно зафейлить ДО tx.Begin (validation moved up).
-	// Plan = pro и без вшивания платежа. Если бы валидация была после Begin,
-	// мы бы поломали teams.subscription_plan — но fix именно об этом.
 	body := map[string]any{
 		"plan":  "pro",
 		"until": "2027-01-01T00:00:00Z",
@@ -162,7 +147,6 @@ func TestSetSubscription_RollbackOnBadPayment(t *testing.T) {
 		t.Fatalf("expected 400 on bad covers_until, got %d", status)
 	}
 
-	// Plan team'а должен остаться 'free' — ничего не должно было записаться.
 	var plan string
 	_ = pool.QueryRow(context.Background(),
 		"SELECT subscription_plan FROM teams WHERE id=$1", teamID).Scan(&plan)
@@ -232,8 +216,6 @@ func TestSetSubscription_ZeroAmountRejected(t *testing.T) {
 	}
 }
 
-// --- handleAdminUpdateUser (P0 — bump tv on demote, no self-demote) ---
-
 func TestAdminUpdateUser_DemoteBumpsTokenVersion(t *testing.T) {
 	pool := setupTestDB(t)
 	_, svc := newTestApp(t, pool)
@@ -242,7 +224,6 @@ func TestAdminUpdateUser_DemoteBumpsTokenVersion(t *testing.T) {
 	other := createUser(t, pool, "other@x.com")
 	makeSuperAdmin(t, pool, other)
 
-	// Записать tv до демоута
 	tvBefore, _ := auth.TokenVersion(context.Background(), pool, other)
 
 	app, _ := newTestApp(t, pool)
@@ -272,8 +253,6 @@ func TestAdminUpdateUser_CannotDemoteSelf(t *testing.T) {
 	}
 }
 
-// --- handleAdminDeleteUser (P0 — last super_admin protect, ClickHouse cleanup) ---
-
 func TestAdminDeleteUser_CannotDeleteLastSuperAdmin(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -281,16 +260,12 @@ func TestAdminDeleteUser_CannotDeleteLastSuperAdmin(t *testing.T) {
 	makeSuperAdmin(t, pool, admin)
 	other := createUser(t, pool, "other@x.com")
 	makeSuperAdmin(t, pool, other)
-	// Удалили other — admin остался один super.
+
 	other2 := createUser(t, pool, "another-other@x.com")
 	makeSuperAdmin(t, pool, other2)
 	_, _ = pool.Exec(context.Background(), "DELETE FROM users WHERE id=$1", other2)
 	_, _ = pool.Exec(context.Background(), "DELETE FROM users WHERE id=$1", other)
 
-	// Теперь только admin = super. Self-delete защищён, но мы хотим проверить
-	// что и через handleAdminDeleteUser обычный путь даёт 409 на last super.
-	// Создаём ещё одного super чтобы admin мог его удалить, потом проверяем
-	// что сам admin не может быть удалён (defensive: self-block).
 	tok := loginAs(t, pool, svc.JWTSecret, admin, "admin@x.com")
 	status, _ := do(t, app, "DELETE", "/v1/admin/users/"+admin.String(), tok, nil)
 	if status != 409 {
@@ -298,22 +273,18 @@ func TestAdminDeleteUser_CannotDeleteLastSuperAdmin(t *testing.T) {
 	}
 }
 
-// --- Middleware (P0 #1 — JWT revocation via tv check) ---
-
 func TestMiddleware_RevokedTokenAfterTVBump(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
 	uid := createUser(t, pool, "user@x.com")
-	createTeamDirect(t, pool, "T", uid) // даём ему хоть одну команду
+	createTeamDirect(t, pool, "T", uid)
 	tok := loginAs(t, pool, svc.JWTSecret, uid, "user@x.com")
 
-	// Токен валиден сразу.
 	status, _ := do(t, app, "GET", "/v1/teams", tok, nil)
 	if status != 200 {
 		t.Fatalf("expected 200 with fresh token, got %d", status)
 	}
 
-	// Бампаем tv — старый токен должен стать невалидным.
 	if err := auth.BumpTokenVersion(context.Background(), pool, uid); err != nil {
 		t.Fatalf("bump: %v", err)
 	}
@@ -335,15 +306,12 @@ func TestMiddleware_MissingBearer(t *testing.T) {
 	}
 }
 
-// --- handleInviteAccept (P0 #2 — atomic consume) ---
-
 func TestInviteAccept_ConsumesAtomically(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
 	owner := createUser(t, pool, "owner@x.com")
 	teamID := createTeamDirect(t, pool, "T", owner)
 
-	// Manually insert invite with max_uses=1 для теста exhaustion.
 	_, err := pool.Exec(context.Background(), `
 		INSERT INTO team_invites (team_id, code, created_by, max_uses, expires_at)
 		VALUES ($1, 'singleshot', $2, 1, now() + interval '1 hour')`, teamID, owner)
@@ -351,7 +319,6 @@ func TestInviteAccept_ConsumesAtomically(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Первый приём — 200.
 	user1 := createUser(t, pool, "u1@x.com")
 	tok1 := loginAs(t, pool, svc.JWTSecret, user1, "u1@x.com")
 	status, _ := do(t, app, "POST", "/v1/invites/singleshot/accept", tok1, nil)
@@ -359,7 +326,6 @@ func TestInviteAccept_ConsumesAtomically(t *testing.T) {
 		t.Fatalf("first accept should succeed, got %d", status)
 	}
 
-	// Второй — 404 (invite exhausted).
 	user2 := createUser(t, pool, "u2@x.com")
 	tok2 := loginAs(t, pool, svc.JWTSecret, user2, "u2@x.com")
 	status, _ = do(t, app, "POST", "/v1/invites/singleshot/accept", tok2, nil)

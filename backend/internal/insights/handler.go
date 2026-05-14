@@ -13,7 +13,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
-// RegisterRoutes — GET /v1/me/insights → []Insight.
 func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwtSecret string, pool *pgxpool.Pool) {
 	g := app.Group("/v1/me", auth.Middleware(jwtSecret, pool))
 	g.Get("/insights", insightsHandler(st, logger))
@@ -28,10 +27,6 @@ func insightsHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
 		last30 := now.Add(-30 * 24 * time.Hour)
 		tz := c.Query("tz", "UTC")
 
-		// Fan-out: 4 independent queries в parallel. ClickHouse driver
-		// поддерживает multiple connections (default pool=10), wall-clock
-		// время = max(query_i) вместо sum. На typical CH Cloud это ~2-3×
-		// speedup для insights endpoint.
 		var (
 			aggLast, aggPrev map[string]uint64
 			langs            []store.LangCell

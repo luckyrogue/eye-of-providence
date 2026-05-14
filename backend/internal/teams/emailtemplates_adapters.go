@@ -11,8 +11,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/teams/emailtemplates"
 )
 
-// --- Adapters: mailer + audit → emailtemplates ports (internal/teams boundary). ---
-
 type pgOverrideRepo struct {
 	store *mailer.PGTemplateStore
 }

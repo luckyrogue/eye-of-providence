@@ -10,8 +10,8 @@ import (
 type Claims struct {
 	UserID       string `json:"sub"`
 	Email        string `json:"email,omitempty"`
-	Provider     string `json:"provider,omitempty"` // github | google | dev | password
-	TokenVersion int    `json:"tv"`                 // bumps на демоут/wipe → старые JWT инвалидируются
+	Provider     string `json:"provider,omitempty"`
+	TokenVersion int    `json:"tv"`
 	jwt.RegisteredClaims
 }
 

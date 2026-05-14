@@ -1,7 +1,3 @@
-// admin.go — super_admin endpoints: list teams/users, stats, delete user/team,
-// update user, add member, set subscription, list payments.
-//
-// Все требуют requireSuperAdmin (или явный isSuperAdmin) gate в начале.
 package teams
 
 import (
@@ -19,8 +15,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
-// adminListPagination — общий парсер ?limit=N&offset=N для admin-list эндпоинтов.
-// limit max=200, default=100. offset >= 0.
 func adminListPagination(c *fiber.Ctx) (limit, offset int) {
 	limit = 100
 	if v, err := strconv.Atoi(c.Query("limit")); err == nil && v > 0 {
@@ -32,7 +26,6 @@ func adminListPagination(c *fiber.Ctx) (limit, offset int) {
 	return limit, offset
 }
 
-// requireSuperAdmin — guard для super_admin handler'ов. Возвращает true если пускаем.
 func (s Service) requireSuperAdmin(c *fiber.Ctx) bool {
 	if !s.isSuperAdmin(c) {
 		_ = httperr.Forbidden(c, "super_admin_required", "super_admin only")
@@ -130,9 +123,6 @@ func (s Service) handleAdminStats(c *fiber.Ctx) error {
 	})
 }
 
-// handleAdminAudit — list audit log entries с filtering. Делегирует в
-// audit.Service.List. Тонкая обёртка для сохранения single registration
-// point (все /v1/admin/* в этом файле) и единого super_admin guard.
 func (s Service) handleAdminAudit(c *fiber.Ctx) error {
 	if !s.requireSuperAdmin(c) {
 		return nil
@@ -172,16 +162,6 @@ func (s Service) handleAdminAudit(c *fiber.Ctx) error {
 	})
 }
 
-// handleAdminRevenue — aggregate финансовых метрик для admin overview.
-//
-// Возвращает:
-//
-//	total_cents       — сумма всех payment'ов за всё время
-//	last_30d_cents    — сумма payments за последние 30 дней (≈ MRR proxy)
-//	currency          — наиболее частая валюта в payments (для display)
-//	paying_teams      — distinct count team'ов с >=1 payment'ом
-//	by_plan           — распределение subscription_plan по teams (count)
-//	recent[]          — последние 10 payments для табы
 func (s Service) handleAdminRevenue(c *fiber.Ctx) error {
 	if !s.requireSuperAdmin(c) {
 		return nil
@@ -206,7 +186,6 @@ func (s Service) handleAdminRevenue(c *fiber.Ctx) error {
 		currency = "USD"
 	}
 
-	// Plan distribution.
 	byPlan := map[string]int{}
 	rows, err := s.Pool.Query(ctx,
 		"SELECT COALESCE(subscription_plan, 'free') AS plan, count(*) FROM teams GROUP BY 1")
@@ -221,17 +200,16 @@ func (s Service) handleAdminRevenue(c *fiber.Ctx) error {
 		}
 	}
 
-	// Recent payments (top 10).
 	type recentPayment struct {
-		ID          uuid.UUID  `json:"id"`
-		TeamID      uuid.UUID  `json:"team_id"`
-		TeamName    string     `json:"team_name"`
-		AmountCents *int       `json:"amount_cents,omitempty"`
-		Currency    *string    `json:"currency,omitempty"`
-		Method      *string    `json:"method,omitempty"`
-		CoversUntil time.Time  `json:"covers_until"`
-		PaidAt      time.Time  `json:"paid_at"`
-		Note        *string    `json:"note,omitempty"`
+		ID          uuid.UUID `json:"id"`
+		TeamID      uuid.UUID `json:"team_id"`
+		TeamName    string    `json:"team_name"`
+		AmountCents *int      `json:"amount_cents,omitempty"`
+		Currency    *string   `json:"currency,omitempty"`
+		Method      *string   `json:"method,omitempty"`
+		CoversUntil time.Time `json:"covers_until"`
+		PaidAt      time.Time `json:"paid_at"`
+		Note        *string   `json:"note,omitempty"`
 	}
 	recent := []recentPayment{}
 	rrows, err := s.Pool.Query(ctx, `
@@ -260,8 +238,6 @@ func (s Service) handleAdminRevenue(c *fiber.Ctx) error {
 	})
 }
 
-// handleAdminSSOList — все SSO-конфиги для super_admin global view.
-// Join с teams для получения team_name. Client_secret НИКОГДА не возвращаем.
 func (s Service) handleAdminSSOList(c *fiber.Ctx) error {
 	if !s.requireSuperAdmin(c) {
 		return nil
@@ -302,9 +278,6 @@ func (s Service) handleAdminSSOList(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"configs": out})
 }
 
-// handleAdminSSODisable — force-disable SSO для team (super_admin override).
-// Owner может re-enable в team settings; полное удаление через DELETE
-// /v1/teams/:id/sso (owner-only).
 func (s Service) handleAdminSSODisable(c *fiber.Ctx) error {
 	if !s.requireSuperAdmin(c) {
 		return nil
@@ -338,7 +311,7 @@ func (s Service) handleAdminDeleteTeam(c *fiber.Ctx) error {
 	if err != nil {
 		return httperr.BadRequest(c, "invalid_team_id", "invalid team id")
 	}
-	// Capture team name для audit-trail ДО удаления.
+
 	var teamName string
 	_ = s.Pool.QueryRow(c.Context(), "SELECT name FROM teams WHERE id=$1", teamID).Scan(&teamName)
 	if _, err := s.Pool.Exec(c.Context(), "DELETE FROM teams WHERE id=$1", teamID); err != nil {
@@ -359,11 +332,11 @@ func (s Service) handleAdminDeleteUser(c *fiber.Ctx) error {
 	if err != nil {
 		return httperr.BadRequest(c, "invalid_user_id", "invalid user id")
 	}
-	// Запрет на самоудаление, чтобы super_admin не остался без аккаунта.
+
 	if uid == userID(c) {
 		return httperr.Conflict(c, "cannot_delete_self", "cannot delete yourself")
 	}
-	// Защита: не оставить систему без хотя бы одного super_admin'а.
+
 	var role string
 	_ = s.Pool.QueryRow(c.Context(), "SELECT global_role FROM users WHERE id=$1", uid).Scan(&role)
 	if role == "super_admin" {
@@ -374,15 +347,14 @@ func (s Service) handleAdminDeleteUser(c *fiber.Ctx) error {
 			return httperr.Conflict(c, "last_super_admin", "cannot delete last super_admin")
 		}
 	}
-	// ClickHouse cleanup ДО Postgres-удаления — после удаления users-row мы потеряем
-	// uid, и события юзера останутся orphan'ами (не привязаны к существующему юзеру).
+
 	if d, ok := EventStore.(store.UserDeleter); ok {
 		if err := d.DeleteUserData(c.Context(), uid.String()); err != nil {
 			s.Logger.Warn("clickhouse delete failed (continuing)",
 				zap.String("user_id", uid.String()), zap.Error(err))
 		}
 	}
-	// Capture victim email для audit-trail ДО удаления.
+
 	var victimEmail string
 	_ = s.Pool.QueryRow(c.Context(), "SELECT email FROM users WHERE id=$1", uid).Scan(&victimEmail)
 	if _, err := s.Pool.Exec(c.Context(), "DELETE FROM users WHERE id=$1", uid); err != nil {
@@ -418,7 +390,7 @@ func (s Service) handleAdminUpdateUser(c *fiber.Ctx) error {
 		if role != "user" && role != "super_admin" {
 			return httperr.BadRequest(c, "invalid_global_role", "global_role must be user | super_admin")
 		}
-		// Запрет понизить себя — иначе можно ребутнуть систему без super_admin'а.
+
 		if uid == userID(c) && role != "super_admin" {
 			return httperr.Conflict(c, "cannot_demote_self", "cannot demote yourself")
 		}
@@ -429,13 +401,12 @@ func (s Service) handleAdminUpdateUser(c *fiber.Ctx) error {
 			"UPDATE users SET global_role=$1 WHERE id=$2", role, uid); err != nil {
 			return s.internalErr(c, err)
 		}
-		// Инвалидируем существующие JWT этого юзера — иначе при демоуте super_admin
-		// сохранил бы доступ к /v1/admin/* до истечения 14d токена.
+
 		_ = auth.BumpTokenVersion(c.Context(), s.Pool, uid)
 		if prevRole != role {
 			actorID, actorEmail := s.actorInfo(c)
 			s.Audit.LogFromCtx(c, actorID, actorEmail, audit.ActionUserRoleChanged, "user", uid.String(), map[string]any{
-				"email":    victimEmail,
+				"email":     victimEmail,
 				"role_from": prevRole,
 				"role_to":   role,
 			})
@@ -486,8 +457,7 @@ func (s Service) handleAdminAddMember(c *fiber.Ctx) error {
 	if err != nil {
 		return httperr.NotFound(c, "user_not_found", "user with this email not found")
 	}
-	// Защита 1-owner invariant: super_admin может назначить owner'а на любую команду,
-	// но не на ту, где этот юзер уже owner какой-то другой команды.
+
 	if role == "owner" {
 		var existingOwned int
 		_ = s.Pool.QueryRow(c.Context(),
@@ -497,7 +467,7 @@ func (s Service) handleAdminAddMember(c *fiber.Ctx) error {
 			return httperr.Conflict(c, "owner_limit", "user already owns another company")
 		}
 	}
-	// UPSERT — если юзер уже member, обновим роль (вместо silent no-op).
+
 	if _, err := s.Pool.Exec(c.Context(), `
 		INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, $3)
 		ON CONFLICT (team_id, user_id) DO UPDATE SET role = EXCLUDED.role`,
@@ -508,17 +478,16 @@ func (s Service) handleAdminAddMember(c *fiber.Ctx) error {
 }
 
 type setSubscriptionReq struct {
-	Plan  *string `json:"plan"`  // "free" | "pro" | "team" | "enterprise"
-	Until *string `json:"until"` // ISO8601 timestamptz; nil = не менять; "" = очистить (revoke)
-	Note  *string `json:"note"`  // публичная заметка (видна owner'у)
+	Plan  *string `json:"plan"`
+	Until *string `json:"until"`
+	Note  *string `json:"note"`
 
-	// Опциональный payment record. Если есть amount_cents > 0 и covers_until — пишем в team_payments.
 	Payment *struct {
 		AmountCents int    `json:"amount_cents"`
 		Currency    string `json:"currency"`
 		Method      string `json:"method"`
 		Note        string `json:"note"`
-		CoversUntil string `json:"covers_until"` // ISO8601
+		CoversUntil string `json:"covers_until"`
 	} `json:"payment"`
 }
 
@@ -535,8 +504,6 @@ func (s Service) handleSetSubscription(c *fiber.Ctx) error {
 		return httperr.BadRequest(c, "invalid_body", "invalid body")
 	}
 
-	// Вся валидация — ДО tx.Begin, чтобы плохой запрос не открывал idle txn slot
-	// (DoS amplification).
 	var planNorm string
 	if req.Plan != nil {
 		planNorm = strings.ToLower(strings.TrimSpace(*req.Plan))

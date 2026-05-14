@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Store — персистентность для upsert OAuth identity (реализация в родительском пакете auth).
 type Store interface {
 	FindUserIDByIdentity(ctx context.Context, provider, subject string) (userID uuid.UUID, ok bool, err error)
 	UpdateUserEmailIfEmpty(ctx context.Context, userID uuid.UUID, email string) error

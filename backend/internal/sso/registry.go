@@ -10,10 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Registry — кеш OIDCProvider'ов per-team. OIDC discovery (well-known)
-// — это HTTP round-trip к IdP'у; не хочется делать его на каждый /sso/start
-// call. Cache TTL = 1h: если config меняется через admin UI, мы invalidate'им
-// явно через Invalidate(teamID).
 type Registry struct {
 	pool        *pgxpool.Pool
 	redirectURL string
@@ -27,8 +23,6 @@ type registryEntry struct {
 	loadedAt time.Time
 }
 
-// NewRegistry — конструктор. redirectURL должен быть public URL endpoint'а
-// `/v1/sso/oidc/callback` (registered в IdP'е).
 func NewRegistry(pool *pgxpool.Pool, redirectURL string) *Registry {
 	return &Registry{
 		pool:        pool,
@@ -38,8 +32,6 @@ func NewRegistry(pool *pgxpool.Pool, redirectURL string) *Registry {
 	}
 }
 
-// Get — возвращает provider для team. Кешируется на 1h. Возвращает
-// ErrConfigNotFound если SSO не настроен или disabled.
 func (r *Registry) Get(ctx context.Context, teamID uuid.UUID) (*OIDCProvider, error) {
 	r.mu.RLock()
 	if e, ok := r.entries[teamID]; ok && time.Since(e.loadedAt) < r.ttl {
@@ -56,8 +48,7 @@ func (r *Registry) Get(ctx context.Context, teamID uuid.UUID) (*OIDCProvider, er
 		return nil, ErrConfigNotFound
 	}
 	if cfg.Provider != ProviderOIDC {
-		// Phase 1 поддерживает только OIDC. SAML provider будет в отдельном
-		// конструкторе.
+
 		return nil, errors.New("non-OIDC provider not supported in Phase 1")
 	}
 
@@ -72,15 +63,12 @@ func (r *Registry) Get(ctx context.Context, teamID uuid.UUID) (*OIDCProvider, er
 	return prov, nil
 }
 
-// Invalidate — снимает cache для team'ы (вызывается после SaveConfig в admin
-// handler'ах).
 func (r *Registry) Invalidate(teamID uuid.UUID) {
 	r.mu.Lock()
 	delete(r.entries, teamID)
 	r.mu.Unlock()
 }
 
-// InvalidateAll — full cache flush, для tests или admin reset.
 func (r *Registry) InvalidateAll() {
 	r.mu.Lock()
 	r.entries = make(map[uuid.UUID]*registryEntry)

@@ -1,5 +1,3 @@
-// cmd/api — единый production-сервер. Подключается к Postgres + ClickHouse если они доступны,
-// иначе fallback на in-memory (удобно для unit-тестов и quick demo без Docker).
 package main
 
 import (
@@ -36,13 +34,13 @@ import (
 	"github.com/eye-of-providence/backend/internal/ingest"
 	"github.com/eye-of-providence/backend/internal/insights"
 	eoplog "github.com/eye-of-providence/backend/internal/log"
-	"github.com/eye-of-providence/backend/internal/prcomment"
-	"github.com/eye-of-providence/backend/internal/publicapi"
-	"github.com/eye-of-providence/backend/internal/push"
 	"github.com/eye-of-providence/backend/internal/mailer"
 	"github.com/eye-of-providence/backend/internal/metrics"
 	"github.com/eye-of-providence/backend/internal/migrate"
 	"github.com/eye-of-providence/backend/internal/plans"
+	"github.com/eye-of-providence/backend/internal/prcomment"
+	"github.com/eye-of-providence/backend/internal/publicapi"
+	"github.com/eye-of-providence/backend/internal/push"
 	"github.com/eye-of-providence/backend/internal/reports"
 	"github.com/eye-of-providence/backend/internal/sso"
 	"github.com/eye-of-providence/backend/internal/store"
@@ -91,9 +89,6 @@ func main() {
 	eventStore := chooseEventStore(cfg, log)
 	defer eventStore.Close()
 
-	// Cache layer — оборачиваем CH-store в Redis-cached decorator если Redis
-	// reachable. На failure (Redis down) — продолжаем без cache (degraded
-	// performance, но functional).
 	if cfg.RedisAddr != "" {
 		cacheCtx, ccancel := context.WithTimeout(rootCtx, 3*time.Second)
 		c, err := cache.New(cacheCtx, cfg.RedisAddr)
@@ -121,8 +116,7 @@ func main() {
 
 	app.Use(fiberrecover.New(fiberrecover.Config{EnableStackTrace: cfg.Env != "production"}))
 	app.Use(requestid.New())
-	// Request-latency histogram для всех HTTP-запросов. Не различаем route'ы
-	// per-prom-label (overhead на UA-string'и), хватает агрегата по всему API.
+
 	app.Use(func(c *fiber.Ctx) error {
 		start := time.Now()
 		err := c.Next()
@@ -130,7 +124,6 @@ func main() {
 		return err
 	})
 
-	// Если AllowedOrigins=="*" — браузеры запрещают AllowCredentials=true с wildcard.
 	allowCreds := cfg.AllowedOrigins != "*"
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.AllowedOrigins,
@@ -155,15 +148,10 @@ func main() {
 		return c.JSON(metrics.Snapshot())
 	})
 
-	// e2eBypass — true только в non-production окружении с явным
-	// X-E2E-Test: 1 заголовком. Защищает прод от bypass'а через header
-	// spoofing (production hard-fails на этой проверке). В CI E2E suite
-	// шлёт header автоматически (см. e2e/helpers/api.ts).
 	e2eBypass := func(c *fiber.Ctx) bool {
 		return cfg.Env != "production" && c.Get("X-E2E-Test") == "1"
 	}
 
-	// Rate-limit на чувствительные auth endpoints (10 req / min / IP).
 	authLimiter := limiter.New(limiter.Config{
 		Max:        10,
 		Expiration: 1 * time.Minute,
@@ -180,9 +168,6 @@ func main() {
 	app.Use("/v1/auth/dev-token", authLimiter)
 	app.Use("/v1/auth/github/callback", authLimiter)
 
-	// Глобальный rate-limit на authed endpoints. Ключ = JWT-юзер если есть, иначе IP.
-	// 120 req/min нормальной нагрузки достаточно для UI; защищает /v1/teams POST,
-	// /v1/admin/*, /v1/commits, /v1/ingest от наглого abuse'а.
 	app.Use("/v1/", limiter.New(limiter.Config{
 		Max:        120,
 		Expiration: 1 * time.Minute,
@@ -199,16 +184,6 @@ func main() {
 		},
 	}))
 
-	// Public routes регистрируются ПЕРВЫМИ. Fiber `app.Group(prefix, handler)`
-	// работает как `app.Use(prefix, handler)` — middleware ловит все
-	// последующие маршруты под префиксом. Если ingest/analytics зарегистрировать
-	// до teams, они навесят auth на весь /v1, и /v1/auth/register перестанет
-	// быть public.
-
-	// OAuth providers map — собирается на основе env. Если GoogleClientID
-	// пустой, провайдер не регистрируется (graceful disable). Apple — Phase 1
-	// stub, в Phase 2 backend оставлен в коде но НЕ wired'ится (см.
-	// .team/product-decisions-confirmed.md §1).
 	oauthProviders := map[string]auth.OAuthProvider{}
 	if cfg.GitHubClientID != "" {
 		oauthProviders["github"] = auth.NewGitHubOAuth(cfg.GitHubClientID, cfg.GitHubClientSec, cfg.GitHubCallback)
@@ -216,17 +191,10 @@ func main() {
 	if cfg.GoogleClientID != "" {
 		oauthProviders["google"] = auth.NewGoogleOAuth(cfg.GoogleClientID, cfg.GoogleClientSec, cfg.GoogleCallback)
 	}
-	// Apple deferred: Provider construct'ится в auth/apple.go, но Exchange
-	// возвращает "phase 1 stub" ошибку. НЕ добавляем в map чтобы avoid'ить
-	// route registration который вернёт 502 на callback.
 
-	// WebAuthn service — конструируется только если RPID настроен и Redis есть.
 	var webauthnSvc *auth.WebAuthnService
 	if cfg.WebAuthnEnabled() && pgPool != nil {
-		// Используем shared cache.Client (не создаём отдельный redis-pool).
-		// Если cache не reachable — webauthn тоже не доступен (Begin/Finish
-		// fail with "redis required"). Это acceptable: passkey требует stateful
-		// session storage.
+
 		var rdsClient *redis.Client
 		if cfg.RedisAddr != "" {
 			rcfg, rerr := redis.ParseURL(cfg.RedisAddr)
@@ -259,13 +227,9 @@ func main() {
 		EnableDevToken: cfg.EnableDevToken,
 	}
 	auth.RegisterRoutes(app, authService)
-	// Public session-handoff endpoint — читает cookie, поэтому регистрируется
-	// ДО RegisterMeRoutes (тот навешивает Middleware на /v1/me).
+
 	auth.RegisterSessionHandoffRoute(app, authService)
 
-	// Devices pairing — public /v1/devices/{pair,poll} + authed /v1/me/devices.
-	// Регистрируем после auth.RegisterRoutes чтобы public роуты не попали
-	// под /v1/me middleware.
 	devices.RegisterRoutes(app, devices.Service{
 		Pool:      pgPool,
 		Logger:    log,
@@ -273,17 +237,11 @@ func main() {
 	})
 
 	mail := chooseMailer(cfg, log)
-	// planSvc — единый kill-switch для plan feature gates (см. internal/plans).
-	// Enforce=false в бете (default), true на GA через EOP_PLAN_LIMITS_ENFORCED.
+
 	planSvc := plans.Service{Enforce: cfg.PlanLimitsEnforced}
-	// auditSvc — append-only лог критичных действий. Inject'ится в teams/sso
-	// services. Если pgPool == nil — no-op (Log/List вернут пустоту/error).
+
 	auditSvc := audit.Service{Pool: pgPool, Logger: log}
 
-	// hookSvc — concrete *webhooks.Service. Удовлетворяет двум интерфейсам:
-	// teams.WebhookDispatcher и anomaly.Dispatcher (одна Dispatch-сигнатура).
-	// Если pgPool == nil (in-memory), hookSvc остаётся nil → consumers
-	// видят nil-interface и пропускают dispatch.
 	var hookSvc *webhooks.Service
 	var hooksDispatcher teams.WebhookDispatcher
 	if pgPool != nil {
@@ -292,13 +250,7 @@ func main() {
 		webhooks.RegisterRoutes(app, hookSvc, cfg.JWTSecret, pgPool)
 		hooksDispatcher = hookSvc
 	}
-	// SSO public endpoints (/v1/sso/start, /v1/sso/oidc/callback) ДОЛЖНЫ
-	// быть зарегистрированы ДО teams.RegisterRoutes, потому что внутри
-	// teams вызывается `app.Group("/v1", auth.Middleware)` — Fiber
-	// применяет это middleware ко ВСЕМ subsequent /v1/* роутам. Если SSO
-	// зарегистрировать после, public endpoints отвечают 401 unauthorized.
-	// Admin SSO routes (под /v1/teams/:id/sso) регистрируются после с явным
-	// auth middleware — там это правильно.
+
 	var ssoRegistry *sso.Registry
 	if pgPool != nil {
 		ssoRegistry = sso.NewRegistry(pgPool, strings.TrimRight(cfg.PublicURL, "/")+"/api/v1/sso/oidc/callback")
@@ -312,19 +264,12 @@ func main() {
 	}
 
 	teams.EventStore = eventStore
-	// templateStore — Postgres override layer для transactional email
-	// templates (Phase 3 admin). nil pool ⇒ admin endpoints вернут 503;
-	// Mailer.Send продолжает работать через embedded baseline.
+
 	var templateStore *mailer.PGTemplateStore
 	if pgPool != nil {
 		templateStore = mailer.NewPGTemplateStore(pgPool)
 	}
 
-	// CMS-lite Phase 4 (Workstream 4) — content service. Public route
-	// GET /v1/content/:slug регистрируется ДО teams.RegisterRoutes чтобы
-	// не попасть под /v1 auth middleware (frontend читает контент анонимно).
-	// Admin routes монтируются ниже через отдельный /v1 group с явным
-	// auth.Middleware (handler-level super_admin gate).
 	contentSvc := &content.Service{
 		Store:     content.NewPGStore(pgPool),
 		Audit:     auditSvc,
@@ -333,7 +278,7 @@ func main() {
 		Pool:      pgPool,
 	}
 	if cfg.RedisAddr != "" {
-		// Создаём отдельный client с теми же опциями что webauthn использует.
+
 		rcfg, rerr := redis.ParseURL(cfg.RedisAddr)
 		if rerr != nil {
 			rcfg = &redis.Options{Addr: cfg.RedisAddr}
@@ -358,10 +303,8 @@ func main() {
 		TemplateStore:  templateStore,
 	})
 
-	// Identities + passkeys routes — JWT-guarded /v1/me/identities, /v1/me/passkeys.
 	auth.RegisterIdentitiesRoutes(app, authService)
 
-	// Protected routes — навешивают auth middleware на весь /v1.
 	auth.RegisterMeRoutes(app, auth.MeService{
 		JWTSecret:  cfg.JWTSecret,
 		Pool:       pgPool,
@@ -381,22 +324,13 @@ func main() {
 		})
 	}
 
-	// SSO admin CRUD — /v1/teams/:id/sso/*. Защищены явным auth middleware
-	// (не наследуют от teams.RegisterRoutes group'а — он работает только
-	// для роутов, зарегистрированных через тот group). Public SSO routes
-	// уже зарегистрированы выше, ДО teams.RegisterRoutes.
 	if pgPool != nil && ssoRegistry != nil {
 		ssoAdmin := sso.AdminService{Pool: pgPool, Registry: ssoRegistry, Logger: log, Plans: planSvc, Audit: auditSvc}
 		ssoAdmin.RegisterAdminRoutes(app.Group("/v1/teams/:id/sso", auth.Middleware(cfg.JWTSecret, pgPool)))
 	}
 
-	// CMS admin endpoints — /v1/admin/content*. JWT через auth.Middleware
-	// + handler-level super_admin gate (как и phase 3 admin routes).
 	contentSvc.RegisterAdminRoutes(app.Group("/v1", auth.Middleware(cfg.JWTSecret, pgPool)))
 
-
-	// Web Push (PWA notifications) — endpoints всегда зарегистрированы; если
-	// VAPID keys пусты, vapid-key handler вернёт 503 "not configured".
 	var pushSvc *push.Service
 	if pgPool != nil {
 		pushSvc = &push.Service{
@@ -406,13 +340,11 @@ func main() {
 			VAPIDPrivateKey: cfg.VAPIDPrivateKey,
 			VAPIDSubject:    cfg.VAPIDSubject,
 		}
-		// Init() создаёт bounded send-pool + shutdown ctx — обязателен для
-		// graceful drain. Без Init() SendToUser fall back на legacy
-		// unbounded fire-and-forget (in-memory test mode).
+
 		pushSvc.Init()
 		push.RegisterRoutes(app, push.SvcConfig{Service: pushSvc, JWTSecret: cfg.JWTSecret})
 	}
-	_ = pushSvc // hooked в anomaly cron ниже
+	_ = pushSvc
 
 	gemini := reports.NewGeminiClient(cfg.GeminiAPIKey, "gemini-2.5-flash")
 	reports.RegisterRoutes(app, reports.Service{
@@ -443,10 +375,6 @@ func main() {
 		log.Info("reports cron started", zap.Int("interval_sec", cfg.ReportsCronSec))
 	}
 
-	// Anomaly detection cron — daily Z-score check, доставка через webhooks
-	// + Web Push (если VAPID настроен). hookSvc и pushSvc оба satisfy
-	// соответствующие interface'ы через идентичную Dispatch/SendToUser
-	// сигнатуру.
 	if hookSvc != nil {
 		var pushOpt anomaly.PushSender
 		if pushSvc != nil && cfg.VAPIDPublicKey != "" {
@@ -470,21 +398,16 @@ func main() {
 		log.Info("anomaly cron started", zap.Duration("interval", 24*time.Hour))
 	}
 
-	// SIGTERM/SIGINT → graceful shutdown.
-	// Порядок: Fiber stops accepting new requests → ждём background workers
-	// (webhook delivery, push send) до 30s deadline → cancel root ctx.
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
 		s := <-sig
 		log.Info("shutdown signal received", zap.String("signal", s.String()))
-		// 1. Fiber server — закрывает listener, ждёт in-flight HTTP до 20s.
+
 		if err := app.ShutdownWithTimeout(20 * time.Second); err != nil {
 			log.Warn("graceful shutdown error", zap.Error(err))
 		}
-		// 2. Background workers (webhook/push delivery). Делегируем им 30s.
-		// Hot-path Dispatch/SendToUser уже не блокирует HTTP — здесь только
-		// дренируем in-flight retry-loops.
+
 		bgCtx, bgCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer bgCancel()
 		if hookSvc != nil {
@@ -513,8 +436,6 @@ func main() {
 	log.Info("api stopped")
 }
 
-// fiberErrorHandler — единая точка обработки errors из handler'ов.
-// Не отдаём raw err.Error() клиенту в production. Логируем полный текст.
 func fiberErrorHandler(log *zap.Logger) fiber.ErrorHandler {
 	return func(c *fiber.Ctx, err error) error {
 		code := fiber.StatusInternalServerError
@@ -530,7 +451,7 @@ func fiberErrorHandler(log *zap.Logger) fiber.ErrorHandler {
 			zap.String("rid", rid),
 			zap.Error(err),
 		)
-		// 4xx могут безопасно отдавать message; 5xx — generic.
+
 		if code >= 500 {
 			return c.Status(code).JSON(fiber.Map{
 				"error":      "internal error",
@@ -587,7 +508,7 @@ func openPgPool(cfg config.Config, log *zap.Logger) *pgxpool.Pool {
 		log.Warn("postgres dsn parse failed", zap.Error(err))
 		return nil
 	}
-	// Tuned defaults — переопределяемы через DSN-параметры pool_max_conns и т.п.
+
 	if pcfg.MaxConns == 0 || pcfg.MaxConns == 4 {
 		pcfg.MaxConns = envIntOr("EOP_PG_MAX_CONNS", 20)
 	}
@@ -598,9 +519,9 @@ func openPgPool(cfg config.Config, log *zap.Logger) *pgxpool.Pool {
 	if pcfg.ConnConfig.RuntimeParams == nil {
 		pcfg.ConnConfig.RuntimeParams = map[string]string{}
 	}
-	// Защита от слоу-квери, повисших на одном коннекте.
+
 	if _, ok := pcfg.ConnConfig.RuntimeParams["statement_timeout"]; !ok {
-		pcfg.ConnConfig.RuntimeParams["statement_timeout"] = "5000" // ms
+		pcfg.ConnConfig.RuntimeParams["statement_timeout"] = "5000"
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -663,8 +584,6 @@ func chooseReportStore(log *zap.Logger, pool *pgxpool.Pool) reports.ReportStore 
 	return reports.NewPostgresStore(pool)
 }
 
-// runHealthcheck — отдельный mode для Docker HEALTHCHECK.
-// Distroless image не имеет shell/curl, поэтому используем сам binary.
 func runHealthcheck() {
 	addr := os.Getenv("EOP_HTTP_ADDR")
 	if addr == "" {

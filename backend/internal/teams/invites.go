@@ -1,6 +1,3 @@
-// invites.go — invite-link / invite-by-email lifecycle:
-// findInvite (read), consumeInvite (atomic accept), handleCreateInvite,
-// sendInviteEmail, handleInvitePreview, handleInviteAccept.
 package teams
 
 import (
@@ -41,9 +38,6 @@ func (s Service) findInvite(ctx context.Context, code string) (*Invite, error) {
 	return &inv, nil
 }
 
-// consumeInvite — атомарно увеличивает use_count если invite ещё валиден.
-// Возвращает team_id если получилось (invite ещё не исчерпан и не expired),
-// иначе ошибку. Защищает от concurrent accept'ов с одной же ссылки.
 func (s Service) consumeInvite(ctx context.Context, code string, userID uuid.UUID) (uuid.UUID, error) {
 	var teamID uuid.UUID
 	err := s.Pool.QueryRow(ctx, `
@@ -67,7 +61,6 @@ func (s Service) handleCreateInvite(c *fiber.Ctx) error {
 		return httperr.Forbidden(c, "role_insufficient", "only owner/admin can create invites")
 	}
 
-	// Optional payload: {"email": "..."}. Без email — link-only (как раньше).
 	var req struct {
 		Email string `json:"email"`
 	}
@@ -78,7 +71,7 @@ func (s Service) handleCreateInvite(c *fiber.Ctx) error {
 		if !ok {
 			return httperr.BadRequest(c, "invalid_email", "invalid email")
 		}
-		// Email-invite — только 1 use (линк не должен переисполь­зоваться).
+
 		emailPtr = &clean
 	}
 	maxUses := 10
@@ -94,8 +87,6 @@ func (s Service) handleCreateInvite(c *fiber.Ctx) error {
 		return s.internalErr(c, err)
 	}
 
-	// Если email задан — шлём письмо. Любой fail при отправке логируем, но
-	// не падаем: инвайт уже создан, юзер может скопировать ссылку руками.
 	sentAt := time.Time{}
 	if emailPtr != nil && s.Mailer != nil {
 		if err := s.sendInviteEmail(c.Context(), teamID, uid, *emailPtr, code); err != nil {
@@ -118,12 +109,6 @@ func (s Service) handleCreateInvite(c *fiber.Ctx) error {
 	return c.JSON(out)
 }
 
-// sendInviteEmail — собирает данные (имя команды + display_name приглашающего)
-// и шлёт письмо через Mailer. Не делает ретраев — Mailer.Send сам отвечает за HTTP.
-//
-// Locale: invite шлётся "слепо" — у получателя ещё нет аккаунта (значит и
-// users.locale). Используем locale приглашающего как best-guess (часто это
-// тот же регион). Fallback в NormalizeLocale (ru).
 func (s Service) sendInviteEmail(ctx context.Context, teamID, inviterID uuid.UUID, to, code string) error {
 	var teamName, inviterName string
 	var inviterLocale *string
@@ -159,9 +144,7 @@ func (s Service) handleInvitePreview(c *fiber.Ctx) error {
 
 func (s Service) handleInviteAccept(c *fiber.Ctx) error {
 	uid := userID(c)
-	// Pre-check: peek team's plan + current member count перед consumeInvite,
-	// чтобы НЕ инкрементировать use_count если упрёмся в plan_limit. Иначе
-	// инвайт "сгорит" впустую для следующих пользователей.
+
 	inv, err := s.findInvite(c.Context(), c.Params("code"))
 	if err != nil {
 		return httperr.NotFound(c, "invite_invalid", "invalid or expired invite")
@@ -183,7 +166,6 @@ func (s Service) handleInviteAccept(c *fiber.Ctx) error {
 		}
 	}
 
-	// consumeInvite атомарно проверяет лимиты и инкрементирует use_count.
 	teamID, err := s.consumeInvite(c.Context(), c.Params("code"), uid)
 	if err != nil {
 		return httperr.NotFound(c, "invite_invalid", "invalid or expired invite")

@@ -1,11 +1,3 @@
-// vapid-gen — генерит ECDSA P-256 VAPID keypair для Web Push.
-//
-// Usage:
-//
-//	go run ./cmd/vapid-gen
-//
-// Output: VAPID_PUBLIC=... / VAPID_PRIVATE=... lines, готовые к copy в .env.
-// Генерация одна на проект; никогда не commit'ить private key.
 package main
 
 import (

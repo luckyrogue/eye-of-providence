@@ -64,7 +64,7 @@ func TestBuildEvent_MultiEdit(t *testing.T) {
 	if !ok {
 		t.Fatal("expected ok")
 	}
-	// alpha\nbeta=10 + gamma=5 = 15
+
 	if ev.CharsIn != 15 {
 		t.Errorf("chars=%d, want 15", ev.CharsIn)
 	}

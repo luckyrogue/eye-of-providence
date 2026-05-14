@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-// Resolve — границы периода для POST /v1/reports/generate (?period=weekly|monthly|daily).
 func Resolve(kind string, now time.Time) (from, to time.Time, periodKey string) {
 	now = now.UTC()
 	switch kind {
@@ -19,7 +18,7 @@ func Resolve(kind string, now time.Time) (from, to time.Time, periodKey string) 
 		to = from.Add(24 * time.Hour).Add(-time.Second)
 		periodKey = fmt.Sprintf("daily_%s", from.Format("2006-01-02"))
 		return from, to, periodKey
-	default: // weekly
+	default:
 		year, week := now.ISOWeek()
 		offset := int(now.Weekday())
 		if offset == 0 {

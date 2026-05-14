@@ -111,7 +111,7 @@ func TestTruncate(t *testing.T) {
 	if got := truncate("hellohello", 5); got != "hell…" {
 		t.Errorf("got %q, want hell…", got)
 	}
-	// Cyrillic — runes not bytes.
+
 	if got := truncate("привет мир", 6); got != "приве…" {
 		t.Errorf("got %q", got)
 	}

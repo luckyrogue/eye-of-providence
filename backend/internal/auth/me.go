@@ -15,16 +15,9 @@ import (
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
-// MeService — endpoints для текущего пользователя:
-//
-//	GET    /v1/me                       — профиль (id, email, github_login, locale)
-//	PATCH  /v1/me/locale                — обновить locale (ru | en | kk | es)
-//	GET    /v1/me/onboarding-status     — состояние онбординга (для wizard'а)
-//	POST   /v1/me/onboarding/dismiss    — пометить wizard завершённым/закрытым
-//	DELETE /v1/me/data                  — стирает все события и отчёты пользователя
 type MeService struct {
 	JWTSecret  string
-	Pool       *pgxpool.Pool // может быть nil (in-memory mode)
+	Pool       *pgxpool.Pool
 	EventStore store.EventStore
 	Logger     *zap.Logger
 }
@@ -73,9 +66,6 @@ func RegisterMeRoutes(app *fiber.App, s MeService) {
 		return c.JSON(fiber.Map{"locale": loc})
 	})
 
-	// API tokens — для public API. Все CRUD требуют JWT (RequireScope не
-	// применяется т.к. ScopeFromCtx вернёт "" для JWT — full access).
-	// API token нельзя использовать для управления API tokens (anti-bootstrap).
 	g.Get("/tokens", listTokensHandler(s))
 	g.Post("/tokens", createTokenHandler(s))
 	g.Delete("/tokens/:id", revokeTokenHandler(s))
@@ -83,14 +73,12 @@ func RegisterMeRoutes(app *fiber.App, s MeService) {
 	g.Delete("/data", func(c *fiber.Ctx) error {
 		claims := ClaimsFromCtx(c)
 
-		// 1. Стираем events в EventStore (если backend поддерживает)
 		if d, ok := s.EventStore.(store.UserDeleter); ok {
 			if err := d.DeleteUserData(c.Context(), claims.UserID); err != nil {
 				s.Logger.Warn("delete events failed", zap.Error(err))
 			}
 		}
 
-		// 2. Стираем reports + user row в Postgres (если есть)
 		if s.Pool != nil {
 			uid, err := uuid.Parse(claims.UserID)
 			if err == nil {
@@ -107,8 +95,7 @@ func RegisterMeRoutes(app *fiber.App, s MeService) {
 }
 
 func wipeUserPg(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) error {
-	// ON DELETE CASCADE на reports/devices/projects/consent через FK,
-	// но удалим явно для надёжности.
+
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return err

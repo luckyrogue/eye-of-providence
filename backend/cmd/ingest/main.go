@@ -23,7 +23,7 @@ func main() {
 	})
 
 	app.Post("/v1/ingest", func(c *fiber.Ctx) error {
-		// TODO Phase 1: validate JWT, decode protobuf IngestRequest, batch-insert в ClickHouse.
+
 		return c.SendStatus(fiber.StatusNotImplemented)
 	})
 

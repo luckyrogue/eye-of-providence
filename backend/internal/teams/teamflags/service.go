@@ -10,24 +10,20 @@ import (
 	"github.com/eye-of-providence/backend/internal/plans"
 )
 
-// Service — application layer для super_admin team flags.
 type Service struct {
 	store FlagStore
 	audit AuditSink
 }
 
-// Deps — конструктор.
 type Deps struct {
 	Store FlagStore
 	Audit AuditSink
 }
 
-// New — wiring.
 func New(d Deps) *Service {
 	return &Service{store: d.Store, audit: d.Audit}
 }
 
-// PruneNullsMap — JSONB-friendly clean-up (exported for teamplanlimits reuse).
 func PruneNullsMap(m map[string]any) map[string]any {
 	out := make(map[string]any, len(m))
 	for k, v := range m {
@@ -39,7 +35,6 @@ func PruneNullsMap(m map[string]any) map[string]any {
 	return out
 }
 
-// Get — текущие flags команды.
 func (s *Service) Get(ctx context.Context, teamID uuid.UUID) (map[string]any, error) {
 	flags, err := s.store.Load(ctx, teamID)
 	if err != nil {
@@ -48,7 +43,6 @@ func (s *Service) Get(ctx context.Context, teamID uuid.UUID) (map[string]any, er
 	return flags, nil
 }
 
-// Patch — merge + validate flags, persist, audit.
 func (s *Service) Patch(ctx context.Context, meta RequestMeta, actorID uuid.UUID, actorEmail string, teamID uuid.UUID, flags map[string]any) (map[string]any, error) {
 	if flags == nil {
 		return nil, ErrMissingFlags

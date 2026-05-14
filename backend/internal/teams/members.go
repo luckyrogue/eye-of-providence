@@ -1,4 +1,3 @@
-// members.go — list / summary / role-update / remove членов команды.
 package teams
 
 import (
@@ -52,8 +51,6 @@ type EventStoreLike interface {
 	AggregateByCategoryBulk(ctx context.Context, userIDs []string, since time.Time) (map[string]map[string]uint64, error)
 }
 
-// EventStore — синглтон, в который cmd/api инжектит ClickHouse store.
-// Объявлен в pkg-level чтобы handler'ы могли его читать без передачи через Service.
 var EventStore EventStoreLike
 
 func (s Service) handleTeamSummary(c *fiber.Ctx) error {
@@ -95,7 +92,7 @@ func (s Service) handleTeamSummary(c *fiber.Ctx) error {
 	if rows.Err() != nil {
 		return s.internalErr(c, rows.Err())
 	}
-	// Один запрос в EventStore вместо N отдельных по каждому участнику.
+
 	if EventStore != nil && len(memberIDs) > 0 {
 		bulk, err := EventStore.AggregateByCategoryBulk(c.Context(), memberIDs, since)
 		if err != nil {
@@ -141,8 +138,7 @@ func (s Service) handleUpdateMemberRole(c *fiber.Ctx) error {
 	if newRole != "owner" && newRole != "admin" && newRole != "member" {
 		return httperr.BadRequest(c, "invalid_role", "role must be owner | admin | member")
 	}
-	// Если назначаем нового owner — проверка что target не owner'ит другую команду
-	// (1-owner-per-user invariant). Super_admin обходит.
+
 	if newRole == "owner" && !s.isSuperAdmin(c) {
 		var existingOwned int
 		_ = s.Pool.QueryRow(c.Context(),
@@ -152,7 +148,7 @@ func (s Service) handleUpdateMemberRole(c *fiber.Ctx) error {
 			return httperr.Conflict(c, "owner_limit", "user already owns another company — beta limits to 1 owner = 1 company")
 		}
 	}
-	// Если owner понижает себя — не должен быть последним.
+
 	if uid == targetUID && newRole != "owner" {
 		var ownerCount int
 		_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM team_members WHERE team_id=$1 AND role='owner'", teamID).Scan(&ownerCount)
@@ -182,7 +178,7 @@ func (s Service) handleRemoveMember(c *fiber.Ctx) error {
 	if !ok || (role != "owner" && role != "admin") {
 		return httperr.Forbidden(c, "role_insufficient", "only owner/admin can remove members")
 	}
-	// Нельзя удалить последнего владельца (включая случай "владелец сам себя").
+
 	var targetRole string
 	_ = s.Pool.QueryRow(c.Context(),
 		"SELECT role FROM team_members WHERE team_id=$1 AND user_id=$2",
@@ -194,7 +190,7 @@ func (s Service) handleRemoveMember(c *fiber.Ctx) error {
 			return httperr.Conflict(c, "last_owner", "cannot remove last owner")
 		}
 	}
-	// Admin не может удалять owner'а.
+
 	if role == "admin" && targetRole == "owner" {
 		return httperr.Forbidden(c, "admin_cant_remove_owner", "admin cannot remove owner")
 	}

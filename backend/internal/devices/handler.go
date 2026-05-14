@@ -13,27 +13,15 @@ import (
 	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
-// Service — DI для devices endpoints.
 type Service struct {
 	Pool      *pgxpool.Pool
 	Logger    *zap.Logger
 	JWTSecret string
 }
 
-// RegisterRoutes — регистрирует pairing endpoints.
-//
-//	POST /v1/devices/pair         — unauthed
-//	POST /v1/devices/poll         — unauthed
-//	POST /v1/me/devices/claim     — authed (JWT)
-//	GET  /v1/me/devices           — authed (JWT)
-//	DELETE /v1/me/devices/:id     — authed (JWT)
-//
-// /v1/me/devices* — отдельная group поверх /v1/me middleware. Fiber
-// корректно мерджит несколько групп с одинаковым префиксом.
 func RegisterRoutes(app *fiber.App, s Service) {
 	if s.Pool == nil {
-		// Без БД pairing невозможен. Регистрируем заглушки чтобы /v1/devices/*
-		// возвращал 503 а не 404.
+
 		app.Post("/v1/devices/pair", func(c *fiber.Ctx) error {
 			return httperr.Unavailable(c, "db_not_configured", "device pairing requires database")
 		})
@@ -104,7 +92,7 @@ func pollHandler(s Service) fiber.Handler {
 
 func claimHandler(s Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Anti-bootstrap: API token не может клеймить устройства.
+
 		if auth.ScopeFromCtx(c) != "" {
 			return httperr.Forbidden(c, "jwt_required", "device claim requires JWT (dashboard session)")
 		}

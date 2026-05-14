@@ -11,8 +11,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
-// listTokensHandler — GET /v1/me/tokens.
-// Anti-bootstrap: API token не может смотреть/создавать токены.
 func listTokensHandler(s MeService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if ScopeFromCtx(c) != "" {
@@ -32,8 +30,6 @@ func listTokensHandler(s MeService) fiber.Handler {
 	}
 }
 
-// createTokenHandler — POST /v1/me/tokens. Body: {name, scope, ttl_days}.
-// Возвращает plaintext "token" ровно один раз.
 func createTokenHandler(s MeService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if ScopeFromCtx(c) != "" {
@@ -66,7 +62,6 @@ func createTokenHandler(s MeService) fiber.Handler {
 	}
 }
 
-// revokeTokenHandler — DELETE /v1/me/tokens/:id.
 func revokeTokenHandler(s MeService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if ScopeFromCtx(c) != "" {

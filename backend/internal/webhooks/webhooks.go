@@ -1,14 +1,3 @@
-// Package webhooks — outbound event delivery (commit.ingested, report.generated).
-//
-// Caller (commits/reports handlers) дёргает Dispatch(ctx, userID, event, payload)
-// после успешного persist. Dispatch неблокирующий — спавнит горутину которая
-// 1) lookup active webhooks для user'а
-// 2) POST'ит JSON с HMAC-SHA256 signature header
-// 3) retry 3 раза с backoff 1s/3s/9s на 5xx/network errors
-// 4) update last_delivery_at / last_status в БД
-//
-// HMAC: header "X-EoP-Signature: sha256=<hex>", computed over raw body. Receiver
-// должен validate constant-time. Secret генерится при создании webhook'а.
 package webhooks
 
 import (
@@ -34,7 +23,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/plans"
 )
 
-// Известные event types. Constant'ы т.к. они часть public contract.
 const (
 	EventCommitIngested  = "commit.ingested"
 	EventReportGenerated = "report.generated"
@@ -47,43 +35,33 @@ var validEvents = map[string]bool{
 	EventAnomalyDetected: true,
 }
 
-// Webhook — DB row, без plaintext secret'а (получается ровно раз при create).
 type Webhook struct {
 	ID             uuid.UUID  `json:"id"`
 	URL            string     `json:"url"`
 	Events         []string   `json:"events"`
-	Format         string     `json:"format"` // "raw" | "slack"
+	Format         string     `json:"format"`
 	Active         bool       `json:"active"`
 	LastDeliveryAt *time.Time `json:"last_delivery_at,omitempty"`
 	LastStatus     *int       `json:"last_status,omitempty"`
 	CreatedAt      time.Time  `json:"created_at"`
 }
 
-// Service — DB pool + dispatcher config. Несёт state для in-flight retries.
 type Service struct {
 	Pool       *pgxpool.Pool
 	Logger     *zap.Logger
-	HTTPClient *http.Client  // если nil → дефолт с timeout 5s
-	Plans      plans.Service // feature-gate: MaxWebhooks при Enforce=true
-	// shutdownCtx — bound goroutines с lifetime app'а. Cancel при shutdown
-	// прерывает HTTP retry-loops чтобы delivery не висел вечно.
+	HTTPClient *http.Client
+	Plans      plans.Service
+
 	shutdownCtx    context.Context
 	shutdownCancel context.CancelFunc
-	// inflight — счётчик in-flight dispatch goroutines. main.go вызывает
-	// Wait() на graceful shutdown, чтобы дать delivery завершиться до exit.
+
 	inflight sync.WaitGroup
-	// dispatchSem — bounded semaphore (max 64 concurrent fan-out). Под burst'ом
-	// 1000 событий не spawn'им 1000 goroutines; новые Dispatch() блокируются
-	// до slot'а. Caller hot-path остаётся быстрым потому что Dispatch только
-	// acquire'ит slot — fire-and-forget делается в goroutine.
+
 	dispatchSem chan struct{}
 }
 
 const maxConcurrentDispatch = 64
 
-// New — конструктор с дефолтным HTTP client + shutdown context + bounded
-// dispatch pool. Caller (main.go) должен вызвать Shutdown(ctx) на SIGTERM
-// чтобы дать in-flight delivery завершиться.
 func New(pool *pgxpool.Pool, logger *zap.Logger) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Service{
@@ -96,8 +74,6 @@ func New(pool *pgxpool.Pool, logger *zap.Logger) *Service {
 	}
 }
 
-// Shutdown — graceful: ждёт inflight delivery до waitDeadline, потом cancel.
-// Caller вызывает с context.WithTimeout(30s) в main.go при SIGTERM.
 func (s *Service) Shutdown(ctx context.Context) error {
 	done := make(chan struct{})
 	go func() {
@@ -109,14 +85,11 @@ func (s *Service) Shutdown(ctx context.Context) error {
 		s.shutdownCancel()
 		return nil
 	case <-ctx.Done():
-		s.shutdownCancel() // hard stop — отрезаем retry-loops
+		s.shutdownCancel()
 		return ctx.Err()
 	}
 }
 
-// CreateWebhook — INSERT с генерёным secret'ом. Возвращает (plaintext_secret, row).
-// Plaintext secret отдаётся ровно один раз (caller должен показать в UI).
-// format пустой → "raw".
 func (s *Service) Create(ctx context.Context, userID uuid.UUID, url string, events []string, format string) (string, Webhook, error) {
 	url = strings.TrimSpace(url)
 	if !strings.HasPrefix(url, "https://") && !strings.HasPrefix(url, "http://") {
@@ -164,7 +137,6 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, url string, even
 	return secret, out, nil
 }
 
-// List — active webhooks пользователя.
 func (s *Service) List(ctx context.Context, userID uuid.UUID) ([]Webhook, error) {
 	rows, err := s.Pool.Query(ctx, `
 		SELECT id, url, events, format, active, last_delivery_at, last_status, created_at
@@ -184,8 +156,6 @@ func (s *Service) List(ctx context.Context, userID uuid.UUID) ([]Webhook, error)
 	return out, nil
 }
 
-// Delete — hard delete (не soft, в отличие от api_tokens — webhook secret уже
-// в plaintext БД, soft-delete не даёт security gain).
 func (s *Service) Delete(ctx context.Context, userID, id uuid.UUID) (bool, error) {
 	tag, err := s.Pool.Exec(ctx, `DELETE FROM webhooks WHERE id = $1 AND user_id = $2`, id, userID)
 	if err != nil {
@@ -194,25 +164,16 @@ func (s *Service) Delete(ctx context.Context, userID, id uuid.UUID) (bool, error
 	return tag.RowsAffected() > 0, nil
 }
 
-// Dispatch — fire-and-forget delivery всех matching webhook'ов. Spawns горутину
-// под bounded semaphore (max 64 concurrent). Caller не ждёт; errors логируются.
-// Используется в hot path (commit ingest, report gen) где блокировка недопустима.
-//
-// Hardening (Phase prod): goroutine attached to s.inflight WaitGroup и
-// s.shutdownCtx. main.go вызывает Shutdown() при SIGTERM — Wait() даёт
-// in-flight delivery завершиться (или прерывается через ctx-cancel).
 func (s *Service) Dispatch(userID uuid.UUID, event string, payload any) {
 	if !validEvents[event] {
 		s.Logger.Warn("unknown event for dispatch", zap.String("event", event))
 		return
 	}
-	// Acquire slot — блокируется если pool заполнен. Hot-path caller всё равно
-	// возвращается быстро потому что dispatchSync теперь под goroutine'й.
+
 	select {
 	case s.dispatchSem <- struct{}{}:
 	case <-s.shutdownCtx.Done():
-		// Service shutting down — drop event. Caller (e.g. ingest handler)
-		// уже зафиксировал commit в БД, dispatch — best-effort.
+
 		return
 	}
 	s.inflight.Add(1)
@@ -225,8 +186,6 @@ func (s *Service) Dispatch(userID uuid.UUID, event string, payload any) {
 	}()
 }
 
-// dispatchSync — testable inner. Использует s.shutdownCtx чтобы retry-loop'ы
-// прерывались на shutdown. Timeout 60s остаётся per-dispatch.
 func (s *Service) dispatchSync(userID uuid.UUID, event string, payload any) {
 	parent := s.shutdownCtx
 	if parent == nil {
@@ -259,12 +218,6 @@ func (s *Service) dispatchSync(userID uuid.UUID, event string, payload any) {
 		targets = append(targets, t)
 	}
 
-	// Fan-out parallel delivery: каждый target — отдельная goroutine.
-	// errgroup с SetLimit(8) bounds concurrency — типичный user имеет 1-2
-	// webhooks, но enterprise team может иметь N штук; не хотим spawn'ить
-	// unbounded если N большое + не хотим блокировать одну slow delivery
-	// другие. Errors мы игнорируем (logged inside deliver), но errgroup
-	// нужен для Wait().
 	g, gctx := errgroup.WithContext(ctx)
 	g.SetLimit(8)
 	for _, t := range targets {
@@ -276,8 +229,6 @@ func (s *Service) dispatchSync(userID uuid.UUID, event string, payload any) {
 	_ = g.Wait()
 }
 
-// deliver — одна доставка с retry. Backoff 1s/3s/9s на 5xx или network.
-// format = "raw" → канонический JSON; "slack" → Slack Block Kit payload.
 func (s *Service) deliver(ctx context.Context, id uuid.UUID, url, secret, format, event string, payload any) {
 	body, err := formatPayload(Format(format), event, payload)
 	if err != nil {
@@ -299,7 +250,7 @@ func (s *Service) deliver(ctx context.Context, id uuid.UUID, url, secret, format
 		status, err := s.send(ctx, url, sig, event, body)
 		lastStatus = status
 		if err == nil && status < 500 {
-			// 2xx/3xx/4xx — не retry'им, receiver responsibility.
+
 			break
 		}
 		s.Logger.Debug("webhook retry",
@@ -319,7 +270,6 @@ func (s *Service) deliver(ctx context.Context, id uuid.UUID, url, secret, format
 	)
 }
 
-// send — единичный POST. Возвращает status и network error если был.
 func (s *Service) send(ctx context.Context, url, sig, event string, body []byte) (int, error) {
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
@@ -338,14 +288,12 @@ func (s *Service) send(ctx context.Context, url, sig, event string, body []byte)
 	return res.StatusCode, nil
 }
 
-// signPayload — HMAC-SHA256 над raw JSON body.
 func signPayload(secret string, body []byte) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write(body)
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
-// VerifySignature — для receiver-side тестов и docs/example.
 func VerifySignature(secret string, body []byte, header string) bool {
 	const prefix = "sha256="
 	if !strings.HasPrefix(header, prefix) {
@@ -361,14 +309,13 @@ func VerifySignature(secret string, body []byte, header string) bool {
 }
 
 func generateSecret() (string, error) {
-	b := make([]byte, 32) // 256-bit HMAC secret
+	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
 	return "whk_" + hex.EncodeToString(b), nil
 }
 
-// Get — single webhook (для UI re-show). Не возвращает secret.
 func (s *Service) Get(ctx context.Context, userID, id uuid.UUID) (*Webhook, error) {
 	var w Webhook
 	err := s.Pool.QueryRow(ctx, `

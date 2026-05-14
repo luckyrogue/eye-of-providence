@@ -1,21 +1,3 @@
-// Package auth — модуль WebAuthn / Passkey.
-//
-// Архитектура:
-//   - WebAuthnService — конструируется из конфиг'а (RPID, RPDisplayName, Origins)
-//     + pool + redis. Если pool == nil или redis == nil — methods вернут
-//     "unavailable" (caller'у нужно решить как обработать).
-//   - Session storage: Redis ключ `webauthn:session:<sid>` TTL 5min. JSON-encoded
-//     *webauthn.SessionData. sid = hex(crypto/rand 16 bytes), уникальный
-//     per-request (анти-конкуренция между табами).
-//   - Storage: webauthn_credentials table (migration 020). Каждый passkey
-//     хранит credential_id, public_key (COSE), aaguid, sign_count, transports.
-//   - Lockout protection: при DELETE / removal — caller обязан вызвать
-//     CountAuthFactors с excludePasskey=credential_id.
-//
-// Synthetic options anti-enumeration: при login/begin с email, который не
-// существует, возвращаем правдоподобные но bogus allowCredentials (random
-// 64-byte IDs). Это делает response shape неотличимым от "user exists with
-// passkeys" — атакующий не может валидировать email через timing/payload.
 package auth
 
 import (
@@ -45,7 +27,6 @@ const (
 	webauthnSessionPrefix = "webauthn:session:"
 )
 
-// WebAuthnService — relying-party state holder.
 type WebAuthnService struct {
 	WA     *webauthn.WebAuthn
 	Pool   *pgxpool.Pool
@@ -53,8 +34,6 @@ type WebAuthnService struct {
 	Logger *zap.Logger
 }
 
-// NewWebAuthnService — конструктор. rpid пустой → возвращает nil + nil (caller
-// должен gracefully не регистрировать endpoints). Origins comma-separated.
 func NewWebAuthnService(rpid, rpName, origins string, pool *pgxpool.Pool, rds *redis.Client, log *zap.Logger) (*WebAuthnService, error) {
 	if rpid == "" {
 		return nil, nil
@@ -80,11 +59,6 @@ func NewWebAuthnService(rpid, rpName, origins string, pool *pgxpool.Pool, rds *r
 	return &WebAuthnService{WA: wa, Pool: pool, Redis: rds, Logger: log}, nil
 }
 
-// ---------------------------------------------------------------------------
-// Internal user adapter — реализует webauthn.User interface через rows из
-// webauthn_credentials. WebAuthnID = userID UUID bytes (16 bytes — fits 64 max).
-// WebAuthnCredentials() возвращает текущие passkey'и юзера.
-
 type webauthnUser struct {
 	id          uuid.UUID
 	name        string
@@ -92,9 +66,9 @@ type webauthnUser struct {
 	creds       []webauthn.Credential
 }
 
-func (u *webauthnUser) WebAuthnID() []byte             { return u.id[:] }
-func (u *webauthnUser) WebAuthnName() string           { return u.name }
-func (u *webauthnUser) WebAuthnDisplayName() string    { return u.displayName }
+func (u *webauthnUser) WebAuthnID() []byte          { return u.id[:] }
+func (u *webauthnUser) WebAuthnName() string        { return u.name }
+func (u *webauthnUser) WebAuthnDisplayName() string { return u.displayName }
 func (u *webauthnUser) WebAuthnCredentials() []webauthn.Credential {
 	return u.creds
 }
@@ -104,7 +78,7 @@ func (s *WebAuthnService) loadUser(ctx context.Context, userID uuid.UUID) (*weba
 	if s.Pool == nil {
 		return u, nil
 	}
-	// Email + display_name — для лучшего UX в браузерных кредентиал-менеджерах.
+
 	var email, name *string
 	_ = s.Pool.QueryRow(ctx,
 		`SELECT email, display_name FROM users WHERE id = $1`, userID,
@@ -161,9 +135,6 @@ func (s *WebAuthnService) loadUser(ctx context.Context, userID uuid.UUID) (*weba
 	return u, rows.Err()
 }
 
-// ---------------------------------------------------------------------------
-// Session helpers — Redis SETEX → GETDEL.
-
 func newSessionID() (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
@@ -201,11 +172,6 @@ func (s *WebAuthnService) loadSession(ctx context.Context, sid string) (*webauth
 	return &data, nil
 }
 
-// ---------------------------------------------------------------------------
-// Registration
-
-// BeginRegistration — для authed-юзера. Создаёт challenge, persist'ит session,
-// возвращает (options, session_id). Client получает options JSON для passkey API.
 func (s *WebAuthnService) BeginRegistration(ctx context.Context, userID uuid.UUID) (*protocol.CredentialCreation, string, error) {
 	if s.WA == nil {
 		return nil, "", errors.New("webauthn: not configured")
@@ -228,10 +194,6 @@ func (s *WebAuthnService) BeginRegistration(ctx context.Context, userID uuid.UUI
 	return creation, sid, nil
 }
 
-// FinishRegistration — verify attestation + persist row в webauthn_credentials.
-// body — raw JSON из window.navigator.credentials.create(...).
-//
-// nickname — user-friendly имя ("iPhone 15", "YubiKey 5C") хранится для UI.
 func (s *WebAuthnService) FinishRegistration(ctx context.Context, userID uuid.UUID, sid string, body []byte, nickname string) error {
 	if s.WA == nil {
 		return errors.New("webauthn: not configured")
@@ -247,7 +209,7 @@ func (s *WebAuthnService) FinishRegistration(ctx context.Context, userID uuid.UU
 	if err != nil {
 		return err
 	}
-	// Synthetic http.Request — library parses из request.Body. Используем bytes.NewReader.
+
 	req, err := http.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -258,7 +220,6 @@ func (s *WebAuthnService) FinishRegistration(ctx context.Context, userID uuid.UU
 		return err
 	}
 
-	// Persist credential. transports → comma-separated.
 	var transports []string
 	for _, t := range cred.Transport {
 		transports = append(transports, string(t))
@@ -278,13 +239,6 @@ func (s *WebAuthnService) FinishRegistration(ctx context.Context, userID uuid.UU
 	return err
 }
 
-// ---------------------------------------------------------------------------
-// Login
-
-// BeginLogin — public flow. email != nil → ищем юзера и его credentials;
-// email == nil ИЛИ unknown → discoverable / synthetic options (anti-enumeration).
-//
-// Возвращает (assertion options, session_id).
 func (s *WebAuthnService) BeginLogin(ctx context.Context, email *string) (*protocol.CredentialAssertion, string, error) {
 	if s.WA == nil {
 		return nil, "", errors.New("webauthn: not configured")
@@ -305,24 +259,18 @@ func (s *WebAuthnService) BeginLogin(ctx context.Context, email *string) (*proto
 	}
 
 	if userID == nil {
-		// Anti-enumeration: возвращаем правдоподобные options (challenge + bogus
-		// allowCredentials). Discoverable login на клиенте всё равно сработает
-		// для реальных passkey'ев (browser ищет резидентные creds в кейчейне).
+
 		assertion, session, err := s.WA.BeginDiscoverableLogin()
 		if err != nil {
 			return nil, "", err
 		}
-		// Добавим 1-2 синтетических allowCredentials чтобы shape мимикрировал
-		// "known user" с passkey'ями. Эти ID не существуют в DB, finish-stage
-		// разрулит как usual.
+
 		assertion.Response.AllowedCredentials = syntheticCredentials()
 		sid, err := newSessionID()
 		if err != nil {
 			return nil, "", err
 		}
-		// Помечаем сессию как "synthetic" — finish stage не сможет валидировать.
-		// Но Redis still hold session чтобы клиент мог завершить (errored finish
-		// indistinguishable от real-user-without-matching-cred сценария).
+
 		if err := s.saveSession(ctx, sid, session); err != nil {
 			return nil, "", err
 		}
@@ -334,7 +282,7 @@ func (s *WebAuthnService) BeginLogin(ctx context.Context, email *string) (*proto
 		return nil, "", err
 	}
 	if len(u.creds) == 0 {
-		// User exists but no passkeys → return synthetic options, same as unknown email.
+
 		assertion, session, err := s.WA.BeginDiscoverableLogin()
 		if err != nil {
 			return nil, "", err
@@ -364,8 +312,6 @@ func (s *WebAuthnService) BeginLogin(ctx context.Context, email *string) (*proto
 	return assertion, sid, nil
 }
 
-// FinishLogin — verify assertion. Возвращает userID при успехе.
-// body — raw JSON из window.navigator.credentials.get(...).
 func (s *WebAuthnService) FinishLogin(ctx context.Context, sid string, body []byte) (uuid.UUID, error) {
 	if s.WA == nil {
 		return uuid.Nil, errors.New("webauthn: not configured")
@@ -383,13 +329,10 @@ func (s *WebAuthnService) FinishLogin(ctx context.Context, sid string, body []by
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	// Если session.UserID пустой — это discoverable / synthetic case. Используем
-	// FinishDiscoverableLogin: handler возвращает user по credential_id raw из
-	// response. Если credential не найден в DB — отвергаем (synthetic case).
 	if len(session.UserID) == 0 {
 		var resolvedUserID uuid.UUID
 		handler := func(rawID, userHandle []byte) (webauthn.User, error) {
-			// userHandle = UUID bytes (мы сохраняем 16-byte raw UUID в WebAuthnID).
+
 			if len(userHandle) != 16 {
 				return nil, errors.New("invalid user handle")
 			}
@@ -438,9 +381,6 @@ func (s *WebAuthnService) FinishLogin(ctx context.Context, sid string, body []by
 	return uid, nil
 }
 
-// updateSignCount — anti-cloning guard. Spec обязывает каждое assertion
-// иметь увеличивающийся sign_count. Каждое successful FinishLogin обновляет
-// записанное значение + last_used_at.
 func (s *WebAuthnService) updateSignCount(ctx context.Context, cred *webauthn.Credential) error {
 	if s.Pool == nil {
 		return nil
@@ -453,13 +393,8 @@ func (s *WebAuthnService) updateSignCount(ctx context.Context, cred *webauthn.Cr
 	return err
 }
 
-// syntheticCredentials — bogus список из 1-2 правдоподобных CredentialDescriptor'ов.
-// Используется при unknown email или user-without-passkeys чтобы spoof'ить
-// "valid user with passkeys" response shape.
 func syntheticCredentials() []protocol.CredentialDescriptor {
-	// Один синтетический ID — браузер всё равно отвергнет если у юзера нет
-	// matching credential. Размер 32 байта — типичный для платформенных
-	// passkey'ев (Apple/Google authenticator'ы).
+
 	b := make([]byte, 32)
 	_, _ = rand.Read(b)
 	return []protocol.CredentialDescriptor{
@@ -471,11 +406,6 @@ func syntheticCredentials() []protocol.CredentialDescriptor {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Passkey management — list / delete.
-
-// PasskeyRow — карточка passkey'я для GET /v1/me/passkeys. AAGUID отдаётся
-// строкой чтобы frontend мог замапить на иконку устройства.
 type PasskeyRow struct {
 	ID         uuid.UUID  `json:"id"`
 	Nickname   string     `json:"nickname,omitempty"`
@@ -502,10 +432,10 @@ func (s *WebAuthnService) ListPasskeys(ctx context.Context, userID uuid.UUID) ([
 	var out []PasskeyRow
 	for rows.Next() {
 		var (
-			pk      PasskeyRow
-			aaguid  *uuid.UUID
-			tr      string
-			nick    string
+			pk     PasskeyRow
+			aaguid *uuid.UUID
+			tr     string
+			nick   string
 		)
 		if err := rows.Scan(&pk.ID, &nick, &aaguid, &tr, &pk.CreatedAt, &pk.LastUsedAt); err != nil {
 			return nil, err
@@ -527,8 +457,6 @@ func (s *WebAuthnService) ListPasskeys(ctx context.Context, userID uuid.UUID) ([
 	return out, rows.Err()
 }
 
-// PasskeyCredentialIDForUser — credential_id raw bytes для passkey id. Нужен
-// для CountAuthFactors excludePasskey при удалении.
 func (s *WebAuthnService) PasskeyCredentialIDForUser(ctx context.Context, userID, passkeyID uuid.UUID) ([]byte, error) {
 	if s.Pool == nil {
 		return nil, errors.New("webauthn: db required")
@@ -544,8 +472,6 @@ func (s *WebAuthnService) PasskeyCredentialIDForUser(ctx context.Context, userID
 	return cid, err
 }
 
-// DeletePasskey — удаляет row. Caller обязан предварительно вызвать
-// CountAuthFactors и проверить Total() > 0 после удаления.
 func (s *WebAuthnService) DeletePasskey(ctx context.Context, userID, passkeyID uuid.UUID) error {
 	if s.Pool == nil {
 		return errors.New("webauthn: db required")
@@ -565,8 +491,6 @@ func (s *WebAuthnService) DeletePasskey(ctx context.Context, userID, passkeyID u
 
 var ErrPasskeyNotFound = errors.New("passkey not found")
 
-// EncodeChallenge — helper для возможной отладки/тестов: outputs base64url challenge.
-// (Не используется напрямую handler'ами — protocol library serialize'ит JSON сам.)
 func EncodeChallenge(c protocol.URLEncodedBase64) string {
 	return base64.RawURLEncoding.EncodeToString(c)
 }

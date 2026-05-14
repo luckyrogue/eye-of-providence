@@ -1,11 +1,3 @@
-// Package anomaly — daily anomaly detection over coding-time series.
-//
-// Подход: Z-score на последних 14 днях. Если yesterday значительно отклонился
-// от baseline mean (|z| ≥ threshold), эмиттим anomaly.detected event которое
-// webhooks.Service доставляет подписчикам (типично — Slack).
-//
-// Используется как retention loop: «Команда сегодня необычно много AI»,
-// «вчера был всплеск рефакторинга».
 package anomaly
 
 import (
@@ -13,55 +5,41 @@ import (
 	"time"
 )
 
-// Kind — тип аномалии. Frontend / Slack-receiver используют для рендеринга
-// человеко-читаемого сообщения.
 type Kind string
 
 const (
-	KindAIHigh       Kind = "ai_high"        // AI-время сильно выше baseline
-	KindAILow        Kind = "ai_low"         // AI-время сильно ниже
-	KindManualHigh   Kind = "manual_high"    // Manual-время сильно выше
-	KindManualLow    Kind = "manual_low"     // Manual-время сильно ниже
-	KindRefactorHigh Kind = "refactor_high"  // Refactor сильно выше
-	KindActivityHigh Kind = "activity_high"  // Общая активность выше
-	KindActivityLow  Kind = "activity_low"   // Активность упала (alert на отсутствие работы)
+	KindAIHigh       Kind = "ai_high"
+	KindAILow        Kind = "ai_low"
+	KindManualHigh   Kind = "manual_high"
+	KindManualLow    Kind = "manual_low"
+	KindRefactorHigh Kind = "refactor_high"
+	KindActivityHigh Kind = "activity_high"
+	KindActivityLow  Kind = "activity_low"
 )
 
-// Anomaly — один detected outlier. Многомерный output: per-category возможны
-// несколько аномалий за один день.
 type Anomaly struct {
 	Kind        Kind    `json:"kind"`
-	Category    string  `json:"category"`     // ai | manual | refactor | total
-	ZScore      float64 `json:"z_score"`      // округлено до 2 знаков
+	Category    string  `json:"category"`
+	ZScore      float64 `json:"z_score"`
 	YesterdayMS uint64  `json:"yesterday_ms"`
-	BaselineMS  uint64  `json:"baseline_ms"` // mean previous 14 days
-	Date        string  `json:"date"`         // YYYY-MM-DD UTC of "yesterday"
+	BaselineMS  uint64  `json:"baseline_ms"`
+	Date        string  `json:"date"`
 }
 
-// Inputs — daily series, отсортированный по дате (oldest → newest).
-// Series должна содержать минимум 8 точек: 7+ для baseline и 1 yesterday.
 type Inputs struct {
-	// PerCategory[date][category] = duration_ms за день. Для отсутствующих
-	// (date, cat) — 0 (не nil).
 	PerCategory map[string]map[string]uint64
-	// Dates в порядке возрастания. PerCategory[date] должен быть для каждого.
+
 	Dates []string
 }
 
 const (
-	// minBaselineDays — нужно ≥7 дней истории чтобы baseline был стабильным.
 	minBaselineDays = 7
-	// zThreshold — порог срабатывания. 2.0 = ~95% confidence (нормальное
-	// распределение). 2.5 для меньшего noise; 1.5 для более чувствительных
-	// alerts.
+
 	zThreshold = 2.0
-	// minBaselineMS — если baseline mean < 5 минут, статистически шумно;
-	// игнорируем (z-score нестабильный на низких данных).
+
 	minBaselineMS = 5 * 60 * 1000
 )
 
-// Detect — возвращает все аномалии в "yesterday" (последний элемент Dates)
-// относительно baseline (предыдущие 7-14 дней).
 func Detect(in Inputs) []Anomaly {
 	if len(in.Dates) < minBaselineDays+1 {
 		return nil
@@ -160,14 +138,12 @@ func categoryKind(cat string, high bool) Kind {
 		if high {
 			return KindRefactorHigh
 		}
-		// refactor low — не интересный signal, игнорим
+
 		return ""
 	}
 	return ""
 }
 
-// meanStd — sample mean + sample standard deviation (Bessel's correction
-// для small N — n-1 в знаменателе).
 func meanStd(xs []float64) (float64, float64) {
 	if len(xs) == 0 {
 		return 0, 0
@@ -188,8 +164,6 @@ func meanStd(xs []float64) (float64, float64) {
 	return mean, math.Sqrt(ss / float64(len(xs)-1))
 }
 
-// zScore — (x - mean) / std. Если std == 0 (constant baseline), возвращаем 0
-// чтобы не triggerить anomaly на zero-variance noise.
 func zScore(x, mean, std float64) float64 {
 	if std == 0 {
 		return 0
@@ -197,8 +171,6 @@ func zScore(x, mean, std float64) float64 {
 	return (x - mean) / std
 }
 
-// MakeInputs — convenience: преобразует store.TrendPoint slice в Inputs.
-// Включает все категории, заполняет пропущенные (date, cat) нулями.
 type Trend struct {
 	Date     string
 	Category string
@@ -213,7 +185,7 @@ func MakeInputs(points []Trend, today time.Time) Inputs {
 		}
 		per[p.Date][p.Category] += p.MS
 	}
-	// Dates: 14 предыдущих + yesterday. yesterday = today - 1.
+
 	yesterday := today.UTC().AddDate(0, 0, -1)
 	dates := []string{}
 	for i := 14; i >= 0; i-- {

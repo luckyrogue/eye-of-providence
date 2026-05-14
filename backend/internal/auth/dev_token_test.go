@@ -10,8 +10,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// Smoke-test: с EnableDevToken=false роут /v1/auth/dev-token не должен
-// существовать (404). Критично для прода — иначе любой получит JWT.
 func TestRegisterRoutes_DevTokenDisabledIsNotRouted(t *testing.T) {
 	app := fiber.New()
 	RegisterRoutes(app, Service{
@@ -31,9 +29,6 @@ func TestRegisterRoutes_DevTokenDisabledIsNotRouted(t *testing.T) {
 	}
 }
 
-// Зеркальная проверка: при EnableDevToken=true роут зарегистрирован.
-// Хэндлер требует Pool/Users; в этом тесте ставим recover-middleware и
-// проверяем только что роут найден (не 404). 500 после nil-pool — норма.
 func TestRegisterRoutes_DevTokenEnabledIsRouted(t *testing.T) {
 	app := fiber.New()
 	app.Use(recover.New())

@@ -1,18 +1,3 @@
-// API tokens — long-lived auth для public API (export, BI, integrations).
-//
-// Формат plaintext: "eop_<48 hex chars>" (24 random bytes), prefix "eop_a4f3"
-// сохраняется в plaintext колонке для UI; full-token хешируется sha256 и
-// сравнивается constant-time. Plaintext возвращается ровно один раз — при
-// создании.
-//
-// Scopes (TEXT):
-//
-//	read         — read-only: events list, summary, insights
-//	write:ingest — POST /v1/ingest (для CI batchers / git hooks)
-//	admin        — всё что user сам делает (super_admin scope = global_role)
-//
-// Revocation: soft-delete revoked_at IS NOT NULL. Middleware игнорирует
-// revoked tokens; user через UI может revoke и/или create new.
 package auth
 
 import (
@@ -33,11 +18,10 @@ import (
 
 const (
 	tokenPrefix    = "eop_"
-	tokenBytesRand = 24 // 48 hex chars
-	tokenPrefixLen = 8  // первые "eop_a4f3" сохраняем в БД для UI
+	tokenBytesRand = 24
+	tokenPrefixLen = 8
 )
 
-// APIToken — DB-row, безопасная для отдачи пользователю (без hashed_token).
 type APIToken struct {
 	ID         uuid.UUID  `json:"id"`
 	Name       string     `json:"name"`
@@ -48,8 +32,6 @@ type APIToken struct {
 	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
 }
 
-// CreateAPIToken — генерит plaintext + сохраняет hash. Возвращает токен +
-// row. Plaintext доступен ТОЛЬКО в момент создания.
 func CreateAPIToken(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, name, scope string, ttl time.Duration) (string, APIToken, error) {
 	if name = strings.TrimSpace(name); name == "" {
 		name = "token"
@@ -90,9 +72,6 @@ func CreateAPIToken(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, n
 	return plaintext, out, nil
 }
 
-// VerifyAPIToken — ищет active token по hash, обновляет last_used_at.
-// Возвращает user_id + scope. ErrTokenInvalid если нет совпадения / revoked /
-// expired.
 var ErrTokenInvalid = errors.New("invalid or expired api token")
 
 func VerifyAPIToken(ctx context.Context, pool *pgxpool.Pool, plaintext string) (uuid.UUID, string, error) {
@@ -120,17 +99,15 @@ func VerifyAPIToken(ctx context.Context, pool *pgxpool.Pool, plaintext string) (
 	if err != nil {
 		return uuid.Nil, "", err
 	}
-	// Constant-time compare защищает от timing attacks даже хотя hashed_token
-	// найден по equality в SQL — defense in depth.
+
 	if subtle.ConstantTimeCompare([]byte(hashed), []byte(dbHash)) != 1 {
 		return uuid.Nil, "", ErrTokenInvalid
 	}
-	// Best-effort обновление last_used_at — не блокируем request если fail.
+
 	_, _ = pool.Exec(ctx, `UPDATE api_tokens SET last_used_at = now() WHERE id = $1`, id)
 	return userID, scope, nil
 }
 
-// ListAPITokens — возвращает active tokens пользователя для UI.
 func ListAPITokens(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) ([]APIToken, error) {
 	rows, err := pool.Query(ctx, `
 		SELECT id, name, scope, prefix, created_at, expires_at, last_used_at
@@ -152,8 +129,6 @@ func ListAPITokens(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) ([
 	return out, nil
 }
 
-// RevokeAPIToken — soft-delete. Возвращает true если row существовал и
-// принадлежал юзеру.
 func RevokeAPIToken(ctx context.Context, pool *pgxpool.Pool, userID, tokenID uuid.UUID) (bool, error) {
 	tag, err := pool.Exec(ctx, `
 		UPDATE api_tokens SET revoked_at = now()
@@ -164,9 +139,6 @@ func RevokeAPIToken(ctx context.Context, pool *pgxpool.Pool, userID, tokenID uui
 	return tag.RowsAffected() > 0, nil
 }
 
-// hashAPIToken — sha256 plaintext'а в hex. Не bcrypt: api token = high-entropy
-// (24 random bytes), bcrypt не даёт security gain, только slow-down (мы хешируем
-// at request time на каждом API call).
 func hashAPIToken(plaintext string) string {
 	h := sha256.Sum256([]byte(plaintext))
 	return hex.EncodeToString(h[:])

@@ -21,8 +21,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/migrate"
 )
 
-// setupTestDB — поднимает pool на тестовую БД (EOP_TEST_PG_DSN) и truncate'ит таблицы.
-// Если env var не задан — пропускает тест: integration runs only when explicitly opted in.
 func setupTestDB(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	dsn := os.Getenv("EOP_TEST_PG_DSN")
@@ -55,8 +53,6 @@ func truncateAll(t *testing.T, pool *pgxpool.Pool) {
 	}
 }
 
-// newTestApp — Fiber приложение с teams routes + auth middleware.
-// Возвращает app + сам Service, чтобы тест мог вызывать helper'ы.
 func newTestApp(t *testing.T, pool *pgxpool.Pool) (*fiber.App, Service) {
 	t.Helper()
 	app := fiber.New()
@@ -72,7 +68,6 @@ func newTestApp(t *testing.T, pool *pgxpool.Pool) (*fiber.App, Service) {
 	return app, svc
 }
 
-// createUser — вставляет user в БД и возвращает его ID. Пароль = email-prefix.
 func createUser(t *testing.T, pool *pgxpool.Pool, email string) uuid.UUID {
 	t.Helper()
 	hash, err := auth.HashPassword("password123")
@@ -89,7 +84,6 @@ func createUser(t *testing.T, pool *pgxpool.Pool, email string) uuid.UUID {
 	return id
 }
 
-// makeSuperAdmin — повышает юзера до super_admin.
 func makeSuperAdmin(t *testing.T, pool *pgxpool.Pool, userID uuid.UUID) {
 	t.Helper()
 	_, err := pool.Exec(context.Background(),
@@ -99,7 +93,6 @@ func makeSuperAdmin(t *testing.T, pool *pgxpool.Pool, userID uuid.UUID) {
 	}
 }
 
-// loginAs — выпускает JWT для существующего юзера (читает текущий tv).
 func loginAs(t *testing.T, pool *pgxpool.Pool, secret string, userID uuid.UUID, email string) string {
 	t.Helper()
 	tv, err := auth.TokenVersion(context.Background(), pool, userID)
@@ -113,7 +106,6 @@ func loginAs(t *testing.T, pool *pgxpool.Pool, secret string, userID uuid.UUID, 
 	return tok
 }
 
-// createTeam — direct INSERT (обходит beta limit и 1-owner check). Для setup тестов.
 func createTeamDirect(t *testing.T, pool *pgxpool.Pool, name string, ownerID uuid.UUID) uuid.UUID {
 	t.Helper()
 	teamID := uuid.New()
@@ -140,8 +132,6 @@ func createTeamDirect(t *testing.T, pool *pgxpool.Pool, name string, ownerID uui
 	return teamID
 }
 
-// do — отправляет HTTP-запрос в Fiber app и возвращает status + body.
-// Если token != "" — добавляет Authorization header.
 func do(t *testing.T, app *fiber.App, method, path, token string, body any) (int, []byte) {
 	t.Helper()
 	var bodyReader io.Reader
@@ -159,7 +149,7 @@ func do(t *testing.T, app *fiber.App, method, path, token string, body any) (int
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
-	resp, err := app.Test(req, -1) // disable timeout
+	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("app.Test: %v", err)
 	}
@@ -168,7 +158,6 @@ func do(t *testing.T, app *fiber.App, method, path, token string, body any) (int
 	return resp.StatusCode, raw
 }
 
-// jsonField — извлекает поле из JSON ответа. nil если не найдено.
 func jsonField(t *testing.T, raw []byte, key string) any {
 	t.Helper()
 	var m map[string]any

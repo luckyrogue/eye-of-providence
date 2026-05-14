@@ -1,4 +1,3 @@
-// teams.go — CRUD команд: list / create / detail / update / delete / beta info.
 package teams
 
 import (
@@ -58,8 +57,6 @@ func (s Service) handleCreateTeam(c *fiber.Ctx) error {
 	}
 	isSuper := s.isSuperAdmin(c)
 
-	// Все проверки и INSERT'ы — внутри одной tx с pg_advisory_xact_lock,
-	// чтобы устранить TOCTOU между beta-counter и INSERT.
 	tx, err := s.Pool.Begin(c.Context())
 	if err != nil {
 		return s.internalErr(c, err)
@@ -70,7 +67,6 @@ func (s Service) handleCreateTeam(c *fiber.Ctx) error {
 		return s.internalErr(c, err)
 	}
 
-	// Constraint: 1 owner = 1 company. Super_admin исключён.
 	if !isSuper {
 		var ownedCount int
 		if err := tx.QueryRow(c.Context(),
@@ -81,7 +77,7 @@ func (s Service) handleCreateTeam(c *fiber.Ctx) error {
 			return httperr.Forbidden(c, "owner_limit", "already an owner — beta limits to 1 owner = 1 company")
 		}
 	}
-	// Beta-лимит: всего N команд в системе. Super_admin обходит.
+
 	if s.BetaTeamLimit > 0 && !isSuper {
 		var teamCount int
 		if err := tx.QueryRow(c.Context(), "SELECT count(*) FROM teams").Scan(&teamCount); err != nil {
@@ -167,7 +163,7 @@ func (s Service) handleDeleteTeam(c *fiber.Ctx) error {
 	if !ok || role != "owner" {
 		return httperr.Forbidden(c, "owner_required", "only owner can delete team")
 	}
-	// Каскад через FK ON DELETE CASCADE удалит team_members, projects, invites, commits.
+
 	if _, err := s.Pool.Exec(c.Context(), "DELETE FROM teams WHERE id=$1", teamID); err != nil {
 		return s.internalErr(c, err)
 	}
@@ -180,7 +176,7 @@ func (s Service) handleBetaInfo(c *fiber.Ctx) error {
 		return s.internalErr(c, err)
 	}
 	limit := s.BetaTeamLimit
-	remaining := -1 // -1 = без лимита
+	remaining := -1
 	if limit > 0 {
 		remaining = max(limit-teamCount, 0)
 	}

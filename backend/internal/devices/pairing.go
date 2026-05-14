@@ -1,27 +1,3 @@
-// Package devices — pairing-code flow для нативных клиентов
-// (browser extension, Tauri agent, VS Code extension).
-//
-// Endpoints:
-//
-//	POST /v1/devices/pair        — unauthed: создаёт pairing_codes row,
-//	                                возвращает {pair_id, secret, code, expires_in}.
-//	POST /v1/devices/poll        — unauthed: клиент полит до claim/expiry.
-//	                                Возвращает {status, token?, user_id?}.
-//	POST /v1/me/devices/claim    — authed (JWT): пользователь вводит код в
-//	                                dashboard, создаётся api_token.
-//	GET  /v1/me/devices          — authed: список устройств юзера.
-//	DELETE /v1/me/devices/:id    — authed: revoke.
-//
-// Безопасность:
-//   - code — 6 знаков из uppercase A-Z + digits, без visually confusable
-//     (без 0/O, 1/I). Энтропия ~32 bits → brute force нереалистичен в окне
-//     10 минут с rate-limit 120 req/min.
-//   - secret — 32 random bytes (hex), известен только клиенту, проверяется
-//     constant-time при poll. Защищает от поллинга чужой сессии по угаданному
-//     pair_id.
-//   - Claim — только authed: dashboard-юзер связывает code со своим user_id.
-//   - Token — long-lived API token (scope=write:ingest, kind=ext|agent|ide).
-//     Plaintext отдаётся клиенту ровно один раз через poll.
 package devices
 
 import (
@@ -42,37 +18,34 @@ import (
 
 const (
 	codeLen       = 6
-	codeAlphabet  = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // 32 symbols, без 0/O/1/I
+	codeAlphabet  = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 	secretBytes   = 32
 	codeTTL       = 10 * time.Minute
 	maxNameLen    = 64
 	devicesScope  = "write:ingest"
 	tokenPrefix   = "eop_"
-	tokenRandHex  = 48 // 24 random bytes
-	tokenPrefHash = 8  // первые "eop_xxxx" в api_tokens.prefix
+	tokenRandHex  = 48
+	tokenPrefHash = 8
 )
 
 var (
-	// ErrPairingNotFound — pair_id не существует или истёк.
 	ErrPairingNotFound = errors.New("pairing not found or expired")
-	// ErrSecretMismatch — secret не совпал (попытка спуфинга или старый client state).
+
 	ErrSecretMismatch = errors.New("pairing secret mismatch")
-	// ErrCodeNotFound — пользователь ввёл неправильный код.
+
 	ErrCodeNotFound = errors.New("pairing code invalid or expired")
-	// ErrAlreadyClaimed — код уже использован.
+
 	ErrAlreadyClaimed = errors.New("pairing code already claimed")
-	// ErrInvalidKind — kind не из whitelist (ext/agent/ide).
+
 	ErrInvalidKind = errors.New("invalid device kind")
 )
 
-// validKinds — whitelist клиентских типов. Используется в pair + claim.
 var validKinds = map[string]struct{}{
 	"ext":   {},
 	"agent": {},
 	"ide":   {},
 }
 
-// PairBeginResult — возврат /v1/devices/pair.
 type PairBeginResult struct {
 	PairID    uuid.UUID `json:"pair_id"`
 	Secret    string    `json:"secret"`
@@ -80,15 +53,13 @@ type PairBeginResult struct {
 	ExpiresIn int       `json:"expires_in"`
 }
 
-// PollResult — возврат /v1/devices/poll.
 type PollResult struct {
-	Status  string  `json:"status"` // pending | claimed | expired
+	Status  string  `json:"status"`
 	Token   *string `json:"token,omitempty"`
 	UserID  *string `json:"user_id,omitempty"`
 	DevName *string `json:"device_name,omitempty"`
 }
 
-// Device — row для UI list. Подмножество api_tokens.
 type Device struct {
 	ID         uuid.UUID  `json:"id"`
 	Kind       string     `json:"kind"`
@@ -98,9 +69,6 @@ type Device struct {
 	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
 }
 
-// PairBegin — выдаёт pairing-code + secret. Кладёт в pairing_codes. На случай
-// случайной коллизии code — 3 попытки (вероятность <10^-8 при <1000 active
-// codes), дальше ошибка БД пробросится наверх.
 func PairBegin(ctx context.Context, pool *pgxpool.Pool, kind, nameHint string) (PairBeginResult, error) {
 	if _, ok := validKinds[kind]; !ok {
 		return PairBeginResult{}, ErrInvalidKind
@@ -129,7 +97,7 @@ func PairBegin(ctx context.Context, pool *pgxpool.Pool, kind, nameHint string) (
 			id, code, secretHash, kind, nameHint, expiresAt,
 		)
 		if err != nil {
-			// 23505 — unique_violation на code. Пытаемся ещё раз.
+
 			if isUniqueViolation(err) {
 				lastErr = err
 				continue
@@ -146,19 +114,6 @@ func PairBegin(ctx context.Context, pool *pgxpool.Pool, kind, nameHint string) (
 	return PairBeginResult{}, fmt.Errorf("could not generate unique code after 3 attempts: %w", lastErr)
 }
 
-// Poll — клиент проверяет статус. Возвращает pending/claimed/expired. Если
-// claimed — токен (plaintext) выдаётся ровно ОДИН раз: после первого успешного
-// poll'а secret_hash затирается (чтобы повторные poll'ы со старым secret'ом
-// уже не получили token).
-//
-// Для simplicity мы храним plaintext token не в pairing_codes, а через
-// в-row флаг claimed_token_id + recreate plaintext невозможно. Поэтому
-// flow такой: claim создаёт api_token и записывает его ID + plaintext в
-// `claimed_secret` поле (TODO: добавили? нет, в схеме нет такого поля).
-//
-// Решение: claim сохраняет plaintext во временную колонку `claimed_plaintext`
-// в pairing_codes (зачищается после первого poll). Это требует расширения
-// миграции — см. далее.
 func Poll(ctx context.Context, pool *pgxpool.Pool, pairID uuid.UUID, secret string) (PollResult, error) {
 	if secret == "" {
 		return PollResult{}, ErrSecretMismatch
@@ -184,14 +139,14 @@ func Poll(ctx context.Context, pool *pgxpool.Pool, pairID uuid.UUID, secret stri
 	if subtle.ConstantTimeCompare([]byte(sha256Hex(secret)), []byte(secretHashDB)) != 1 {
 		return PollResult{}, ErrSecretMismatch
 	}
-	// Expired до claim — статус expired.
+
 	if claimedAt == nil && time.Now().UTC().After(expiresAt) {
 		return PollResult{Status: "expired"}, nil
 	}
 	if claimedAt == nil || tokenID == nil {
 		return PollResult{Status: "pending"}, nil
 	}
-	// Claimed: достанем user_id + name из api_tokens, отдадим plaintext один раз.
+
 	var userID uuid.UUID
 	var name string
 	err = pool.QueryRow(ctx, `
@@ -205,7 +160,7 @@ func Poll(ctx context.Context, pool *pgxpool.Pool, pairID uuid.UUID, secret stri
 	out.UserID = &uid
 	out.DevName = &name
 	if plainText != nil && *plainText != "" {
-		// Атомарно зачищаем plaintext чтобы повторный poll не выдал токен.
+
 		_, _ = pool.Exec(ctx, `
 			UPDATE pairing_codes SET claimed_plaintext = NULL WHERE id = $1`, pairID)
 		out.Token = plainText
@@ -213,9 +168,6 @@ func Poll(ctx context.Context, pool *pgxpool.Pool, pairID uuid.UUID, secret stri
 	return out, nil
 }
 
-// Claim — authed-юзер связывает code со своим аккаунтом. Создаёт api_token
-// (kind=<kind>, scope=write:ingest), хранит plaintext в pairing_codes до
-// первого poll'а клиентом.
 func Claim(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, code, name string) (Device, error) {
 	code = strings.ToUpper(strings.TrimSpace(code))
 	if len(code) != codeLen {
@@ -303,7 +255,6 @@ func Claim(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, code, name
 	return out, nil
 }
 
-// List — список устройств юзера (api_tokens с kind IS NOT NULL, не revoked).
 func List(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) ([]Device, error) {
 	rows, err := pool.Query(ctx, `
 		SELECT id, kind, name, prefix, created_at, last_used_at
@@ -331,8 +282,6 @@ func List(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) ([]Device, 
 	return out, nil
 }
 
-// Revoke — soft-delete устройства. Возвращает true если row существовал и
-// принадлежал юзеру.
 func Revoke(ctx context.Context, pool *pgxpool.Pool, userID, deviceID uuid.UUID) (bool, error) {
 	tag, err := pool.Exec(ctx, `
 		UPDATE api_tokens SET revoked_at = now()
@@ -344,8 +293,6 @@ func Revoke(ctx context.Context, pool *pgxpool.Pool, userID, deviceID uuid.UUID)
 	return tag.RowsAffected() > 0, nil
 }
 
-// GCExpired — фоновая зачистка просроченных pairing_codes (claimed > 24h
-// назад или не claimed > expires_at). Вызывается из cron'а.
 func GCExpired(ctx context.Context, pool *pgxpool.Pool) (int64, error) {
 	tag, err := pool.Exec(ctx, `
 		DELETE FROM pairing_codes
@@ -405,7 +352,6 @@ func defaultName(kind string) string {
 }
 
 func isUniqueViolation(err error) bool {
-	// pgx wraps PostgresError; вместо завозим разбор кода используем substring
-	// match — это узкое место (test will guard against drift).
+
 	return err != nil && strings.Contains(err.Error(), "23505")
 }

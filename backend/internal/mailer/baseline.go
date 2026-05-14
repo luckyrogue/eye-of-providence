@@ -1,30 +1,7 @@
-// baseline.go — exposing the embedded fallback templates as `Template`
-// rows for the admin editor.
-//
-// Mailer ранее использовал hard-coded sprintf builders (templates.go) с
-// signature like `InviteEmail(teamName, inviteURL, inviterName, locale)`.
-// Admin editor же работает с Go-template syntax `{{.TeamName}}`. Чтобы не
-// дублировать копию текстов, baseline здесь — синтез из тех же
-// inviteCopies / resetCopies / digestCopies map'ов, но в Go-template
-// представлении.
-//
-// Если admin сохраняет override в БД, render идёт через store.Render(); если
-// row отсутствует — caller (teams/sso/mailer-send pathways) использует
-// старые builders из templates.go напрямую (без template substitution).
-// Это даёт нам:
-//   1) zero functional regression — embedded send path не меняется
-//   2) корректные admin baseline для preview/edit
-//   3) post-save используется new render path с full template substitution
-
 package mailer
 
 import "strings"
 
-// BaselineTemplate — embedded copy для (key, locale) в формате
-// Go-template'а. Используется admin endpoint'ом для отображения
-// "стартового" значения, когда DB override отсутствует.
-//
-// Returns nil если key + locale нераспознаны.
 func BaselineTemplate(key string, locale Locale) *Template {
 	loc := NormalizeLocale(string(locale))
 	switch key {
@@ -47,32 +24,20 @@ func BaselineTemplate(key string, locale Locale) *Template {
 			BodyText: teamInviteTextTpl(c),
 		}
 	case TemplateKeySubscriptionActivated:
-		// Phase 3 baseline: пока нет embedded copy в templates.go (subscription
-		// activation шлётся вручную через admin UI). Минимальный шаблон
-		// gives admin starting point. Если позже добавим типизированный
-		// builder — синхронизируем здесь.
+
 		return subscriptionActivatedBaseline(loc)
 	}
 	return nil
 }
 
-// formatTpl — заменяет первый `%s` в legacy-формате на нужный Go-template
-// placeholder. inviteCopies использует `%s` для substitution; в admin
-// editor'е это переводится в `{{.X}}`. Для строк с несколькими `%s`
-// caller вызывает replaceFirstSubst напрямую с цепочкой.
 func formatTpl(src, placeholder string) string {
 	return replaceFirstSubst(src, placeholder)
 }
 
-// replaceFirstSubst — заменяет первое вхождение `%s` на `placeholder`.
-// Используется для конверсии sprintf-стиля legacy строк (inviteCopies,
-// resetCopies) в Go-template формат.
 func replaceFirstSubst(s, placeholder string) string {
 	return strings.Replace(s, "%s", placeholder, 1)
 }
 
-// passwordResetHTMLTpl — рендер inline templates.go reset baseline в
-// Go-template виде. Переменные: ResetURL.
 func passwordResetHTMLTpl(c resetCopy) string {
 	return "<!doctype html>\n<html><body style=\"" + baseStyle + "\">\n" +
 		"  <h2 style=\"margin:0 0 12px;font-weight:700;\">" + c.Heading + "</h2>\n" +
@@ -88,12 +53,9 @@ func passwordResetTextTpl(c resetCopy) string {
 	return c.TextHeader + "\n\n" + c.TextLead + "\n{{.ResetURL}}\n\n" + c.TextValid
 }
 
-// teamInviteHTMLTpl — invite baseline. Переменные: TeamName, AcceptURL,
-// InviterName, Role (optional).
 func teamInviteHTMLTpl(c inviteCopy) string {
 	heading := replaceFirstSubst(c.Heading, "{{.TeamName}}")
-	// Greeting содержит ДВА %s — inviter + team. Используем conditional
-	// branch на наличие InviterName.
+
 	greetingWith := replaceFirstSubst(replaceFirstSubst(c.Greeting, "{{.InviterName}}"), "{{.TeamName}}")
 	greetingNoBy := replaceFirstSubst(c.GreetingNoBy, "{{.TeamName}}")
 
@@ -115,9 +77,6 @@ func teamInviteTextTpl(c inviteCopy) string {
 		c.TextAccept + " {{.AcceptURL}}\n\n" + c.TextIgnore
 }
 
-// subscriptionActivatedBaseline — placeholder copy для subscription
-// activated. Минимальный, чтобы admin editor имел стартовое значение.
-// Реальное содержание полирует product/copy team через UI.
 func subscriptionActivatedBaseline(loc Locale) *Template {
 	type sub struct{ subj, heading, lead, button, valid, txtHead, txtLead, txtValid string }
 	copies := map[Locale]sub{

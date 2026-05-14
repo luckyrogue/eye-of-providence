@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// MatrixEntry — одна ячейка матрицы key × locale (list endpoint).
 type MatrixEntry struct {
 	Key         string     `json:"key"`
 	Locale      string     `json:"locale"`
@@ -15,7 +14,6 @@ type MatrixEntry struct {
 	UpdatedBy   *uuid.UUID `json:"updated_by,omitempty"`
 }
 
-// View — ответ GET одного шаблона (override или baseline).
 type View struct {
 	Key       string     `json:"key"`
 	Locale    string     `json:"locale"`
@@ -27,26 +25,23 @@ type View struct {
 	UpdatedBy *uuid.UUID `json:"updated_by,omitempty"`
 }
 
-// UpsertCommand — вход PUT admin email template.
 type UpsertCommand struct {
 	Subject  string
 	BodyHTML string
 	BodyText string
 }
 
-// UpsertResult — результат успешного upsert.
 type UpsertResult struct {
-	Key        string     `json:"key"`
-	Locale     string     `json:"locale"`
-	Subject    string     `json:"subject"`
-	BodyHTML   string     `json:"body_html"`
-	BodyText   string     `json:"body_text"`
-	UpdatedAt  time.Time  `json:"updated_at"`
-	UpdatedBy  *uuid.UUID `json:"updated_by"`
-	IsDefault  bool       `json:"is_default"`
+	Key       string     `json:"key"`
+	Locale    string     `json:"locale"`
+	Subject   string     `json:"subject"`
+	BodyHTML  string     `json:"body_html"`
+	BodyText  string     `json:"body_text"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	UpdatedBy *uuid.UUID `json:"updated_by"`
+	IsDefault bool       `json:"is_default"`
 }
 
-// OverrideRow — строка override в хранилище (доменный DTO без mailer).
 type OverrideRow struct {
 	Key       string
 	Locale    string
@@ -57,7 +52,6 @@ type OverrideRow struct {
 	UpdatedBy *uuid.UUID
 }
 
-// AuditEvent — запись в audit trail (без Fiber).
 type AuditEvent struct {
 	ActorID    uuid.UUID
 	ActorEmail string
@@ -69,7 +63,6 @@ type AuditEvent struct {
 	UserAgent  string
 }
 
-// RequestMeta — IP/UA для audit (заполняет HTTP adapter).
 type RequestMeta struct {
 	IP        string
 	UserAgent string

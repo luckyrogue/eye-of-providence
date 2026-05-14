@@ -14,28 +14,26 @@ import (
 	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
-// Service — config для PR-comment endpoint.
 type Service struct {
 	Pool         *pgxpool.Pool
 	JWTSecret    string
 	Logger       *zap.Logger
-	HTTPClient   HTTPClient // если nil → дефолт http.Client с timeout 10s
-	DashboardURL string     // base URL для click-through link в комменте
+	HTTPClient   HTTPClient
+	DashboardURL string
 }
 
-// RegisterRoutes — POST /v1/integrations/pr-comment.
 func RegisterRoutes(app *fiber.App, s Service) {
 	g := app.Group("/v1/integrations", auth.Middleware(s.JWTSecret, s.Pool))
 	g.Post("/pr-comment", postHandler(s))
 }
 
 type request struct {
-	Provider      string   `json:"provider"`       // "github" | "gitlab"
-	Host          string   `json:"host"`           // optional, для self-hosted
-	Repo          string   `json:"repo"`           // "owner/name" или "namespace/project"
-	PRNumber      int      `json:"pr_number"`      // GitHub PR / GitLab MR IID
-	SHAs          []string `json:"shas"`           // commit SHAs to aggregate
-	ProviderToken string   `json:"provider_token"` // GitHub PAT / GitLab PAT
+	Provider      string   `json:"provider"`
+	Host          string   `json:"host"`
+	Repo          string   `json:"repo"`
+	PRNumber      int      `json:"pr_number"`
+	SHAs          []string `json:"shas"`
+	ProviderToken string   `json:"provider_token"`
 }
 
 func postHandler(s Service) fiber.Handler {

@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-// Format — формат payload'а на исходящий webhook. Дефолт "raw"; "slack"
-// форматирует под Slack incoming-webhook contract.
 type Format string
 
 const (
@@ -24,9 +22,6 @@ func validFormat(f string) bool {
 	return false
 }
 
-// formatPayload — сериализует payload по выбранному формату.
-//   - raw: канонический {event, data, sent_at} (старое поведение, HMAC-signed)
-//   - slack: {text, blocks} с pretty event description (для Slack channels)
 func formatPayload(format Format, event string, payload any) ([]byte, error) {
 	switch format {
 	case FormatSlack:
@@ -42,11 +37,6 @@ func formatPayload(format Format, event string, payload any) ([]byte, error) {
 	}
 }
 
-// marshalSlack — Slack incoming-webhook payload. Использует Block Kit для
-// богатого UI: header + section с key=value полями. Fallback `text` для
-// notifications/preview.
-//
-// Slack ожидает HTTP 200; никаких HMAC-проверок не делает.
 func marshalSlack(event string, payload any) ([]byte, error) {
 	data, _ := payload.(map[string]any)
 
@@ -103,8 +93,7 @@ func marshalSlack(event string, payload any) ([]byte, error) {
 		fields = append(fields, slackField("Z-score", fmt.Sprintf("%.2f", float64(z)/1)))
 
 	default:
-		// Unknown event — отправляем generic notification, чтобы Slack хоть
-		// что-то показал.
+
 		headerText = ":bell: Eye of Providence event"
 		summaryText = event
 	}
@@ -129,15 +118,12 @@ func marshalSlack(event string, payload any) ([]byte, error) {
 	}
 
 	return json.Marshal(map[string]any{
-		// text — fallback для preview / mobile notifications.
+
 		"text":   strings.TrimSpace(headerText + " — " + summaryText),
 		"blocks": blocks,
 	})
 }
 
-// anomalyHeader — emoji + label per anomaly kind. Compatible с Kind values
-// из internal/anomaly/detector.go (но не импортируем тот pkg чтобы избежать
-// import cycle — webhooks → anomaly → webhooks).
 func anomalyHeader(kind string) (emoji, label string) {
 	switch kind {
 	case "ai_high":

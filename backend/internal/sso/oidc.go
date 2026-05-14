@@ -11,9 +11,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// OIDCProvider — обёртка вокруг go-oidc/v3 provider'а + oauth2.Config.
-// Кешируется per-team в OIDCRegistry; повторный AuthCodeURL/Exchange не
-// делают discovery.
 type OIDCProvider struct {
 	cfg       *Config
 	provider  *oidc.Provider
@@ -21,25 +18,16 @@ type OIDCProvider struct {
 	oauth2cfg *oauth2.Config
 }
 
-// OIDCIdentity — то что мы извлекаем из ID token. Минимум, достаточный
-// для JIT provisioning. Все поля validated через verifier.
 type OIDCIdentity struct {
-	Subject       string // "sub" claim — stable IdP identifier
+	Subject       string
 	Email         string
 	EmailVerified bool
 	Name          string
 	Picture       string
 }
 
-// defaultOIDCScopes — минимальный набор. Email обязателен для domain check
-// и для display. Profile — для name/picture. Открытый scope "openid" required.
 var defaultOIDCScopes = []string{oidc.ScopeOpenID, "email", "profile"}
 
-// NewOIDCProvider — создаёт provider через discovery (well-known endpoint).
-// Полный round-trip к IdP — caller должен закешировать результат.
-//
-// redirectURL — должен ТОЧНО совпадать с тем, что зарегистрирован в IdP
-// (за наследничество case-sensitive). Обычно — `<public_url>/v1/sso/oidc/callback`.
 func NewOIDCProvider(ctx context.Context, cfg *Config, redirectURL string) (*OIDCProvider, error) {
 	if cfg.Provider != ProviderOIDC {
 		return nil, fmt.Errorf("config provider is %s, not oidc", cfg.Provider)
@@ -78,20 +66,10 @@ func NewOIDCProvider(ctx context.Context, cfg *Config, redirectURL string) (*OID
 	}, nil
 }
 
-// AuthCodeURL — IdP authorization endpoint с state + nonce. Nonce binding'ит
-// state с ID-token'ом — после callback'а проверяется что claim "nonce" в
-// ID token == nonce, который мы выдали.
 func (p *OIDCProvider) AuthCodeURL(state, nonce string) string {
 	return p.oauth2cfg.AuthCodeURL(state, oidc.Nonce(nonce))
 }
 
-// Exchange — code → token + ID token validation. Проверяет:
-//   - signature (через JWKS от провайдера)
-//   - issuer
-//   - audience (client_id)
-//   - nonce (если passed) — anti-replay
-//
-// Возвращает identity или error если что-то не сошлось.
 func (p *OIDCProvider) Exchange(ctx context.Context, code, expectedNonce string) (*OIDCIdentity, error) {
 	ectx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -140,9 +118,6 @@ func (p *OIDCProvider) Exchange(ctx context.Context, code, expectedNonce string)
 	}, nil
 }
 
-// CheckEmailDomain — если allowed_domains настроен, email DOMAIN ДОЛЖЕН быть
-// в списке. Защита от misconfigured IdP'а или скомпрометированного аккаунта
-// в external IdP'е (e.g. Google personal вместо Google Workspace).
 func (p *OIDCProvider) CheckEmailDomain(email string) error {
 	if len(p.cfg.AllowedDomains) == 0 {
 		return nil

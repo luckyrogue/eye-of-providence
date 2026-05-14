@@ -11,24 +11,21 @@ import (
 
 const maxBodyBytes = 256 * 1024
 
-// TemplateSyntaxError — деталь ошибки парсинга/рендера шаблона.
 type TemplateSyntaxError struct {
 	Detail string
 }
 
 func (e *TemplateSyntaxError) Error() string { return e.Detail }
 
-// Service — application layer для admin email templates.
 type Service struct {
-	repo       OverrideRepository
-	baseline   BaselineProvider
-	validator  TemplateSyntaxValidator
-	audit      AuditSink
-	keys       []string
-	locales    []string
+	repo      OverrideRepository
+	baseline  BaselineProvider
+	validator TemplateSyntaxValidator
+	audit     AuditSink
+	keys      []string
+	locales   []string
 }
 
-// Deps — зависимости конструктора (ports + allowlists).
 type Deps struct {
 	Repo      OverrideRepository
 	Baseline  BaselineProvider
@@ -38,7 +35,6 @@ type Deps struct {
 	Locales   []string
 }
 
-// New — wiring use case. Repo и Audit могут быть nil (repo nil ⇒ read-only matrix + baseline GET; upsert/delete вернут ErrStoreUnavailable).
 func New(d Deps) *Service {
 	return &Service{
 		repo:      d.Repo,
@@ -69,7 +65,6 @@ func contains(list []string, v string) bool {
 	return false
 }
 
-// ListMatrix — матрица всех key × locale с флагом override.
 func (s *Service) ListMatrix(ctx context.Context) ([]MatrixEntry, error) {
 	overrides := map[string]OverrideRow{}
 	if s.repo != nil {
@@ -97,7 +92,6 @@ func (s *Service) ListMatrix(ctx context.Context) ([]MatrixEntry, error) {
 	return out, nil
 }
 
-// Get — DB override или embedded baseline.
 func (s *Service) Get(ctx context.Context, key, locale string) (*View, error) {
 	if err := s.validateKeyLocale(key, locale); err != nil {
 		return nil, err
@@ -133,7 +127,6 @@ func (s *Service) Get(ctx context.Context, key, locale string) (*View, error) {
 	return v, nil
 }
 
-// Upsert — validate + persist override.
 func (s *Service) Upsert(ctx context.Context, meta RequestMeta, actorID uuid.UUID, actorEmail, key, locale string, cmd UpsertCommand) (*UpsertResult, error) {
 	if s.repo == nil {
 		return nil, ErrStoreUnavailable
@@ -184,7 +177,6 @@ func (s *Service) Upsert(ctx context.Context, meta RequestMeta, actorID uuid.UUI
 	}, nil
 }
 
-// Delete — удалить override; если не было строки — ErrNoOverride.
 func (s *Service) Delete(ctx context.Context, meta RequestMeta, actorID uuid.UUID, actorEmail, key, locale string) (*OverrideRow, error) {
 	if s.repo == nil {
 		return nil, ErrStoreUnavailable
@@ -225,7 +217,6 @@ func (s *Service) logAudit(ctx context.Context, meta RequestMeta, actorID uuid.U
 	})
 }
 
-// JoinSupported — helper для сообщений об ошибке (тесты / handler).
 func JoinSupported(items []string) string {
 	var b strings.Builder
 	for i, x := range items {
@@ -237,7 +228,6 @@ func JoinSupported(items []string) string {
 	return b.String()
 }
 
-// IsInvalidSyntax reports TemplateSyntaxError.
 func IsInvalidSyntax(err error) (detail string, ok bool) {
 	var syn *TemplateSyntaxError
 	if errors.As(err, &syn) {

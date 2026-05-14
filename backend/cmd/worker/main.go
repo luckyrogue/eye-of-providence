@@ -12,10 +12,5 @@ func main() {
 
 	logger.Info("worker starting")
 
-	// TODO Phase 3: attribution post-processing.
-	// Читает raw events из ClickHouse, классифицирует hunks
-	// (typed | pasted-AI | pasted-other | AI-inline | AI-agent | unknown),
-	// пишет в attribution_events.
-
-	select {} // блок до получения сигнала завершения
+	select {}
 }

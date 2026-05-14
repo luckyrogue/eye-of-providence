@@ -15,17 +15,14 @@ import (
 	"github.com/eye-of-providence/backend/internal/plans"
 )
 
-// AdminService — bundle для admin SSO endpoints. teamRoleCheck inject'ится
-// чтобы избежать import cycle (teams imports sso для admin routes ниже).
 type AdminService struct {
 	Pool     *pgxpool.Pool
 	Registry *Registry
 	Logger   *zap.Logger
-	Plans    plans.Service // feature-gate: SSO требует Business+ при Enforce=true
-	Audit    audit.Service // append-only лог сохранения/удаления конфигов
+	Plans    plans.Service
+	Audit    audit.Service
 }
 
-// actorInfo — берёт actor_id + email для audit-trail.
 func (s AdminService) actorInfo(c *fiber.Ctx) (uuid.UUID, string) {
 	claims := auth.ClaimsFromCtx(c)
 	uid, _ := uuid.Parse(claims.UserID)
@@ -36,9 +33,6 @@ func (s AdminService) actorInfo(c *fiber.Ctx) (uuid.UUID, string) {
 	return uid, email
 }
 
-// RegisterAdminRoutes — owner/admin endpoints для SSO config CRUD.
-// Mount'ится под /v1/teams/:id/sso, защищается auth middleware на caller
-// side. Per-endpoint role check внутри.
 func (s AdminService) RegisterAdminRoutes(g fiber.Router) {
 	g.Get("/", s.handleGet)
 	g.Put("/", s.handleSave)
@@ -46,19 +40,17 @@ func (s AdminService) RegisterAdminRoutes(g fiber.Router) {
 	g.Post("/test", s.handleTestDiscovery)
 }
 
-// configResponse — конфиг без секретов. client_secret никогда не возвращается
-// в GET — это write-only.
 type configResponse struct {
-	TeamID         uuid.UUID `json:"team_id"`
-	Provider       string    `json:"provider"`
-	Enabled        bool      `json:"enabled"`
-	OIDCIssuer     string    `json:"oidc_issuer,omitempty"`
-	OIDCClientID   string    `json:"oidc_client_id,omitempty"`
-	HasClientSecret bool     `json:"has_client_secret"` // только индикатор
-	OIDCScopes     []string  `json:"oidc_scopes,omitempty"`
-	AllowedDomains []string  `json:"allowed_domains,omitempty"`
-	JITProvision   bool      `json:"jit_provision"`
-	JITRole        string    `json:"jit_role"`
+	TeamID          uuid.UUID `json:"team_id"`
+	Provider        string    `json:"provider"`
+	Enabled         bool      `json:"enabled"`
+	OIDCIssuer      string    `json:"oidc_issuer,omitempty"`
+	OIDCClientID    string    `json:"oidc_client_id,omitempty"`
+	HasClientSecret bool      `json:"has_client_secret"`
+	OIDCScopes      []string  `json:"oidc_scopes,omitempty"`
+	AllowedDomains  []string  `json:"allowed_domains,omitempty"`
+	JITProvision    bool      `json:"jit_provision"`
+	JITRole         string    `json:"jit_role"`
 }
 
 func toResponse(c *Config) configResponse {
@@ -76,8 +68,6 @@ func toResponse(c *Config) configResponse {
 	}
 }
 
-// requireOwnerOrAdmin — проверяет что юзер owner|admin в team. Возвращает
-// httperr response если нет, или nil если ok.
 func requireOwnerOrAdmin(c *fiber.Ctx, pool *pgxpool.Pool, teamID uuid.UUID) error {
 	claims := auth.ClaimsFromCtx(c)
 	uid, err := uuid.Parse(claims.UserID)
@@ -116,11 +106,11 @@ func (s AdminService) handleGet(c *fiber.Ctx) error {
 }
 
 type saveRequest struct {
-	Provider         string   `json:"provider"`           // "oidc"
+	Provider         string   `json:"provider"`
 	Enabled          bool     `json:"enabled"`
 	OIDCIssuer       string   `json:"oidc_issuer"`
 	OIDCClientID     string   `json:"oidc_client_id"`
-	OIDCClientSecret string   `json:"oidc_client_secret"` // optional, если пусто — keep existing
+	OIDCClientSecret string   `json:"oidc_client_secret"`
 	OIDCScopes       []string `json:"oidc_scopes"`
 	AllowedDomains   []string `json:"allowed_domains"`
 	JITProvision     *bool    `json:"jit_provision"`
@@ -135,7 +125,7 @@ func (s AdminService) handleSave(c *fiber.Ctx) error {
 	if err := requireOwnerOrAdmin(c, s.Pool, teamID); err != nil {
 		return err
 	}
-	// Plan gate: SSO — Business+ feature. В бете Enforce=false → пропускает всех.
+
 	var teamPlan string
 	_ = s.Pool.QueryRow(c.Context(),
 		"SELECT subscription_plan FROM teams WHERE id=$1", teamID).Scan(&teamPlan)
@@ -174,8 +164,7 @@ func (s AdminService) handleSave(c *fiber.Ctx) error {
 	cfg.OIDCIssuer = strings.TrimRight(req.OIDCIssuer, "/")
 	cfg.OIDCClientID = req.OIDCClientID
 	if req.OIDCClientSecret != "" {
-		// Empty в request = keep existing (для UI: чтобы owner не вводил secret
-		// каждый раз при редактировании other fields).
+
 		cfg.OIDCClientSecret = req.OIDCClientSecret
 	}
 	if cfg.OIDCClientSecret == "" {
@@ -204,12 +193,12 @@ func (s AdminService) handleSave(c *fiber.Ctx) error {
 
 	actorID, actorEmail := s.actorInfo(c)
 	s.Audit.LogFromCtx(c, actorID, actorEmail, audit.ActionSSOSaved, "team", teamID.String(), map[string]any{
-		"provider":         string(cfg.Provider),
-		"enabled":          cfg.Enabled,
-		"oidc_issuer":      cfg.OIDCIssuer,
-		"allowed_domains":  cfg.AllowedDomains,
-		"jit_provision":    cfg.JITProvision,
-		"jit_role":         cfg.JITRole,
+		"provider":        string(cfg.Provider),
+		"enabled":         cfg.Enabled,
+		"oidc_issuer":     cfg.OIDCIssuer,
+		"allowed_domains": cfg.AllowedDomains,
+		"jit_provision":   cfg.JITProvision,
+		"jit_role":        cfg.JITRole,
 	})
 	return c.JSON(fiber.Map{"config": toResponse(cfg)})
 }
@@ -231,9 +220,6 @@ func (s AdminService) handleDelete(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"deleted": true})
 }
 
-// handleTestDiscovery — проверяет, что issuer URL валиден (well-known
-// endpoint достижим, ID token signing keys publish'ятся). Не делает actual
-// flow, нужен только для UI "Test connection" кнопки.
 func (s AdminService) handleTestDiscovery(c *fiber.Ctx) error {
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {

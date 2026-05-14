@@ -105,11 +105,11 @@ func TestDispatch_HappyPath(t *testing.T) {
 	uid := makeUser(t, pool)
 
 	var (
-		gotMu       sync.Mutex
-		gotBody     []byte
-		gotSig      string
-		gotEvent    string
-		hits        atomic.Int32
+		gotMu    sync.Mutex
+		gotBody  []byte
+		gotSig   string
+		gotEvent string
+		hits     atomic.Int32
 	)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotMu.Lock()
@@ -129,10 +129,8 @@ func TestDispatch_HappyPath(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Synchronous-ish: вызываем dispatchSync вместо Dispatch чтобы не race.
 	svc.dispatchSync(uid, EventCommitIngested, map[string]any{"sha": "abc"})
 
-	// Wait short for goroutine; dispatchSync блокирует do all sends.
 	for i := 0; i < 20 && hits.Load() == 0; i++ {
 		time.Sleep(50 * time.Millisecond)
 	}
@@ -159,7 +157,6 @@ func TestDispatch_HappyPath(t *testing.T) {
 		t.Errorf("payload.data.sha=%v", data["sha"])
 	}
 
-	// last_delivery_at + last_status должны обновиться.
 	var lastStatus *int
 	_ = pool.QueryRow(context.Background(),
 		"SELECT last_status FROM webhooks WHERE user_id=$1", uid).Scan(&lastStatus)
@@ -184,7 +181,7 @@ func TestDispatch_OnlyMatchingEvents(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc.dispatchSync(uid, EventCommitIngested, map[string]any{}) // не matching event
+	svc.dispatchSync(uid, EventCommitIngested, map[string]any{})
 	time.Sleep(100 * time.Millisecond)
 	if hits.Load() != 0 {
 		t.Errorf("delivered %d times, want 0 (event not subscribed)", hits.Load())
@@ -198,19 +195,18 @@ func TestDispatch_5xxRetry(t *testing.T) {
 	var hits atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hits.Add(1)
-		w.WriteHeader(500) // всегда fail
+		w.WriteHeader(500)
 	}))
 	defer server.Close()
 
 	svc := New(pool, zap.NewNop())
-	// fast HTTP timeout чтобы тест не висел
+
 	svc.HTTPClient = &http.Client{Timeout: 1 * time.Second}
 	_, _, err := svc.Create(context.Background(), uid, server.URL, []string{EventCommitIngested}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// dispatchSync включает 4 попытки (delays 0/1s/3s/9s). Ждать 13s + buffer.
 	done := make(chan struct{})
 	go func() {
 		svc.dispatchSync(uid, EventCommitIngested, map[string]any{})
@@ -268,7 +264,7 @@ func TestDispatch_SlackFormat(t *testing.T) {
 	if err := json.Unmarshal(gotBody, &payload); err != nil {
 		t.Fatalf("body not JSON: %s", string(gotBody))
 	}
-	// Slack contract: верхний уровень — text + blocks, без event/data.
+
 	if _, ok := payload["text"]; !ok {
 		t.Error("Slack payload missing text")
 	}

@@ -8,8 +8,6 @@ import (
 	"testing"
 )
 
-// --- POST /v1/teams/:id/invites ---
-
 func TestCreateInvite_LinkOnly(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -91,8 +89,6 @@ func TestCreateInvite_MemberCannot(t *testing.T) {
 	}
 }
 
-// --- GET /v1/invites/:code (preview, no auth) ---
-
 func TestInvitePreview_HappyPath(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -127,8 +123,6 @@ func TestInvitePreview_BadCode_404(t *testing.T) {
 		t.Errorf("status=%d, want 404", status)
 	}
 }
-
-// --- POST /v1/invites/:code/accept ---
 
 func TestInviteAccept_HappyPath(t *testing.T) {
 	pool := setupTestDB(t)
@@ -181,8 +175,6 @@ func TestInviteAccept_OneUseExhausted(t *testing.T) {
 	}
 }
 
-// --- /v1/teams (list) and /v1/beta/info ---
-
 func TestListMyTeams_OnlyMyTeams(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -207,8 +199,6 @@ func TestListMyTeams_OnlyMyTeams(t *testing.T) {
 		t.Errorf("got team id=%v, want %v", id, myTeam)
 	}
 }
-
-// --- /v1/teams/:id (detail) ---
 
 func TestTeamDetail_MemberCanRead(t *testing.T) {
 	pool := setupTestDB(t)

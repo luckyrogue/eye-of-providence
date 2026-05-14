@@ -1,24 +1,5 @@
 //go:build integration
 
-// Запуск:
-//   EOP_TEST_PG_DSN=postgres://eop:eop_dev@localhost:5432/eop_test \
-//     go test -tags=integration ./internal/auth/...
-//
-// Полные WebAuthn ceremony-тесты — register / login / replay — против
-// virtualwebauthn-authenticator'а descope/virtualwebauthn v1.0.5.
-//
-// Источник правды: webauthn.go + .team/qa-testplans/webauthn-register.md +
-// webauthn-login.md.
-//
-// Архитектура fake authenticator'а:
-//   - RelyingParty{ID: localhost, Origin: http://localhost:5173} — точно
-//     совпадает с newTestWebAuthn() config'ом, иначе RP-validation в
-//     go-webauthn отвергнет attestation/assertion.
-//   - virtualwebauthn.NewCredential(KeyTypeEC2) — EC2/P-256 keypair (типичный
-//     для платформенных passkey'ев: Apple/Google).
-//   - UserHandle = userID.Bytes — мы храним 16-byte raw UUID в WebAuthnID,
-//     go-webauthn проверит совпадение в FinishLogin.
-
 package auth
 
 import (
@@ -43,8 +24,6 @@ const (
 	testWebAuthnUserName = "wa-test@example.com"
 )
 
-// setupWebAuthnIntegration — DB + Redis (miniredis) + WebAuthnService готовый
-// к полному ceremony. Inserts a user row и возвращает её id.
 func setupWebAuthnIntegration(t *testing.T) (*WebAuthnService, *pgxpool.Pool, uuid.UUID) {
 	t.Helper()
 	dsn := os.Getenv("EOP_TEST_PG_DSN")
@@ -89,8 +68,6 @@ func setupWebAuthnIntegration(t *testing.T) (*WebAuthnService, *pgxpool.Pool, uu
 	return wa, pool, userID
 }
 
-// newVirtualRP — config совпадает с newTestWebAuthn() — иначе RP/Origin checks
-// в go-webauthn fail'ятся.
 func newVirtualRP() virtualwebauthn.RelyingParty {
 	return virtualwebauthn.RelyingParty{
 		Name:   testWebAuthnRPName,
@@ -99,10 +76,6 @@ func newVirtualRP() virtualwebauthn.RelyingParty {
 	}
 }
 
-// registerCredential — выполняет полный BeginRegistration → FinishRegistration
-// flow и возвращает виртуальные credential/authenticator, готовые к login.
-//
-// nickname опционален; пустая строка → NULL в DB.
 func registerCredential(t *testing.T, wa *WebAuthnService, userID uuid.UUID, nickname string) (virtualwebauthn.Authenticator, virtualwebauthn.Credential) {
 	t.Helper()
 	ctx := context.Background()
@@ -134,25 +107,18 @@ func registerCredential(t *testing.T, wa *WebAuthnService, userID uuid.UUID, nic
 		t.Fatalf("FinishRegistration: %v", err)
 	}
 
-	// UserHandle == raw UUID bytes — webauthn.go использует userID.Bytes как
-	// WebAuthnID, go-webauthn проверяет matching при FinishLogin/DiscoverableLogin.
 	uidBytes := userID
 	authenticator.Options.UserHandle = uidBytes[:]
 	authenticator.AddCredential(cred)
 	return authenticator, cred
 }
 
-// TestWebAuthnRegister_FullFlow — happy-path register: BeginRegistration →
-// virtualwebauthn attestation → FinishRegistration → row в DB.
-//
-// Источник: webauthn-register.md §1 (happy path).
 func TestWebAuthnRegister_FullFlow(t *testing.T) {
 	wa, pool, userID := setupWebAuthnIntegration(t)
 	ctx := context.Background()
 
 	_, cred := registerCredential(t, wa, userID, "Virtual EC2")
 
-	// Verify row persisted с правильными полями.
 	var (
 		credentialID []byte
 		signCount    int64
@@ -184,17 +150,6 @@ func TestWebAuthnRegister_FullFlow(t *testing.T) {
 	}
 }
 
-// TestWebAuthnLogin_ReplayAttack — переиспользование одного assertion дважды
-// отвергается. Защита: webauthn.go сохраняет sessions в Redis SETEX → GETDEL,
-// первый FinishLogin потребляет session, второй — fails ("session not found").
-//
-// Дополнительно проверяем sign_count regression: после успешного login DB
-// хранит обновлённый sign_count; повторный assertion с тем же counter (без
-// bump'а виртуального authenticator'а) приведёт к CloneWarning в go-webauthn
-// (см. authenticator.go:60). Здесь это вторичная защита — primary — single-use
-// session — уже отвергает replay.
-//
-// Источник: webauthn-login.md §5.
 func TestWebAuthnLogin_ReplayAttack(t *testing.T) {
 	wa, pool, userID := setupWebAuthnIntegration(t)
 	ctx := context.Background()
@@ -203,7 +158,6 @@ func TestWebAuthnLogin_ReplayAttack(t *testing.T) {
 
 	email := testWebAuthnUserName
 
-	// === Login attempt #1: должен пройти. ===
 	assertion1, sid1, err := wa.BeginLogin(ctx, &email)
 	if err != nil {
 		t.Fatalf("BeginLogin #1: %v", err)
@@ -227,17 +181,10 @@ func TestWebAuthnLogin_ReplayAttack(t *testing.T) {
 		t.Errorf("FinishLogin #1 returned userID=%s, want %s", gotUserID, userID)
 	}
 
-	// === Replay attempt: same (sid1, body1) → session уже GETDEL'd. ===
 	if _, err := wa.FinishLogin(ctx, sid1, []byte(body1)); err == nil {
 		t.Fatal("replay with reused session_id succeeded; single-use protection broken")
 	}
 
-	// === Sign-count regression: новый BeginLogin, но cred.Counter оставлен
-	// без bump'а — virtualwebauthn пишет тот же sign_count в authData. После
-	// previous success DB хранит sign_count=0 (initial). go-webauthn fires
-	// CloneWarning при authDataCount <= storedCount (см. authenticator.go:60).
-	// FinishLogin не возвращает error по CloneWarning, но мы убеждаемся, что
-	// замёт sign_count в DB не двинулся назад. ===
 	var storedSignCount int64
 	if err := pool.QueryRow(ctx, `SELECT sign_count FROM webauthn_credentials WHERE user_id = $1`, userID).Scan(&storedSignCount); err != nil {
 		t.Fatalf("select sign_count: %v", err)
@@ -252,14 +199,11 @@ func TestWebAuthnLogin_ReplayAttack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseAssertionOptions #2: %v", err)
 	}
-	// КРИТИЧЕСКОЕ: не bump'аем cred.Counter — симулируем cloned authenticator.
+
 	body2 := virtualwebauthn.CreateAssertionResponse(rp, authenticator, cred, *parsedOpts2)
 
-	// FinishLogin успешен (go-webauthn не fail'ит — только flag CloneWarning).
-	// Но stored sign_count в DB не должен регрессировать.
 	if _, err := wa.FinishLogin(ctx, sid2, []byte(body2)); err != nil {
-		// Если когда-нибудь webauthn.go начнёт propagate CloneWarning →
-		// принимаем error. Тест не должен false-fail'ить в этом случае.
+
 		t.Logf("FinishLogin #2 errored (likely CloneWarning surfacing): %v", err)
 	}
 

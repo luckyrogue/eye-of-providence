@@ -170,7 +170,7 @@ func TestService_Upsert_SyntaxRejected_Audit(t *testing.T) {
 	svc := emailtemplates.New(emailtemplates.Deps{
 		Repo:      repo,
 		Baseline:  fakeBaseline{},
-		Validator: fakeValidator{err: context.Canceled}, // any non-nil
+		Validator: fakeValidator{err: context.Canceled},
 		Audit:     audit,
 		Keys:      keys,
 		Locales:   locs,

@@ -13,7 +13,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/cache"
 )
 
-// fakeStore — counts calls для verification cache hits/misses.
 type fakeStore struct {
 	aggCalls     atomic.Int32
 	bulkCalls    atomic.Int32
@@ -69,13 +68,11 @@ func (f *fakeStore) DeleteUserData(_ context.Context, _ string) error {
 	return nil
 }
 
-// setupCache — стартует mini-redis-style цепочку через real redis.Client с
-// in-memory mock через DB 15. На CI без Redis тест skip'ится.
 func setupCache(t *testing.T) *cache.Cache {
 	t.Helper()
 	cli := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
-		DB:   15, // dedicated test DB
+		DB:   15,
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
@@ -92,7 +89,7 @@ func setupCache(t *testing.T) *cache.Cache {
 
 func TestCached_NoCacheFallthrough(t *testing.T) {
 	inner := &fakeStore{aggResp: map[string]uint64{"ai": 100}}
-	// nil cache → NewCached returns inner as-is
+
 	wrapped := NewCached(inner, nil, zap.NewNop())
 	if wrapped != inner {
 		t.Error("nil cache should return inner as-is")
@@ -107,7 +104,6 @@ func TestCached_AggregateHitMiss(t *testing.T) {
 	ctx := context.Background()
 	since := time.Now().Add(-7 * 24 * time.Hour)
 
-	// Miss → calls inner
 	r1, err := wrapped.AggregateByCategory(ctx, "user-1", since)
 	if err != nil {
 		t.Fatal(err)
@@ -119,7 +115,6 @@ func TestCached_AggregateHitMiss(t *testing.T) {
 		t.Errorf("got %v", r1)
 	}
 
-	// Hit → no inner call
 	r2, err := wrapped.AggregateByCategory(ctx, "user-1", since)
 	if err != nil {
 		t.Fatal(err)
@@ -167,7 +162,6 @@ func TestCached_BulkSortStability(t *testing.T) {
 	ctx := context.Background()
 	since := time.Now()
 
-	// Same set, different order → same cache key
 	wrapped.AggregateByCategoryBulk(ctx, []string{"u1", "u2"}, since)
 	wrapped.AggregateByCategoryBulk(ctx, []string{"u2", "u1"}, since)
 	if inner.bulkCalls.Load() != 1 {
@@ -198,7 +192,7 @@ func TestCached_DeleteInvalidates(t *testing.T) {
 	uid := "user-del"
 	since := time.Now()
 
-	wrapped.AggregateByCategory(ctx, uid, since) // populate cache
+	wrapped.AggregateByCategory(ctx, uid, since)
 	if del, ok := wrapped.(UserDeleter); ok {
 		if err := del.DeleteUserData(ctx, uid); err != nil {
 			t.Fatal(err)
@@ -207,7 +201,6 @@ func TestCached_DeleteInvalidates(t *testing.T) {
 		t.Fatal("CachedEventStore should implement UserDeleter")
 	}
 
-	// After delete, next call → cache miss → new inner call
 	wrapped.AggregateByCategory(ctx, uid, since)
 	if inner.aggCalls.Load() != 2 {
 		t.Errorf("expected 2 inner calls (cache invalidated), got %d", inner.aggCalls.Load())
@@ -215,7 +208,7 @@ func TestCached_DeleteInvalidates(t *testing.T) {
 }
 
 func TestCached_SetFailureNotFatal(t *testing.T) {
-	// Cache с invalid endpoint → SET fails, но read pass-through still works
+
 	cli := redis.NewClient(&redis.Options{Addr: "127.0.0.1:1", DialTimeout: 100 * time.Millisecond})
 	c := &cache.Cache{Client: cli, Prefix: "test"}
 	defer cli.Close()
@@ -223,9 +216,6 @@ func TestCached_SetFailureNotFatal(t *testing.T) {
 	inner := &fakeStore{aggResp: map[string]uint64{"ai": 1}}
 	wrapped := NewCached(inner, c, zap.NewNop())
 
-	// Even with broken cache, read should succeed via inner.
-	// (DeadlineExceeded ok если ping глобальный timeout сработал — read
-	// fall-through всё равно работает, cache miss silently logged.)
 	_, err := wrapped.AggregateByCategory(context.Background(), "u", time.Now())
 	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("inner read should succeed when cache broken: %v", err)

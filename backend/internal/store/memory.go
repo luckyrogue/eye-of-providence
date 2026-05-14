@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-// MemoryStore — in-memory реализация EventStore для dev / тестов.
-// В production заменяется на ClickHouse store (Phase 2+).
 type MemoryStore struct {
 	mu     sync.RWMutex
 	events []Event

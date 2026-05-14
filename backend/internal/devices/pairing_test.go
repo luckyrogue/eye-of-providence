@@ -53,7 +53,6 @@ func makeUser(t *testing.T, pool *pgxpool.Pool) uuid.UUID {
 	return id
 }
 
-// TestPairing_HappyPath — полный flow: pair → poll(pending) → claim → poll(claimed, token выдан раз).
 func TestPairing_HappyPath(t *testing.T) {
 	pool := setupDevicesDB(t)
 	uid := makeUser(t, pool)
@@ -70,7 +69,6 @@ func TestPairing_HappyPath(t *testing.T) {
 		t.Fatal("empty secret or pair_id")
 	}
 
-	// Pending до claim.
 	pr, err := Poll(ctx, pool, pair.PairID, pair.Secret)
 	if err != nil {
 		t.Fatalf("Poll pending: %v", err)
@@ -87,7 +85,6 @@ func TestPairing_HappyPath(t *testing.T) {
 		t.Errorf("dev=%+v", dev)
 	}
 
-	// Первый poll после claim — выдаёт token.
 	pr, err = Poll(ctx, pool, pair.PairID, pair.Secret)
 	if err != nil {
 		t.Fatalf("Poll claimed: %v", err)
@@ -99,7 +96,6 @@ func TestPairing_HappyPath(t *testing.T) {
 		t.Fatal("token nil/empty after claim")
 	}
 
-	// Второй poll — token уже не выдаётся (zeroed).
 	pr2, err := Poll(ctx, pool, pair.PairID, pair.Secret)
 	if err != nil {
 		t.Fatalf("Poll second: %v", err)
@@ -109,7 +105,6 @@ func TestPairing_HappyPath(t *testing.T) {
 	}
 }
 
-// TestPairing_ExpiredCode — после code_expires_at статус "expired".
 func TestPairing_ExpiredCode(t *testing.T) {
 	pool := setupDevicesDB(t)
 	ctx := context.Background()
@@ -133,7 +128,6 @@ func TestPairing_ExpiredCode(t *testing.T) {
 	}
 }
 
-// TestPairing_WrongSecret — Poll с чужим secret'ом возвращает ErrSecretMismatch.
 func TestPairing_WrongSecret(t *testing.T) {
 	pool := setupDevicesDB(t)
 	ctx := context.Background()
@@ -148,7 +142,6 @@ func TestPairing_WrongSecret(t *testing.T) {
 	}
 }
 
-// TestPairing_ClaimStaleCode — Claim с истёкшим code возвращает ErrCodeNotFound.
 func TestPairing_ClaimStaleCode(t *testing.T) {
 	pool := setupDevicesDB(t)
 	uid := makeUser(t, pool)
@@ -170,7 +163,6 @@ func TestPairing_ClaimStaleCode(t *testing.T) {
 	}
 }
 
-// TestPairing_DoubleClaim — повторный Claim того же code → ErrAlreadyClaimed.
 func TestPairing_DoubleClaim(t *testing.T) {
 	pool := setupDevicesDB(t)
 	uid := makeUser(t, pool)
@@ -189,8 +181,6 @@ func TestPairing_DoubleClaim(t *testing.T) {
 	}
 }
 
-// TestPairing_ListAndRevoke — List показывает только paired (kind IS NOT NULL),
-// Revoke помечает revoked_at, после чего List не возвращает row.
 func TestPairing_ListAndRevoke(t *testing.T) {
 	pool := setupDevicesDB(t)
 	uid := makeUser(t, pool)

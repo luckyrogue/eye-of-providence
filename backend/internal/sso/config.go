@@ -1,22 +1,3 @@
-// Package sso — single sign-on (OIDC сейчас, SAML позже).
-//
-// Архитектура:
-//
-//	teams ── 1:1 ── sso_configs (per-team IdP setup, owner/admin manage)
-//	users.sso_team_id + users.sso_subject — стабильный link к IdP-identity.
-//
-// Flow (OIDC SP-initiated):
-//
-//	1. User → POST /v1/sso/start → backend генерит state+nonce, кладёт в
-//	   sso_states (TTL 10min), редиректит на IdP authorization URL.
-//	2. IdP → редирект на /v1/sso/oidc/callback?code=...&state=...
-//	3. Backend проверяет state, exchange code → ID token, валидирует nonce.
-//	4. JIT: если sso_subject не найден — создаём user, добавляем в team
-//	   с jit_role. Иначе — login existing user.
-//	5. Выпускаем JWT, редиректим на return_to.
-//
-// SAML (Phase 2): отдельный package sso/saml_provider.go с crewjam/saml.
-
 package sso
 
 import (
@@ -29,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Provider — тип SSO для одной team. Расширяется когда добавится SAML.
 type Provider string
 
 const (
@@ -37,7 +17,6 @@ const (
 	ProviderSAML Provider = "saml"
 )
 
-// Config — per-team SSO config row. Encoded из sso_configs table.
 type Config struct {
 	TeamID    uuid.UUID
 	Provider  Provider
@@ -45,29 +24,22 @@ type Config struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 
-	// OIDC fields. Все nullable — таблица multi-provider.
 	OIDCIssuer       string
 	OIDCClientID     string
 	OIDCClientSecret string
 	OIDCScopes       []string
 
-	// SAML fields (заглушки до Phase 2).
 	SAMLIdPMetadata string
 	SAMLSPEntityID  string
 	SAMLACSURL      string
 
-	// Common.
 	AllowedDomains []string
 	JITProvision   bool
-	JITRole        string // "owner" | "admin" | "member"
+	JITRole        string
 }
 
-// ErrConfigNotFound — нет sso_config для team_id'а. Caller должен fallback
-// на standard password/GitHub auth.
 var ErrConfigNotFound = errors.New("sso config not found")
 
-// LoadConfig — читает sso_configs по team_id. Возвращает ErrConfigNotFound
-// если не настроен.
 func LoadConfig(ctx context.Context, pool *pgxpool.Pool, teamID uuid.UUID) (*Config, error) {
 	var c Config
 	c.TeamID = teamID
@@ -98,7 +70,6 @@ func LoadConfig(ctx context.Context, pool *pgxpool.Pool, teamID uuid.UUID) (*Con
 	return &c, nil
 }
 
-// SaveConfig — upsert (one row per team). created_at не трогаем при update.
 func SaveConfig(ctx context.Context, pool *pgxpool.Pool, c *Config) error {
 	_, err := pool.Exec(ctx, `
 		INSERT INTO sso_configs (
@@ -129,13 +100,11 @@ func SaveConfig(ctx context.Context, pool *pgxpool.Pool, c *Config) error {
 	return err
 }
 
-// DeleteConfig — disable SSO для team (превращает её в обычную команду).
 func DeleteConfig(ctx context.Context, pool *pgxpool.Pool, teamID uuid.UUID) error {
 	_, err := pool.Exec(ctx, `DELETE FROM sso_configs WHERE team_id = $1`, teamID)
 	return err
 }
 
-// nullStr — convert empty string → SQL NULL (column nullable).
 func nullStr(s string) any {
 	if s == "" {
 		return nil

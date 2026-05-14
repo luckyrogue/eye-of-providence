@@ -1,27 +1,3 @@
-// Package httperr — typed error responses (RFC 7807 Problem Details + extensions).
-//
-// Goal: stable machine-readable error contract для frontend и API consumers.
-// Заменяет ad-hoc `c.Status(400).JSON(fiber.Map{"error": "..."})`.
-//
-// Schema:
-//
-//	{
-//	  "type":       "https://eop.rysdavletov.org/errors/{code}",  // dereferenceable URI
-//	  "title":      "Bad Request",                                 // human-readable HTTP status
-//	  "status":     400,                                           // HTTP status int
-//	  "detail":     "name must be 1..100 chars",                   // specific message
-//	  "code":       "invalid_team_name",                           // machine-readable identifier
-//	  "instance":   "/v1/teams",                                   // path that produced error
-//	  "request_id": "abc-123",                                     // correlation w/ logs
-//	  "error":      "name must be 1..100 chars"                    // backward-compat alias of detail
-//	}
-//
-// Backward-compat: keep `error` field = `detail` чтобы старые frontend
-// consumers продолжали работать без миграции. Новый код может читать
-// `code` для structured error-handling (e.g. показать конкретный i18n).
-//
-// Content-Type: application/problem+json (per RFC 7807). Fiber клиенты
-// которые проверяют content-type — корректно расценивают как error.
 package httperr
 
 import (
@@ -31,8 +7,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// ProblemDetails — JSON-serializable struct. Fields per RFC 7807 + EoP-specific
-// extensions (code, request_id, error).
 type ProblemDetails struct {
 	Type      string `json:"type,omitempty"`
 	Title     string `json:"title"`
@@ -41,17 +15,12 @@ type ProblemDetails struct {
 	Instance  string `json:"instance,omitempty"`
 	Code      string `json:"code,omitempty"`
 	RequestID string `json:"request_id,omitempty"`
-	// Error — alias of Detail для backward-compat со старыми consumers
-	// которые читали `error` поле. Новый код предпочитает Detail+Code.
+
 	Error string `json:"error,omitempty"`
-	// Extensions — arbitrary дополнительные поля per RFC 7807 §3.2.
-	// Используется когда нужно вернуть structured-data (e.g. provider_status,
-	// required_scope, code_reason). Marshaled inline через custom MarshalJSON.
+
 	Extensions map[string]any `json:"-"`
 }
 
-// MarshalJSON — сериализуем struct fields + Extensions inline на верхний
-// уровень (per RFC 7807 — extension fields соседствуют с standard ones).
 func (p ProblemDetails) MarshalJSON() ([]byte, error) {
 	type alias ProblemDetails
 	base, err := json.Marshal(alias(p))
@@ -61,7 +30,7 @@ func (p ProblemDetails) MarshalJSON() ([]byte, error) {
 	if len(p.Extensions) == 0 {
 		return base, nil
 	}
-	// Re-marshal merge через map.
+
 	var m map[string]any
 	if err := json.Unmarshal(base, &m); err != nil {
 		return nil, err
@@ -77,8 +46,6 @@ const (
 	typePrefix  = "https://eop.rysdavletov.org/errors/"
 )
 
-// Send — записывает problem в response с правильным content-type. Возвращает
-// nil чтобы handler могли просто `return httperr.Send(c, p)`.
 func Send(c *fiber.Ctx, p ProblemDetails) error {
 	if p.Title == "" {
 		p.Title = http.StatusText(p.Status)
@@ -94,12 +61,11 @@ func Send(c *fiber.Ctx, p ProblemDetails) error {
 			p.RequestID = rid
 		}
 	}
-	// Backward-compat: error = detail.
+
 	if p.Error == "" {
 		p.Error = p.Detail
 	}
-	// Используем Send + manual marshal вместо c.JSON чтобы set content-type
-	// до отправки тела (c.JSON forc'ит application/json).
+
 	body, err := json.Marshal(p)
 	if err != nil {
 		return err
@@ -149,9 +115,6 @@ func BadGateway(c *fiber.Ctx, code, detail string) error {
 	return Send(c, ProblemDetails{Status: fiber.StatusBadGateway, Code: code, Detail: detail})
 }
 
-// Internal — 500 с auto request_id correlation. Detail генерик ("internal error")
-// чтобы не светить implementation details наружу. Caller должен log.Error
-// собственно ошибку до этого вызова.
 func Internal(c *fiber.Ctx) error {
 	return Send(c, ProblemDetails{
 		Status: fiber.StatusInternalServerError,

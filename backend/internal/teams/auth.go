@@ -1,6 +1,3 @@
-// auth.go — register / login / public auth-config endpoints.
-//
-// Forgot/reset вынесены в password_reset.go.
 package teams
 
 import (
@@ -20,7 +17,7 @@ func (s Service) handleAuthConfig(c *fiber.Ctx) error {
 	if s.Pool != nil {
 		_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM users").Scan(&userCount)
 	}
-	// providers — пустой массив (а не nil) чтобы JSON shape был стабильным.
+
 	providers := s.AuthProviders
 	if providers == nil {
 		providers = []string{}
@@ -65,8 +62,6 @@ func (s Service) handleRegister(c *fiber.Ctx) error {
 	}
 	req.DisplayName = dn
 
-	// Подсчёт пользователей. Первый user может зарегаться без invite (bootstrap),
-	// он же станет super_admin.
 	var userCount int
 	_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM users").Scan(&userCount)
 	isFirstUser := userCount == 0
@@ -75,7 +70,7 @@ func (s Service) handleRegister(c *fiber.Ctx) error {
 		if req.InviteCode == nil || *req.InviteCode == "" {
 			return httperr.Forbidden(c, "invite_required", "registration is invite-only")
 		}
-		// Проверяем валидность ДО создания юзера
+
 		if _, err := s.findInvite(c.Context(), *req.InviteCode); err != nil {
 			return httperr.BadRequest(c, "invite_invalid", "invite invalid or expired")
 		}
@@ -92,7 +87,6 @@ func (s Service) handleRegister(c *fiber.Ctx) error {
 		s.Logger.Info("first user promoted to super_admin", zap.String("email", user.Email))
 	}
 
-	// Атомарно: invite consumes (защищает от race), затем добавляем юзера.
 	var joinedTeam *uuid.UUID
 	if req.InviteCode != nil && *req.InviteCode != "" {
 		teamID, err := s.consumeInvite(c.Context(), *req.InviteCode, user.ID)
@@ -130,7 +124,7 @@ func (s Service) handleLogin(c *fiber.Ctx) error {
 	}
 	email, ok := validateEmail(req.Email)
 	if !ok || !validatePassword(req.Password) {
-		// Не подсказываем, что именно не так — это login surface.
+
 		return httperr.Unauthorized(c, "invalid_credentials", "invalid email or password")
 	}
 	req.Email = email

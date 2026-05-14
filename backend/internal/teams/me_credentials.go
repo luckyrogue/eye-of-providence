@@ -17,10 +17,6 @@ type changeNameReq struct {
 	LastName    *string `json:"last_name"`
 }
 
-// handleChangeMyName — PATCH /v1/me/name.
-//
-// Партиальный апдейт: передавай только те поля, что меняешь.
-// last_name="" → NULL (сброс), display_name="" → 400 (имя обязательно).
 func (s Service) handleChangeMyName(c *fiber.Ctx) error {
 	if s.Pool == nil {
 		return httperr.Unavailable(c, "db_required", "auth requires postgres")
@@ -75,10 +71,6 @@ type changeEmailReq struct {
 	Email           string `json:"email"`
 }
 
-// handleChangeMyEmail — PATCH /v1/me/email.
-//
-// Требует current_password (account-takeover surface). Bumpит token_version,
-// инвалидируя другие активные сессии. Возвращает новый JWT с обновлённым email.
 func (s Service) handleChangeMyEmail(c *fiber.Ctx) error {
 	if s.Pool == nil {
 		return httperr.Unavailable(c, "db_required", "auth requires postgres")
@@ -136,10 +128,6 @@ type changePasswordReq struct {
 	NewPassword     string `json:"new_password"`
 }
 
-// handleChangeMyPassword — PATCH /v1/me/password.
-//
-// Требует current_password. Bumpит token_version (инвалидирует другие сессии).
-// Возвращает новый JWT с обновлённой token_version.
 func (s Service) handleChangeMyPassword(c *fiber.Ctx) error {
 	if s.Pool == nil {
 		return httperr.Unavailable(c, "db_required", "auth requires postgres")

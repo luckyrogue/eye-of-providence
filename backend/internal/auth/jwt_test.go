@@ -86,7 +86,7 @@ func TestIssueJWT_TokenVersionPropagated(t *testing.T) {
 }
 
 func TestIssueJWT_DotSeparated(t *testing.T) {
-	// Sanity: HS256 JWT всегда трёхсегментный header.payload.signature
+
 	tok, _ := IssueJWT(testSecret, "u", "", "", 0, time.Hour)
 	if strings.Count(tok, ".") != 2 {
 		t.Errorf("expected 2 dots, got %d in %q", strings.Count(tok, "."), tok)

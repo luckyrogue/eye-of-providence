@@ -16,17 +16,6 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-// WebAuthn tests.
-//
-// Strategy:
-//   - Config / construction: pure unit tests.
-//   - Synthetic options (anti-enumeration): pure unit tests.
-//   - Session save/load: use miniredis (in-process Redis).
-//   - Full register/login crypto: integration only (real authenticator required).
-//
-// Источник правды: webauthn.go + .team/qa-testplans/webauthn-register.md +
-// .team/qa-testplans/webauthn-login.md.
-
 func newTestRedis(t *testing.T) *redis.Client {
 	t.Helper()
 	mr := miniredis.RunT(t)
@@ -39,7 +28,7 @@ func newTestWebAuthn(t *testing.T, rds *redis.Client) *WebAuthnService {
 		"localhost",
 		"EOP Test",
 		"http://localhost:5173",
-		nil, // pool nil → DB-зависимые методы возвращают error
+		nil,
 		rds,
 		zaptest.NewLogger(t),
 	)
@@ -52,11 +41,8 @@ func newTestWebAuthn(t *testing.T, rds *redis.Client) *WebAuthnService {
 	return wa
 }
 
-// === Config / construction ===
-
 func TestNewWebAuthnService_EmptyRPID_ReturnsNil(t *testing.T) {
-	// Documented behavior: пустой RPID = "feature disabled", caller не
-	// регистрирует endpoints. nil, nil — explicit signal.
+
 	s, err := NewWebAuthnService("", "name", "http://x", nil, nil, zaptest.NewLogger(t))
 	if err != nil {
 		t.Errorf("expected nil err for empty RPID, got %v", err)
@@ -92,14 +78,6 @@ func TestNewWebAuthnService_HappyPath(t *testing.T) {
 	}
 }
 
-// === Synthetic options shape (anti-enumeration) ===
-
-// TestSyntheticCredentials_ShapeMatchesReal — unknown email path returns
-// синтетические allowCredentials. Они должны быть неотличимы от реальных:
-// 32-байтовый ID, тип public-key, transports.
-//
-// Это критично: атакующий не должен через response shape отличать
-// "user не существует" от "user существует без passkey'ев".
 func TestSyntheticCredentials_ShapeMatchesReal(t *testing.T) {
 	creds := syntheticCredentials()
 	if len(creds) == 0 {
@@ -119,8 +97,6 @@ func TestSyntheticCredentials_ShapeMatchesReal(t *testing.T) {
 	}
 }
 
-// TestSyntheticCredentials_RandomEachCall — повторный вызов должен давать
-// разные ID. Иначе можно по константе опознать synthetic path.
 func TestSyntheticCredentials_RandomEachCall(t *testing.T) {
 	a := syntheticCredentials()
 	b := syntheticCredentials()
@@ -132,8 +108,6 @@ func TestSyntheticCredentials_RandomEachCall(t *testing.T) {
 	}
 }
 
-// === Session save/load round-trip ===
-
 func TestWebAuthnSession_SaveAndLoad(t *testing.T) {
 	rds := newTestRedis(t)
 	s := newTestWebAuthn(t, rds)
@@ -142,7 +116,7 @@ func TestWebAuthnSession_SaveAndLoad(t *testing.T) {
 	if err != nil {
 		t.Fatalf("newSessionID: %v", err)
 	}
-	if len(sid) != 32 { // 16 random bytes hex-encoded = 32 chars
+	if len(sid) != 32 {
 		t.Errorf("session id len=%d, want 32", len(sid))
 	}
 
@@ -166,8 +140,6 @@ func TestWebAuthnSession_SaveAndLoad(t *testing.T) {
 	}
 }
 
-// TestWebAuthnSession_SingleUse — после GetDel повторный read возвращает ошибку.
-// Анти-replay: один session_id = один finish-attempt.
 func TestWebAuthnSession_SingleUse(t *testing.T) {
 	rds := newTestRedis(t)
 	s := newTestWebAuthn(t, rds)
@@ -185,7 +157,7 @@ func TestWebAuthnSession_SingleUse(t *testing.T) {
 }
 
 func TestWebAuthnSession_NoRedis(t *testing.T) {
-	// Нет Redis → методы должны вернуть explicit error (не паниковать).
+
 	s := &WebAuthnService{Redis: nil}
 	err := s.saveSession(context.Background(), "sid", &webauthn.SessionData{})
 	if err == nil {
@@ -197,8 +169,6 @@ func TestWebAuthnSession_NoRedis(t *testing.T) {
 	}
 }
 
-// TestWebAuthnSession_Expiry — Redis TTL = 5 минут. Используем miniredis
-// FastForward чтобы симулировать прошедшее время.
 func TestWebAuthnSession_Expiry(t *testing.T) {
 	mr := miniredis.RunT(t)
 	rds := redis.NewClient(&redis.Options{Addr: mr.Addr()})
@@ -208,16 +178,13 @@ func TestWebAuthnSession_Expiry(t *testing.T) {
 	if err := s.saveSession(context.Background(), sid, &webauthn.SessionData{Challenge: "x"}); err != nil {
 		t.Fatalf("save: %v", err)
 	}
-	// Forward past TTL.
+
 	mr.FastForward(webauthnSessionTTL + time.Second)
 	if _, err := s.loadSession(context.Background(), sid); err == nil {
 		t.Error("expected expiry error, got nil")
 	}
 }
 
-// === BeginRegistration / BeginLogin without DB ===
-
-// TestBeginRegistration_NotConfigured — WA == nil → graceful error.
 func TestBeginRegistration_NotConfigured(t *testing.T) {
 	s := &WebAuthnService{}
 	_, _, err := s.BeginRegistration(context.Background(), uuid.New())
@@ -226,7 +193,6 @@ func TestBeginRegistration_NotConfigured(t *testing.T) {
 	}
 }
 
-// TestBeginLogin_NoPool — pool nil → graceful error.
 func TestBeginLogin_NoPool(t *testing.T) {
 	rds := newTestRedis(t)
 	s, _ := NewWebAuthnService("localhost", "EOP", "http://localhost", nil, rds, zaptest.NewLogger(t))
@@ -236,46 +202,16 @@ func TestBeginLogin_NoPool(t *testing.T) {
 	}
 }
 
-// === Full register / login crypto (DB-required) ===
-//
-// Полные ceremony-тесты живут в webauthn_integration_test.go под
-// build tag `integration`:
-//   - TestWebAuthnRegister_FullFlow  — BeginRegistration → FinishRegistration
-//     против virtualwebauthn authenticator'а.
-//   - TestWebAuthnLogin_ReplayAttack — одно assertion переиспользованное
-//     дважды; вторая попытка должна быть отвергнута (single-use session
-//     GETDEL'd после первого FinishLogin).
-//
-// Здесь же — non-integration anti-enumeration assertion: unknown email path
-// возвращает options, неотличимые от "real user with passkeys" с точки зрения
-// клиента.
-
-// TestWebAuthnLogin_UnknownEmail_NoLeak — гарантирует, что unknown email
-// возвращает options ровно того же shape (parseable virtualwebauthn'ом),
-// что и реальный credential — атакующий не может валидировать email через
-// response payload.
-//
-// DB не требуется: воспроизводим точную логику пути `userID == nil` из
-// BeginLogin (BeginDiscoverableLogin + synthetic AllowedCredentials), затем
-// прогоняем результат через virtualwebauthn.ParseAssertionOptions — тот же
-// парсер, который использует браузер/клиент.
-//
-// Источник: webauthn.go:288–330 + webauthn-login.md (anti-enumeration §6).
 func TestWebAuthnLogin_UnknownEmail_NoLeak(t *testing.T) {
 	rds := newTestRedis(t)
 	s := newTestWebAuthn(t, rds)
 
-	// Симулируем path "unknown email": в реальном BeginLogin это происходит
-	// после Pool.QueryRow → pgx.ErrNoRows. Здесь напрямую вызываем
-	// BeginDiscoverableLogin + injection synthetic credentials, ровно как в
-	// webauthn.go.
 	assertion, session, err := s.WA.BeginDiscoverableLogin()
 	if err != nil {
 		t.Fatalf("BeginDiscoverableLogin: %v", err)
 	}
 	assertion.Response.AllowedCredentials = syntheticCredentials()
 
-	// Persist session, чтобы выглядело идентично "happy-path".
 	sid, err := newSessionID()
 	if err != nil {
 		t.Fatalf("newSessionID: %v", err)
@@ -284,14 +220,11 @@ func TestWebAuthnLogin_UnknownEmail_NoLeak(t *testing.T) {
 		t.Fatalf("saveSession: %v", err)
 	}
 
-	// Serialize options точно так же, как handler отдаёт фронту.
 	optionsJSON, err := json.Marshal(assertion.Response)
 	if err != nil {
 		t.Fatalf("marshal options: %v", err)
 	}
 
-	// virtualwebauthn — единственный публичный parser, эмулирующий браузер.
-	// Если он parse'ит — клиент тоже parse'ит, и shape неотличим от реального.
 	parsed, err := virtualwebauthn.ParseAssertionOptions(string(optionsJSON))
 	if err != nil {
 		t.Fatalf("ParseAssertionOptions: response shape malformed (browser would reject too): %v", err)
@@ -306,15 +239,13 @@ func TestWebAuthnLogin_UnknownEmail_NoLeak(t *testing.T) {
 	if len(parsed.AllowCredentials) == 0 {
 		t.Error("AllowCredentials empty — leaks 'no user' (real users-with-passkeys path always has IDs)")
 	}
-	// Каждый synthetic credential должен иметь не-пустой base64url ID длиной
-	// эквивалентной 32 байтам (44 char base64url без padding ≈ same shape).
+
 	for i, id := range parsed.AllowCredentials {
 		if id == "" {
 			t.Errorf("[%d] AllowCredentials entry empty", i)
 		}
 	}
 
-	// Sanity: повторный вызов даёт другой challenge (анти-fingerprint).
 	a2, s2, err := s.WA.BeginDiscoverableLogin()
 	if err != nil {
 		t.Fatalf("second BeginDiscoverableLogin: %v", err)
@@ -331,12 +262,6 @@ func TestWebAuthnLogin_UnknownEmail_NoLeak(t *testing.T) {
 	}
 }
 
-// === Session JSON shape regression ===
-
-// TestSessionData_JSONShape — sanity-check, что webauthn.SessionData
-// JSON-сериализуется в стабильную форму. Если go-webauthn lib bump'нется
-// и изменит field names, наши persisted сессии станут unloadable —
-// этот тест поймает раньше.
 func TestSessionData_JSONShape(t *testing.T) {
 	sd := webauthn.SessionData{
 		Challenge: "challenge-xyz",
@@ -348,7 +273,7 @@ func TestSessionData_JSONShape(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 	s := string(raw)
-	// Required fields go-webauthn lib uses — нарушение здесь обозначит lib breaking change.
+
 	for _, want := range []string{"challenge", "user_id"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("missing field %q in serialized SessionData: %s", want, s)

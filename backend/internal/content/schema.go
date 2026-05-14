@@ -1,22 +1,3 @@
-// schema.go — per-slug validation rules для Phase 1 CMS allowlist.
-//
-// Дизайн: каждый slug маппит на ValidatorFunc, которая принимает raw JSON и
-// возвращает структурированную *SchemaError с error_code, field path,
-// schema_path (точечно совместимо с product-audit-taxonomy.md
-// content.save_rejected payload).
-//
-// JSON Schema-style проверки сделаны вручную чтобы не тянуть зависимости
-// (jsonschema/v6 + draft-2020-12) ради 4 простых shape'ов:
-//   * `{ text: string(1..N) }`               — hero.headline, hero.subhead
-//   * `{ label, href, external? }`            — hero.cta_*
-//   * `{ tagline, bullets: string[3..8] }`    — pricing.*.description
-//   * `{ items: Array<{q, a, anchor?}>(3..10) }` — faq.items
-//
-// Все строковые поля — plain text (не markdown, не HTML). Только `text` в
-// headline допускает `<em>...</em>` инлайн (рендерится frontend'ом как
-// `<em>` JSX-тег); backend не валидирует HTML — это plain string на нашей
-// стороне, frontend regex-replace'нет `<em>`/`</em>`.
-
 package content
 
 import (
@@ -26,20 +7,13 @@ import (
 	"regexp"
 )
 
-// ErrUnknownSlug — slug отсутствует в Phase 1 allowlist. Используется
-// caller'ом через errors.Is.
 var ErrUnknownSlug = errors.New("unknown content slug")
 
-// SchemaError — структурированная ошибка для admin save. Code мапит на
-// product-audit-taxonomy.md content.save_rejected.error_code:
-//
-//	schema_violation — missing field / wrong type / out of range
-//	invalid_json     — body не парсится как JSON
 type SchemaError struct {
-	Code       string // schema_violation | invalid_json
-	Field      string // path inside JSON, e.g. "bullets[3]"
-	Detail     string // human-readable
-	SchemaPath string // pointer-like path, e.g. "/properties/bullets/items"
+	Code       string
+	Field      string
+	Detail     string
+	SchemaPath string
 }
 
 func (e *SchemaError) Error() string {
@@ -52,17 +26,12 @@ func (e *SchemaError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Code, e.Detail)
 }
 
-// ValidatorFunc — каждая Phase 1 schema => одна функция.
 type ValidatorFunc func(raw json.RawMessage) *SchemaError
 
-// hrefPattern — https:// абсолютные или /relative path'ы. javascript:,
-// data:, mailto:, http:// (без TLS) — отвергаются.
 var hrefPattern = regexp.MustCompile(`^(https://|/)`)
 
-// anchorPattern — kebab-case slug для FAQ deep linking.
 var anchorPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
-// validateString — общий helper для обязательного string field (min length 1) и max длиной.
 func validateString(m map[string]json.RawMessage, key string, maxLen int, fieldPath string) *SchemaError {
 	const minLen = 1
 	raw, present := m[key]
@@ -102,8 +71,6 @@ func validateString(m map[string]json.RawMessage, key string, maxLen int, fieldP
 	return nil
 }
 
-// validateTextOnly — `{ text: string(1..maxLen) }`. Используется для
-// hero.headline (maxLen=200) и hero.subhead (maxLen=400).
 func validateTextOnly(maxLen int) ValidatorFunc {
 	return func(raw json.RawMessage) *SchemaError {
 		if len(raw) == 0 {
@@ -130,8 +97,6 @@ func validateTextOnly(maxLen int) ValidatorFunc {
 	}
 }
 
-// validateCTAButton — `{ label, href, external? }`. label 1..40, href 1..500
-// matches hrefPattern. external optional bool.
 func validateCTAButton() ValidatorFunc {
 	return func(raw json.RawMessage) *SchemaError {
 		if len(raw) == 0 {
@@ -182,7 +147,6 @@ func validateCTAButton() ValidatorFunc {
 	}
 }
 
-// validatePricingTier — `{ tagline: string(1..80), bullets: string[3..8] (1..80 each) }`.
 func validatePricingTier() ValidatorFunc {
 	return func(raw json.RawMessage) *SchemaError {
 		if len(raw) == 0 {
@@ -261,7 +225,6 @@ func validatePricingTier() ValidatorFunc {
 	}
 }
 
-// validateFAQItems — `{ items: Array<{q, a, anchor?}>(3..10) }`.
 func validateFAQItems() ValidatorFunc {
 	return func(raw json.RawMessage) *SchemaError {
 		if len(raw) == 0 {
@@ -367,15 +330,12 @@ func validateFAQItems() ValidatorFunc {
 	}
 }
 
-// SlugDescriptor — registry entry: slug + version + validator.
 type SlugDescriptor struct {
 	Slug          string
 	SchemaVersion int
 	Validate      ValidatorFunc
 }
 
-// AllowedSlugs — Phase 1 allowlist (8 slugs из product-cms-slugs.md).
-// Порядок сохраняем для детерминированного matrix-вывода в admin UI.
 var AllowedSlugs = []SlugDescriptor{
 	{Slug: "landing.hero.headline", SchemaVersion: 1, Validate: validateTextOnly(200)},
 	{Slug: "landing.hero.subhead", SchemaVersion: 1, Validate: validateTextOnly(400)},
@@ -387,7 +347,6 @@ var AllowedSlugs = []SlugDescriptor{
 	{Slug: "landing.faq.items", SchemaVersion: 1, Validate: validateFAQItems()},
 }
 
-// slugIndex — map для O(1) lookup. Заполняется в init().
 var slugIndex map[string]SlugDescriptor
 
 func init() {
@@ -397,22 +356,18 @@ func init() {
 	}
 }
 
-// LookupSlug — возвращает descriptor если slug в allowlist, иначе false.
 func LookupSlug(slug string) (SlugDescriptor, bool) {
 	d, ok := slugIndex[slug]
 	return d, ok
 }
 
-// IsKnownSlug — компактная проверка (тесты используют это имя).
 func IsKnownSlug(slug string) bool {
 	_, ok := slugIndex[slug]
 	return ok
 }
 
-// IsAllowedSlug — alias of IsKnownSlug, оставлен для удобства handler'ов.
 func IsAllowedSlug(slug string) bool { return IsKnownSlug(slug) }
 
-// SlugList — упорядоченный список slug'ов для admin matrix UI.
 func SlugList() []string {
 	out := make([]string, len(AllowedSlugs))
 	for i, d := range AllowedSlugs {
@@ -421,10 +376,8 @@ func SlugList() []string {
 	return out
 }
 
-// SupportedLocales — 4 локали, синхронизировано с mailer.SupportedLocales.
 var SupportedLocales = []string{"en", "ru", "kk", "es"}
 
-// IsSupportedLocale — компактная проверка для query-param validation.
 func IsSupportedLocale(loc string) bool {
 	for _, l := range SupportedLocales {
 		if l == loc {
@@ -434,10 +387,6 @@ func IsSupportedLocale(loc string) bool {
 	return false
 }
 
-// FallbackLocales — chain для public read path (policy C). Никогда не
-// возвращает сам requested locale (caller проверяет direct hit отдельно).
-//
-// Все локали fall back к "en". "en" не имеет fallback (404 если нет row).
 func FallbackLocales(requested string) []string {
 	if requested == "en" {
 		return nil
@@ -445,12 +394,6 @@ func FallbackLocales(requested string) []string {
 	return []string{"en"}
 }
 
-// Validate — high-level entry-point: проверяет slug в allowlist и валидирует
-// raw JSON против schema. Возвращает:
-//
-//	ErrUnknownSlug — slug не в allowlist (errors.Is совместим)
-//	*SchemaError   — schema/json error (errors.As совместим)
-//	nil            — успех
 func Validate(slug string, raw json.RawMessage) error {
 	desc, ok := LookupSlug(slug)
 	if !ok {

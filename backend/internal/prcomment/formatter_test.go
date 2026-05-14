@@ -44,7 +44,7 @@ func TestFormatComment_HappyPath(t *testing.T) {
 	if !strings.Contains(out, "https://eop.example.com/team") {
 		t.Errorf("missing dashboard link: %q", out)
 	}
-	// Progress bar — 7 filled из 10 (для 73%)
+
 	if !strings.Contains(out, "███████░░░") {
 		t.Errorf("progress bar wrong: %q", out)
 	}
@@ -63,7 +63,7 @@ func TestProgressBar(t *testing.T) {
 		0:    "`░░░░░░░░░░`",
 		50:   "`█████░░░░░`",
 		100:  "`██████████`",
-		150:  "`██████████`", // clamp to 100
+		150:  "`██████████`",
 		-10:  "`░░░░░░░░░░`",
 		73.4: "`███████░░░`",
 	}

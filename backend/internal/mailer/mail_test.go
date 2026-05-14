@@ -12,8 +12,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// TestResendSend_Success — проверяем POST /emails: правильный auth header,
-// правильный JSON body, accept response.
 func TestResendSend_Success(t *testing.T) {
 	var captured resendReq
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -52,8 +50,6 @@ func TestResendSend_Success(t *testing.T) {
 	}
 }
 
-// TestResendSend_4xx — Resend вернул 422 (например, домен не верифицирован).
-// Caller получает ошибку, но не паникует.
 func TestResendSend_4xx(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(422)
@@ -74,8 +70,6 @@ func TestResendSend_4xx(t *testing.T) {
 	}
 }
 
-// TestNoopMailer — Send ничего не делает, не возвращает ошибку (использовать
-// в dev/без resend-key безопасно).
 func TestNoopMailer(t *testing.T) {
 	m := Noop(zap.NewNop())
 	if err := m.Send(context.Background(), "to@x.dev", "S", "h", "t"); err != nil {
@@ -83,7 +77,6 @@ func TestNoopMailer(t *testing.T) {
 	}
 }
 
-// TestInviteEmailTemplate — sanity-check, что результат содержит ожидаемые токены.
 func TestInviteEmailTemplate(t *testing.T) {
 	subject, html, text := InviteEmail("Acme", "https://app.dev/?invite=ABC", "Темирлан", LocaleRU)
 	if !strings.Contains(subject, "Acme") {
@@ -100,14 +93,13 @@ func TestInviteEmailTemplate(t *testing.T) {
 	}
 }
 
-// TestHTMLEscape — display_name юзера мог содержать `<script>`. Проверяем escape.
 func TestHTMLEscape(t *testing.T) {
 	cases := map[string]string{
-		"plain":           "plain",
-		"<script>":        "&lt;script&gt;",
-		`a"b`:             `a&quot;b`,
-		"a&b":             "a&amp;b",
-		"a'b":             "a&#39;b",
+		"plain":    "plain",
+		"<script>": "&lt;script&gt;",
+		`a"b`:      `a&quot;b`,
+		"a&b":      "a&amp;b",
+		"a'b":      "a&#39;b",
 	}
 	for in, want := range cases {
 		if got := htmlEscape(in); got != want {

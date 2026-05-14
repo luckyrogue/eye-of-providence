@@ -8,8 +8,6 @@ import (
 	"testing"
 )
 
-// --- Admin guard ---
-
 func TestAdmin_NonSuper_403(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -28,8 +26,6 @@ func TestAdmin_NonSuper_403(t *testing.T) {
 	}
 }
 
-// --- /v1/admin/stats ---
-
 func TestAdminStats_HappyPath(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -38,7 +34,6 @@ func TestAdminStats_HappyPath(t *testing.T) {
 	makeSuperAdmin(t, pool, admin)
 	tok := loginAs(t, pool, svc.JWTSecret, admin, "admin@example.com")
 
-	// Создаём 2 команды + 1 user в команде
 	owner := createUser(t, pool, "owner@example.com")
 	t1 := createTeamDirect(t, pool, "T1", owner)
 	_ = createTeamDirect(t, pool, "T2", owner)
@@ -68,8 +63,6 @@ func TestAdminStats_HappyPath(t *testing.T) {
 		t.Errorf("beta_limit = %d, want 3", out.BetaLimit)
 	}
 }
-
-// --- /v1/admin/teams ---
 
 func TestAdminListTeams(t *testing.T) {
 	pool := setupTestDB(t)
@@ -107,8 +100,6 @@ func TestAdminListTeams(t *testing.T) {
 	}
 }
 
-// --- /v1/admin/users ---
-
 func TestAdminListUsers(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -132,8 +123,6 @@ func TestAdminListUsers(t *testing.T) {
 		t.Errorf("users count = %d, want ≥3", len(out.Users))
 	}
 }
-
-// --- /v1/admin/users/:id (DELETE) ---
 
 func TestAdminDeleteUser(t *testing.T) {
 	pool := setupTestDB(t)
@@ -172,8 +161,6 @@ func TestAdminDeleteUser_CannotDeleteSelf(t *testing.T) {
 	}
 }
 
-// --- /v1/admin/users/:id PATCH (роль) ---
-
 func TestAdminUpdateUser_PromoteToSuper(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
@@ -197,12 +184,10 @@ func TestAdminUpdateUser_PromoteToSuper(t *testing.T) {
 	}
 }
 
-// --- /v1/teams/beta — public info ---
-
 func TestBetaInfo_PublicEndpoint(t *testing.T) {
 	pool := setupTestDB(t)
 	app, svc := newTestApp(t, pool)
-	// Юзер с любой ролью может смотреть beta-info
+
 	uid := createUser(t, pool, "any@example.com")
 	tok := loginAs(t, pool, svc.JWTSecret, uid, "any@example.com")
 
@@ -229,8 +214,6 @@ func TestBetaInfo_PublicEndpoint(t *testing.T) {
 		t.Errorf("slots_remaining negative: %d", info.SlotsRemaining)
 	}
 }
-
-// --- /v1/admin/teams/:id/subscription PATCH ---
 
 func TestAdminSetSubscription_PaidPlan(t *testing.T) {
 	pool := setupTestDB(t)
@@ -268,7 +251,7 @@ func TestAdminSetSubscription_PaidPlan(t *testing.T) {
 	if note != "Y combinator deal" {
 		t.Errorf("note = %q", note)
 	}
-	// payment recorded
+
 	var paymentCount int
 	_ = pool.QueryRow(context.Background(),
 		"SELECT count(*) FROM team_payments WHERE team_id=$1", team).Scan(&paymentCount)
@@ -288,7 +271,6 @@ func TestAdminListPayments(t *testing.T) {
 	owner := createUser(t, pool, "payOwner@example.com")
 	team := createTeamDirect(t, pool, "Pay", owner)
 
-	// Direct insert платежа
 	_, err := pool.Exec(context.Background(),
 		`INSERT INTO team_payments (team_id, amount_cents, currency, method, covers_until, recorded_by)
 		 VALUES ($1, 10000, 'USD', 'cash', NOW() + INTERVAL '1 year', $2)`,
@@ -309,8 +291,6 @@ func TestAdminListPayments(t *testing.T) {
 		t.Errorf("payments len = %d, want 1", len(out.Payments))
 	}
 }
-
-// --- /v1/admin/teams/:id DELETE ---
 
 func TestAdminDeleteTeam(t *testing.T) {
 	pool := setupTestDB(t)
@@ -334,8 +314,6 @@ func TestAdminDeleteTeam(t *testing.T) {
 		t.Error("team не удалена")
 	}
 }
-
-// --- /v1/admin/teams/:id/members POST (add member) ---
 
 func TestAdminAddMember(t *testing.T) {
 	pool := setupTestDB(t)

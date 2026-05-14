@@ -28,8 +28,8 @@ func (f fakeProfile) UpdateLocale(ctx context.Context, userID uuid.UUID, locale 
 }
 
 type fakeTokens struct {
-	list   []meapp.TokenRow
-	listErr error
+	list        []meapp.TokenRow
+	listErr     error
 	createPlain string
 	createRow   meapp.TokenRow
 	createErr   error

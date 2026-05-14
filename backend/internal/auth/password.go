@@ -28,7 +28,6 @@ func VerifyPassword(hash, p string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(p)) == nil
 }
 
-// CreateUser — регистрация: email уникален, password захеширован.
 func CreateUser(ctx context.Context, pool *pgxpool.Pool, email, displayName, password string, teamID *uuid.UUID) (*PasswordUser, error) {
 	hash, err := HashPassword(password)
 	if err != nil {
@@ -37,7 +36,7 @@ func CreateUser(ctx context.Context, pool *pgxpool.Pool, email, displayName, pas
 	id := uuid.New()
 	role := "member"
 	if teamID == nil {
-		role = "owner" // первый пользователь, без команды — может потом создать
+		role = "owner"
 	}
 	_, err = pool.Exec(ctx, `
 		INSERT INTO users (id, email, display_name, password_hash, team_id, role)
@@ -49,7 +48,6 @@ func CreateUser(ctx context.Context, pool *pgxpool.Pool, email, displayName, pas
 	return &PasswordUser{ID: id, Email: email, DisplayName: displayName, TeamID: teamID, Role: role}, nil
 }
 
-// FindUserByEmail — для login.
 func FindUserByEmail(ctx context.Context, pool *pgxpool.Pool, email string) (*PasswordUser, error) {
 	var u PasswordUser
 	var teamID *uuid.UUID

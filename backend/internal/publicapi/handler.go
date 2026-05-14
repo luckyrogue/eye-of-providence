@@ -1,16 +1,3 @@
-// Package publicapi — стабильный read-only data export для интеграций (BI,
-// custom dashboards, exporters). Аутентификация через API tokens (eop_*) или
-// JWT, scope=read достаточен.
-//
-// Endpoints (все под /v1/public, версия в URL для будущей миграции):
-//
-//	GET /v1/public/events       — paginated event log
-//	GET /v1/public/summary      — agg by category за период
-//	GET /v1/public/languages    — language breakdown
-//	GET /v1/public/trend        — daily trend
-//
-// Стабильность: schema полей не меняется без увеличения версии в URL.
-// Backward compatibility — обязательная (intern integrations будут опираться).
 package publicapi
 
 import (
@@ -26,7 +13,6 @@ import (
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
-// RegisterRoutes — public API под /v1/public с auth middleware + scope check.
 func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwtSecret string, pool *pgxpool.Pool) {
 	g := app.Group("/v1/public",
 		auth.Middleware(jwtSecret, pool),
@@ -39,7 +25,6 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 	g.Get("/trend", trendHandler(st, logger))
 }
 
-// daysParam — единый парсер ?days=N с safe-defaults и cap 365.
 func daysParam(c *fiber.Ctx, fallback int) int {
 	n, _ := strconv.Atoi(c.Query("days", strconv.Itoa(fallback)))
 	if n <= 0 || n > 365 {

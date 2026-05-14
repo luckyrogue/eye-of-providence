@@ -8,14 +8,11 @@ import (
 	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
-// JWTSecret поле для middleware. Добавляется к Service field-set чтобы
-// RegisterRoutes мог вызвать middleware без отдельного конструктора.
 type SvcConfig struct {
 	*Service
 	JWTSecret string
 }
 
-// RegisterRoutes — /v1/me/push/* CRUD + public VAPID key endpoint.
 func RegisterRoutes(app *fiber.App, c SvcConfig) {
 	g := app.Group("/v1/me/push", auth.Middleware(c.JWTSecret, c.Pool))
 	g.Get("/vapid-key", vapidKeyHandler(c.Service))

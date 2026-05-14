@@ -11,37 +11,30 @@ import (
 const defaultJWTSecret = "dev-only-secret-change-me"
 
 type Config struct {
-	Env                string
-	HTTPAddr           string
-	PostgresDSN        string
-	ClickHouseDSN      string
-	RedisAddr          string
-	GeminiAPIKey       string
-	GitHubClientID     string
-	GitHubClientSec    string
-	GitHubCallback     string
-	// Google OAuth — все опциональны. Provider регистрируется только при
-	// непустом GoogleClientID (см. cmd/api/main.go в Phase 2).
+	Env             string
+	HTTPAddr        string
+	PostgresDSN     string
+	ClickHouseDSN   string
+	RedisAddr       string
+	GeminiAPIKey    string
+	GitHubClientID  string
+	GitHubClientSec string
+	GitHubCallback  string
+
 	GoogleClientID  string
 	GoogleClientSec string
 	GoogleCallback  string
-	// Apple Sign-in — все опциональны. AppleClientID = Services ID
-	// (например, "com.eop.web"). AppleTeamID/KeyID/PrivateKey используются
-	// для подписи client_secret JWT (см. internal/auth/apple.go Phase 2).
+
 	AppleClientID   string
 	AppleTeamID     string
 	AppleKeyID      string
 	ApplePrivateKey string
 	AppleCallback   string
-	// WebAuthn / Passkey — все опциональны. Provider/endpoints регистрируются
-	// только если WebAuthnRPID != "" (см. cmd/api/main.go). RPID = effective
-	// domain в проде (например "eop.rysdavletov.org"), "localhost" в dev.
-	// Origins — comma-separated полные origin'ы для CORS-валидации (например
-	// "https://eop.rysdavletov.org,http://localhost:5173").
-	WebAuthnRPID    string
-	WebAuthnRPName  string
-	WebAuthnOrigins string
-	JWTSecret       string
+
+	WebAuthnRPID       string
+	WebAuthnRPName     string
+	WebAuthnOrigins    string
+	JWTSecret          string
 	AllowedOrigins     string
 	BodyLimitBytes     int
 	ReportsCronSec     int
@@ -83,7 +76,7 @@ func FromEnv() Config {
 		WebAuthnOrigins:    os.Getenv("EOP_WEBAUTHN_ORIGINS"),
 		JWTSecret:          getenv("EOP_JWT_SECRET", defaultJWTSecret),
 		AllowedOrigins:     getenv("EOP_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174"),
-		BodyLimitBytes:     atoiOr(os.Getenv("EOP_BODY_LIMIT_BYTES"), 1<<20), // 1 MiB
+		BodyLimitBytes:     atoiOr(os.Getenv("EOP_BODY_LIMIT_BYTES"), 1<<20),
 		ReportsCronSec:     atoi(os.Getenv("EOP_REPORTS_CRON_SEC")),
 		InviteOnly:         getenv("EOP_INVITE_ONLY", "true") != "false",
 		AutoMigrate:        boolEnv("EOP_AUTO_MIGRATE", env != "production"),
@@ -99,9 +92,6 @@ func FromEnv() Config {
 	}
 }
 
-// WebAuthnEnabled — true если RPID сконфигурирован. Используется в
-// teams.handleAuthConfig для флага passkey_enabled и в main.go для
-// решения регистрировать ли webauthn-endpoints.
 func (c Config) WebAuthnEnabled() bool {
 	return c.WebAuthnRPID != ""
 }
@@ -126,8 +116,6 @@ func (c Config) Validate() error {
 		}
 	}
 
-	// WebAuthn включён по факту EOP_WEBAUTHN_RPID. Если включён — origins тоже
-	// обязателен (без них WebAuthn library отвергнет любые ассертации).
 	if c.WebAuthnRPID != "" && strings.TrimSpace(c.WebAuthnOrigins) == "" {
 		errs = append(errs, "EOP_WEBAUTHN_ORIGINS must be set when EOP_WEBAUTHN_RPID is set")
 	}

@@ -19,10 +19,6 @@ func main() {
 		return c.JSON(fiber.Map{"status": "ok", "service": "reports"})
 	})
 
-	// TODO Phase 5: POST /v1/reports/generate — собрать numeric context из ClickHouse,
-	// отправить в Gemini (gemini-2.5-flash) с context caching system prompt,
-	// сохранить markdown в Postgres reports table.
-
 	logger.Info("reports starting", zap.String("addr", cfg.HTTPAddr), zap.Bool("gemini_configured", cfg.GeminiAPIKey != ""))
 	if err := app.Listen(cfg.HTTPAddr); err != nil {
 		logger.Fatal("reports exited", zap.Error(err))

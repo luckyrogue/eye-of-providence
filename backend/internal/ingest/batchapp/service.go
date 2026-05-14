@@ -7,10 +7,8 @@ import (
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
-// ErrBatchTooLarge — превышен лимит событий в одном запросе.
 var ErrBatchTooLarge = errors.New("batch too large")
 
-// PrepareIngest — валидация размера batch + privacy-gate + user_id из токена.
 func PrepareIngest(claimsUserID string, events []store.Event, maxBatch int) ([]store.Event, int, int, error) {
 	if len(events) > maxBatch {
 		return nil, 0, 0, ErrBatchTooLarge
@@ -33,7 +31,6 @@ func PrepareIngest(claimsUserID string, events []store.Event, maxBatch int) ([]s
 	return valid, accepted, rejected, nil
 }
 
-// ValidEvent — privacy-gate и базовые инварианты (см. ingest handler).
 func ValidEvent(e store.Event) bool {
 	if e.AppBundle == "" || e.Source == "" || e.Category == "" {
 		return false

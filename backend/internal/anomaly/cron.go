@@ -12,34 +12,23 @@ import (
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
-// Dispatcher — webhooks-style fire-and-forget sender. internal/webhooks.Service
-// этому соответствует.
 type Dispatcher interface {
 	Dispatch(userID uuid.UUID, event string, payload any)
 }
 
-// PushSender — Web Push delivery (PWA). Optional, nil → push не шлётся.
-// Push дублирует Slack для retention loop'а (юзер видит OS-уровневое
-// уведомление без открытия Slack).
 type PushSender interface {
 	SendToUser(userID uuid.UUID, payload any)
 }
 
-// EventName — webhook event'а. Должен быть зарегистрирован в
-// internal/webhooks/webhooks.go validEvents для доставки.
 const EventName = "anomaly.detected"
 
-// Cron — daily anomaly checker. Раз в Interval тикает: для каждого active
-// user'а fetch'ит DailyTrend(15 days), детектит, отправляет через Dispatcher
-// + опционально через PushSender.
 type Cron struct {
 	Interval   time.Duration
 	EventStore store.EventStore
 	Webhooks   Dispatcher
-	Push       PushSender // optional
+	Push       PushSender
 	Logger     *zap.Logger
-	// dedup: userID+anomaly.Date+anomaly.Kind → не шлём одну и ту же аномалию
-	// дважды если cron tick'ает несколько раз в день.
+
 	seen map[string]bool
 }
 
@@ -66,7 +55,7 @@ func (c *Cron) Run(ctx context.Context) {
 
 func (c *Cron) tick(ctx context.Context) {
 	if c.Webhooks == nil {
-		return // в-memory mode — webhooks не настроены
+		return
 	}
 	since := time.Now().UTC().Add(-15 * 24 * time.Hour)
 	users, err := c.EventStore.ActiveUserIDs(ctx, since)
@@ -77,10 +66,6 @@ func (c *Cron) tick(ctx context.Context) {
 
 	now := time.Now().UTC()
 
-	// Fan-out per-user detection: DailyTrend — самый дорогой call (CH query),
-	// делаем в parallel. SetLimit=8 limits CH connection pool pressure.
-	// Detect() pure-CPU, Webhooks/Push dispatch — async (fire-and-forget).
-	// seen-map требует mutex т.к. читается/пишется из разных goroutines.
 	g, gctx := errgroup.WithContext(ctx)
 	g.SetLimit(8)
 	var seenMu sync.Mutex
@@ -126,10 +111,9 @@ func (c *Cron) tick(ctx context.Context) {
 	}
 	_ = g.Wait()
 
-	// GC seen-map: удаляем entries старше 7 дней (по date в key).
 	cutoff := now.AddDate(0, 0, -7).Format("2006-01-02")
 	for key := range c.seen {
-		// key format: userID|date|kind. Извлекаем date через split.
+
 		parts := splitN(key, "|", 3)
 		if len(parts) >= 2 && parts[1] < cutoff {
 			delete(c.seen, key)
@@ -137,9 +121,6 @@ func (c *Cron) tick(ctx context.Context) {
 	}
 }
 
-// pushPayloadFor — формирует push.Payload (но не импортируем тот pkg —
-// возвращаем generic map чтобы избежать import cycle anomaly → push). Service
-// SendToUser принимает any → JSON-marshal.
 func pushPayloadFor(a Anomaly) any {
 	titles := map[Kind]string{
 		KindAIHigh:       "AI usage spike",
@@ -160,12 +141,12 @@ func pushPayloadFor(a Anomaly) any {
 		"title": title,
 		"body":  fmtAnomalyBody(yHrs, bHrs, a.Category),
 		"url":   "/dashboard",
-		"tag":   "anomaly." + string(a.Kind), // dedupe push'ей одного типа
+		"tag":   "anomaly." + string(a.Kind),
 	}
 }
 
 func fmtAnomalyBody(yHrs, bHrs float64, category string) string {
-	// "AI 5.2h vs 1.1h baseline" — короткий single-line под Lock-screen.
+
 	return formatHours(yHrs) + " vs " + formatHours(bHrs) + " baseline (" + category + ")"
 }
 
@@ -205,9 +186,6 @@ func itoa(n int) string {
 	return string(buf[i:])
 }
 
-// splitN — лёгкий split без import strings, чтобы tests могли быть
-// minimal-dep. (Мы используем strings везде в проекте, но внутри cron
-// hot-path хочется maintain'ить cheap.) Actually это дешевле чем strings.
 func splitN(s, sep string, n int) []string {
 	out := make([]string, 0, n)
 	for i := 0; i < n-1; i++ {
