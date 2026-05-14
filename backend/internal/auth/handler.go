@@ -352,11 +352,14 @@ func handleSessionHandoff(s Service) fiber.Handler {
 			return httperr.NotFound(c, "no_handoff", "no pending session handoff")
 		}
 		// Clear cookie regardless of validity (one-shot semantics).
+		// fasthttp only serializes Max-Age when MaxAge>0, so use Expires in the past
+		// (RFC 6265) — matches integration test and browser deletion semantics.
 		c.Cookie(&fiber.Cookie{
 			Name:     handoffCookieName,
 			Value:    "",
 			Path:     "/",
-			MaxAge:   -1,
+			MaxAge:   0,
+			Expires:  time.Unix(0, 0).UTC(),
 			HTTPOnly: true,
 			SameSite: "Lax",
 			Secure:   s.SecureCookies,

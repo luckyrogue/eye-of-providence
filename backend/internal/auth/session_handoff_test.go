@@ -29,6 +29,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -145,7 +146,9 @@ func TestSessionHandoff_ValidCookie_ReturnsToken(t *testing.T) {
 		if !contains(sc, sessionHandoffCookie) {
 			continue
 		}
-		if contains(sc, "Max-Age=0") || contains(sc, "Expires=Thu, 01 Jan 1970") {
+		lower := strings.ToLower(sc)
+		if strings.Contains(lower, "max-age=0") ||
+			strings.Contains(lower, "expires=thu, 01 jan 1970") {
 			foundClear = true
 		}
 	}
