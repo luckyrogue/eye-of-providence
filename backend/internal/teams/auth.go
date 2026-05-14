@@ -4,11 +4,14 @@
 package teams
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/auth/passwordapp"
 	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
@@ -131,9 +134,12 @@ func (s Service) handleLogin(c *fiber.Ctx) error {
 		return httperr.Unauthorized(c, "invalid_credentials", "invalid email or password")
 	}
 	req.Email = email
-	user, err := auth.FindUserByEmail(c.Context(), s.Pool, req.Email)
-	if err != nil || !auth.VerifyPassword(user.PasswordHash, req.Password) {
-		return httperr.Unauthorized(c, "invalid_credentials", "invalid email or password")
+	user, err := auth.NewPasswordLoginService(s.Pool).VerifyLogin(c.Context(), req.Email, req.Password)
+	if err != nil {
+		if errors.Is(err, passwordapp.ErrInvalidCredentials) {
+			return httperr.Unauthorized(c, "invalid_credentials", "invalid email or password")
+		}
+		return s.internalErr(c, err)
 	}
 	tv, _ := auth.TokenVersion(c.Context(), s.Pool, user.ID)
 	tok, err := auth.IssueJWT(s.JWTSecret, user.ID.String(), user.Email, "password", tv, tokenTTL)

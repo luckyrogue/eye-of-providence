@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
+	"github.com/eye-of-providence/backend/internal/ingest/batchapp"
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
@@ -51,7 +52,7 @@ func post(t *testing.T, app *fiber.App, tok string, body any) (int, []byte) {
 
 func TestValidEvent_HappyPath(t *testing.T) {
 	e := store.Event{AppBundle: "code", Source: "ide", Category: "manual", DurationMS: 1000}
-	if !validEvent(e) {
+	if !batchapp.ValidEvent(e) {
 		t.Fatal("rejected valid event")
 	}
 }
@@ -66,7 +67,7 @@ func TestValidEvent_RejectsMissingFields(t *testing.T) {
 		{AppBundle: "code", Source: "ide", Category: "manual", DurationMS: 25 * 60 * 60 * 1000}, // >24h (25h)
 	}
 	for i, e := range cases {
-		if validEvent(e) {
+		if batchapp.ValidEvent(e) {
 			t.Errorf("case %d: invalid event accepted: %+v", i, e)
 		}
 	}

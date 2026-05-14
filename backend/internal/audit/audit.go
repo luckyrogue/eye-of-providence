@@ -126,15 +126,15 @@ func (s Service) LogFromCtx(c *fiber.Ctx, actorID uuid.UUID, actorEmail string, 
 		TargetType: targetType,
 		TargetID:   targetID,
 		Metadata:   metadata,
-		IP:         clientIP(c),
+		IP:         ClientIP(c),
 		UserAgent:  c.Get("User-Agent"),
 	})
 }
 
-// clientIP — берёт IP из X-Forwarded-For (если за reverse proxy) или RemoteAddr.
+// ClientIP — берёт IP из X-Forwarded-For (если за reverse proxy) или RemoteAddr.
 // Стрипает port если есть. Truncate'им до 64 chars на всякий — длинная XFF
 // chain может пойти на килобайты.
-func clientIP(c *fiber.Ctx) string {
+func ClientIP(c *fiber.Ctx) string {
 	if xff := c.Get("X-Forwarded-For"); xff != "" {
 		// XFF может быть list "client, proxy1, proxy2" — берём первый.
 		first := strings.SplitN(xff, ",", 2)[0]

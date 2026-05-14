@@ -1,7 +1,6 @@
 package insights
 
 import (
-	"context"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -84,43 +83,4 @@ func insightsHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
 		})
 		return c.JSON(fiber.Map{"insights": out})
 	}
-}
-
-// aggregateRangeCtx — AggregateByCategory с верхней границей (для prev7d).
-// EventStore не имеет range-варианта, поэтому вычисляем как diff:
-//
-//	agg(prev7) = agg(since=prev7) - agg(since=last7)
-//
-// Внутри две CH queries — fan-out parallel чтобы wall-clock = max(2) вместо
-// sum.
-func aggregateRangeCtx(ctx context.Context, st store.EventStore, userID string, since, until time.Time) (map[string]uint64, error) {
-	var full, tail map[string]uint64
-	g, gctx := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		v, err := st.AggregateByCategory(gctx, userID, since)
-		if err != nil {
-			return err
-		}
-		full = v
-		return nil
-	})
-	g.Go(func() error {
-		v, err := st.AggregateByCategory(gctx, userID, until)
-		if err != nil {
-			return err
-		}
-		tail = v
-		return nil
-	})
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-	out := make(map[string]uint64, len(full))
-	for k, v := range full {
-		t := tail[k]
-		if v >= t {
-			out[k] = v - t
-		}
-	}
-	return out, nil
 }

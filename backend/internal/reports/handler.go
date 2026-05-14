@@ -1,7 +1,6 @@
 package reports
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/httperr"
+	"github.com/eye-of-providence/backend/internal/reports/periodapp"
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
@@ -32,7 +32,7 @@ func RegisterRoutes(app *fiber.App, s Service) {
 		claims := auth.ClaimsFromCtx(c)
 
 		periodKind := c.Query("period", "weekly")
-		from, to, periodKey := resolvePeriod(periodKind)
+		from, to, periodKey := periodapp.Resolve(periodKind, time.Now().UTC())
 
 		nc, err := BuildContext(c.Context(), s.EventStore, claims.UserID, periodKey, from, to)
 		if err != nil {
@@ -74,33 +74,4 @@ func RegisterRoutes(app *fiber.App, s Service) {
 		}
 		return c.JSON(r)
 	})
-}
-
-func resolvePeriod(kind string) (time.Time, time.Time, string) {
-	now := time.Now().UTC()
-	switch kind {
-	case "monthly":
-		from := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-		to := from.AddDate(0, 1, 0).Add(-time.Second)
-		key := fmt.Sprintf("monthly_%04d_%02d", now.Year(), now.Month())
-		return from, to, key
-	case "daily":
-		from := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-		to := from.Add(24 * time.Hour).Add(-time.Second)
-		key := fmt.Sprintf("daily_%s", from.Format("2006-01-02"))
-		return from, to, key
-	default: // weekly
-		// ISO week-of-year
-		year, week := now.ISOWeek()
-		// найдём понедельник этой недели
-		offset := int(now.Weekday())
-		if offset == 0 {
-			offset = 7
-		}
-		monday := now.AddDate(0, 0, 1-offset)
-		from := time.Date(monday.Year(), monday.Month(), monday.Day(), 0, 0, 0, 0, time.UTC)
-		to := from.AddDate(0, 0, 7).Add(-time.Second)
-		key := fmt.Sprintf("weekly_%04d_W%02d", year, week)
-		return from, to, key
-	}
 }

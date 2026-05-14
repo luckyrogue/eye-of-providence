@@ -41,6 +41,43 @@ golangci-lint run ./...  # ★ блокер
   `push`, `prcomment`, `anomaly`, `reports`, `store`, `cache`, `httperr`,
   `metrics`, `migrate`, `mailer`, `config`, `log`.
 
+### Clean architecture (incremental)
+
+- Внутри `internal/<domain>/` допускаются **подпакеты** с явными границами:
+  application/use case без `fiber`/`pgx` в сигнатурах, **порты** (интерфейсы)
+  рядом с use case, реализации портов в родительском пакете или в
+  `*_adapters.go` (см. `internal/teams/emailtemplates` + wiring в
+  `emailtemplates_adapters.go`).
+- Новые вертикальные фичи по возможности идут через use case + тонкие HTTP
+  handlers; существующий код мигрируется **strangler**-ом по одному срезу.
+- Публичный audit API для IP: `audit.ClientIP(c *fiber.Ctx)` — общий helper
+  для записи IP без дублирования X-Forwarded-For логики.
+
+#### Статус миграции на use case-слои (по доменам)
+
+Эталонный шаблон: [`internal/teams/emailtemplates/`](internal/teams/emailtemplates/) (порты, `Service`, unit-тесты с fake; wiring в [`emailtemplates_adapters.go`](internal/teams/emailtemplates_adapters.go); тонкие handlers).
+
+| Домен | Срез / подпакет | Примечание |
+|-------|-----------------|------------|
+| teams | `emailtemplates` | эталон |
+| teams | `teamflags`, `teamplanlimits`, `adminlists` | admin Phase 3 |
+| auth | `meapp` | GET/PATCH /v1/me, API tokens |
+| auth | `oauthapp` | OAuth upsert identity |
+| auth | `passwordapp` | password login (teams вызывает `auth.NewPasswordLoginService`) |
+| auth | `webauthnapp` | обёртка над WebAuthn begin/finish |
+| devices | `devicelist` | GET /v1/me/devices |
+| webhooks | `webhooklist` | GET /v1/me/webhooks |
+| push | `pushlist` | GET /v1/me/push/subscriptions |
+| sso | `ssostart` | POST /v1/sso/start |
+| ingest | `batchapp` | валидация и подготовка batch /v1/ingest |
+| publicapi | `eventsapp` | GET /v1/public/events |
+| analytics | `recentapp` | GET /v1/events/recent |
+| prcomment | `CommentBody` (тип в корне пакета) | aggregate + markdown без цикла импортов |
+| insights | `rangeagg` | окно prev7d для fan-out |
+| reports | `periodapp` | resolve периода generate |
+| content | — | следующий срез (избегать циклов с родительским `content`) |
+| anomaly | — | логика в `detector.go` + `detector_test`; cron остаётся инфраструктурным entrypoint |
+
 ### Error handling
 
 **Используй `internal/httperr` для HTTP error responses.** Pattern:

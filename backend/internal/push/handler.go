@@ -39,7 +39,7 @@ func listHandler(s *Service) fiber.Handler {
 		if err != nil {
 			return httperr.Unauthorized(c, "invalid_subject", "invalid subject")
 		}
-		subs, err := s.List(c.Context(), uid)
+		subs, err := newPushListService(s).List(c.Context(), uid)
 		if err != nil {
 			return httperr.Internal(c)
 		}

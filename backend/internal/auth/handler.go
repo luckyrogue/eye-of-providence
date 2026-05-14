@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
@@ -13,10 +12,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
+	"github.com/eye-of-providence/backend/internal/auth/oauthapp"
 	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
@@ -187,10 +186,12 @@ func registerOAuthProvider(g fiber.Router, s Service, name string, p OAuthProvid
 			return httperr.BadRequest(c, "email_not_verified", "provider did not return verified email")
 		}
 
-		userUUID, linkErr := upsertOAuthUser(c.Context(), s, name, user)
+		userUUID, linkErr := newOAuthAppService(s).UpsertOAuthUser(c.Context(), name, oauthapp.ExternalUser{
+			Subject: user.Subject, Email: user.Email, Name: user.Name, Login: user.Login,
+		})
 		if linkErr != nil {
 			s.Logger.Warn("oauth link failed", zap.String("provider", name), zap.Error(linkErr))
-			if errors.Is(linkErr, errIdentityLinkRequired) {
+			if errors.Is(linkErr, oauthapp.ErrIdentityLinkRequired) {
 				// Email collision policy: existing password-user без email_verified=true
 				// → 409 "sign in to link". Согласно decisions-confirmed §4, мы линкуем
 				// автоматически если provider gave email_verified=true (что обязательно
@@ -225,105 +226,6 @@ func registerOAuthProvider(g fiber.Router, s Service, name string, p OAuthProvid
 		return c.Redirect(dest, fiber.StatusFound)
 	})
 }
-
-// upsertOAuthUser — реализует email-collision policy (decisions-confirmed §4):
-//  1. Сначала ищем по (provider, subject) в user_identities → существующий
-//     mapping → login (вернём user_id).
-//  2. Если нет: ищем users.email == email. Найден → link identity к существующему
-//     юзеру (auto-link, потому что provider гарантировал email_verified=true в Exchange).
-//  3. Не найден: create user + identity (новый пользователь).
-//
-// Возвращает (userID, error). errIdentityLinkRequired — sentinel для cases когда
-// мы хотим вернуть 409 (Phase 1 не использует, оставлен на будущее для unverified-email path).
-func upsertOAuthUser(ctx context.Context, s Service, provider string, ext *ExternalUser) (uuid.UUID, error) {
-	if s.Pool == nil {
-		// In-memory fallback — derive deterministic UUID, no persistence.
-		return uuid.NewSHA1(uuid.NameSpaceURL, []byte(provider+":"+ext.Subject)), nil
-	}
-
-	// Step 1: existing identity?
-	var existingUserID uuid.UUID
-	err := s.Pool.QueryRow(ctx, `
-		SELECT user_id FROM user_identities WHERE provider = $1 AND subject = $2
-	`, provider, ext.Subject).Scan(&existingUserID)
-	if err == nil {
-		// Existing identity — sync email (verified провайдером) on the user
-		// row только если он сейчас пустой.
-		_, _ = s.Pool.Exec(ctx, `
-			UPDATE users SET email = COALESCE(NULLIF(users.email, ''), $1) WHERE id = $2
-		`, ext.Email, existingUserID)
-		return existingUserID, nil
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return uuid.Nil, err
-	}
-
-	// Step 2: existing user by email?
-	var linkedUserID uuid.UUID
-	err = s.Pool.QueryRow(ctx,
-		`SELECT id FROM users WHERE email = $1`, ext.Email,
-	).Scan(&linkedUserID)
-	if err == nil {
-		// Link: write identity row to existing user. Provider guarantee'ит
-		// email_verified=true (см. github.go/google.go Exchange security guards),
-		// поэтому auto-link безопасен.
-		_, err := s.Pool.Exec(ctx, `
-			INSERT INTO user_identities (user_id, provider, subject, email)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (provider, subject) DO NOTHING
-		`, linkedUserID, provider, ext.Subject, ext.Email)
-		if err != nil {
-			return uuid.Nil, err
-		}
-		return linkedUserID, nil
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return uuid.Nil, err
-	}
-
-	// Step 3: create new user + identity (атомарно через tx).
-	tx, err := s.Pool.Begin(ctx)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	newID := uuid.New()
-	displayName := ext.Name
-	if displayName == "" {
-		displayName = ext.Login
-	}
-	if displayName == "" {
-		displayName = ext.Email
-	}
-	githubLogin := ""
-	if provider == "github" {
-		githubLogin = ext.Login
-	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO users (id, email, github_login, display_name)
-		VALUES ($1, $2, NULLIF($3, ''), $4)
-		ON CONFLICT (id) DO NOTHING
-	`, newID, ext.Email, githubLogin, displayName); err != nil {
-		return uuid.Nil, err
-	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO user_identities (user_id, provider, subject, email)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (provider, subject) DO NOTHING
-	`, newID, provider, ext.Subject, ext.Email); err != nil {
-		return uuid.Nil, err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return uuid.Nil, err
-	}
-	return newID, nil
-}
-
-// errIdentityLinkRequired — sentinel для будущего, когда добавим
-// "unverified email" path. В Phase 2 все провайдеры гарантируют email_verified,
-// поэтому return value не используется.
-var errIdentityLinkRequired = errors.New("identity link requires re-auth")
 
 // setHandoffCookie — кладёт one-shot JWT в HttpOnly cookie. Lax SameSite —
 // потому что callback это redirect от другого origin'а (provider) к нашему
@@ -545,7 +447,8 @@ func handleWebAuthnRegisterBegin(s Service) fiber.Handler {
 		if err != nil {
 			return httperr.Unauthorized(c, "invalid_subject", "invalid token subject")
 		}
-		creation, sid, err := s.WebAuthn.BeginRegistration(c.Context(), uid)
+		wa := newWebAuthnApp(s.WebAuthn)
+		creation, sid, err := wa.RegisterBegin(c.Context(), uid)
 		if err != nil {
 			s.Logger.Warn("webauthn begin register failed", zap.Error(err))
 			return httperr.BadRequest(c, "webauthn_begin_failed", err.Error())
@@ -577,7 +480,7 @@ func handleWebAuthnRegisterFinish(s Service) fiber.Handler {
 		if req.SessionID == "" || len(req.Attestation) == 0 {
 			return httperr.BadRequest(c, "missing_fields", "session_id and attestation required")
 		}
-		if err := s.WebAuthn.FinishRegistration(c.Context(), uid, req.SessionID, req.Attestation, req.Nickname); err != nil {
+		if err := newWebAuthnApp(s.WebAuthn).RegisterFinish(c.Context(), uid, req.SessionID, req.Attestation, req.Nickname); err != nil {
 			s.Logger.Warn("webauthn finish register failed", zap.Error(err))
 			return httperr.BadRequest(c, "webauthn_finish_failed", err.Error())
 		}
@@ -594,7 +497,7 @@ func handleWebAuthnLoginBegin(s Service) fiber.Handler {
 		var req webauthnLoginBeginReq
 		// Empty body допустим — это discoverable / usernameless login.
 		_ = c.BodyParser(&req)
-		assertion, sid, err := s.WebAuthn.BeginLogin(c.Context(), req.Email)
+		assertion, sid, err := newWebAuthnApp(s.WebAuthn).LoginBegin(c.Context(), req.Email)
 		if err != nil {
 			s.Logger.Warn("webauthn begin login failed", zap.Error(err))
 			return httperr.BadRequest(c, "webauthn_begin_failed", err.Error())
@@ -622,7 +525,7 @@ func handleWebAuthnLoginFinish(s Service) fiber.Handler {
 		if req.SessionID == "" || len(req.Assertion) == 0 {
 			return httperr.BadRequest(c, "missing_fields", "session_id and assertion required")
 		}
-		uid, err := s.WebAuthn.FinishLogin(c.Context(), req.SessionID, req.Assertion)
+		uid, err := newWebAuthnApp(s.WebAuthn).LoginFinish(c.Context(), req.SessionID, req.Assertion)
 		if err != nil {
 			s.Logger.Warn("webauthn finish login failed", zap.Error(err))
 			return httperr.Unauthorized(c, "webauthn_finish_failed", err.Error())

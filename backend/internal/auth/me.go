@@ -2,13 +2,15 @@ package auth
 
 import (
 	"context"
-	"time"
+	"errors"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
+	"github.com/eye-of-providence/backend/internal/auth/meapp"
+	"github.com/eye-of-providence/backend/internal/httperr"
 	"github.com/eye-of-providence/backend/internal/metrics"
 	"github.com/eye-of-providence/backend/internal/store"
 )
@@ -32,55 +34,44 @@ func RegisterMeRoutes(app *fiber.App, s MeService) {
 
 	g.Get("/", func(c *fiber.Ctx) error {
 		claims := ClaimsFromCtx(c)
-		out := fiber.Map{
-			"user_id":  claims.UserID,
-			"email":    claims.Email,
-			"provider": claims.Provider,
-		}
-		if s.Pool != nil {
-			uid, err := uuid.Parse(claims.UserID)
-			if err == nil {
-				var ghLogin *string
-				var globalRole *string
-				var displayName *string
-				var lastName *string
-				var phone *string
-				var locale *string
-				var hasPassword bool
-				var createdAt time.Time
-				_ = s.Pool.QueryRow(c.Context(),
-					"SELECT github_login, global_role, display_name, last_name, phone, locale, password_hash IS NOT NULL, created_at FROM users WHERE id = $1", uid).
-					Scan(&ghLogin, &globalRole, &displayName, &lastName, &phone, &locale, &hasPassword, &createdAt)
-				if ghLogin != nil {
-					out["github_login"] = *ghLogin
-				}
-				if globalRole != nil {
-					out["global_role"] = *globalRole
-				}
-				if displayName != nil {
-					out["display_name"] = *displayName
-				}
-				if lastName != nil {
-					out["last_name"] = *lastName
-				}
-				if phone != nil {
-					out["phone"] = *phone
-				}
-				if locale != nil {
-					out["locale"] = *locale
-				}
-				out["has_password"] = hasPassword
-				if !createdAt.IsZero() {
-					out["created_at"] = createdAt.UTC().Format(time.RFC3339)
-				}
+		app := newMeAppService(s)
+		out, err := app.GetProfile(c.Context(), meapp.SessionClaims{
+			UserID: claims.UserID, Email: claims.Email, Provider: claims.Provider,
+		})
+		if err != nil {
+			if errors.Is(err, meapp.ErrInvalidSubject) {
+				return httperr.Unauthorized(c, "invalid_subject", "invalid token subject")
 			}
+			return httperr.Internal(c)
 		}
 		return c.JSON(out)
 	})
 
 	g.Get("/onboarding-status", onboardingStatusHandler(s))
 	g.Post("/onboarding/dismiss", onboardingDismissHandler(s))
-	g.Patch("/locale", localeHandler(s))
+	g.Patch("/locale", func(c *fiber.Ctx) error {
+		claims := ClaimsFromCtx(c)
+		uid, err := uuid.Parse(claims.UserID)
+		if err != nil {
+			return httperr.Unauthorized(c, "invalid_subject", "invalid token subject")
+		}
+		var req struct {
+			Locale string `json:"locale"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return httperr.BadRequest(c, "invalid_body", "invalid body")
+		}
+		app := newMeAppService(s)
+		loc, err := app.PatchLocale(c.Context(), uid, req.Locale)
+		if err != nil {
+			if errors.Is(err, meapp.ErrUnsupportedLocale) {
+				return httperr.BadRequest(c, "invalid_locale", "unsupported locale")
+			}
+			s.Logger.Warn("locale update failed", zap.Error(err))
+			return httperr.Internal(c)
+		}
+		return c.JSON(fiber.Map{"locale": loc})
+	})
 
 	// API tokens — для public API. Все CRUD требуют JWT (RequireScope не
 	// применяется т.к. ScopeFromCtx вернёт "" для JWT — full access).

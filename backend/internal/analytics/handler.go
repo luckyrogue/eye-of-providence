@@ -22,7 +22,7 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 		if limit <= 0 || limit > 500 {
 			limit = 50
 		}
-		events, err := st.ListRecent(c.Context(), claims.UserID, limit)
+		events, err := newRecentEventsApp(st).ListRecent(c.Context(), claims.UserID, limit)
 		if err != nil {
 			logger.Error("list recent failed", zap.Error(err))
 			return httperr.Internal(c)

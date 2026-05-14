@@ -55,7 +55,7 @@ func eventsHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
 		if limit <= 0 || limit > 1000 {
 			limit = 100
 		}
-		events, err := st.ListRecent(c.Context(), claims.UserID, limit)
+		events, err := newEventsApp(st).ListRecent(c.Context(), claims.UserID, limit)
 		if err != nil {
 			logger.Error("public events failed", zap.Error(err))
 			return httperr.Internal(c)

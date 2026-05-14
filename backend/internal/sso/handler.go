@@ -54,24 +54,16 @@ func (s Service) handleStart(c *fiber.Ctx) error {
 		return httperr.BadRequest(c, "invalid_team_id", "team_id must be uuid")
 	}
 
-	prov, err := s.Registry.Get(c.Context(), teamID)
-	if errors.Is(err, ErrConfigNotFound) {
-		return httperr.NotFound(c, "sso_not_configured", "SSO not configured for this team")
-	}
-	if err != nil {
-		s.Logger.Error("sso registry get failed",
-			zap.String("team", teamID.String()), zap.Error(err))
-		return httperr.Internal(c)
-	}
-
-	state, err := CreateState(c.Context(), s.Pool, teamID, req.ReturnTo)
-	if err != nil {
-		s.Logger.Error("sso state create failed", zap.Error(err))
-		return httperr.Internal(c)
-	}
-
-	url := prov.AuthCodeURL(state.Value, state.Nonce)
-	return c.JSON(fiber.Map{"authorize_url": url})
+		url, err := newSSOStartService(s).AuthorizeURL(c.Context(), teamID, req.ReturnTo)
+		if errors.Is(err, ErrConfigNotFound) {
+			return httperr.NotFound(c, "sso_not_configured", "SSO not configured for this team")
+		}
+		if err != nil {
+			s.Logger.Error("sso start failed",
+				zap.String("team", teamID.String()), zap.Error(err))
+			return httperr.Internal(c)
+		}
+		return c.JSON(fiber.Map{"authorize_url": url})
 }
 
 // handleOIDCCallback — IdP redirect endpoint. Query: ?code=...&state=...

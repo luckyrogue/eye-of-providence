@@ -58,37 +58,6 @@ func onboardingStatusHandler(s MeService) fiber.Handler {
 	}
 }
 
-// supportedLocales — синхронизирован с frontend dashboard/src/shared/i18n/index.ts.
-var supportedLocales = map[string]bool{"ru": true, "en": true, "kk": true, "es": true}
-
-func localeHandler(s MeService) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		claims := ClaimsFromCtx(c)
-		uid, err := uuid.Parse(claims.UserID)
-		if err != nil {
-			return httperr.Unauthorized(c, "invalid_subject", "invalid token subject")
-		}
-		var req struct {
-			Locale string `json:"locale"`
-		}
-		if err := c.BodyParser(&req); err != nil {
-			return httperr.BadRequest(c, "invalid_body", "invalid body")
-		}
-		if !supportedLocales[req.Locale] {
-			return httperr.BadRequest(c, "invalid_locale", "unsupported locale")
-		}
-		if s.Pool == nil {
-			return c.JSON(fiber.Map{"locale": req.Locale})
-		}
-		if _, err := s.Pool.Exec(c.Context(),
-			`UPDATE users SET locale = $1 WHERE id = $2`, req.Locale, uid,
-		); err != nil {
-			s.Logger.Warn("locale update failed", zap.Error(err))
-			return httperr.Internal(c)
-		}
-		return c.JSON(fiber.Map{"locale": req.Locale})
-	}
-}
 
 func onboardingDismissHandler(s MeService) fiber.Handler {
 	return func(c *fiber.Ctx) error {

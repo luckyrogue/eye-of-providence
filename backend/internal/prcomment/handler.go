@@ -53,13 +53,11 @@ func postHandler(s Service) fiber.Handler {
 			return httperr.BadRequest(c, "invalid_request", err.Error())
 		}
 
-		agg, err := AggregateBySHA(c.Context(), s.Pool, uid, req.SHAs)
+		comment, agg, err := (&CommentBody{Pool: s.Pool, Base: s.DashboardURL}).Markdown(c.Context(), uid, req.SHAs)
 		if err != nil {
 			s.Logger.Error("pr-comment aggregate failed", zap.Error(err))
 			return httperr.Internal(c)
 		}
-
-		comment := FormatComment(agg, s.DashboardURL)
 
 		if err := postComment(c.Context(), s.HTTPClient, req, comment); err != nil {
 			s.Logger.Warn("pr-comment post failed",

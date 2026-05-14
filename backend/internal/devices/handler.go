@@ -145,7 +145,7 @@ func listHandler(s Service) fiber.Handler {
 		if err != nil {
 			return httperr.Unauthorized(c, "invalid_subject", "invalid subject")
 		}
-		devs, err := List(c.Context(), s.Pool, uid)
+		devs, err := newDeviceListService(s.Pool).ListMyDevices(c.Context(), uid)
 		if err != nil {
 			s.Logger.Error("devices list failed", zap.Error(err))
 			return httperr.Internal(c)
