@@ -1,5 +1,3 @@
-// Baseline-тесты для централизованных Zod схем.
-// Roadmap: добавлять интеграционные тесты по мере роста coverage.
 import { describe, expect, it } from "vitest";
 import {
   apiTokenSchema,
@@ -10,22 +8,18 @@ import {
   teamSchema,
   webhookSchema,
 } from "./schemas";
-
 describe("loginSchema", () => {
   it("accepts a normal login pair", () => {
     expect(loginSchema.safeParse({ email: "user@example.com", password: "x" }).success).toBe(true);
   });
-
   it("rejects empty email", () => {
     const r = loginSchema.safeParse({ email: "", password: "x" });
     expect(r.success).toBe(false);
   });
-
   it("rejects malformed email", () => {
     expect(loginSchema.safeParse({ email: "not-an-email", password: "x" }).success).toBe(false);
   });
 });
-
 describe("registerSchema", () => {
   it("requires password >= 8 chars", () => {
     expect(
@@ -38,7 +32,6 @@ describe("registerSchema", () => {
     ).toBe(true);
   });
 });
-
 describe("resetPasswordSchema", () => {
   it("requires matching passwords", () => {
     expect(
@@ -50,18 +43,15 @@ describe("resetPasswordSchema", () => {
     ).toBe(true);
   });
 });
-
 describe("teamSchema / inviteSchema", () => {
   it("teamSchema rejects empty name", () => {
     expect(teamSchema.safeParse({ name: "" }).success).toBe(false);
   });
-
   it("inviteSchema requires valid email", () => {
     expect(inviteSchema.safeParse({ email: "u@e.com" }).success).toBe(true);
     expect(inviteSchema.safeParse({ email: "broken" }).success).toBe(false);
   });
 });
-
 describe("apiTokenSchema", () => {
   it("rejects ttl out of range", () => {
     expect(apiTokenSchema.safeParse({ name: "t", scope: "read", ttlDays: -1 }).success).toBe(false);
@@ -69,14 +59,12 @@ describe("apiTokenSchema", () => {
       false,
     );
   });
-
   it("accepts valid token spec", () => {
     expect(
       apiTokenSchema.safeParse({ name: "t", scope: "write:ingest", ttlDays: 30 }).success,
     ).toBe(true);
   });
 });
-
 describe("webhookSchema", () => {
   it("requires at least one event", () => {
     expect(
@@ -87,7 +75,6 @@ describe("webhookSchema", () => {
       }).success,
     ).toBe(false);
   });
-
   it("accepts a complete webhook spec", () => {
     expect(
       webhookSchema.safeParse({

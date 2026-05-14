@@ -13,30 +13,23 @@ import {
   type AccountInfo,
 } from "../shared/api/tauri";
 import { PairingWizard } from "../shared/ui/pairing-wizard";
-
-/** Совпадает с `DEFAULT_BACKEND` в agent `auth.rs` — для сравнения без показа поля всем. */
 const DEFAULT_BACKEND_URL = "https://eop.rysdavletov.org/api";
-
 function normalizeBackendUrl(url: string): string {
   return url.trim().replace(/\/+$/, "");
 }
-
 function isNonDefaultBackend(url: string): boolean {
   const u = normalizeBackendUrl(url);
   if (!u) return false;
   return u !== normalizeBackendUrl(DEFAULT_BACKEND_URL);
 }
-
 export function SettingsPage() {
   const { t } = useTranslation("agent");
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [backend, setBackend] = useState("");
   const [backendSaved, setBackendSaved] = useState(false);
-  /** Поле URL показываем только для self-hosted или по явному запросу. */
   const [showBackendUi, setShowBackendUi] = useState(false);
   const [paused, setPausedState] = useState(false);
   const [autostart, setAutostartState] = useState(false);
-
   const refresh = useCallback(async () => {
     try {
       const info = await accountInfo();
@@ -58,11 +51,9 @@ export function SettingsPage() {
       console.warn("[eop] get_autostart failed", e);
     }
   }, []);
-
   useEffect(() => {
     void refresh();
   }, [refresh]);
-
   const onSaveBackend = useCallback(async () => {
     try {
       await setBackendUrl(backend);
@@ -74,9 +65,7 @@ export function SettingsPage() {
       console.warn("[eop] set_backend_url failed", e);
     }
   }, [backend, refresh]);
-
   const backendUiVisible = showBackendUi || isNonDefaultBackend(backend);
-
   const onLogout = useCallback(async () => {
     try {
       await logout();
@@ -85,7 +74,6 @@ export function SettingsPage() {
       console.warn("[eop] logout failed", e);
     }
   }, [refresh]);
-
   const onTogglePause = useCallback(async () => {
     try {
       await setPaused(!paused);
@@ -94,7 +82,6 @@ export function SettingsPage() {
       console.warn("[eop] set_paused failed", e);
     }
   }, [paused]);
-
   const onToggleAutostart = useCallback(async () => {
     try {
       await setAutostart(!autostart);
@@ -103,7 +90,6 @@ export function SettingsPage() {
       console.warn("[eop] set_autostart failed", e);
     }
   }, [autostart]);
-
   return (
     <div className="space-y-4">
       <Card>

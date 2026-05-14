@@ -2,7 +2,6 @@ import { Bell } from "lucide-react";
 import type { Subscription } from "../../../entities/push";
 import { DisablePushButton } from "../../../features/push-unsubscribe";
 import { parseUserAgent } from "../../../shared/lib/push";
-
 export function SubscriptionRow({ sub }: { sub: Subscription }) {
   const label = parseUserAgent(sub.user_agent ?? "");
   return (

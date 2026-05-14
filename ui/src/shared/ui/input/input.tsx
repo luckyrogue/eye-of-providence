@@ -1,16 +1,13 @@
 import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from "react";
 import { cn } from "../../lib/cn";
-
 export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   label?: ReactNode;
   labelClassName?: string;
 };
-
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, label, labelClassName, id, ...props }, ref) => {
     const uid = useId();
     const inputId = label ? (id ?? uid) : id;
-
     const control = (
       <input
         ref={ref}
@@ -27,11 +24,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {...props}
       />
     );
-
     if (!label) {
       return control;
     }
-
     return (
       <div className="w-full">
         <label

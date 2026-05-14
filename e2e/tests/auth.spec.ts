@@ -1,29 +1,19 @@
-// Auth flow:
-//   - register → токен в localStorage, redirect на onboarding
-//   - login существующего юзера
-//   - logout инвалидирует state в browser-context'е
-//   - forgot password не палит существование email'а (всегда 200)
-//   - реджект пустого тела с типизированной ошибкой
-
 import { test, expect } from "@playwright/test";
 import { apiLogin, apiRegister, ApiError, createApiClient } from "../helpers/api.js";
 import { uniqueEmail } from "../helpers/db.js";
-
 test.describe("auth", () => {
   test("register flow via API works and returns JWT", async () => {
     const email = uniqueEmail("register");
     const r = await apiRegister(email, "TestPassword123!", "Register Tester");
-    expect(r.token).toMatch(/^eyJ/); // JWT prefix
+    expect(r.token).toMatch(/^eyJ/);
     expect(r.user_id).toMatch(/^[0-9a-f-]{36}$/);
   });
-
   test("login flow via API works", async () => {
     const email = uniqueEmail("login");
     await apiRegister(email, "TestPassword123!", "Login Tester");
     const r = await apiLogin(email, "TestPassword123!");
     expect(r.token).toMatch(/^eyJ/);
   });
-
   test("login rejects wrong password with invalid_credentials", async () => {
     const email = uniqueEmail("wrongpw");
     await apiRegister(email, "TestPassword123!");
@@ -37,7 +27,6 @@ test.describe("auth", () => {
       expect(err.code).toBe("invalid_credentials");
     }
   });
-
   test("register rejects short password with typed code", async () => {
     try {
       await apiRegister(uniqueEmail("shortpw"), "abc");
@@ -49,27 +38,22 @@ test.describe("auth", () => {
       expect(err.code).toBe("invalid_password");
     }
   });
-
   test("forgot password always returns 200 (no email enumeration)", async () => {
     const c = createApiClient();
-    const r1 = await c.fetch<{ status: string }>("/v1/auth/forgot-password", {
+    const r1 = await c.fetch<{
+      status: string;
+    }>("/v1/auth/forgot-password", {
       method: "POST",
       body: JSON.stringify({ email: "definitely-not-exists@local.test" }),
     });
     expect(r1.status).toBe("ok");
-    // То же для невалидного формата.
-    const r2 = await c.fetch<{ status: string }>("/v1/auth/forgot-password", {
+    const r2 = await c.fetch<{
+      status: string;
+    }>("/v1/auth/forgot-password", {
       method: "POST",
       body: JSON.stringify({ email: "not-an-email" }),
     });
     expect(r2.status).toBe("ok");
   });
-
-  test.skip("UI: signup form leads to onboarding", async () => {
-    // FE bug: AuthRoute (/signup) ignores `mode="register"` prop — Auth page
-    // defaults to login form. Чтобы починить — поправить
-    // dashboard/src/pages/auth/index.tsx (передать initialMode в Auth).
-    // Re-enable когда frontend fix приедет. До тех пор register flow
-    // покрыт API-тестами выше.
-  });
+  test.skip("UI: signup form leads to onboarding", async () => {});
 });

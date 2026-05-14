@@ -1,41 +1,23 @@
-// Dashboard widgets — KPI grid, Heatmap, Gauge, Donut, Trend chart,
-// Language bars, Attribution log, Recap card.
-//
-// Все widgets wired к real API через react-query (useHeatmap / useTrend /
-// useSummary / useLanguages / useRecent). Mock-widgets удалены — см.
-// TODO ниже. i18n: все строки через t("dashboard.*") из app namespace.
-//
-// Удалены (вернутся когда backend добавит endpoints):
-//   - TimelineCard      — нужен /v1/timeline (events by hour)
-//   - ProvidersList     — нужен /v1/summary/categories с ai_provider breakdown
-//   - ProjectsList      — нужен /v1/summary/projects
-//   - FocusSessions     — нужен /v1/sessions/focus
-
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { useRecent, useSummary, useLanguages, useHeatmap, useTrend } from "../../../entities/event";
 import { getTz } from "../../../shared/lib/tz";
 import type { EventRow, HeatmapCell, LangCell, TrendPoint } from "../../../entities/event";
-
-// formatHm — миллисекунды → "Xh Ymin", где первое — крупная цифра для KPI.
-function formatHm(ms: number): { value: string; unit: string } {
+function formatHm(ms: number): {
+  value: string;
+  unit: string;
+} {
   const totalMin = Math.round(ms / 60000);
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
   if (h > 0) return { value: String(h), unit: `h ${String(m).padStart(2, "0")}m` };
   return { value: String(m), unit: "min" };
 }
-
-/* ============ KPI grid ============ */
-// 3 KPI tile вместо 4 — "Focus sessions" удалён (нет /v1/sessions/focus).
-// Sparklines убраны — они показывают synthetic sine wave (не реальные данные).
-// Без spark вернёмся когда добавим /v1/trend с per-day breakdown.
 export function KpiGrid() {
   const { t } = useTranslation("app");
   const summary = useSummary(7);
-  const summaryPrev = useSummary(14); // для delta vs prior period
-
+  const summaryPrev = useSummary(14);
   const ms = summary.data ?? {};
   const aiMs = Object.entries(ms)
     .filter(([k]) => k === "ai" || k.startsWith("ai_"))
@@ -43,22 +25,16 @@ export function KpiGrid() {
   const manualMs = ms["manual"] ?? ms["typed"] ?? 0;
   const totalMs = aiMs + manualMs;
   const aiPct = totalMs > 0 ? Math.round((aiMs / totalMs) * 100) : 0;
-
   const activeFmt = formatHm(totalMs);
   const manualFmt = formatHm(manualMs);
-
-  // Delta vs prior 7d. summary(14) — total за 14 дней; вычитаем последние
-  // 7 → получаем prior period.
   const prevMs = summaryPrev.data ?? {};
   const prevTotal = (prevMs["ai"] ?? 0) + (prevMs["manual"] ?? prevMs["typed"] ?? 0) - totalMs;
   const totalDelta = totalMs - prevTotal;
   const totalDeltaFmt = formatHm(Math.abs(totalDelta));
-
   const aiPctPrev =
     prevTotal > 0 ? Math.round((((prevMs["ai"] ?? 0) - aiMs) / prevTotal) * 100) : 0;
   const aiPctDelta = aiPct - aiPctPrev;
   const hasData = totalMs > 0;
-
   return (
     <div className="kpi-grid">
       <KpiTile
@@ -96,7 +72,6 @@ export function KpiGrid() {
     </div>
   );
 }
-
 function KpiTile({
   label,
   value,
@@ -106,7 +81,10 @@ function KpiTile({
   label: string;
   value: string;
   unit: string;
-  delta?: { kind: "up" | "down" | "flat"; text: string };
+  delta?: {
+    kind: "up" | "down" | "flat";
+    text: string;
+  };
 }) {
   const Icon = delta?.kind === "up" ? TrendingUp : delta?.kind === "down" ? TrendingDown : Minus;
   return (
@@ -125,11 +103,6 @@ function KpiTile({
     </div>
   );
 }
-
-/* ============ Recap (AI narrative) ============ */
-// TODO(GA): wire к useInsights() — backend возвращает {key, vars} массив
-// narrative-карточек. Сейчас mock текст до того как Gemini-pipeline даёт
-// stable summaries (см. recap-card в widgets/insights).
 export function RecapCard() {
   const { t } = useTranslation("app");
   return (
@@ -139,10 +112,6 @@ export function RecapCard() {
     </div>
   );
 }
-
-/* ============ Heatmap (7×24) ============ */
-// useHeatmap returns HeatmapCell[] (dow 0–6 = Mon–Sun, hour 0–23, category, ms).
-// Aggregate всё по cell'ам (sum ms across all categories) и нормализуем на max.
 function reshapeHeatmap(cells: HeatmapCell[] | undefined): number[] {
   const out = Array.from({ length: 168 }, () => 0);
   if (!cells) return out;
@@ -154,14 +123,12 @@ function reshapeHeatmap(cells: HeatmapCell[] | undefined): number[] {
   const max = Math.max(1, ...out);
   return out.map((v) => v / max);
 }
-
 export function HeatmapCard() {
   const { t } = useTranslation("app");
   const tz = useMemo(() => getTz(), []);
   const heat = useHeatmap(7, tz);
   const cells = useMemo(() => reshapeHeatmap(heat.data), [heat.data]);
   const hasData = cells.some((v) => v > 0);
-
   return (
     <div className="eop-card col-span-12 min-[1181px]:col-span-8">
       <div className="card-head">
@@ -208,9 +175,6 @@ export function HeatmapCard() {
     </div>
   );
 }
-
-/* ============ Gauge (Dependency score) ============ */
-// Dependency score = AI usage proportion за 30 дней, derived от useSummary(30).
 export function GaugeCard() {
   const { t } = useTranslation("app");
   const summary = useSummary(30);
@@ -220,7 +184,6 @@ export function GaugeCard() {
     .reduce((acc, [, v]) => acc + v, 0);
   const total = aiMs + (ms["manual"] ?? ms["typed"] ?? 0);
   const value = total > 0 ? Math.round((aiMs / total) * 100) : 0;
-
   const r = 60;
   const cx = 80;
   const cy = 80;
@@ -281,12 +244,6 @@ export function GaugeCard() {
     </div>
   );
 }
-
-/* TimelineCard — removed: нужен /v1/timeline endpoint (events grouped by hour),
-   backend ещё нет. Вернуть когда добавим endpoint. См. GA roadmap. */
-
-/* ============ Donut + legend (Code provenance) ============ */
-// Real data: useSummary(7) → Record<category, ms>. Маппим в 5 buckets.
 const PROVENANCE_BUCKETS = [
   { key: "ai_inline", labelKey: "dashboard.provenance_ai_inline", color: "hsl(var(--accent))" },
   { key: "paste_ai", labelKey: "dashboard.provenance_paste_ai", color: "#60a5fa" },
@@ -294,19 +251,15 @@ const PROVENANCE_BUCKETS = [
   { key: "ai_agent", labelKey: "dashboard.provenance_ai_agent", color: "#c084fc" },
   { key: "unknown", labelKey: "dashboard.provenance_unknown", color: "rgba(255,255,255,0.18)" },
 ];
-
 export function ProvenanceDonut() {
   const { t } = useTranslation("app");
   const summary = useSummary(7);
   const ms = summary.data ?? {};
-
-  // Map backend categories → 5 buckets. Fallback "manual"/"typed" → Typed.
   const data = PROVENANCE_BUCKETS.map((b) => ({
     ...b,
     label: t(b.labelKey),
     ms: ms[b.key] ?? (b.key === "manual" ? (ms["typed"] ?? 0) : 0),
   }));
-  // Aggregate "ai_*" if separate buckets отсутствуют а есть общий "ai".
   if (data[0].ms === 0 && ms["ai"]) {
     data[0].ms = ms["ai"];
   }
@@ -316,7 +269,6 @@ export function ProvenanceDonut() {
     pct: total > 0 ? Math.round((d.ms / total) * 100) : 0,
   }));
   const aiTotal = pcts.filter((d) => d.key.startsWith("ai_")).reduce((acc, d) => acc + d.pct, 0);
-
   const r = 60;
   const c = 2 * Math.PI * r;
   let offset = 0;
@@ -380,19 +332,19 @@ export function ProvenanceDonut() {
     </div>
   );
 }
-
-/* ProvidersList — removed: backend нужно расширить /v1/summary/categories
-   на breakdown по ai_provider field. Сейчас events содержат ai_provider
-   но aggregate endpoint его игнорирует. Вернуть после backend changes. */
-
-/* ============ Trend chart (AI ratio 30d) ============ */
-// useTrend returns TrendPoint[] (date, category, chars, ms). Группируем
-// по date, считаем ai_pct = ai / total.
-function reshapeTrend(
-  points: TrendPoint[] | undefined,
-): { date: string; ai: number; manual: number }[] {
+function reshapeTrend(points: TrendPoint[] | undefined): {
+  date: string;
+  ai: number;
+  manual: number;
+}[] {
   if (!points || points.length === 0) return [];
-  const byDate = new Map<string, { ai: number; manual: number }>();
+  const byDate = new Map<
+    string,
+    {
+      ai: number;
+      manual: number;
+    }
+  >();
   for (const p of points) {
     const entry = byDate.get(p.date) ?? { ai: 0, manual: 0 };
     if (p.category === "ai" || p.category.startsWith("ai_")) entry.ai += p.ms;
@@ -410,16 +362,12 @@ function reshapeTrend(
       };
     });
 }
-
 export function TrendChart() {
   const { t } = useTranslation("app");
   const tz = useMemo(() => getTz(), []);
   const trend = useTrend(30, tz);
   const series = useMemo(() => reshapeTrend(trend.data), [trend.data]);
   const hasData = series.length >= 2;
-
-  // Если данных нет — показываем empty state, БЕЗ синтетического sine wave.
-  // Раньше fake sine вводил в заблуждение (выглядит как реальные метрики).
   if (!hasData) {
     return (
       <div className="eop-card col-span-12">
@@ -435,7 +383,6 @@ export function TrendChart() {
       </div>
     );
   }
-
   const W = 720,
     H = 180;
   const aiSeries = series.map((s) => s.ai);
@@ -452,7 +399,6 @@ export function TrendChart() {
   const fillPath = `${toPath(aiSeries)} L ${W - 10} ${H - 24} L 30 ${H - 24} Z`;
   const avgAi = aiSeries.reduce((acc, v) => acc + v, 0) / aiSeries.length;
   const avgMan = 100 - avgAi;
-
   return (
     <div className="eop-card col-span-12">
       <div className="card-head">
@@ -511,15 +457,20 @@ export function TrendChart() {
     </div>
   );
 }
-
-/* ============ Language bars ============ */
-// useLanguages returns LangCell[] (lang, category, chars, ms). Группируем
-// по lang, считаем ai_pct.
-function reshapeLanguages(
-  cells: LangCell[] | undefined,
-): { name: string; time: string; ai: number; manual: number }[] {
+function reshapeLanguages(cells: LangCell[] | undefined): {
+  name: string;
+  time: string;
+  ai: number;
+  manual: number;
+}[] {
   if (!cells || cells.length === 0) return [];
-  const byLang = new Map<string, { ai: number; manual: number }>();
+  const byLang = new Map<
+    string,
+    {
+      ai: number;
+      manual: number;
+    }
+  >();
   for (const c of cells) {
     const entry = byLang.get(c.lang) ?? { ai: 0, manual: 0 };
     if (c.category === "ai" || c.category.startsWith("ai_")) entry.ai += c.ms;
@@ -543,7 +494,6 @@ function reshapeLanguages(
     .sort((a, b) => b._total - a._total)
     .slice(0, 8);
 }
-
 export function LanguageBars() {
   const { t } = useTranslation("app");
   const lang = useLanguages(7);
@@ -578,15 +528,6 @@ export function LanguageBars() {
     </div>
   );
 }
-
-/* ProjectsList — removed: нужен /v1/summary/projects endpoint (есть
-   commits table с project_id, можно агрегировать). Вернуть после backend. */
-
-/* FocusSessions — removed: нет /v1/sessions/focus endpoint'а (нужен
-   group-by сессий ≥15min uninterrupted). Вернуть после backend. */
-
-/* ============ Attribution log ============ */
-// useRecent — live event stream. Refetch interval 10s для near-live.
 function categoryToTag(c: string): string {
   if (c === "manual" || c === "typed") return "typed";
   if (c === "ai_inline" || c === "ai_assist") return "ai-inline";
@@ -595,7 +536,6 @@ function categoryToTag(c: string): string {
   if (c.startsWith("refactor")) return "refactor";
   return "ai-inline";
 }
-
 function formatLogRow(r: EventRow): {
   ts: string;
   tag: string;
@@ -613,12 +553,10 @@ function formatLogRow(r: EventRow): {
     src: r.ai_provider ? `${r.ai_provider} · ${r.ai_channel ?? r.source}` : r.source,
   };
 }
-
 export function AttributionLog() {
   const { t } = useTranslation("app");
   const recent = useRecent(20);
   const rows = useMemo(() => (recent.data ?? []).map(formatLogRow), [recent.data]);
-
   return (
     <div className="eop-card col-span-12">
       <div className="card-head">

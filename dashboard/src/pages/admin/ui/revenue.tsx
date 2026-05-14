@@ -1,14 +1,9 @@
-// Revenue tab — aggregate sum payments + plan distribution + recent 10.
-// Wired к GET /v1/admin/revenue (super_admin only).
-
 import { useTranslation } from "react-i18next";
 import { useAdminRevenue, type RevenuePayment } from "../../../entities/admin";
 import { formatDate } from "../../../shared/lib/tz";
-
 export function Revenue({ tz }: { tz: string }) {
   const { t } = useTranslation("app");
   const { data, isPending, isError, error } = useAdminRevenue();
-
   if (isPending) {
     return (
       <div className="eop-card" style={{ minHeight: 320 }}>
@@ -32,7 +27,6 @@ export function Revenue({ tz }: { tz: string }) {
       </div>
     );
   }
-
   return (
     <div className="space-y-4">
       <div className="kpi-grid">
@@ -138,7 +132,6 @@ export function Revenue({ tz }: { tz: string }) {
     </div>
   );
 }
-
 function PaymentRow({ p, tz }: { p: RevenuePayment; tz: string }) {
   return (
     <div className="log-row">
@@ -152,7 +145,6 @@ function PaymentRow({ p, tz }: { p: RevenuePayment; tz: string }) {
     </div>
   );
 }
-
 function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="kpi">
@@ -162,7 +154,6 @@ function Tile({ label, value, hint }: { label: string; value: string; hint?: str
     </div>
   );
 }
-
 function formatMoney(cents: number, currency: string): string {
   const major = (cents / 100).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -170,7 +161,6 @@ function formatMoney(cents: number, currency: string): string {
   });
   return `${major} ${currency.toUpperCase()}`;
 }
-
 function planColor(plan: string): string {
   switch (plan) {
     case "enterprise":

@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@eop/ui";
 import { Globe } from "lucide-react";
 import { LocaleSelect } from "../../../features/locale-switch";
 import { TimezoneSelect } from "../../../features/timezone-switch";
-
 export function SettingsLocaleTimezoneCard() {
   const { t } = useTranslation("common");
   return (

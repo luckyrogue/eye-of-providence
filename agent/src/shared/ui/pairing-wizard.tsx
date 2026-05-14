@@ -2,16 +2,25 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Button } from "@eop/ui";
 import { openUrl, pairBegin, pairPoll, type PairBeginResponse } from "../api/tauri";
-
 type Phase =
-  | { kind: "idle" }
-  | { kind: "starting" }
-  | { kind: "waiting"; pair: PairBeginResponse }
-  | { kind: "expired" }
-  | { kind: "error"; message: string };
-
-const POLL_INTERVAL_MS = 2_500;
-
+  | {
+      kind: "idle";
+    }
+  | {
+      kind: "starting";
+    }
+  | {
+      kind: "waiting";
+      pair: PairBeginResponse;
+    }
+  | {
+      kind: "expired";
+    }
+  | {
+      kind: "error";
+      message: string;
+    };
+const POLL_INTERVAL_MS = 2500;
 function dashboardHost(backend: string): string {
   try {
     return new URL(backend).host;
@@ -19,23 +28,17 @@ function dashboardHost(backend: string): string {
     return backend;
   }
 }
-
-// Polling до claim или expire (POLL_INTERVAL_MS). После успешного claim
-// вызывает onClaimed — caller сам перетягивает account-info из бэка.
 export function PairingWizard({ backend, onClaimed }: { backend: string; onClaimed?: () => void }) {
   const { t } = useTranslation("agent");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const pollTimer = useRef<number | null>(null);
-
   const stopPoll = useCallback(() => {
     if (pollTimer.current !== null) {
       window.clearInterval(pollTimer.current);
       pollTimer.current = null;
     }
   }, []);
-
   useEffect(() => () => stopPoll(), [stopPoll]);
-
   const start = useCallback(async () => {
     setPhase({ kind: "starting" });
     try {
@@ -46,7 +49,6 @@ export function PairingWizard({ backend, onClaimed }: { backend: string; onClaim
       setPhase({ kind: "error", message: t("settings_pair_error") });
     }
   }, [t]);
-
   useEffect(() => {
     if (phase.kind !== "waiting") return;
     const { pair_id, secret } = phase.pair;
@@ -75,7 +77,6 @@ export function PairingWizard({ backend, onClaimed }: { backend: string; onClaim
       stopPoll();
     };
   }, [phase, stopPoll, onClaimed]);
-
   if (phase.kind === "idle") {
     return (
       <div className="space-y-3">

@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { TYPE_ICON } from "../model/icon-map";
 import type { ChangelogEntry } from "../model/types";
-
 export function Row({ entry }: { entry: ChangelogEntry }) {
   const { t } = useTranslation("changelog");
   const cfg = TYPE_ICON[entry.type];

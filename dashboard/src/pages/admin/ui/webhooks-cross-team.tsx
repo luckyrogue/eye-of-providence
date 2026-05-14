@@ -1,5 +1,3 @@
-// Cross-team webhooks admin view. Re-uses DataTable pattern from users-table.
-
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -20,14 +18,12 @@ import {
 import { dtLabels } from "../../../shared/lib/data-table-labels";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { formatDate } from "../../../shared/lib/tz";
-
 export function WebhooksCrossTeam({ tz }: { tz: string }) {
   const { t } = useTranslation(["app", "common"]);
   const webhooks = useAdminCrossWebhooks();
   const revoke = useAdminRevokeWebhook();
   const confirm = useConfirm();
   const runToast = useMutationToast();
-
   const onRevoke = useCallback(
     async (wh: CrossTeamWebhook) => {
       const ok = await confirm({
@@ -44,7 +40,6 @@ export function WebhooksCrossTeam({ tz }: { tz: string }) {
     },
     [confirm, revoke, runToast, t],
   );
-
   const columns = useMemo<DataTableColumn<CrossTeamWebhook>[]>(
     () => [
       {
@@ -107,9 +102,7 @@ export function WebhooksCrossTeam({ tz }: { tz: string }) {
     ],
     [t, tz, revoke.isPending, onRevoke],
   );
-
   const list = webhooks.data ?? [];
-
   return (
     <div className="eop-card">
       <div className="card-head">

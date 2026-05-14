@@ -1,6 +1,3 @@
-// OAuth button row: renders enabled provider buttons side-by-side.
-// Click → full redirect to `${VITE_BACKEND_URL}/v1/auth/${provider}/login`.
-// SPA redirect is intentional — backend owns the OAuth round-trip.
 import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@eop/ui";
@@ -8,19 +5,20 @@ import type { OAuthProvider } from "../../../entities/user";
 import { GithubGlyph } from "./glyphs/github-glyph";
 import { GoogleGlyph } from "./glyphs/google-glyph";
 import { AppleGlyph } from "./glyphs/apple-glyph";
-
 const API_BASE = import.meta.env.VITE_BACKEND_URL || "https://eop-api.rysdavletov.org";
-
-const GLYPHS: Record<OAuthProvider, ComponentType<{ className?: string }>> = {
+const GLYPHS: Record<
+  OAuthProvider,
+  ComponentType<{
+    className?: string;
+  }>
+> = {
   github: GithubGlyph,
   google: GoogleGlyph,
   apple: AppleGlyph,
 };
-
 function startOAuth(provider: OAuthProvider) {
   window.location.href = `${API_BASE}/v1/auth/${provider}/login`;
 }
-
 export function OAuthButtonRow({ providers }: { providers: OAuthProvider[] }) {
   const { t } = useTranslation("auth");
   if (!providers.length) return null;

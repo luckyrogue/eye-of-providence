@@ -1,19 +1,5 @@
-// 3D eye stage с орбитальными нодами, pyramid, dilating pupil, scanline.
-// Чистый CSS-animation — никакого WebGL/canvas, всё в transform 3D + keyframes
-// (см. [data-theme="eop"] keyframes в ui/src/shared/styles.css).
-//
-// Orbital placement: измеряем реальный размер eye-stage через ResizeObserver
-// и кладём ноды на 38%-радиусе от центра. translate(${x}%, ${y}%) в CSS
-// percent-units относится к ВЛАДЕЛЬЦУ transform-а (38px own-size), что
-// давало бы кластер в 18px от центра — неправильно. Используем px-вычисление.
-//
-// Подложка mouse-tracking: parent <div> rotateX/Y по перемещению мыши даёт
-// иллюзию "следит за курсором" — детали в useEffect.
-
 import { useEffect, useRef, useState, type ReactElement } from "react";
-
 type IconName = "VSCode" | "Browser" | "Terminal" | "Anthropic" | "Cursor" | "Copilot";
-
 const Icons: Record<IconName, ReactElement> = {
   VSCode: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -51,8 +37,11 @@ const Icons: Record<IconName, ReactElement> = {
     </svg>
   ),
 };
-
-const NODES: { icon: IconName; angle: number; glow?: boolean }[] = [
+const NODES: {
+  icon: IconName;
+  angle: number;
+  glow?: boolean;
+}[] = [
   { icon: "VSCode", angle: 0, glow: true },
   { icon: "Browser", angle: 60 },
   { icon: "Terminal", angle: 120, glow: true },
@@ -60,17 +49,10 @@ const NODES: { icon: IconName; angle: number; glow?: boolean }[] = [
   { icon: "Cursor", angle: 240, glow: true },
   { icon: "Copilot", angle: 300 },
 ];
-
-// Радиус орбиты как % от ширины eye-stage. 0.38 кладёт ноды чуть за внешним
-// ring'ом (r1 inset:0 = диаметр stage, r2 inset:8%, r3 inset:16%).
 const ORBIT_RADIUS_RATIO = 0.38;
-
 export function EyeScene() {
   const stageRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState(0);
-
-  // Измеряем фактический размер stage. ResizeObserver — для responsive
-  // (eye-stage растягивается до 560px max-width, на mobile меньше).
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
@@ -82,9 +64,6 @@ export function EyeScene() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-
-  // Mouse-tracking: tilt stage по cursor position для "следящего" эффекта.
-  // Throttling не нужен — CSS transition в 0.3s сам сглаживает.
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
@@ -98,9 +77,7 @@ export function EyeScene() {
     window.addEventListener("mousemove", onMove);
     return () => window.removeEventListener("mousemove", onMove);
   }, []);
-
   const radiusPx = size * ORBIT_RADIUS_RATIO;
-
   return (
     <div
       className="eye-stage"

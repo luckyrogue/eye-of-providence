@@ -2,14 +2,12 @@ import { useTranslation } from "react-i18next";
 import { Button, useConfirm } from "@eop/ui";
 import { useDeleteMyData, useProfile } from "../../../entities/user";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-
 export function DeleteMyDataButton({ onWiped }: { onWiped: () => void }) {
   const { t } = useTranslation("common");
   const profile = useProfile();
   const deleteData = useDeleteMyData();
   const runToast = useMutationToast();
   const confirm = useConfirm();
-
   async function destroy() {
     const ok = await confirm({
       title: t("settings.danger_confirm_title"),
@@ -25,7 +23,6 @@ export function DeleteMyDataButton({ onWiped }: { onWiped: () => void }) {
     });
     if (r !== null) onWiped();
   }
-
   return (
     <Button variant="destructive" size="sm" onClick={destroy} disabled={deleteData.isPending}>
       {t("actions.delete")}

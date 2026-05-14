@@ -1,10 +1,3 @@
-// /auth/complete — landing route after OAuth/passkey backend redirect.
-//
-// Backend issues a one-shot HttpOnly cookie `eop_session_handoff` and bounces
-// the browser here with `?return_to=/somewhere`. We read the cookie, save the
-// JWT to localStorage, prime react-query, and navigate to `return_to` (or
-// `/dashboard`). Errors are rendered inline (cookie expired or never set →
-// 401) with a back-to-login CTA.
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,9 +7,7 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import { completeSessionHandoff, fetchMe } from "../../entities/user";
 import { useAuth } from "../../entities/session";
 import { safeRedirect } from "../../shared/lib/redirect";
-
 type Phase = "loading" | "error";
-
 export function AuthCompleteRoute() {
   const { t } = useTranslation("auth");
   const navigate = useNavigate();
@@ -24,17 +15,13 @@ export function AuthCompleteRoute() {
   const { setAuth, logout } = useAuth();
   const qc = useQueryClient();
   const [phase, setPhase] = useState<Phase>("loading");
-
   useEffect(() => {
     let cancelled = false;
     const returnTo = safeRedirect(params.get("return_to")) ?? "/dashboard";
-
     void (async () => {
       try {
         const token = await completeSessionHandoff();
         if (cancelled) return;
-        // Token is in localStorage; load /me so we can hydrate useAuth's
-        // user_id (route guards depend on it) before navigating away.
         const me = await fetchMe();
         if (cancelled) return;
         setAuth({ user_id: me.user_id, token, display_name: me.display_name });
@@ -48,12 +35,10 @@ export function AuthCompleteRoute() {
         }
       }
     })();
-
     return () => {
       cancelled = true;
     };
   }, [navigate, params, qc, setAuth, logout]);
-
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12">
       <Card className="w-full max-w-md card-hover">

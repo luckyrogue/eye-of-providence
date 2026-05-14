@@ -1,35 +1,16 @@
-// Eye of Providence service worker — offline shell + future push hook.
-//
-// Caching strategy:
-//   - Navigation (HTML): network-first → fallback на cached index.html.
-//     Гарантирует, что юзер увидит latest UI online, и shell offline.
-//   - /assets/* (Vite hashed bundles): cache-first immutable.
-//   - /v1/*: NEVER cached — user data, PII, must hit network.
-//   - Static (favicon, manifest, icons): cache-first revalidate via etag.
-//
-// Push event handler заглушка готова под Web Push API (Phase B).
-
 const VERSION = "v1";
 const SHELL_CACHE = `eop-shell-${VERSION}`;
 const ASSET_CACHE = `eop-assets-${VERSION}`;
 const SHELL_URLS = ["/", "/index.html", "/manifest.webmanifest", "/favicon.svg"];
-
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(SHELL_CACHE).then((cache) =>
-      // addAll fail-fast: если хоть один URL не достижим — install отказан.
-      cache.addAll(SHELL_URLS).catch(() => {
-        // best-effort, не блокируем install при temporary network issues
-      }),
-    ),
+    caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_URLS).catch(() => {})),
   );
   self.skipWaiting();
 });
-
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
-      // Чистим старые версии кэша (у нас новые имена при VERSION bump).
       const keys = await caches.keys();
       await Promise.all(
         keys
@@ -40,18 +21,11 @@ self.addEventListener("activate", (event) => {
     })(),
   );
 });
-
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
-
-  // Только same-origin GET — POST/PUT/DELETE не cache'им, cross-origin тоже.
   if (req.method !== "GET" || url.origin !== self.location.origin) return;
-
-  // API requests — bypass cache. Auth-sensitive, user-specific.
   if (url.pathname.startsWith("/v1/") || url.pathname.startsWith("/api/")) return;
-
-  // Navigation — network-first с offline-fallback.
   if (req.mode === "navigate") {
     event.respondWith(
       (async () => {
@@ -64,15 +38,12 @@ self.addEventListener("fetch", (event) => {
           const cache = await caches.open(SHELL_CACHE);
           const cached = await cache.match("/index.html");
           if (cached) return cached;
-          // Полный offline + нет cache → 504.
           return new Response("Offline", { status: 504 });
         }
       })(),
     );
     return;
   }
-
-  // Hashed assets (Vite) — cache-first.
   if (url.pathname.startsWith("/assets/")) {
     event.respondWith(
       (async () => {
@@ -90,8 +61,6 @@ self.addEventListener("fetch", (event) => {
     );
     return;
   }
-
-  // Static (favicon/manifest/icons/changelog.json) — stale-while-revalidate.
   event.respondWith(
     (async () => {
       const cache = await caches.open(SHELL_CACHE);
@@ -106,10 +75,6 @@ self.addEventListener("fetch", (event) => {
     })(),
   );
 });
-
-//
-// Когда server шлёт push-payload (после weekly report generated, anomaly
-// alert и т.д.), browser вызывает это. Мы рендерим OS notification.
 self.addEventListener("push", (event) => {
   let data = {};
   try {
@@ -123,11 +88,10 @@ self.addEventListener("push", (event) => {
     icon: "/icon-192.png",
     badge: "/icon-192.png",
     data: { url: data.url || "/dashboard" },
-    tag: data.tag, // dedupes пушей с одинаковым tag
+    tag: data.tag,
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
-
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = event.notification.data?.url || "/dashboard";

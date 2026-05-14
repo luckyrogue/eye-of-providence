@@ -1,14 +1,4 @@
-// JSON Schemas per slug. Mirrors backend allowlist (.team/product-cms-slugs.md).
-// Used by Monaco for autocomplete + live validation in the admin editor.
-//
-// Keep these in sync with backend `SlugRegistry` in
-// backend/internal/content/registry.go. A schema bump on the BE requires
-// updating this map AND the schema_version in the response.
-
 import type { ContentSlug } from "./types";
-
-// JSON Schema draft 2020-12 (Monaco understands draft-07+ for inline hints).
-// We avoid ajv here — schemas are passed to Monaco as plain objects.
 type JsonSchema = {
   $schema?: string;
   type?: string;
@@ -24,7 +14,6 @@ type JsonSchema = {
   description?: string;
   default?: unknown;
 };
-
 const textBlock = (max: number): JsonSchema => ({
   type: "object",
   required: ["text"],
@@ -33,7 +22,6 @@ const textBlock = (max: number): JsonSchema => ({
     text: { type: "string", minLength: 1, maxLength: max },
   },
 });
-
 const ctaBlock: JsonSchema = {
   type: "object",
   required: ["label", "href"],
@@ -50,7 +38,6 @@ const ctaBlock: JsonSchema = {
     external: { type: "boolean", default: false },
   },
 };
-
 const pricingTier: JsonSchema = {
   type: "object",
   required: ["tagline", "bullets"],
@@ -65,7 +52,6 @@ const pricingTier: JsonSchema = {
     },
   },
 };
-
 const faqItems: JsonSchema = {
   type: "object",
   required: ["items"],
@@ -93,7 +79,6 @@ const faqItems: JsonSchema = {
     },
   },
 };
-
 export const CONTENT_SCHEMAS: Record<ContentSlug, JsonSchema> = {
   "landing.hero.headline": textBlock(200),
   "landing.hero.subhead": textBlock(400),
@@ -104,9 +89,6 @@ export const CONTENT_SCHEMAS: Record<ContentSlug, JsonSchema> = {
   "landing.pricing.business.description": pricingTier,
   "landing.faq.items": faqItems,
 };
-
-// Editor placeholders — pre-fill empty rows with a valid shape so admins
-// don't start from a blank `{}`.
 export const CONTENT_EXAMPLES: Record<ContentSlug, unknown> = {
   "landing.hero.headline": { text: "Ship faster. <em>Know how</em>." },
   "landing.hero.subhead": {

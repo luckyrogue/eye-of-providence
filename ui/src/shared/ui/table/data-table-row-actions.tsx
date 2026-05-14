@@ -1,17 +1,12 @@
-// Универсальный slot ⋯ row-actions для DataTable.
-// Caller передаёт DropdownMenuItem-узлы как children.
 import { MoreHorizontal } from "lucide-react";
-
 import { Button } from "../button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "../dropdown-menu";
-
 export type DataTableRowActionsProps = {
   children: React.ReactNode;
   align?: "start" | "center" | "end";
   triggerLabel?: string;
   contentClassName?: string;
 };
-
 export function DataTableRowActions({
   children,
   align = "end",

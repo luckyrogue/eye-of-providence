@@ -1,18 +1,6 @@
-// CMS-lite editor for a single slug × locale row.
-//
-// Layout:
-//   - Header: slug + locale tabs + Save Draft / Publish / Revert / Preview.
-//   - Monaco JSON editor with per-slug JSON Schema for live validation.
-//   - Optional preview iframe (sandbox=""): renders /?preview=<slug>.
-//
-// Concurrency:
-//   - PUT carries If-Match=<last-known etag>. On 412 we surface a localised
-//     "conflict" toast but keep the unsaved JSON in memory so the admin
-//     can hit Save again after refreshing.
-
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, useConfirm } from "@eop/ui";
+import { Button, Tabs, TabsList, TabsTrigger, useConfirm } from "@eop/ui";
 import { Loader2 } from "lucide-react";
 import {
   CONTENT_EXAMPLES,
@@ -23,15 +11,10 @@ import {
 } from "../../../shared/content";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { ConcurrentEditError, useContentBlock, useRevertContent, useSaveContent } from "../api";
-
-// Lazy-load Monaco — keeps the admin bundle lean. We use the same
-// component as the email-template editor (Phase 3 pattern).
 const MonacoEditor = lazy(() =>
   import("@monaco-editor/react").then((m) => ({ default: m.Editor })),
 );
-
 type EditorErrorState = "none" | "schema" | "syntax" | "conflict";
-
 export function ContentBlockEditor({ slug }: { slug: ContentSlug }) {
   const { t } = useTranslation("app");
   const confirm = useConfirm();
@@ -40,41 +23,29 @@ export function ContentBlockEditor({ slug }: { slug: ContentSlug }) {
   const detail = useContentBlock(slug, locale);
   const save = useSaveContent();
   const revert = useRevertContent();
-
-  // Editor state — kept separately from react-query cache so unsaved edits
-  // survive a background refetch.
   const [json, setJson] = useState<string>("");
   const [dirty, setDirty] = useState(false);
   const [editorError, setEditorError] = useState<EditorErrorState>("none");
-
-  // Reset editor when slug/locale or backing detail changes.
   useEffect(() => {
     if (!detail.data) return;
-    // Prefer draft over published when the row has both (an in-flight
-    // draft is what the admin wants to keep editing).
     const seed = detail.data.draft_content ?? detail.data.content ?? CONTENT_EXAMPLES[slug];
     setJson(JSON.stringify(seed, null, 2));
     setDirty(false);
     setEditorError("none");
   }, [detail.data, slug, locale]);
-
   const schema = CONTENT_SCHEMAS[slug];
-
-  // Configure Monaco's JSON validation with the per-slug schema. Uses a
-  // synthetic URI so multiple slugs don't collide in the schemas list.
   const monacoUri = useMemo(() => `inmemory://eop-cms/${slug}-${locale}.json`, [slug, locale]);
-
-  // Monaco 0.55 moved JSON language services to the top-level `json`
-  // namespace (the legacy `languages.json` is deprecated). We type the
-  // arg with a minimal shape so a future Monaco upgrade doesn't silently
-  // break the schema wiring.
   type MonacoLike = {
     json: {
       jsonDefaults: {
         setDiagnosticsOptions: (opts: {
           validate?: boolean;
           allowComments?: boolean;
-          schemas?: Array<{ uri: string; fileMatch?: string[]; schema?: unknown }>;
+          schemas?: Array<{
+            uri: string;
+            fileMatch?: string[];
+            schema?: unknown;
+          }>;
         }) => void;
       };
     };
@@ -92,15 +63,21 @@ export function ContentBlockEditor({ slug }: { slug: ContentSlug }) {
       ],
     });
   };
-
-  const parse = (): { ok: true; value: unknown } | { ok: false; error: string } => {
+  const parse = ():
+    | {
+        ok: true;
+        value: unknown;
+      }
+    | {
+        ok: false;
+        error: string;
+      } => {
     try {
       return { ok: true, value: JSON.parse(json) };
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
   };
-
   async function doSave(publish: boolean) {
     const parsed = parse();
     if (!parsed.ok) {
@@ -115,8 +92,6 @@ export function ContentBlockEditor({ slug }: { slug: ContentSlug }) {
         payload: { content: parsed.value, publish },
         etag: detail.data?.etag ?? null,
       });
-      // After save: the JSON we just typed is now the source of truth.
-      // Reset dirty flag against the response so cosmetic re-saves are no-ops.
       setDirty(false);
       await runToast(Promise.resolve(r), {
         success: publish
@@ -140,7 +115,6 @@ export function ContentBlockEditor({ slug }: { slug: ContentSlug }) {
       });
     }
   }
-
   async function doRevert() {
     const ok = await confirm({
       title: t("admin.content.confirm_revert_title", {
@@ -158,12 +132,10 @@ export function ContentBlockEditor({ slug }: { slug: ContentSlug }) {
       success: t("admin.content.save_success", { defaultValue: "Reverted" }),
     });
   }
-
   function openPreview() {
     const url = `/?preview=${encodeURIComponent(slug)}&locale=${encodeURIComponent(locale)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   }
-
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[1fr_minmax(0,420px)] gap-4">
       <div className="space-y-3 min-w-0">
@@ -180,24 +152,22 @@ export function ContentBlockEditor({ slug }: { slug: ContentSlug }) {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <div
-              className="inline-flex rounded-md border overflow-hidden text-[12px] font-mono"
-              style={{ borderColor: "hsl(var(--border))" }}
-            >
-              {CONTENT_LOCALES.map((l) => (
-                // eslint-disable-next-line no-restricted-syntax -- locale tabs
-                <button
-                  key={l}
-                  type="button"
-                  onClick={() => setLocale(l)}
-                  className={`px-2.5 py-1 transition-colors ${
-                    locale === l ? "bg-foreground/10" : "hover:bg-foreground/5"
-                  }`}
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
+            <Tabs value={locale} onValueChange={(v) => setLocale(v as ContentLocale)}>
+              <TabsList
+                className="inline-flex h-auto flex-wrap rounded-md border bg-transparent p-0 gap-0"
+                style={{ borderColor: "hsl(var(--border))" }}
+              >
+                {CONTENT_LOCALES.map((l) => (
+                  <TabsTrigger
+                    key={l}
+                    value={l}
+                    className="rounded-none px-2.5 py-1 text-[12px] font-mono border-0 shadow-none data-[state=active]:bg-foreground/10 data-[state=inactive]:hover:bg-foreground/5"
+                  >
+                    {l}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
             <Button type="button" variant="ghost" size="sm" onClick={openPreview}>
               {t("admin.content.preview", { defaultValue: "Preview" })}
             </Button>
@@ -293,7 +263,6 @@ export function ContentBlockEditor({ slug }: { slug: ContentSlug }) {
           {t("admin.content.preview_title", { defaultValue: "Live preview" })}
         </div>
         <iframe
-          // sandbox="" — block scripts/cookies; just visual.
           title="cms-preview"
           sandbox=""
           className="flex-1 bg-white"
@@ -303,7 +272,6 @@ export function ContentBlockEditor({ slug }: { slug: ContentSlug }) {
     </div>
   );
 }
-
 function BadgeForRow({
   hasPublished,
   hasDraft,

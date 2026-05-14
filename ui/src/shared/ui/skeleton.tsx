@@ -1,10 +1,7 @@
 import { cn } from "../lib/cn";
-
 export function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse rounded-md bg-muted", className)} />;
 }
-
-// Готовые "lines" — для текстовых заглушек.
 export function SkeletonText({ lines = 3, className }: { lines?: number; className?: string }) {
   return (
     <div className={cn("space-y-2", className)}>
@@ -14,8 +11,6 @@ export function SkeletonText({ lines = 3, className }: { lines?: number; classNa
     </div>
   );
 }
-
-// Skeleton-таблица — для placeholder во время loading.
 export function SkeletonTable({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
   return (
     <div className="overflow-hidden rounded-md border">

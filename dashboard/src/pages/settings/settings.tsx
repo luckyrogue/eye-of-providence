@@ -13,19 +13,16 @@ import { SettingsPasskeyCard } from "./ui/settings-passkey-card";
 import { SettingsPasswordCard } from "./ui/settings-password-card";
 import { SettingsPrivacyCard } from "./ui/settings-privacy-card";
 import { SettingsProfileCard } from "./ui/settings-profile-card";
-
 export function Settings({ onWiped }: { onWiped: () => void }) {
   const { i18n } = useTranslation("common");
   const profile = useProfile();
   const teams = useTeams();
   const devices = useDevices();
-
   const hasPassword = profile.data?.has_password ?? false;
   const uiLocale = i18n.resolvedLanguage ?? "ru";
   const userLocale = (profile.data?.locale ?? uiLocale) as Locale;
   const firstName = profile.data?.display_name ?? "";
   const lastName = profile.data?.last_name ?? "";
-
   return (
     <div className="space-y-4">
       <SettingsPageHead />

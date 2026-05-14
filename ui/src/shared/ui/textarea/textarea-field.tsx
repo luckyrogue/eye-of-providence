@@ -3,7 +3,6 @@ import type { Control, FieldPath, FieldValues } from "react-hook-form";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "../form";
 import { cn } from "../../lib/cn";
 import { Textarea } from "./textarea";
-
 export type TextareaFieldProps<
   TFieldValues extends FieldValues,
   TName extends FieldPath<TFieldValues>,
@@ -18,10 +17,6 @@ export type TextareaFieldProps<
   translateError?: (msg?: string) => string | undefined;
   hideMessage?: boolean;
 };
-
-/**
- * react-hook-form + shadcn FormField + Textarea (props instead of render-prop boilerplate).
- */
 export function TextareaField<
   TFieldValues extends FieldValues,
   TName extends FieldPath<TFieldValues>,

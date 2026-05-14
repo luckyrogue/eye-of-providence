@@ -3,7 +3,6 @@ import type { Control, FieldPath, FieldValues } from "react-hook-form";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "./form";
 import { Checkbox } from "./checkbox";
 import { cn } from "../lib/cn";
-
 export type CheckboxFieldProps<
   TFieldValues extends FieldValues,
   TName extends FieldPath<TFieldValues>,
@@ -16,11 +15,6 @@ export type CheckboxFieldProps<
   className?: string;
   hideMessage?: boolean;
 };
-
-/**
- * RHF + shadcn FormField + Checkbox для boolean-полей.
- * Раскладка: чекбокс слева, label/description справа.
- */
 export function CheckboxField<
   TFieldValues extends FieldValues,
   TName extends FieldPath<TFieldValues>,

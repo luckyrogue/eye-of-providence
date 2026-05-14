@@ -4,21 +4,16 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { CheckCircle2, Lock } from "lucide-react";
 import { ResetPasswordForm } from "../../features/auth-reset-password";
-
 export function ResetPasswordRoute() {
   const { t } = useTranslation("auth");
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const token = params.get("token") ?? "";
   const [done, setDone] = useState(false);
-
   function onDone() {
     setDone(true);
-    // Все старые сессии инвалидированы (token_version bumped) —
-    // отправляем юзера логиниться заново.
     setTimeout(() => navigate("/login", { replace: true }), 1500);
   }
-
   if (!token) {
     return (
       <div className="min-h-screen mx-auto max-w-md px-4 pt-12 sm:pt-16 pb-12">
@@ -38,7 +33,6 @@ export function ResetPasswordRoute() {
       </div>
     );
   }
-
   return (
     <div className="min-h-screen mx-auto max-w-md px-4 pt-12 sm:pt-16 pb-12">
       <Card className="card-hover reveal">

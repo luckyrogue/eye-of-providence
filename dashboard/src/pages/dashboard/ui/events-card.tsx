@@ -15,13 +15,11 @@ import { useIngestDemo, useRecent, type EventRow } from "../../../entities/event
 import { dtLabels } from "../../../shared/lib/data-table-labels";
 import { formatTime } from "../../../shared/lib/tz";
 import { CategoryBadge } from "./category-badge";
-
 export function EventsCard({ tz }: { tz: string }) {
   const { t } = useTranslation(["app", "common"]);
   const events = useRecent(20);
   const sendDemo = useIngestDemo();
   const eventsList: EventRow[] = events.data ?? [];
-
   const columns = useMemo<DataTableColumn<EventRow>[]>(
     () => [
       {
@@ -69,7 +67,6 @@ export function EventsCard({ tz }: { tz: string }) {
     ],
     [t, tz],
   );
-
   return (
     <Card className="card-hover">
       <CardHeader>

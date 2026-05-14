@@ -1,7 +1,3 @@
-// Webhooks management — Settings page section.
-//
-// Симметрия с api-tokens widget: список + create-feature + delete-feature.
-
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
@@ -9,12 +5,10 @@ import { Plus, Webhook as WebhookIcon } from "lucide-react";
 import { useWebhooks } from "../../../entities/webhook";
 import { CreateWebhookDialog } from "../../../features/webhook-create";
 import { WebhookRow } from "./webhook-row";
-
 export function WebhooksWidget() {
   const { t } = useTranslation("developer");
   const list = useWebhooks();
   const [showCreate, setShowCreate] = useState(false);
-
   return (
     <Card>
       <CardHeader className="flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">

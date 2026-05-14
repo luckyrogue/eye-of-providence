@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 import { SimpleSelect } from "@eop/ui";
 import { useUpdateMemberRole } from "../../../entities/team";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-
 export function MemberRoleSelect({
   teamID,
   userID,
@@ -17,7 +16,6 @@ export function MemberRoleSelect({
   const { t } = useTranslation("app");
   const updateRole = useUpdateMemberRole(teamID);
   const runToast = useMutationToast();
-
   async function changeRole(role: string) {
     if (role === value) return;
     await runToast(updateRole.mutateAsync({ userID, role }), {
@@ -25,7 +23,6 @@ export function MemberRoleSelect({
       error: t("team_detail.member_role_update_failed"),
     });
   }
-
   return (
     <SimpleSelect
       value={value}

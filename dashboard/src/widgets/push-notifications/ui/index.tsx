@@ -1,11 +1,3 @@
-// Push notifications setup widget — Settings page section.
-//
-// 4 состояния:
-//   - browser не поддерживает: hide widget
-//   - server не настроил VAPID (503): hide
-//   - permission denied: показ message
-//   - subscribed: список endpoint'ов + кнопка добавить устройство
-
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
@@ -13,7 +5,6 @@ import { Bell } from "lucide-react";
 import { PUSH_SUPPORTED, useVAPIDKey, usePushSubscriptions } from "../../../entities/push";
 import { EnablePushButton } from "../../../features/push-subscribe";
 import { SubscriptionRow } from "./subscription-row";
-
 export function PushNotificationsWidget() {
   const { t } = useTranslation("pwa");
   const vapid = useVAPIDKey();
@@ -21,12 +12,9 @@ export function PushNotificationsWidget() {
   const [permission] = useState<NotificationPermission>(
     typeof Notification !== "undefined" ? Notification.permission : "default",
   );
-
   if (!PUSH_SUPPORTED) return null;
   if (vapid.isError) return null;
-
   const subList = subs.data ?? [];
-
   return (
     <Card>
       <CardHeader>

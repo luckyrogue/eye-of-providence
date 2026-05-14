@@ -3,7 +3,6 @@ import { DangerZone } from "@eop/ui";
 import type { Team } from "../../../entities/team";
 import { DeleteTeamButton } from "../../../features/team-delete";
 import { RenameTeamForm } from "../../../features/team-rename";
-
 export function SettingsTab({ team }: { team: Team }) {
   const { t } = useTranslation("app");
   return (

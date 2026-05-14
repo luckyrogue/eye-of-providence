@@ -12,10 +12,6 @@ import {
 import { buttonVariants } from "../shared/ui/button";
 import { cn } from "../shared/lib/cn";
 import { Input } from "../shared/ui/input";
-
-// typeToConfirm: для destructive-операций — confirm заблокирован, пока
-// пользователь не введёт точную строку ("Введи название чтобы удалить").
-// Поверх AlertDialog (а не Dialog) — нужен role="alertdialog" для a11y.
 export function ConfirmDialog({
   open,
   onClose,
@@ -41,20 +37,17 @@ export function ConfirmDialog({
 }) {
   const [typed, setTyped] = useState("");
   const canConfirm = !typeToConfirm || typed === typeToConfirm;
-
   function handleConfirm() {
     if (!canConfirm) return;
     onConfirm();
     setTyped("");
   }
-
   function handleOpenChange(o: boolean) {
     if (!o) {
       setTyped("");
       onClose();
     }
   }
-
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent>
@@ -88,26 +81,21 @@ export function ConfirmDialog({
 type ConfirmFn = (
   opts: Omit<Parameters<typeof ConfirmDialog>[0], "open" | "onClose" | "onConfirm" | "busy">,
 ) => Promise<boolean>;
-
 const ConfirmContext = createContext<ConfirmFn | null>(null);
-
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [opts, setOpts] = useState<Parameters<ConfirmFn>[0] | null>(null);
   const resolveRef = useRef<((v: boolean) => void) | null>(null);
-
   const confirm = useCallback<ConfirmFn>((o) => {
     return new Promise<boolean>((resolve) => {
       resolveRef.current = resolve;
       setOpts(o);
     });
   }, []);
-
   function close(result: boolean) {
     setOpts(null);
     resolveRef.current?.(result);
     resolveRef.current = null;
   }
-
   return (
     <ConfirmContext.Provider value={confirm}>
       {children}
@@ -117,7 +105,6 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     </ConfirmContext.Provider>
   );
 }
-
 export function useConfirm(): ConfirmFn {
   const ctx = useContext(ConfirmContext);
   if (!ctx) throw new Error("useConfirm must be used inside <ConfirmProvider>");

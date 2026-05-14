@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { Input, SimpleSelect } from "@eop/ui";
 import { useAdminAudit, type AuditEntry } from "../../../entities/admin";
 import { formatDate } from "../../../shared/lib/tz";
-
 const ACTION_OPTIONS = [
   "",
   "team.deleted",
@@ -17,24 +16,19 @@ const ACTION_OPTIONS = [
   "device.claimed",
   "device.revoked",
 ];
-
 const TARGET_OPTIONS = ["", "team", "user", "sso", "device", "payment"];
-
 export function AuditLog({ tz }: { tz: string }) {
   const { t } = useTranslation("app");
   const [action, setAction] = useState("");
   const [targetType, setTargetType] = useState("");
   const [targetID, setTargetID] = useState("");
   const filter = {
-    // SimpleSelect не разрешает empty value, поэтому используем sentinel
-    // "__any_*__" и маппим обратно в undefined для backend.
     action: action && action !== "__any_action__" ? action : undefined,
     target_type: targetType && targetType !== "__any_target__" ? targetType : undefined,
     target_id: targetID || undefined,
     limit: 200,
   };
   const { data, isPending, isError, error } = useAdminAudit(filter);
-
   return (
     <div className="eop-card">
       <div className="card-head">
@@ -103,7 +97,6 @@ export function AuditLog({ tz }: { tz: string }) {
     </div>
   );
 }
-
 function AuditRow({ entry, tz }: { entry: AuditEntry; tz: string }) {
   return (
     <div className="log-row">
@@ -125,7 +118,6 @@ function AuditRow({ entry, tz }: { entry: AuditEntry; tz: string }) {
     </div>
   );
 }
-
 function tagForAction(action: string): string {
   if (action.startsWith("team.deleted") || action.startsWith("user.deleted")) return "refactor";
   if (action.startsWith("sso")) return "ai-agent";
@@ -134,13 +126,11 @@ function tagForAction(action: string): string {
   if (action.startsWith("device")) return "typed";
   return "ai-inline";
 }
-
 function shortID(id?: string): string {
   if (!id) return "—";
   if (id.length > 8) return id.slice(0, 8);
   return id;
 }
-
 function renderMeta(meta: Record<string, unknown>): string {
   const pairs = Object.entries(meta)
     .filter(([k]) => k !== "ip" && k !== "user_agent")

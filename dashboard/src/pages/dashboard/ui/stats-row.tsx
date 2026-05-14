@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Eyebrow, StatTile } from "@eop/ui";
 import { Activity, Brain, FileText } from "lucide-react";
-
 export function StatsRow({
   aiRatio,
   totalMinutes,

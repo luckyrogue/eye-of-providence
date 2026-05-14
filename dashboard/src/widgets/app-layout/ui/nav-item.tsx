@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@eop/ui";
-
 export function NavItem({
   to,
   icon,

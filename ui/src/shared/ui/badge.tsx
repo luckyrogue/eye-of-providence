@@ -1,9 +1,6 @@
-// shadcn/ui Badge — copy-paste из registry, расширено tonal-вариантами и
-// `mono` для font-mono отображения.
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
-
 export const badgeVariants = cva(
   "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
   {
@@ -20,14 +17,11 @@ export const badgeVariants = cva(
     defaultVariants: { variant: "default" },
   },
 );
-
 export type BadgeVariant = VariantProps<typeof badgeVariants>["variant"];
-
 interface BadgeProps
   extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {
   mono?: boolean;
 }
-
 export function Badge({ className, variant, mono, ...props }: BadgeProps) {
   return (
     <span

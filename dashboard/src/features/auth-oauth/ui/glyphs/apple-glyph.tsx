@@ -1,4 +1,3 @@
-// Apple logo glyph per Apple Sign-in HIG. Uses currentColor so it adapts to button theme.
 export function AppleGlyph({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 16 16" fill="currentColor" className={className} aria-hidden="true">

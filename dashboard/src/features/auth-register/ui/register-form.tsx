@@ -6,7 +6,6 @@ import { register as apiRegister, useAuthConfig, type AuthResponse } from "../..
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { registerSchema, type RegisterValues } from "../../../shared/lib/schemas";
 import { OAuthButtonRow } from "../../auth-oauth";
-
 export function RegisterForm({
   inviteCode,
   onSuccess,
@@ -18,14 +17,11 @@ export function RegisterForm({
   const runToast = useMutationToast();
   const authConfig = useAuthConfig();
   const providers = authConfig.data?.providers ?? ["github"];
-
   const form = useForm<RegisterValues>({
     defaultValues: { email: "", password: "", displayName: "" },
     resolver: zodResolver(registerSchema),
   });
-
   const tr = (msg?: string) => (msg ? t(msg as never) : msg);
-
   async function onSubmit(values: RegisterValues) {
     const r = await runToast(
       apiRegister(values.email, values.password, values.displayName, inviteCode || undefined),
@@ -33,7 +29,6 @@ export function RegisterForm({
     );
     if (r) onSuccess(r);
   }
-
   return (
     <div className="space-y-4">
       {providers.length > 0 && (

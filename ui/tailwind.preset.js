@@ -1,4 +1,3 @@
-// Shared Tailwind preset — используется agent, dashboard и browser-extension.
 export default {
   darkMode: ["class"],
   theme: {

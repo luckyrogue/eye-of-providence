@@ -1,7 +1,6 @@
 import { Trans, useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { ArrowRight, Download, SkipForward } from "lucide-react";
-
 export function InstallStep({
   onSkip,
   onContinue,

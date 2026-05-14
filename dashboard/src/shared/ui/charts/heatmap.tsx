@@ -1,21 +1,22 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-
-// Локальный shape вместо импорта из entities/event: shared/* — низший слой FSD.
-type HeatmapCell = { dow: number; hour: number; category: string; ms: number };
-
+type HeatmapCell = {
+  dow: number;
+  hour: number;
+  category: string;
+  ms: number;
+};
 export function Heatmap({ cells }: { cells: HeatmapCell[] }) {
   const { t } = useTranslation(["common", "app"]);
   const days = t("common:heatmap.days", { returnObjects: true }) as string[];
   const minShort = t("common:heatmap.minutes_short");
-
-  const [hover, setHover] = useState<{ dow: number; hour: number } | null>(null);
-
+  const [hover, setHover] = useState<{
+    dow: number;
+    hour: number;
+  } | null>(null);
   const grid = useMemo(() => buildGrid(cells), [cells]);
   const max = useMemo(() => Math.max(1, ...grid.flat().map((c) => c.total)), [grid]);
-
   const hovered = hover ? grid[hover.dow][hover.hour] : null;
-
   return (
     <div className="space-y-3">
       <div className="overflow-x-auto">
@@ -65,9 +66,13 @@ export function Heatmap({ cells }: { cells: HeatmapCell[] }) {
     </div>
   );
 }
-
-type GridCell = { total: number; byCat: { cat: string; ms: number }[] };
-
+type GridCell = {
+  total: number;
+  byCat: {
+    cat: string;
+    ms: number;
+  }[];
+};
 function buildGrid(cells: HeatmapCell[]): GridCell[][] {
   const grid: GridCell[][] = Array.from({ length: 7 }, () =>
     Array.from({ length: 24 }, () => ({ total: 0, byCat: [] })),
@@ -81,7 +86,6 @@ function buildGrid(cells: HeatmapCell[]): GridCell[][] {
   for (const row of grid) for (const cell of row) cell.byCat.sort((a, b) => b.ms - a.ms);
   return grid;
 }
-
 function DayRow({
   day,
   row,

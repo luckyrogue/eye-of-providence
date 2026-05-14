@@ -7,22 +7,17 @@ import { LOCALE_LABELS, SUPPORTED_LOCALES, type Locale } from "@eop/i18n";
 import i18n from "../shared/i18n";
 import { backendDisplayHost, clearConfig } from "../shared/api/backend";
 import { PairingWizard } from "../shared/ui/pairing-wizard";
-
 const DEFAULT_BACKEND_HOST = backendDisplayHost();
-
 const LOCALE_OPTIONS = SUPPORTED_LOCALES.map((lng) => ({
   value: lng,
   label: LOCALE_LABELS[lng],
 }));
-
 function Options() {
   const { t, i18n: i18nInstance } = useTranslation("popup");
   const [token, setToken] = useState<string | undefined>();
-
   const lng = (i18nInstance.resolvedLanguage?.split("-")[0] ??
     i18nInstance.language.split("-")[0]) as Locale;
   const localeValue = SUPPORTED_LOCALES.includes(lng) ? lng : "ru";
-
   useEffect(() => {
     void chrome.storage.local.get(["eop_token"]).then((r) => {
       setToken(r.eop_token as string | undefined);
@@ -34,12 +29,10 @@ function Options() {
     chrome.storage.onChanged.addListener(onChange);
     return () => chrome.storage.onChanged.removeListener(onChange);
   }, []);
-
   async function logout() {
     await clearConfig();
     setToken(undefined);
   }
-
   return (
     <div className="mx-auto max-w-md p-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -72,7 +65,6 @@ function Options() {
     </div>
   );
 }
-
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <I18nextProvider i18n={i18n}>
     <Options />

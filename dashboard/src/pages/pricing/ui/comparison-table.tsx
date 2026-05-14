@@ -1,13 +1,16 @@
 import { Fragment } from "react";
 import { Check, Minus } from "lucide-react";
 import { Eyebrow } from "@eop/ui";
-
 type Cell = string | boolean;
-type Row = { label: string; values: [Cell, Cell, Cell, Cell] };
-type Group = { name: string; rows: Row[] };
-
+type Row = {
+  label: string;
+  values: [Cell, Cell, Cell, Cell];
+};
+type Group = {
+  name: string;
+  rows: Row[];
+};
 const TIERS = ["Free", "Pro", "Business", "Enterprise"] as const;
-
 const GROUPS: Group[] = [
   {
     name: "Teams & users",
@@ -74,7 +77,6 @@ const GROUPS: Group[] = [
     ],
   },
 ];
-
 function CellContent({ value }: { value: Cell }) {
   if (value === true) {
     return <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-label="Yes" />;
@@ -84,7 +86,6 @@ function CellContent({ value }: { value: Cell }) {
   }
   return <span className="text-sm">{value}</span>;
 }
-
 export function ComparisonTable() {
   return (
     <section className="py-24 border-t bg-muted/20">

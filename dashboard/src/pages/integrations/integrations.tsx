@@ -3,10 +3,8 @@ import { APITokensWidget } from "../../widgets/api-tokens";
 import { DevicesWidget } from "../../widgets/devices";
 import { PushNotificationsWidget } from "../../widgets/push-notifications";
 import { WebhooksWidget } from "../../widgets/webhooks";
-
 export function IntegrationsPage() {
   const { t } = useTranslation("common");
-
   return (
     <div className="space-y-4">
       <div className="page-head">

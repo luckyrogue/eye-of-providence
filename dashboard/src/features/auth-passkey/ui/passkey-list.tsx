@@ -1,15 +1,9 @@
-// Settings → Passkeys → list rows.
-//
-// Empty state matches the copy in product-copy/oauth-and-passkey.md. The
-// revoke button warns destructive intent through the shared useConfirm
-// dialog; the bottom toast confirms success / surfaces backend errors.
 import { useTranslation } from "react-i18next";
 import { Button, useConfirm } from "@eop/ui";
 import { Fingerprint, Trash2 } from "lucide-react";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { usePasskeys, useRevokePasskey } from "../api";
 import type { Passkey } from "../../../entities/user";
-
 function formatRelative(iso: string | null | undefined, locale: string): string | null {
   if (!iso) return null;
   return new Date(iso).toLocaleString(locale, {
@@ -20,7 +14,6 @@ function formatRelative(iso: string | null | undefined, locale: string): string 
     minute: "2-digit",
   });
 }
-
 export function PasskeyList() {
   const { t, i18n } = useTranslation("common");
   const passkeys = usePasskeys();
@@ -28,7 +21,6 @@ export function PasskeyList() {
   const confirm = useConfirm();
   const runToast = useMutationToast();
   const locale = i18n.resolvedLanguage ?? "ru";
-
   async function onRevoke(p: Passkey) {
     const isLast = (passkeys.data?.length ?? 0) <= 1;
     const ok = await confirm({
@@ -42,16 +34,13 @@ export function PasskeyList() {
     if (!ok) return;
     await runToast(revoke.mutateAsync(p.id), {});
   }
-
   if (passkeys.isLoading) {
     return <p className="text-sm text-muted-foreground">{t("actions.loading")}</p>;
   }
-
   const items = passkeys.data ?? [];
   if (items.length === 0) {
     return <p className="text-sm text-muted-foreground">{t("settings.passkey_empty")}</p>;
   }
-
   return (
     <ul className="space-y-2">
       {items.map((p) => {

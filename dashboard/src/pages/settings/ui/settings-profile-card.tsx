@@ -27,7 +27,6 @@ import { LOCALE_LABELS, type Locale } from "../../../shared/i18n";
 import { formatJoinDate } from "../lib/format-join-date";
 import { GithubGlyph } from "./github-glyph";
 import { ProfileStat } from "./profile-stat";
-
 export function SettingsProfileCard({
   profile,
   isProfileError,
@@ -48,7 +47,6 @@ export function SettingsProfileCard({
   userLocale: Locale;
 }) {
   const { t } = useTranslation("common");
-
   const firstName = profile?.display_name ?? "";
   const lastName = profile?.last_name ?? "";
   const fullName = formatShortDisplayName(firstName, lastName, profile?.email ?? "—");
@@ -59,7 +57,6 @@ export function SettingsProfileCard({
   const hasPassword = profile?.has_password ?? false;
   const isAdmin = profile?.global_role === "super_admin";
   const provider = profile?.provider;
-
   return (
     <Card>
       <CardHeader>

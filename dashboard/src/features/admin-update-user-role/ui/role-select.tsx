@@ -2,12 +2,10 @@ import { useTranslation } from "react-i18next";
 import { SimpleSelect } from "@eop/ui";
 import { useAdminUpdateUser } from "../../../entities/admin";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-
 export function UserRoleSelect({ userID, value }: { userID: string; value: string }) {
   const { t } = useTranslation("app");
   const update = useAdminUpdateUser();
   const runToast = useMutationToast();
-
   async function setRole(role: string) {
     if (role === value) return;
     await runToast(update.mutateAsync({ userID, payload: { global_role: role } }), {
@@ -15,7 +13,6 @@ export function UserRoleSelect({ userID, value }: { userID: string; value: strin
       error: t("admin.users_role_change_failed"),
     });
   }
-
   return (
     <SimpleSelect
       value={value}

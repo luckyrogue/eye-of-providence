@@ -1,7 +1,3 @@
-// Editor для одного email-шаблона (key + locale).
-// RHF + zod. Monaco lazy-loaded. HTML preview через iframe sandbox.
-// Required-variable hint и revert-to-default flow.
-
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
@@ -17,20 +13,14 @@ import {
   type EmailTemplateLocale,
 } from "../api";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-
-// Lazy-load Monaco — heavy chunk. Suspense fallback показывает skeleton.
 const MonacoEditor = lazy(() =>
   import("@monaco-editor/react").then((m) => ({ default: m.Editor })),
 );
-
-// Per-template required variables — должен присутствовать в body_html.
 const REQUIRED_VARS: Record<EmailTemplateKey, string[]> = {
   password_reset: ["reset_url"],
   team_invite: ["accept_url"],
   subscription_activated: ["plan_name"],
 };
-
-// Sample значения для preview (рендерятся в iframe sandbox).
 const SAMPLE_VARS: Record<EmailTemplateKey, Record<string, string>> = {
   password_reset: {
     name: "Ada",
@@ -52,15 +42,12 @@ const SAMPLE_VARS: Record<EmailTemplateKey, Record<string, string>> = {
     billing_url: "https://eop.example/billing",
   },
 };
-
 const schema = z.object({
   subject: z.string().min(1).max(998),
   body_html: z.string().min(1).max(262144),
   body_text: z.string().max(262144),
 });
-
 type FormValues = z.infer<typeof schema>;
-
 export function EmailTemplateEditor({
   templateKey,
   locale,
@@ -74,17 +61,14 @@ export function EmailTemplateEditor({
   const save = useSaveEmailTemplate();
   const revert = useRevertEmailTemplate();
   const runToast = useMutationToast();
-
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { subject: "", body_html: "", body_text: "" },
   });
-
   const { handleSubmit, watch, setValue, reset, formState } = form;
   const subject = watch("subject");
   const bodyHtml = watch("body_html");
   const bodyText = watch("body_text");
-
   useEffect(() => {
     if (detail.data) {
       reset({
@@ -94,20 +78,16 @@ export function EmailTemplateEditor({
       });
     }
   }, [detail.data, reset]);
-
   const requiredVars = REQUIRED_VARS[templateKey];
   const missingVars = useMemo(
     () => requiredVars.filter((v) => !bodyHtml.includes(`{{${v}}}`)),
     [bodyHtml, requiredVars],
   );
-
   const previewHtml = useMemo(
     () => substituteVars(bodyHtml, SAMPLE_VARS[templateKey]),
     [bodyHtml, templateKey],
   );
-
   const [showPreview, setShowPreview] = useState(true);
-
   async function onSubmit(values: FormValues) {
     if (missingVars.length > 0) return;
     await runToast(save.mutateAsync({ key: templateKey, locale, payload: values }), {
@@ -115,7 +95,6 @@ export function EmailTemplateEditor({
       error: t("admin.email_templates.toast.save_failed"),
     });
   }
-
   async function onRevert() {
     const ok = await confirm({
       title: t("admin.email_templates.cta.revert_confirm_title"),
@@ -129,7 +108,6 @@ export function EmailTemplateEditor({
       error: t("admin.email_templates.toast.revert_failed"),
     });
   }
-
   if (detail.isPending) {
     return (
       <div className="text-sm text-muted-foreground py-8 flex items-center gap-2">
@@ -146,9 +124,7 @@ export function EmailTemplateEditor({
     );
   }
   if (!detail.data) return null;
-
   const isDefault = detail.data.is_default;
-
   return (
     <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
       <header className="flex items-start justify-between gap-3 flex-wrap">
@@ -304,9 +280,6 @@ export function EmailTemplateEditor({
     </form>
   );
 }
-
-// substituteVars — простая замена {{var}} → sample value. Используется
-// только для preview; backend делает реальную подстановку с escaping.
 function substituteVars(html: string, vars: Record<string, string>): string {
   return html.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m, name: string) =>
     Object.prototype.hasOwnProperty.call(vars, name) ? vars[name] : `{{${name}}}`,

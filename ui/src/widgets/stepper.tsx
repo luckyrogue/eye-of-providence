@@ -1,8 +1,9 @@
 import { Check } from "lucide-react";
 import { cn } from "../shared/lib/cn";
-
-export type StepperItem = { key: string; label: string };
-
+export type StepperItem = {
+  key: string;
+  label: string;
+};
 export function Stepper({
   steps,
   current,

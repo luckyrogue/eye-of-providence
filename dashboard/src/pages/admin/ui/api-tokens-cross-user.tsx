@@ -1,5 +1,3 @@
-// Cross-user API tokens admin view. Re-uses DataTable pattern.
-
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -20,14 +18,12 @@ import {
 import { dtLabels } from "../../../shared/lib/data-table-labels";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { formatDate } from "../../../shared/lib/tz";
-
 export function APITokensCrossUser({ tz }: { tz: string }) {
   const { t } = useTranslation(["app", "common"]);
   const tokens = useAdminCrossTokens();
   const revoke = useAdminRevokeToken();
   const confirm = useConfirm();
   const runToast = useMutationToast();
-
   const onRevoke = useCallback(
     async (tok: CrossUserToken) => {
       const ok = await confirm({
@@ -44,7 +40,6 @@ export function APITokensCrossUser({ tz }: { tz: string }) {
     },
     [confirm, revoke, runToast, t],
   );
-
   const columns = useMemo<DataTableColumn<CrossUserToken>[]>(
     () => [
       {
@@ -112,9 +107,7 @@ export function APITokensCrossUser({ tz }: { tz: string }) {
     ],
     [t, tz, revoke.isPending, onRevoke],
   );
-
   const list = tokens.data ?? [];
-
   return (
     <div className="eop-card">
       <div className="card-head">

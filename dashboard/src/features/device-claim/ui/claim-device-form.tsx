@@ -4,9 +4,7 @@ import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { Button, Form, InputField, toast } from "@eop/ui";
 import { useClaimDevice } from "../../../entities/device";
-
 const CODE_LEN = 6;
-
 const claimDeviceSchema = z.object({
   code: z
     .string()
@@ -14,9 +12,7 @@ const claimDeviceSchema = z.object({
     .regex(/^[A-Z0-9]+$/, "developer:devices_claim_code_invalid"),
   name: z.string().max(64, "developer:devices_claim_name_max"),
 });
-
 type ClaimDeviceValues = z.infer<typeof claimDeviceSchema>;
-
 export function ClaimDeviceForm() {
   const { t } = useTranslation("developer");
   const claim = useClaimDevice();
@@ -26,14 +22,15 @@ export function ClaimDeviceForm() {
     mode: "onChange",
   });
   const tr = (msg?: string) => (msg ? t(msg as never, { defaultValue: msg }) : msg);
-
   async function onSubmit(values: ClaimDeviceValues) {
     try {
       await claim.mutateAsync({ code: values.code, name: values.name });
       toast.success(t("devices_claim_success"));
       form.reset({ code: "", name: "" });
     } catch (e) {
-      const err = e as Error & { code?: string };
+      const err = e as Error & {
+        code?: string;
+      };
       if (err.code === "code_already_claimed") {
         toast.error(t("devices_claim_error_used"));
       } else {
@@ -41,9 +38,7 @@ export function ClaimDeviceForm() {
       }
     }
   }
-
   const submitting = form.formState.isSubmitting || claim.isPending;
-
   return (
     <Form {...form}>
       <form

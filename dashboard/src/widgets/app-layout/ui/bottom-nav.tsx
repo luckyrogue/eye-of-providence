@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Activity, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import { BottomNavItem } from "./bottom-nav-item";
-
 export function BottomNav({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   const { t } = useTranslation("common");
   return (

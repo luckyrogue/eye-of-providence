@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Sparkles } from "lucide-react";
 import type { BetaInfo } from "../../entities/team";
-
 export function BetaBanner({ beta }: { beta: BetaInfo }) {
   const { t } = useTranslation("app");
   const slotsLeft = beta.slots_remaining;

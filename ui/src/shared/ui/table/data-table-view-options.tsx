@@ -1,7 +1,5 @@
-// "Columns" dropdown — переключение видимости колонок.
 import type { Table } from "@tanstack/react-table";
 import { Settings2 } from "lucide-react";
-
 import { Button } from "../button";
 import {
   DropdownMenu,
@@ -12,12 +10,10 @@ import {
   DropdownMenuTrigger,
 } from "../dropdown-menu";
 import type { DataTableLabels } from "./types";
-
 export type DataTableViewOptionsProps<TData> = {
   table: Table<TData>;
   labels?: DataTableLabels;
 };
-
 export function DataTableViewOptions<TData>({ table, labels }: DataTableViewOptionsProps<TData>) {
   return (
     <DropdownMenu>

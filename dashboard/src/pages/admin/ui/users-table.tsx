@@ -17,13 +17,11 @@ import { UserRoleSelect } from "../../../features/admin-update-user-role";
 import { dtLabels } from "../../../shared/lib/data-table-labels";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { formatDate } from "../../../shared/lib/tz";
-
 export function UsersTable({ users, tz }: { users: AdminUser[]; tz: string }) {
   const { t } = useTranslation(["app", "common"]);
   const confirm = useConfirm();
   const del = useAdminDeleteUser();
   const runToast = useMutationToast();
-
   const destroy = useCallback(
     async (user: AdminUser) => {
       const ok = await confirm({
@@ -40,7 +38,6 @@ export function UsersTable({ users, tz }: { users: AdminUser[]; tz: string }) {
     },
     [confirm, del, runToast, t],
   );
-
   const columns = useMemo<DataTableColumn<AdminUser>[]>(
     () => [
       {
@@ -112,7 +109,6 @@ export function UsersTable({ users, tz }: { users: AdminUser[]; tz: string }) {
     ],
     [t, tz, del.isPending, destroy],
   );
-
   return (
     <div className="eop-card">
       <div className="card-head">

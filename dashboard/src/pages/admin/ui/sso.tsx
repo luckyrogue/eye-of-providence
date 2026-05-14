@@ -1,20 +1,15 @@
-// SSO tab — global view всех OIDC configs across teams + force-disable.
-// Wired к GET /v1/admin/sso + POST /v1/admin/sso/:id/disable.
-
 import { useTranslation } from "react-i18next";
-import { toast, useConfirm } from "@eop/ui";
+import { useConfirm, Button } from "@eop/ui";
 import { Power, ShieldCheck } from "lucide-react";
 import { useAdminSSODisable, useAdminSSOList, type AdminSSOConfig } from "../../../entities/admin";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { formatDate } from "../../../shared/lib/tz";
-
 export function SSOConfigs({ tz }: { tz: string }) {
   const { t } = useTranslation("app");
   const { data, isPending, isError, error } = useAdminSSOList();
   const disable = useAdminSSODisable();
   const confirm = useConfirm();
   const runToast = useMutationToast();
-
   const handleDisable = async (cfg: AdminSSOConfig) => {
     const ok = await confirm({
       title: t("admin.sso_disable_confirm_title", { team: cfg.team_name }),
@@ -28,7 +23,6 @@ export function SSOConfigs({ tz }: { tz: string }) {
       error: t("admin.sso_disable_failed"),
     });
   };
-
   if (isPending) {
     return (
       <div className="eop-card" style={{ minHeight: 200 }}>
@@ -52,9 +46,7 @@ export function SSOConfigs({ tz }: { tz: string }) {
       </div>
     );
   }
-
   const configs = data ?? [];
-
   return (
     <div className="eop-card">
       <div className="card-head">
@@ -120,12 +112,13 @@ export function SSOConfigs({ tz }: { tz: string }) {
                 </div>
               </div>
               {cfg.enabled && (
-                // eslint-disable-next-line no-restricted-syntax -- custom destructive action with icon, в строке
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => void handleDisable(cfg)}
                   disabled={disable.isPending}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-[12px] disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 text-[12px] disabled:opacity-60"
                   style={{
                     borderColor: "hsl(var(--destructive) / 0.4)",
                     color: "hsl(var(--destructive))",
@@ -133,7 +126,7 @@ export function SSOConfigs({ tz }: { tz: string }) {
                 >
                   <Power className="h-3.5 w-3.5" />
                   {t("admin.sso_force_disable")}
-                </button>
+                </Button>
               )}
             </div>
           ))}
@@ -142,8 +135,3 @@ export function SSOConfigs({ tz }: { tz: string }) {
     </div>
   );
 }
-
-// Silence unused import warnings for re-exported toast utility (we use it through
-// useMutationToast helper, but having direct import keeps surface for future
-// inline error toasts).
-void toast;

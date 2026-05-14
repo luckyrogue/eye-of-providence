@@ -14,11 +14,6 @@ import {
   TabsTrigger,
 } from "@eop/ui";
 import { ArrowRight, Loader2, Mail, SkipForward } from "lucide-react";
-
-// Два режима:
-//   1) link-only (default): max_uses=10, ссылку копируем руками
-//   2) email-driven: max_uses=1, backend сам отправляет письмо
-// (max_uses-cap'ы выставлены на стороне handler'а.)
 export function InviteStep({
   busy,
   inviteUrl,
@@ -39,7 +34,6 @@ export function InviteStep({
   const { t } = useTranslation(["onboarding", "common"]);
   const [mode, setMode] = useState<"link" | "email">("link");
   const [email, setEmail] = useState("");
-
   return (
     <Card className="card-hover reveal">
       <CardHeader>

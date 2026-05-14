@@ -13,27 +13,21 @@ import type {
   SetPausedMessage,
 } from "../shared/api/messages";
 import { PairingWizard } from "../shared/ui/pairing-wizard";
-
 const DEFAULT_BACKEND_HOST = backendDisplayHost();
-
 const LOCALE_OPTIONS = SUPPORTED_LOCALES.map((lng) => ({
   value: lng,
   label: LOCALE_LABELS[lng],
 }));
-
 const DOWNTIME_WARNING_MS = 5 * 60 * 1000;
-
 function Popup() {
   const { t, i18n: i18nInstance } = useTranslation("popup");
   const [token, setToken] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<GetStatusResponse | null>(null);
-
   const lng = (i18nInstance.resolvedLanguage?.split("-")[0] ??
     i18nInstance.language.split("-")[0]) as Locale;
   const localeValue = SUPPORTED_LOCALES.includes(lng) ? lng : "ru";
-
   const refreshStatus = () => {
     const msg: GetStatusMessage = { type: "get-status" };
     void chrome.runtime
@@ -43,7 +37,6 @@ function Popup() {
       })
       .catch(() => {});
   };
-
   useEffect(() => {
     void chrome.storage.local.get(["eop_token"]).then((r) => {
       setToken(r.eop_token as string | undefined);
@@ -61,12 +54,10 @@ function Popup() {
       chrome.storage.onChanged.removeListener(onChange);
     };
   }, []);
-
   async function logout() {
     await clearConfig();
     setToken(undefined);
   }
-
   async function flushNow() {
     setBusy(true);
     setError(null);
@@ -80,19 +71,16 @@ function Popup() {
       setBusy(false);
     }
   }
-
   async function togglePause() {
     const next = !(status?.paused ?? false);
     const msg: SetPausedMessage = { type: "set-paused", paused: next };
     await chrome.runtime.sendMessage(msg);
     refreshStatus();
   }
-
   const pending = (status?.buffer ?? 0) + (status?.retry ?? 0);
   const downtime = status && status.lastSuccessTs > 0 ? Date.now() - status.lastSuccessTs : 0;
   const showDowntimeBanner =
     !!token && !status?.paused && downtime > DOWNTIME_WARNING_MS && pending > 0;
-
   return (
     <div className="w-80 space-y-3 p-4">
       <div className="flex justify-end">
@@ -112,7 +100,7 @@ function Popup() {
           {showDowntimeBanner && (
             <div className="rounded-md border border-destructive bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive">
               {t("downtime_warning", {
-                minutes: Math.round(downtime / 60_000),
+                minutes: Math.round(downtime / 60000),
               })}
             </div>
           )}
@@ -153,7 +141,6 @@ function Popup() {
     </div>
   );
 }
-
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <I18nextProvider i18n={i18n}>
     <Popup />

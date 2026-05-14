@@ -1,21 +1,11 @@
-// Mobile install prompt — два режима:
-//   1. Chromium (Android / Desktop): beforeinstallprompt → button "Install app"
-//   2. iOS Safari: hint card "Share → Add to Home Screen"
-//
-// Скрывается после dismiss (localStorage flag) или после фактической установки
-// (display-mode: standalone).
-
 import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, IconButton } from "@eop/ui";
 import { Download, X } from "lucide-react";
 import { useInstallPrompt } from "../../../shared/lib/pwa";
-
 export function InstallPWA() {
   const { t } = useTranslation("pwa");
   const { canInstall, showIOSHint, install, dismiss } = useInstallPrompt();
-
   if (!canInstall && !showIOSHint) return null;
-
   return (
     <Card className="border-primary/20 bg-primary/5">
       <CardContent className="pt-6 flex items-start gap-3">

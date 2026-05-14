@@ -2,34 +2,36 @@ import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 import { Home, Plug, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import type { ComponentType } from "react";
-
 type NavItem = {
   to: string;
   label: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: ComponentType<{
+    className?: string;
+  }>;
   badge?: string;
   badgeKind?: "new";
   matchExact?: boolean;
 };
-
 export function Sidebar({
   user,
   isSuperAdmin,
   open,
   onNavigate,
 }: {
-  user: { name: string; handle: string; avatarLabel: string };
+  user: {
+    name: string;
+    handle: string;
+    avatarLabel: string;
+  };
   isSuperAdmin: boolean;
   open?: boolean;
   onNavigate?: () => void;
 }) {
   const { t } = useTranslation(["common", "app"]);
-
   const workspace: NavItem[] = [
     { to: "/dashboard", label: t("nav.dashboard"), icon: Home, matchExact: true },
     { to: "/team", label: t("nav.team"), icon: Users, matchExact: true },
   ];
-
   const insights: NavItem[] = [
     {
       to: "/integrations",
@@ -44,7 +46,6 @@ export function Sidebar({
       matchExact: true,
     },
   ];
-
   return (
     <aside className={`eop-sidebar ${open ? "open" : ""}`}>
       <div className="brand">
@@ -115,7 +116,6 @@ export function Sidebar({
     </aside>
   );
 }
-
 function NavItemLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
   const Icon = item.icon;
   return (

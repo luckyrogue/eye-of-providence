@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { KeyRound } from "lucide-react";
 import { ChangePasswordForm } from "../../../features/change-password";
-
 export function SettingsPasswordCard({ hasPassword }: { hasPassword: boolean }) {
   const { t } = useTranslation("common");
   return (

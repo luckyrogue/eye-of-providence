@@ -8,7 +8,6 @@ export {
   TableCell,
   TableCaption,
 } from "./table";
-
 export { DataTable, type DataTableProps } from "./data-table";
 export { DataTableColumnHeader, type DataTableColumnHeaderProps } from "./data-table-column-header";
 export { DataTablePagination, type DataTablePaginationProps } from "./data-table-pagination";
@@ -16,8 +15,6 @@ export { DataTableViewOptions, type DataTableViewOptionsProps } from "./data-tab
 export { DataTableRowActions, type DataTableRowActionsProps } from "./data-table-row-actions";
 export { selectColumn, type SelectColumnLabels } from "./helpers";
 export type { DataTableLabels } from "./types";
-
-// Реэкспорт типов TanStack чтобы потребители не зависели напрямую от имени пакета.
 export type {
   ColumnDef as DataTableColumn,
   Row as DataTableRow,

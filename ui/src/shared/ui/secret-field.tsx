@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { Copy } from "lucide-react";
 import { Button } from "./button";
-
-// Read-only поле с кнопкой "Copy". Используется для одноразового показа
-// secret'а (API token plaintext, webhook secret) — после закрытия модалки
-// значение становится недоступно.
-//
-// i18n-агностично: caller передаёт локализованные подписи.
 export function SecretField({
   value,
   copyLabel,

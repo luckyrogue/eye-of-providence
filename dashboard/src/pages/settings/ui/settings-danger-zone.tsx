@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { DangerZone } from "@eop/ui";
 import { DeleteMyDataButton } from "../../../features/delete-my-data";
-
 export function SettingsDangerZone({ onWiped }: { onWiped: () => void }) {
   const { t } = useTranslation("common");
   return (

@@ -1,8 +1,4 @@
 import { z } from "zod";
-
-// zod-схема формы подписки. Сообщения — i18n-ключи (resolves в форме через
-// translateError или прямой t() при рендере). Cross-field валидация: если
-// recordPayment включён и план платный, то amount > 0 и until обязателен.
 export const subscriptionFormSchema = z
   .object({
     plan: z.enum(["free", "pro", "team", "enterprise"]),
@@ -36,9 +32,7 @@ export const subscriptionFormSchema = z
       }
     }
   });
-
 export type SubscriptionForm = z.infer<typeof subscriptionFormSchema>;
-
 export const DEFAULT_SUBSCRIPTION_FORM: SubscriptionForm = {
   plan: "free",
   until: "",

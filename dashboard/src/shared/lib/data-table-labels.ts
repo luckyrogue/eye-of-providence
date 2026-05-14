@@ -1,8 +1,5 @@
 import type { TFunction } from "i18next";
 import type { DataTableLabels, SelectColumnLabels } from "@eop/ui";
-
-// Фабрика DataTable labels на основе common:data_table.
-// Используем в каждой таблице, чтобы переводы шли через i18n, а не дублировались.
 export function dtLabels(t: TFunction): DataTableLabels {
   return {
     filterPlaceholder: t("common:data_table.filter"),
@@ -20,7 +17,6 @@ export function dtLabels(t: TFunction): DataTableLabels {
       t("common:data_table.selected_of_total", { selected, total }),
   };
 }
-
 export function dtSelectLabels(t: TFunction): SelectColumnLabels {
   return {
     selectAll: t("common:data_table.select_all"),

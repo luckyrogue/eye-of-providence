@@ -1,13 +1,5 @@
-// Безопасный markdown через react-markdown.
-//
-// react-markdown рендерит дерево элементов, не использует dangerouslySetInnerHTML
-// и по умолчанию не пропускает HTML — поэтому XSS невозможен даже на untrusted
-// LLM-выводах. Custom-классы передаём через `components` props без потери
-// type-safety и без regex-парсинга.
 import ReactMarkdown from "react-markdown";
-
 const NUMERIC_RE = /^-?[\d.,]+\s*(%|сек|мин|ч|секунд|минут|часов|часа|симв|событий)?$|^-?[\d.,]+%/;
-
 export function Markdown({ source }: { source: string }) {
   return (
     <div className="prose-eop">
@@ -52,9 +44,6 @@ export function Markdown({ source }: { source: string }) {
     </div>
   );
 }
-
-// react-markdown передаёт в `children` массив с разными node-типами.
-// Для классификации numeric/non-numeric достаточно flatten в строку.
 function childrenToString(children: React.ReactNode): string {
   if (typeof children === "string") return children;
   if (typeof children === "number") return String(children);

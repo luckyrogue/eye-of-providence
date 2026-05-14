@@ -1,8 +1,3 @@
-// Публичный API @eop/ui — FSD-подобная структура внутри пакета:
-//   shared/lib   — утилиты (cn)
-//   shared/ui    — примитивы / shadcn-компоненты (кластеры: input/, select/, button/, avatar/)
-//   widgets      — композиции из примитивов
-//   features     — сценарии с состоянием (императивные диалоги)
 export { Button, buttonVariants, IconButton, type ButtonProps } from "./shared/ui/button";
 export {
   Card,

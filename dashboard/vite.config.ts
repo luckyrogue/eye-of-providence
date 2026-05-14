@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
@@ -9,7 +8,6 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     watch: {
-      // Polling нужен в Docker volume mount на macOS
       usePolling: true,
       interval: 300,
     },
@@ -17,9 +15,6 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Стабильное разбиение vendor-chunks: тяжёлые libs кэшируются независимо
-        // от правок приложения. Используем функцию: Radix-пакеты приходят
-        // транзитивно через @eop/ui и могут отсутствовать в dependencies.
         manualChunks(id) {
           if (!id.includes("node_modules")) return undefined;
           if (id.includes("/react-router")) return "react-vendor";

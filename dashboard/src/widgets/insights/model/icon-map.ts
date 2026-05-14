@@ -9,11 +9,13 @@ import {
   Clock,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-
-// Mapping insight `key` → визуальный icon+color. Backend шлёт key, мы
-// рендерим. Дефолт (не-найденный key) даёт `Sparkles` — нейтральная
-// «note»-иконка.
-export const INSIGHT_ICON_MAP: Record<string, { icon: LucideIcon; color: string }> = {
+export const INSIGHT_ICON_MAP: Record<
+  string,
+  {
+    icon: LucideIcon;
+    color: string;
+  }
+> = {
   ai_trend_up: { icon: TrendingUp, color: "text-purple-500" },
   ai_trend_down: { icon: TrendingDown, color: "text-blue-500" },
   ai_trend_flat: { icon: Minus, color: "text-muted-foreground" },
@@ -23,5 +25,4 @@ export const INSIGHT_ICON_MAP: Record<string, { icon: LucideIcon; color: string 
   productive_day: { icon: Calendar, color: "text-blue-500" },
   total_activity: { icon: Clock, color: "text-muted-foreground" },
 };
-
 export const FALLBACK_INSIGHT_ICON = { icon: Sparkles, color: "text-muted-foreground" };

@@ -7,11 +7,14 @@ import type {
   AdminSetSubscriptionRes,
   AdminStatsRes,
 } from "./res";
-
-export type UpdateUserReq = { global_role?: string; display_name?: string };
-
-export type AddMemberReq = { email: string; role: string };
-
+export type UpdateUserReq = {
+  global_role?: string;
+  display_name?: string;
+};
+export type AddMemberReq = {
+  email: string;
+  role: string;
+};
 export type SubscriptionPaymentReq = {
   amount_cents: number;
   currency: string;
@@ -19,16 +22,12 @@ export type SubscriptionPaymentReq = {
   note: string;
   covers_until: string;
 };
-
 export type SetSubscriptionReq = {
   plan?: string;
   until?: string | null;
   note?: string | null;
   payment?: SubscriptionPaymentReq;
 };
-
-// Все query keys строятся от общего корня `all`, чтобы инвалидация
-// одного ключа уровня сущности (`admin`) очищала все её вариации.
 export const adminKeys = {
   all: ["admin"] as const,
   stats: () => [...adminKeys.all, "stats"] as const,
@@ -36,56 +35,40 @@ export const adminKeys = {
   users: () => [...adminKeys.all, "users"] as const,
   payments: (teamID: string) => [...adminKeys.all, "payments", teamID] as const,
 };
-
 export const adminStats = () => http.get<AdminStatsRes>("/v1/admin/stats").then((r) => r.data);
-
 export const adminListTeams = () =>
   http.get<AdminListTeamsRes>("/v1/admin/teams").then((r) => r.data.teams ?? []);
-
 export const adminListUsers = () =>
   http.get<AdminListUsersRes>("/v1/admin/users").then((r) => r.data.users ?? []);
-
 export const adminListPayments = (teamID: string) =>
   http
     .get<AdminListPaymentsRes>(`/v1/admin/teams/${teamID}/payments`)
     .then((r) => r.data.payments ?? []);
-
 export const adminDeleteTeam = (teamID: string) =>
   http.delete(`/v1/admin/teams/${teamID}`).then(() => undefined);
-
 export const adminDeleteUser = (userID: string) =>
   http.delete(`/v1/admin/users/${userID}`).then(() => undefined);
-
 export const adminUpdateUser = (userID: string, payload: UpdateUserReq) =>
   http.patch(`/v1/admin/users/${userID}`, payload).then(() => undefined);
-
 export const adminAddMember = (teamID: string, email: string, role: string) => {
   const body: AddMemberReq = { email, role };
   return http.post(`/v1/admin/teams/${teamID}/members`, body).then(() => undefined);
 };
-
 export const adminSetSubscription = (teamID: string, payload: SetSubscriptionReq) =>
   http
     .patch<AdminSetSubscriptionRes>(`/v1/admin/teams/${teamID}/subscription`, payload)
     .then((r) => r.data);
-
 export const useAdminStats = () => useQuery({ queryKey: adminKeys.stats(), queryFn: adminStats });
-
 export const useAdminTeams = () =>
   useQuery({ queryKey: adminKeys.teams(), queryFn: adminListTeams });
-
 export const useAdminUsers = () =>
   useQuery({ queryKey: adminKeys.users(), queryFn: adminListUsers });
-
 export const useAdminPayments = (teamID: string | null) =>
   useQuery({
     queryKey: teamID ? adminKeys.payments(teamID) : [...adminKeys.all, "payments", "disabled"],
     queryFn: () => adminListPayments(teamID!),
     enabled: !!teamID,
   });
-
-// --- Revenue ---
-
 export type RevenuePayment = {
   id: string;
   team_id: string;
@@ -97,7 +80,6 @@ export type RevenuePayment = {
   paid_at: string;
   note?: string;
 };
-
 export type AdminRevenue = {
   total_cents: number;
   last_30d_cents: number;
@@ -106,14 +88,9 @@ export type AdminRevenue = {
   by_plan: Record<string, number>;
   recent: RevenuePayment[];
 };
-
 const fetchRevenue = () => http.get<AdminRevenue>("/v1/admin/revenue").then((r) => r.data);
-
 export const useAdminRevenue = () =>
   useQuery({ queryKey: [...adminKeys.all, "revenue"] as const, queryFn: fetchRevenue });
-
-// --- Audit log ---
-
 export type AuditEntry = {
   id: string;
   actor_id?: string;
@@ -126,7 +103,6 @@ export type AuditEntry = {
   user_agent?: string;
   created_at: string;
 };
-
 export type AuditFilter = {
   action?: string;
   target_type?: string;
@@ -134,22 +110,21 @@ export type AuditFilter = {
   actor_id?: string;
   limit?: number;
 };
-
 const fetchAudit = (f: AuditFilter) =>
   http
-    .get<{ entries: AuditEntry[]; limit: number; offset: number }>("/v1/admin/audit", {
+    .get<{
+      entries: AuditEntry[];
+      limit: number;
+      offset: number;
+    }>("/v1/admin/audit", {
       params: f,
     })
     .then((r) => r.data.entries ?? []);
-
 export const useAdminAudit = (f: AuditFilter = {}) =>
   useQuery({
     queryKey: [...adminKeys.all, "audit", f] as const,
     queryFn: () => fetchAudit(f),
   });
-
-// --- SSO global view ---
-
 export type AdminSSOConfig = {
   team_id: string;
   team_name: string;
@@ -163,16 +138,16 @@ export type AdminSSOConfig = {
   created_at: string;
   updated_at: string;
 };
-
 const fetchSSOConfigs = () =>
-  http.get<{ configs: AdminSSOConfig[] }>("/v1/admin/sso").then((r) => r.data.configs ?? []);
-
+  http
+    .get<{
+      configs: AdminSSOConfig[];
+    }>("/v1/admin/sso")
+    .then((r) => r.data.configs ?? []);
 const adminSSODisable = (teamID: string) =>
   http.post(`/v1/admin/sso/${teamID}/disable`).then(() => undefined);
-
 export const useAdminSSOList = () =>
   useQuery({ queryKey: [...adminKeys.all, "sso"] as const, queryFn: fetchSSOConfigs });
-
 export function useAdminSSODisable() {
   const qc = useQueryClient();
   return useMutation({
@@ -180,25 +155,20 @@ export function useAdminSSODisable() {
     onSuccess: () => qc.invalidateQueries({ queryKey: [...adminKeys.all, "sso"] }),
   });
 }
-
 export function useAdminDeleteTeam() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (teamID: string) => adminDeleteTeam(teamID),
-    // Удаление команды затрагивает все admin-запросы (teams/stats/payments).
     onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.all }),
   });
 }
-
 export function useAdminDeleteUser() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (userID: string) => adminDeleteUser(userID),
-    // Удаление user'а каскадно меняет users/stats и потенциально teams.
     onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.all }),
   });
 }
-
 export function useAdminUpdateUser() {
   const qc = useQueryClient();
   return useMutation({
@@ -207,7 +177,6 @@ export function useAdminUpdateUser() {
     onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.users() }),
   });
 }
-
 export function useAdminAddMember() {
   const qc = useQueryClient();
   return useMutation({
@@ -220,7 +189,6 @@ export function useAdminAddMember() {
       ]),
   });
 }
-
 export function useAdminSetSubscription() {
   const qc = useQueryClient();
   return useMutation({
@@ -233,12 +201,8 @@ export function useAdminSetSubscription() {
       ]),
   });
 }
-
-// --- Email templates ---
-
 export type EmailTemplateKey = "password_reset" | "team_invite" | "subscription_activated";
 export type EmailTemplateLocale = "en" | "ru" | "kk" | "es";
-
 export type EmailTemplateRow = {
   key: EmailTemplateKey;
   locale: EmailTemplateLocale;
@@ -247,7 +211,6 @@ export type EmailTemplateRow = {
   updated_by: string | null;
   updated_by_email: string | null;
 };
-
 export type EmailTemplateDetail = {
   key: EmailTemplateKey;
   locale: EmailTemplateLocale;
@@ -258,29 +221,26 @@ export type EmailTemplateDetail = {
   updated_at: string | null;
   updated_by: string | null;
 };
-
 export type EmailTemplateSaveReq = {
   subject: string;
   body_html: string;
   body_text: string;
 };
-
 const adminEmailTemplatesKey = () => [...adminKeys.all, "email_templates"] as const;
 const adminEmailTemplateDetailKey = (k: EmailTemplateKey, l: EmailTemplateLocale) =>
   [...adminKeys.all, "email_templates", k, l] as const;
-
 const fetchEmailTemplates = () =>
   http
-    .get<{ templates: EmailTemplateRow[] }>("/v1/admin/email-templates")
+    .get<{
+      templates: EmailTemplateRow[];
+    }>("/v1/admin/email-templates")
     .then((r) => r.data.templates ?? []);
-
 const fetchEmailTemplate = (key: EmailTemplateKey, locale: EmailTemplateLocale) =>
   http
     .get<EmailTemplateDetail>(
       `/v1/admin/email-templates/${encodeURIComponent(key)}?locale=${encodeURIComponent(locale)}`,
     )
     .then((r) => r.data);
-
 const saveEmailTemplate = (
   key: EmailTemplateKey,
   locale: EmailTemplateLocale,
@@ -292,17 +252,14 @@ const saveEmailTemplate = (
       payload,
     )
     .then((r) => r.data);
-
 const revertEmailTemplate = (key: EmailTemplateKey, locale: EmailTemplateLocale) =>
   http
     .delete(
       `/v1/admin/email-templates/${encodeURIComponent(key)}?locale=${encodeURIComponent(locale)}`,
     )
     .then(() => undefined);
-
 export const useEmailTemplates = () =>
   useQuery({ queryKey: adminEmailTemplatesKey(), queryFn: fetchEmailTemplates });
-
 export const useEmailTemplate = (
   key: EmailTemplateKey | null,
   locale: EmailTemplateLocale | null,
@@ -315,7 +272,6 @@ export const useEmailTemplate = (
     queryFn: () => fetchEmailTemplate(key!, locale!),
     enabled: !!key && !!locale,
   });
-
 export function useSaveEmailTemplate() {
   const qc = useQueryClient();
   return useMutation({
@@ -337,7 +293,6 @@ export function useSaveEmailTemplate() {
       ]),
   });
 }
-
 export function useRevertEmailTemplate() {
   const qc = useQueryClient();
   return useMutation({
@@ -352,32 +307,26 @@ export function useRevertEmailTemplate() {
       ]),
   });
 }
-
-// --- Team flags ---
-
 export type TeamFlagsPayload = Record<string, boolean | number | null>;
-
 const updateTeamFlags = (teamID: string, payload: TeamFlagsPayload) =>
   http
     .patch<{
       flags: TeamFlagsPayload;
     }>(`/v1/admin/teams/${encodeURIComponent(teamID)}/flags`, payload)
     .then((r) => r.data);
-
 const adminTeamFlagsKey = (teamID: string) => [...adminKeys.all, "team-flags", teamID] as const;
-
 const fetchTeamFlags = (teamID: string) =>
   http
-    .get<{ flags: TeamFlagsPayload }>(`/v1/admin/teams/${encodeURIComponent(teamID)}/flags`)
+    .get<{
+      flags: TeamFlagsPayload;
+    }>(`/v1/admin/teams/${encodeURIComponent(teamID)}/flags`)
     .then((r) => r.data.flags ?? {});
-
 export const useTeamFlags = (teamID: string | null) =>
   useQuery({
     queryKey: teamID ? adminTeamFlagsKey(teamID) : [...adminKeys.all, "team-flags", "disabled"],
     queryFn: () => fetchTeamFlags(teamID!),
     enabled: !!teamID,
   });
-
 export function useUpdateTeamFlags() {
   const qc = useQueryClient();
   return useMutation({
@@ -390,14 +339,9 @@ export function useUpdateTeamFlags() {
       ]),
   });
 }
-
-// --- Plan overrides ---
-
 export type PlanOverridesPayload = Record<string, number | null>;
-
 const adminPlanOverridesKey = (teamID: string) =>
   [...adminKeys.all, "plan-overrides", teamID] as const;
-
 const fetchPlanOverrides = (teamID: string) =>
   http
     .get<{
@@ -405,14 +349,12 @@ const fetchPlanOverrides = (teamID: string) =>
       plan_defaults: Record<string, number | null>;
     }>(`/v1/admin/teams/${encodeURIComponent(teamID)}/plan-overrides`)
     .then((r) => r.data);
-
 const updatePlanOverrides = (teamID: string, payload: PlanOverridesPayload) =>
   http
     .patch<{
       overrides: PlanOverridesPayload;
     }>(`/v1/admin/teams/${encodeURIComponent(teamID)}/plan-overrides`, payload)
     .then((r) => r.data);
-
 export const usePlanOverrides = (teamID: string | null) =>
   useQuery({
     queryKey: teamID
@@ -421,7 +363,6 @@ export const usePlanOverrides = (teamID: string | null) =>
     queryFn: () => fetchPlanOverrides(teamID!),
     enabled: !!teamID,
   });
-
 export function useUpdateTeamPlanLimits() {
   const qc = useQueryClient();
   return useMutation({
@@ -434,9 +375,6 @@ export function useUpdateTeamPlanLimits() {
       ]),
   });
 }
-
-// --- Cross-team webhooks ---
-
 export type CrossTeamWebhook = {
   id: string;
   team_id: string;
@@ -446,24 +384,21 @@ export type CrossTeamWebhook = {
   format: string;
   created_at: string;
 };
-
 const fetchCrossWebhooks = () =>
   http
-    .get<{ webhooks: CrossTeamWebhook[] }>("/v1/admin/webhooks")
+    .get<{
+      webhooks: CrossTeamWebhook[];
+    }>("/v1/admin/webhooks")
     .then((r) => r.data.webhooks ?? []);
-
 const adminCrossWebhooksKey = () => [...adminKeys.all, "cross-webhooks"] as const;
-
 const revokeCrossWebhook = (teamID: string, webhookID: string) =>
   http
     .delete(
       `/v1/admin/teams/${encodeURIComponent(teamID)}/webhooks/${encodeURIComponent(webhookID)}`,
     )
     .then(() => undefined);
-
 export const useAdminCrossWebhooks = () =>
   useQuery({ queryKey: adminCrossWebhooksKey(), queryFn: fetchCrossWebhooks });
-
 export function useAdminRevokeWebhook() {
   const qc = useQueryClient();
   return useMutation({
@@ -472,9 +407,6 @@ export function useAdminRevokeWebhook() {
     onSuccess: () => qc.invalidateQueries({ queryKey: adminCrossWebhooksKey() }),
   });
 }
-
-// --- Cross-user API tokens ---
-
 export type CrossUserToken = {
   id: string;
   user_id: string;
@@ -485,18 +417,17 @@ export type CrossUserToken = {
   created_at: string;
   last_used_at: string | null;
 };
-
 const fetchCrossTokens = () =>
-  http.get<{ tokens: CrossUserToken[] }>("/v1/admin/api-tokens").then((r) => r.data.tokens ?? []);
-
+  http
+    .get<{
+      tokens: CrossUserToken[];
+    }>("/v1/admin/api-tokens")
+    .then((r) => r.data.tokens ?? []);
 const adminCrossTokensKey = () => [...adminKeys.all, "cross-tokens"] as const;
-
 const revokeCrossToken = (tokenID: string) =>
   http.delete(`/v1/admin/api-tokens/${encodeURIComponent(tokenID)}`).then(() => undefined);
-
 export const useAdminCrossTokens = () =>
   useQuery({ queryKey: adminCrossTokensKey(), queryFn: fetchCrossTokens });
-
 export function useAdminRevokeToken() {
   const qc = useQueryClient();
   return useMutation({

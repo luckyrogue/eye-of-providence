@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next";
-
 export function SettingsPageHead() {
   const { t } = useTranslation("common");
   return (

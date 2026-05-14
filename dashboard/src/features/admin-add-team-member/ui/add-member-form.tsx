@@ -3,11 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button, Input, SimpleSelect, type SimpleSelectOption } from "@eop/ui";
 import { useAdminAddMember, type AdminUser } from "../../../entities/admin";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-
 type Role = "member" | "admin" | "owner";
-
-// Inline-форма «add team member». Без table-разметки — годится и для DataTable
-// (через renderSubComponent), и для любых других обёрток.
 export function AddMemberForm({
   teamID,
   users,
@@ -25,7 +21,6 @@ export function AddMemberForm({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("member");
   const datalistId = useId();
-
   const roleOptions = useMemo<SimpleSelectOption[]>(
     () => [
       { value: "member", label: t("app:admin.add_member_role_member") },
@@ -34,7 +29,6 @@ export function AddMemberForm({
     ],
     [t],
   );
-
   async function add() {
     if (!email.trim()) return;
     const ok = await runToast(addMember.mutateAsync({ teamID, email: email.trim(), role }), {
@@ -43,7 +37,6 @@ export function AddMemberForm({
     });
     if (ok !== null) onAdded();
   }
-
   return (
     <div className="bg-muted/20 px-3 py-3">
       <div className="flex flex-wrap items-center gap-2">

@@ -3,7 +3,6 @@ import { IconButton, useConfirm } from "@eop/ui";
 import { UserMinus } from "lucide-react";
 import { useRemoveMember } from "../../../entities/team";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-
 export function RemoveMemberButton({
   teamID,
   userID,
@@ -19,7 +18,6 @@ export function RemoveMemberButton({
   const removeM = useRemoveMember(teamID);
   const runToast = useMutationToast();
   const confirm = useConfirm();
-
   async function remove() {
     const ok = await confirm({
       title: t("team_detail.member_remove_title", { name: displayName }),
@@ -33,7 +31,6 @@ export function RemoveMemberButton({
       error: t("team_detail.member_remove_failed"),
     });
   }
-
   return (
     <IconButton
       danger

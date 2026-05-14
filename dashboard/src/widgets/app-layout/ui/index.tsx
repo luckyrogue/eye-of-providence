@@ -1,6 +1,3 @@
-// pb-16 на content-обёртке — чтобы mobile bottom-nav не перекрывал
-// последний row контента.
-
 import { Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useMe } from "../../../entities/user";
@@ -8,13 +5,11 @@ import { useAuthRedirect } from "../lib/use-auth-redirect";
 import { BottomNav } from "./bottom-nav";
 import { HeaderNav } from "./header-nav";
 import { ResilienceBanners } from "./resilience-banners";
-
 export function AppLayout() {
   const { doLogout } = useAuthRedirect();
   const { t } = useTranslation("common");
   const me = useMe();
   const isSuperAdmin = me.data?.global_role === "super_admin";
-
   return (
     <div
       className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5"

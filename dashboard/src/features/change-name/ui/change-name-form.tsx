@@ -5,7 +5,6 @@ import { Button, Form, InputField } from "@eop/ui";
 import { useChangeMyName } from "../../../entities/user";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { changeNameSchema, type ChangeNameValues } from "../../../shared/lib/schemas";
-
 export function ChangeNameForm({
   displayName,
   lastName,
@@ -21,7 +20,6 @@ export function ChangeNameForm({
     defaultValues: { displayName: displayName ?? "", lastName: lastName ?? "" },
   });
   const tr = (msg?: string) => (msg ? t(msg as never) : msg);
-
   async function onSubmit(values: ChangeNameValues) {
     const trimmed = values.lastName.trim();
     await runToast(
@@ -35,7 +33,6 @@ export function ChangeNameForm({
       },
     );
   }
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">

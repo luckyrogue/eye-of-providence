@@ -1,5 +1,4 @@
 import { Skeleton } from "@eop/ui";
-
 export function AdminSkeleton() {
   return (
     <div className="space-y-4">

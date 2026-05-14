@@ -1,15 +1,11 @@
-// "What we measure" — 6 cards с pills (artifact: section #measure).
-//
-// Заменяет старый Features компонент. i18n ключ namespace: measure.cards[].
-// Икона на индекс — order matters.
-
 import { useTranslation } from "react-i18next";
 import { Activity, BarChart3, Brain, Code2, GitBranch, Sparkles } from "lucide-react";
-
-type Card = { title: string; body: string; pills: string[] };
-
+type Card = {
+  title: string;
+  body: string;
+  pills: string[];
+};
 const ICONS = [Activity, Code2, Brain, GitBranch, BarChart3, Sparkles];
-
 export function Measure() {
   const { t } = useTranslation("landing");
   const cards = t("measure.cards", { returnObjects: true }) as Card[];

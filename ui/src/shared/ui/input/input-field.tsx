@@ -3,12 +3,7 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "../for
 import { cn } from "../../lib/cn";
 import { Input } from "./input";
 import type { InputFieldProps } from "./types";
-
 export type { InputFieldProps } from "./types";
-
-/**
- * react-hook-form + shadcn FormField + Input (props instead of render-prop boilerplate).
- */
 export function InputField<
   TFieldValues extends FieldValues,
   TName extends FieldPath<TFieldValues>,

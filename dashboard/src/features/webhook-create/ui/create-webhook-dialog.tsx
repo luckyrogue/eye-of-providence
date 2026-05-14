@@ -19,39 +19,32 @@ import {
   type WebhookFormat,
 } from "../../../entities/webhook";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-
 export function CreateWebhookDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation("developer");
   const create = useCreateWebhook();
   const runToast = useMutationToast();
-
   const [url, setUrl] = useState("");
   const [events, setEvents] = useState<WebhookEvent[]>(["commit.ingested"]);
   const [format, setFormat] = useState<WebhookFormat>("raw");
   const [secret, setSecret] = useState<string | null>(null);
-
   function toggleEvent(e: WebhookEvent) {
     setEvents((prev) => (prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e]));
   }
-
   function reset() {
     setUrl("");
     setEvents(["commit.ingested"]);
     setFormat("raw");
     setSecret(null);
   }
-
   function close() {
     reset();
     onClose();
   }
-
   async function submit() {
     if (!url.trim() || events.length === 0) return;
     const r = await runToast(create.mutateAsync({ url: url.trim(), events, format }), {});
     if (r) setSecret(r.secret);
   }
-
   return (
     <>
       <Dialog open={open && !secret} onOpenChange={(o) => !o && close()}>

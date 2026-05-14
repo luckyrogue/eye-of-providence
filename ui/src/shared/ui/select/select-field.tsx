@@ -3,7 +3,6 @@ import type { Control, FieldPath, FieldValues } from "react-hook-form";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "../form";
 import { SimpleSelect } from "./simple-select";
 import type { SimpleSelectOption } from "./types";
-
 export type SelectFieldProps<
   TFieldValues extends FieldValues,
   TName extends FieldPath<TFieldValues>,
@@ -18,7 +17,6 @@ export type SelectFieldProps<
   translateError?: (msg?: string) => string | undefined;
   hideMessage?: boolean;
 };
-
 export function SelectField<
   TFieldValues extends FieldValues,
   TName extends FieldPath<TFieldValues>,

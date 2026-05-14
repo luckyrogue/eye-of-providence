@@ -10,7 +10,6 @@ import { CompanyStep } from "./ui/company-step";
 import { EventStep } from "./ui/event-step";
 import { InstallStep } from "./ui/install-step";
 import { InviteStep } from "./ui/invite-step";
-
 export function Onboarding({
   initialStep,
   initialTeamID,
@@ -28,11 +27,8 @@ export function Onboarding({
   const [busy, setBusy] = useState(false);
   const runToast = useMutationToast();
   const qc = useQueryClient();
-
   const stepDefs = ONBOARDING_STEPS.map((s) => ({ key: s.id, label: t(s.i18nKey) }));
-
   const inviteUrl = inviteCode ? `${window.location.origin}/?invite=${inviteCode}` : "";
-
   async function createCompany(name: string) {
     if (!name.trim()) return;
     setBusy(true);
@@ -43,13 +39,10 @@ export function Onboarding({
     if (r) {
       setTeamID(r.id);
       localStorage.setItem(SESSION_KEYS.team, r.id);
-      // Invalidate teams cache: AppLayout читает useTeams() для решения "редиректить
-      // ли на /onboarding из-за пустых команд". Без invalidation остаётся stale empty.
       await qc.invalidateQueries({ queryKey: teamsKeys.all });
       setStep("install");
     }
   }
-
   async function generateInvite(email?: string) {
     if (!teamID) return;
     setBusy(true);
@@ -62,11 +55,9 @@ export function Onboarding({
       if (email && r.sent) setInviteEmailSent(true);
     }
   }
-
   function copyInvite() {
     if (inviteUrl) void navigator.clipboard.writeText(inviteUrl);
   }
-
   return (
     <div className="relative min-h-[calc(100vh-100px)]">
       <div className="dot-grid pointer-events-none absolute inset-x-0 top-0 h-[420px] -z-10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />

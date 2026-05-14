@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from "../shared/ui/dialog";
 import { Input } from "../shared/ui/input";
-
 export function PromptDialog({
   open,
   title,
@@ -36,16 +35,13 @@ export function PromptDialog({
   busy?: boolean;
 }) {
   const [value, setValue] = useState(initialValue);
-
   useEffect(() => {
     if (open) setValue(initialValue);
   }, [open, initialValue]);
-
   function submit() {
     if (busy || !value.trim()) return;
     onConfirm(value.trim());
   }
-
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md p-6 space-y-4">

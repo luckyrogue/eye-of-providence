@@ -13,37 +13,29 @@ import {
 } from "@eop/ui";
 import { useCreateToken, type APIToken } from "../../../entities/user";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-
-// Plaintext secret отображается ТОЛЬКО на момент создания: backend хранит
-// только хеш. Поэтому диалог двустадийный — форма → одноразовый показ token.
 export function CreateTokenDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation("developer");
   const create = useCreateToken();
   const runToast = useMutationToast();
-
   const [name, setName] = useState("");
   const [scope, setScope] = useState<APIToken["scope"]>("read");
   const [ttl, setTtl] = useState(0);
   const [secret, setSecret] = useState<string | null>(null);
-
   function reset() {
     setName("");
     setScope("read");
     setTtl(0);
     setSecret(null);
   }
-
   function close() {
     reset();
     onClose();
   }
-
   async function submit() {
     if (!name.trim()) return;
     const r = await runToast(create.mutateAsync({ name: name.trim(), scope, ttlDays: ttl }), {});
     if (r) setSecret(r.token);
   }
-
   return (
     <>
       <Dialog open={open && !secret} onOpenChange={(o) => !o && close()}>

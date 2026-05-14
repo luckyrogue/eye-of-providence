@@ -4,10 +4,8 @@ import { DataTable, type DataTableColumn } from "@eop/ui";
 import type { Device } from "../../../entities/device";
 import { RevokeDeviceButton } from "../../../features/device-revoke";
 import { DeviceKindBadge } from "./device-kind-badge";
-
 export function DevicesTable({ devices, isLoading }: { devices: Device[]; isLoading: boolean }) {
   const { t } = useTranslation("developer");
-
   const columns = useMemo<DataTableColumn<Device>[]>(
     () => [
       {
@@ -53,7 +51,6 @@ export function DevicesTable({ devices, isLoading }: { devices: Device[]; isLoad
     ],
     [t],
   );
-
   return (
     <DataTable
       columns={columns}

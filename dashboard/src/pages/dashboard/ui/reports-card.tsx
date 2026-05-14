@@ -15,14 +15,11 @@ import { Sparkles } from "lucide-react";
 import { useGenerateReport, type Report } from "../../../entities/report";
 import { Markdown } from "../../../shared/lib/markdown";
 import { formatDate } from "../../../shared/lib/tz";
-
-// Если активный таб не выбран — показываем первый (свежий) отчёт из списка.
 export function ReportsCard({ reports, tz }: { reports: Report[]; tz: string }) {
   const { t } = useTranslation("app");
   const genReport = useGenerateReport();
   const [activeReport, setActiveReport] = useState<Report | null>(null);
   const current = activeReport ?? reports[0] ?? null;
-
   return (
     <Card className="card-hover">
       <CardHeader className="flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

@@ -4,7 +4,6 @@ import { Button, IconButton } from "@eop/ui";
 import { Activity, Eye, LogOut, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import { NavItem } from "./nav-item";
 import { LangSwitch } from "../../../shared/ui/lang-switch";
-
 export function HeaderNav({
   isSuperAdmin,
   onLogout,

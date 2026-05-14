@@ -1,14 +1,11 @@
 import { cn } from "../shared/lib/cn";
-
 export type Plan = "free" | "pro" | "team" | "enterprise" | string;
-
 const planColors: Record<string, string> = {
   free: "bg-muted text-muted-foreground border-border",
   pro: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
   team: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30",
   enterprise: "bg-warning/10 text-warning border-warning/30",
 };
-
 export function PlanBadge({
   plan,
   until,
@@ -19,8 +16,6 @@ export function PlanBadge({
   plan: Plan;
   until?: string | null;
   className?: string;
-  // i18n: caller passes locale-aware strings; English defaults для consumer'ов
-  // которые не настроили i18n.
   untilLabel?: string;
   expiredLabel?: string;
 }) {

@@ -3,22 +3,16 @@ import { Trans, useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { ArrowRight, CheckCircle2, Loader2, Radio, SkipForward } from "lucide-react";
 import { useOnboardingStatus } from "../../../entities/user";
-
-// Polling каждые 5s до первого события от агента; при has_event=true —
-// auto-advance в onFinish (короткая задержка задаётся в эффекте ниже).
 export function EventStep({ onFinish, onSkip }: { onFinish: () => void; onSkip: () => void }) {
   const { t } = useTranslation("onboarding");
   const status = useOnboardingStatus({ refetchInterval: 5000 });
   const hasEvent = status.data?.has_event ?? false;
-
-  // Auto-advance: как только событие пришло, через 1.5s закрываем wizard.
   useEffect(() => {
     if (hasEvent) {
       const timer = setTimeout(onFinish, 1500);
       return () => clearTimeout(timer);
     }
   }, [hasEvent, onFinish]);
-
   if (hasEvent) {
     return (
       <Card className="card-hover reveal">
@@ -32,7 +26,6 @@ export function EventStep({ onFinish, onSkip }: { onFinish: () => void; onSkip: 
       </Card>
     );
   }
-
   return (
     <Card className="card-hover reveal">
       <CardHeader>

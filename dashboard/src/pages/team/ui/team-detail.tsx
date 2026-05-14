@@ -18,7 +18,6 @@ import { CommitsTab } from "./commits-tab";
 import { MembersTab } from "./members-tab";
 import { ProjectsTab } from "./projects-tab";
 import { SettingsTab } from "./settings-tab";
-
 export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; tz: string }) {
   const { t } = useTranslation(["app", "common"]);
   const role = team.role;
@@ -27,13 +26,8 @@ export function TeamDetail({ teamID, team, tz }: { teamID: string; team: Team; t
   const stats = useTeamSummary(teamID);
   const note = team.subscription_note;
   const memberCount = members.data?.length ?? 0;
-
-  // i18next plural — _one/_few/_many подбираются автоматически по locale
-  // (русский имеет all 3, English только one/many).
   const memberCountLabel = t("team_detail.members_count", { count: memberCount });
-
   const visibleTabs = TEAM_DETAIL_TABS.filter((it) => !("ownerOnly" in it) || role === "owner");
-
   return (
     <Card className="card-hover">
       <Tabs value={tab} onValueChange={(v) => setTab(v as TeamDetailTabKey)}>

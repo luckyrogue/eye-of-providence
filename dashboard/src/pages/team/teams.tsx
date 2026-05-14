@@ -17,7 +17,6 @@ import { CreateTeamButton } from "../../features/team-create";
 import { SESSION_KEYS } from "../../shared/lib/session-storage";
 import { BetaBanner } from "../../widgets/beta-banner";
 import { TeamDetail } from "./ui/team-detail";
-
 export function Teams({ tz }: { tz: string }) {
   const { t } = useTranslation("app");
   const teams = useTeams();
@@ -26,16 +25,10 @@ export function Teams({ tz }: { tz: string }) {
   const [activeTeam, setActiveTeam] = useState<string | null>(
     localStorage.getItem(SESSION_KEYS.team),
   );
-
   const teamsList = useMemo(() => teams.data ?? [], [teams.data]);
-  // 1 owner = 1 company invariant (бэкенд тоже ловит, но UI не должен звать
-  // запрос, обречённый на 403). Super_admin исключён.
   const isSuperAdmin = me.data?.global_role === "super_admin";
   const alreadyOwner = teamsList.some((tt) => tt.role === "owner");
   const ownerBlocked = alreadyOwner && !isSuperAdmin;
-
-  // Sync activeTeam с реальным списком: если ничего не выбрано, или выбранная
-  // команда удалена — переключиться на первую доступную.
   useEffect(() => {
     if (teamsList.length === 0) return;
     const exists = activeTeam && teamsList.some((tt) => tt.id === activeTeam);
@@ -45,22 +38,18 @@ export function Teams({ tz }: { tz: string }) {
       localStorage.setItem(SESSION_KEYS.team, first);
     }
   }, [teamsList, activeTeam]);
-
   function switchTeam(id: string) {
     setActiveTeam(id);
     localStorage.setItem(SESSION_KEYS.team, id);
   }
-
   const slotsLeft = beta.data?.slots_remaining ?? -1;
   const betaFull = !!(beta.data?.limit && beta.data.limit > 0 && slotsLeft === 0);
   const activeT = teamsList.find((tt) => tt.id === activeTeam);
-
   const blockedReason = ownerBlocked
     ? t("teams.blocked_owner")
     : betaFull
       ? t("teams.blocked_beta_full")
       : undefined;
-
   return (
     <div className="space-y-4">
       <div className="page-head">

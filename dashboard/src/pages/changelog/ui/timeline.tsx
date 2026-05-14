@@ -1,8 +1,6 @@
 import type { ChangelogEntry } from "../model/types";
 import { DateHeading } from "./date-heading";
 import { Row } from "./row";
-
-// Группировка по дате (YYYY-MM-DD) — в одном дне может быть много commit'ов.
 function groupByDate(entries: ChangelogEntry[]): Map<string, ChangelogEntry[]> {
   const groups = new Map<string, ChangelogEntry[]>();
   for (const e of entries) {
@@ -12,7 +10,6 @@ function groupByDate(entries: ChangelogEntry[]): Map<string, ChangelogEntry[]> {
   }
   return groups;
 }
-
 export function Timeline({ entries }: { entries: ChangelogEntry[] }) {
   const groups = groupByDate(entries);
   const dates = Array.from(groups.keys());

@@ -5,7 +5,6 @@ import type { MemberStat, TeamMember } from "../../../entities/team";
 import { RemoveMemberButton } from "../../../features/team-remove-member";
 import { MemberRoleSelect } from "../../../features/team-update-member-role";
 import { isReadOnlyRole } from "../../../shared/ui/role-tooltip";
-
 export function MemberRow({
   member,
   stat,
@@ -22,7 +21,6 @@ export function MemberRow({
   const canManage =
     viewerCanMutate && (myRole === "owner" || (myRole === "admin" && member.role !== "owner"));
   const canChangeRole = viewerCanMutate && myRole === "owner";
-
   return (
     <li className="flex items-center justify-between rounded-md border p-3 hover:bg-muted/30 transition-colors">
       <div className="flex items-center gap-3 min-w-0">

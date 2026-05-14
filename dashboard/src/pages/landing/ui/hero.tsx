@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight, Download, Search } from "lucide-react";
 import { useContent, type CtaBlock, type TextBlock } from "../../../shared/content";
 import { EyeScene } from "./eye-scene";
-
 function GithubIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className}>
@@ -11,9 +10,6 @@ function GithubIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-
-// Запускаем один раз на первое появление в viewport — иначе число «прыгает»
-// каждый раз, когда секция возвращается в фокус при скролле.
 function StatNum({ end, decimals = 0 }: { end: number; decimals?: number }) {
   const [val, setVal] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
@@ -46,16 +42,13 @@ function StatNum({ end, decimals = 0 }: { end: number; decimals?: number }) {
     <span ref={ref}>{decimals ? val.toFixed(decimals) : Math.round(val).toLocaleString()}</span>
   );
 }
-
-type Stat = { label: string; value: string; unit: string };
-
-// Headline renderer: CMS stores the raw string and we tolerate exactly one
-// pair of <em>...</em> for inline italics. Everything else is plain text
-// (React auto-escapes). The fallback default from i18n keeps the same
-// contract so behaviour is identical when CMS is offline.
+type Stat = {
+  label: string;
+  value: string;
+  unit: string;
+};
 function HeadlineRenderer({ text }: { text: string }) {
   const parts = useMemo(() => {
-    // Find first <em>…</em>; anything else stays literal.
     const m = text.match(/^([\s\S]*?)<em>([\s\S]*?)<\/em>([\s\S]*)$/);
     if (!m) return { pre: text, em: null as string | null, post: "" };
     return { pre: m[1], em: m[2], post: m[3] };
@@ -68,17 +61,10 @@ function HeadlineRenderer({ text }: { text: string }) {
     </>
   );
 }
-
 export function Hero() {
   const { t } = useTranslation("landing");
   const stats = t("stats", { returnObjects: true }) as Stat[];
-
-  // CMS-managed copy with i18n fallbacks. The fallback string mirrors the
-  // legacy compound title keys so the previous render stays intact when DB
-  // is offline.
   const headlineFallbackText = useMemo(() => {
-    // Reconstruct legacy "title1 + titleAccent + title2 + <em>titleItal</em> + title3"
-    // into a single string so the new render contract is uniform.
     const t1 = t("hero.title1");
     const ta = t("hero.titleAccent");
     const t2 = t("hero.title2");
@@ -86,7 +72,6 @@ export function Hero() {
     const t3 = t("hero.title3");
     return `${t1}${ta}${t2}<em>${ti}</em>${t3}`;
   }, [t]);
-
   const headline = useContent<TextBlock>("landing.hero.headline", { text: headlineFallbackText });
   const subhead = useContent<TextBlock>("landing.hero.subhead", { text: t("hero.sub") });
   const ctaPrimary = useContent<CtaBlock>("landing.hero.cta_primary", {
@@ -99,7 +84,6 @@ export function Hero() {
     href: "#how",
     external: false,
   });
-
   return (
     <section className="relative grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] items-center gap-10 lg:gap-[60px] pt-[120px] pb-[80px] px-4 sm:px-8 mx-auto max-w-[1400px]">
       <div className="flex flex-col gap-7">
@@ -165,14 +149,10 @@ export function Hero() {
         </div>
       </div>
 
-      {/* Desktop offset: translate-y, не margin — чтобы не подталкивать */}
-      {/* нижний stat-row и не ломать grid items-center на mobile. Верх */}
-      {/* орбиты иначе обрезается nav-bar'ом на коротких viewport'ах. */}
       <div className="w-full lg:justify-self-end lg:translate-y-12 xl:translate-y-16">
         <EyeScene />
       </div>
 
-      {/* Hero stats: 4-col flat-grid, 1px lines между секциями */}
       <div
         className="col-span-full grid grid-cols-2 md:grid-cols-4 gap-px rounded-xl overflow-hidden border mt-10"
         style={{

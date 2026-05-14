@@ -1,5 +1,3 @@
-// Лейблы для DataTable / DataTablePagination / DataTableViewOptions.
-// @eop/ui i18n-агностично, поэтому переводы передаются через props (см. AGENTS.md).
 export type DataTableLabels = {
   filterPlaceholder?: string;
   columnsButton?: string;

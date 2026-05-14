@@ -1,44 +1,28 @@
-// Centralized zod schemas для всех форм. Один источник правды для:
-//   - validation rules (max length, regex, refinements)
-//   - inferred TS-types (вместо ручных interface)
-//   - error messages (i18n keys через .min/.email/.refine errorMessage)
-//
-// Convention: `xxxSchema` — zod schema, `XxxValues` — inferred TS-type.
-// i18n-keys как error messages — translateZodError() резолвит на frontend
-// перед передачей в react-hook-form.
-
 import { z } from "zod";
-
 const email = z
   .string()
   .min(1, "auth:validation_email_required")
   .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "auth:validation_email_invalid")
   .max(254, "auth:validation_email_invalid");
-
 const passwordLogin = z.string().min(1, "auth:validation_password_required");
 const passwordRegister = z
   .string()
   .min(8, "auth:validation_password_min")
   .max(256, "auth:validation_password_min");
-
 const displayName = z
   .string()
   .min(1, "auth:validation_name_required")
   .max(64, "auth:validation_name_max");
-
 export const loginSchema = z.object({ email, password: passwordLogin });
 export type LoginValues = z.infer<typeof loginSchema>;
-
 export const registerSchema = z.object({
   email,
   password: passwordRegister,
   displayName,
 });
 export type RegisterValues = z.infer<typeof registerSchema>;
-
 export const forgotPasswordSchema = z.object({ email });
 export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
-
 export const resetPasswordSchema = z
   .object({
     password: passwordRegister,
@@ -49,13 +33,11 @@ export const resetPasswordSchema = z
     path: ["confirmPassword"],
   });
 export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
-
 export const changeEmailSchema = z.object({
   currentPassword: passwordLogin,
   email,
 });
 export type ChangeEmailValues = z.infer<typeof changeEmailSchema>;
-
 export const changePasswordSchema = z
   .object({
     currentPassword: passwordLogin,
@@ -67,21 +49,17 @@ export const changePasswordSchema = z
     path: ["confirmPassword"],
   });
 export type ChangePasswordValues = z.infer<typeof changePasswordSchema>;
-
 export const changeNameSchema = z.object({
   displayName,
   lastName: z.string().max(64, "auth:validation_name_max"),
 });
 export type ChangeNameValues = z.infer<typeof changeNameSchema>;
-
 const teamName = z
   .string()
   .min(1, "team:validation_name_required")
   .max(100, "team:validation_name_max");
-
 export const teamSchema = z.object({ name: teamName });
 export type TeamValues = z.infer<typeof teamSchema>;
-
 export const inviteSchema = z.object({
   email: z
     .string()
@@ -89,7 +67,6 @@ export const inviteSchema = z.object({
     .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "auth:validation_email_invalid"),
 });
 export type InviteValues = z.infer<typeof inviteSchema>;
-
 export const apiTokenSchema = z.object({
   name: z
     .string()
@@ -99,7 +76,6 @@ export const apiTokenSchema = z.object({
   ttlDays: z.number().int().min(0).max(365),
 });
 export type APITokenValues = z.infer<typeof apiTokenSchema>;
-
 export const webhookSchema = z.object({
   url: z.string().url("developer:validation_url_invalid").max(2048),
   events: z
