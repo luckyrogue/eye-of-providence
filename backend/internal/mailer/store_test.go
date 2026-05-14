@@ -8,11 +8,11 @@ import (
 
 func TestRender_BasicSubstitution(t *testing.T) {
 	tpl := Template{
-		Subject:  "Hi {{.Name}}",
-		BodyHTML: "<p>Hello, {{.Name}}!</p>",
-		BodyText: "Hello, {{.Name}}!",
+		Subject:  "Hi {{.Recipient}}",
+		BodyHTML: "<p>Hello, {{.Recipient}}!</p>",
+		BodyText: "Hello, {{.Recipient}}!",
 	}
-	out, err := Render(tpl, map[string]any{"Name": "Ada"})
+	out, err := Render(tpl, map[string]any{"Recipient": "Ada"})
 	if err != nil {
 		t.Fatalf("render: %v", err)
 	}

@@ -88,7 +88,7 @@ func (s Service) handleAdminGetEmailTemplate(c *fiber.Ctx) error {
 	}
 	key, locale, err := parseTemplatePath(c)
 	if err != nil {
-		return err
+		return wrapParseTemplatePathError(c, err)
 	}
 	view := emailTemplateView{Key: key, Locale: string(locale)}
 	if s.TemplateStore != nil {
@@ -134,7 +134,7 @@ func (s Service) handleAdminUpsertEmailTemplate(c *fiber.Ctx) error {
 	}
 	key, locale, err := parseTemplatePath(c)
 	if err != nil {
-		return err
+		return wrapParseTemplatePathError(c, err)
 	}
 	var req adminUpsertTemplateReq
 	if err := c.BodyParser(&req); err != nil {
@@ -174,13 +174,22 @@ func (s Service) handleAdminUpsertEmailTemplate(c *fiber.Ctx) error {
 		BodyText: req.BodyText,
 	}, actorID)
 	if err != nil {
-		return s.internalErr(c, err)
+		switch {
+		case errors.Is(err, mailer.ErrInvalidEmailTemplateKey):
+			return httperr.BadRequest(c, "invalid_template_key",
+				"key must be one of "+joinSupported(mailer.SupportedTemplateKeys))
+		case errors.Is(err, mailer.ErrInvalidEmailTemplateLocale):
+			return httperr.BadRequest(c, "invalid_template_locale",
+				"locale must be one of "+joinSupported(mailer.SupportedLocales))
+		default:
+			return s.internalErr(c, err)
+		}
 	}
 	s.Audit.LogFromCtx(c, actorID, actorEmail, audit.ActionEmailTemplateUpdated,
 		"email_template", key+":"+string(locale), map[string]any{
-			"subject":          req.Subject,
-			"body_html_bytes":  len(req.BodyHTML),
-			"body_text_bytes":  len(req.BodyText),
+			"subject":         req.Subject,
+			"body_html_bytes": len(req.BodyHTML),
+			"body_text_bytes": len(req.BodyText),
 		})
 	return c.JSON(fiber.Map{
 		"key":        out.Key,
@@ -203,7 +212,7 @@ func (s Service) handleAdminDeleteEmailTemplate(c *fiber.Ctx) error {
 	}
 	key, locale, err := parseTemplatePath(c)
 	if err != nil {
-		return err
+		return wrapParseTemplatePathError(c, err)
 	}
 	prev, derr := s.TemplateStore.Delete(c.Context(), key, string(locale))
 	if derr != nil {
@@ -216,29 +225,48 @@ func (s Service) handleAdminDeleteEmailTemplate(c *fiber.Ctx) error {
 	actorID, actorEmail := s.actorInfo(c)
 	s.Audit.LogFromCtx(c, actorID, actorEmail, audit.ActionEmailTemplateReverted,
 		"email_template", key+":"+string(locale), map[string]any{
-			"previous_subject":     prev.Subject,
-			"previous_body_html":   prev.BodyHTML,
-			"previous_body_text":   prev.BodyText,
-			"previous_updated_at":  prev.UpdatedAt,
-			"previous_updated_by":  prev.UpdatedBy,
+			"previous_subject":    prev.Subject,
+			"previous_body_html":  prev.BodyHTML,
+			"previous_body_text":  prev.BodyText,
+			"previous_updated_at": prev.UpdatedAt,
+			"previous_updated_by": prev.UpdatedBy,
 		})
 	return c.Status(http.StatusNoContent).Send(nil)
 }
 
-// parseTemplatePath — общий валидатор для :key/:locale path params. Возвращает
-// 400 invalid_template_key / invalid_template_locale если значения вне allowlist'а.
+// Sentinel errors for parseTemplatePath — httperr.Send returns nil after writing
+// the response, so returning that value as `error` would let the caller fall
+// through with empty key/locale (DB CHECK failures, wrong status codes).
+var (
+	errInvalidAdminTemplateKey    = errors.New("invalid admin template key")
+	errInvalidAdminTemplateLocale = errors.New("invalid admin template locale")
+)
+
+// parseTemplatePath — общий валидатор для :key/:locale path params.
+// On failure returns a sentinel error; caller must map via wrapParseTemplatePathError.
 func parseTemplatePath(c *fiber.Ctx) (string, mailer.Locale, error) {
 	key := c.Params("key")
 	locale := c.Params("locale")
 	if !mailer.IsSupportedTemplateKey(key) {
-		return "", "", httperr.BadRequest(c, "invalid_template_key",
-			"key must be one of "+joinSupported(mailer.SupportedTemplateKeys))
+		return "", "", errInvalidAdminTemplateKey
 	}
 	if !mailer.IsSupportedLocale(locale) {
-		return "", "", httperr.BadRequest(c, "invalid_template_locale",
-			"locale must be one of "+joinSupported(mailer.SupportedLocales))
+		return "", "", errInvalidAdminTemplateLocale
 	}
 	return key, mailer.Locale(locale), nil
+}
+
+func wrapParseTemplatePathError(c *fiber.Ctx, err error) error {
+	switch {
+	case errors.Is(err, errInvalidAdminTemplateKey):
+		return httperr.BadRequest(c, "invalid_template_key",
+			"key must be one of "+joinSupported(mailer.SupportedTemplateKeys))
+	case errors.Is(err, errInvalidAdminTemplateLocale):
+		return httperr.BadRequest(c, "invalid_template_locale",
+			"locale must be one of "+joinSupported(mailer.SupportedLocales))
+	default:
+		return err
+	}
 }
 
 func joinSupported(items []string) string {
@@ -427,9 +455,9 @@ func (s Service) handleAdminGetTeamPlanLimits(c *fiber.Ctx) error {
 	}
 	defaults := s.Plans.Limits(plan)
 	return c.JSON(fiber.Map{
-		"team_id":           teamID,
-		"plan":              plan,
-		"overrides":         override,
+		"team_id":            teamID,
+		"plan":               plan,
+		"overrides":          override,
 		"effective_defaults": planLimitsAsMap(defaults),
 	})
 }

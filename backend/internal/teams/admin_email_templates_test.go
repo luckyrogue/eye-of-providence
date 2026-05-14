@@ -106,7 +106,7 @@ func TestAdminEmailTemplates_RequiresSuperAdmin(t *testing.T) {
 		{"GET", "/v1/admin/email-templates", nil},
 		{"GET", "/v1/admin/email-templates/password_reset/ru", nil},
 		{"PUT", "/v1/admin/email-templates/password_reset/ru", map[string]any{
-			"subject": "x", "body_html": "<p>x {{reset_url}}</p>", "body_text": "x",
+			"subject": "x", "body_html": "<p>x {{.ResetURL}}</p>", "body_text": "x",
 		}},
 		{"DELETE", "/v1/admin/email-templates/password_reset/ru", nil},
 	}
@@ -136,7 +136,7 @@ func TestAdminEmailTemplates_List_Matrix(t *testing.T) {
 	_, err := pool.Exec(context.Background(), `
 		INSERT INTO email_templates (key, locale, subject, body_html, body_text, updated_by)
 		VALUES ($1, $2, $3, $4, $5, $6)`,
-		"password_reset", "ru", "custom subject", "<p>custom {{reset_url}}</p>", "custom",
+		"password_reset", "ru", "custom subject", "<p>custom {{.ResetURL}}</p>", "custom",
 		admin)
 	if err != nil {
 		t.Skipf("waiting on backend agent commit of migration 022 (email_templates): %v", err)
@@ -254,8 +254,8 @@ func TestAdminEmailTemplates_Put_Upserts(t *testing.T) {
 
 	put := map[string]any{
 		"subject":   "Reset v1",
-		"body_html": "<p>Hi {{name}}, click {{reset_url}}</p>",
-		"body_text": "Hi {{name}}, click {{reset_url}}",
+		"body_html": "<p>Hi, click {{.ResetURL}}</p>",
+		"body_text": "Hi, click {{.ResetURL}}",
 	}
 	status, body := do(t, app, "PUT", "/v1/admin/email-templates/password_reset/ru", tok, put)
 	skipIfNotFound(t, status, "PUT /v1/admin/email-templates/:key/:locale")
@@ -276,8 +276,8 @@ func TestAdminEmailTemplates_Put_Upserts(t *testing.T) {
 	// Second PUT — должен UPDATE (не INSERT новой строки).
 	put2 := map[string]any{
 		"subject":   "Reset v2",
-		"body_html": "<p>v2 {{reset_url}}</p>",
-		"body_text": "v2 {{reset_url}}",
+		"body_html": "<p>v2 {{.ResetURL}}</p>",
+		"body_text": "v2 {{.ResetURL}}",
 	}
 	status, body = do(t, app, "PUT", "/v1/admin/email-templates/password_reset/ru", tok, put2)
 	if status != 200 && status != 201 {
@@ -341,7 +341,7 @@ func TestAdminEmailTemplates_Delete_RevertsToDefault(t *testing.T) {
 	_, err := pool.Exec(context.Background(), `
 		INSERT INTO email_templates (key, locale, subject, body_html, body_text, updated_by)
 		VALUES ($1, $2, $3, $4, $5, $6)`,
-		"password_reset", "ru", "to be deleted", "<p>x {{reset_url}}</p>", "x", admin)
+		"password_reset", "ru", "to be deleted", "<p>x {{.ResetURL}}</p>", "x", admin)
 	if err != nil {
 		t.Skipf("waiting on backend agent commit of migration 022 (email_templates): %v", err)
 	}
@@ -408,9 +408,9 @@ func TestAdminEmailTemplates_HTMLEscape(t *testing.T) {
 	// при render'е (`mailer.Render(...)`) экранирует значение, либо отвергает
 	// на save.
 	put := map[string]any{
-		"subject":   "Hi {{name}}",
-		"body_html": "<p>Hi {{name}}, your link: {{reset_url}}</p>",
-		"body_text": "Hi {{name}}, your link: {{reset_url}}",
+		"subject":   "Hi {{.ResetURL}}",
+		"body_html": "<p>Your link: {{.ResetURL}}</p>",
+		"body_text": "Your link: {{.ResetURL}}",
 	}
 	status, _ := do(t, app, "PUT", "/v1/admin/email-templates/password_reset/en", tok, put)
 	skipIfNotFound(t, status, "PUT /v1/admin/email-templates/:key/:locale (HTML escape coverage)")

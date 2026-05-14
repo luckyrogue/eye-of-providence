@@ -17,7 +17,8 @@
 //   4. Single-use — повторный вызов → 401
 //   5. TTL ≤ 30 секунд
 //
-// Backend status (2026-05-12): endpoint не зарегистрирован. Тесты — scaffold.
+// Backend: GET /v1/me/session-handoff регистрируется до /v1/me + JWT middleware
+// (см. auth.RegisterSessionHandoffRoute в cmd/api); тест повторяет тот же порядок.
 
 package auth
 
@@ -70,6 +71,7 @@ func setupHandoffApp(t *testing.T) (*fiber.App, *pgxpool.Pool, MeService) {
 		EventStore: store.NewMemory(),
 		Logger:     logger,
 	}
+	RegisterSessionHandoffRoute(app, Service{JWTSecret: svc.JWTSecret, SecureCookies: false})
 	RegisterMeRoutes(app, svc)
 	return app, pool, svc
 }

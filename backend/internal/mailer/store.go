@@ -14,8 +14,9 @@
 // Render: `subject` через `text/template`, `body_html` через `html/template`
 // (auto-escapes user input — критично для recipient-controlled vars типа
 // {{team_name}} в team_invite, см. QA bug review). `body_text` тоже через
-// `text/template`. Variable substitution синтаксис стандартный Go template:
-// `{{.Name}}`, `{{.URL}}`. Mailer-layer caller передаёт map[string]any с
+// `text/template`. Variable substitution — стандартный Go template (`{{.ResetURL}}`
+// и т.д.). В `body_html` избегайте полей вроде `.Name`: `html/template` трактует
+// их в HTML-контексте и парсинг падает. Mailer caller передаёт map[string]any с
 // уже подготовленными ключами.
 
 package mailer
@@ -38,9 +39,9 @@ import (
 // email_templates table (migration 022). Список фиксирован — adding a new
 // kind email требует backend changes (см. admin-email-templates.md scope).
 const (
-	TemplateKeyPasswordReset          = "password_reset"
-	TemplateKeyTeamInvite             = "team_invite"
-	TemplateKeySubscriptionActivated  = "subscription_activated"
+	TemplateKeyPasswordReset         = "password_reset"
+	TemplateKeyTeamInvite            = "team_invite"
+	TemplateKeySubscriptionActivated = "subscription_activated"
 )
 
 // SupportedTemplateKeys — для валидации входа в admin endpoints. Hardcoded
@@ -99,6 +100,13 @@ type TemplateStore interface {
 	Lookup(ctx context.Context, key string, locale Locale) (*Template, error)
 }
 
+// Sentinel errors — PGTemplateStore.Upsert returns these before hitting the DB
+// so admin handlers can answer 400 instead of a constraint-violation 500.
+var (
+	ErrInvalidEmailTemplateKey    = errors.New("invalid email template key")
+	ErrInvalidEmailTemplateLocale = errors.New("invalid email template locale")
+)
+
 // NilStore — для тестов / dev mode без DB. Возвращает (nil, nil) на всё,
 // заставляя caller'а fallback на embedded baseline.
 type NilStore struct{}
@@ -147,6 +155,12 @@ func (s *PGTemplateStore) Lookup(ctx context.Context, key string, locale Locale)
 func (s *PGTemplateStore) Upsert(ctx context.Context, t Template, actor uuid.UUID) (*Template, error) {
 	if s == nil || s.Pool == nil {
 		return nil, errors.New("template store: nil pool")
+	}
+	if !IsSupportedTemplateKey(t.Key) {
+		return nil, ErrInvalidEmailTemplateKey
+	}
+	if !IsSupportedLocale(t.Locale) {
+		return nil, ErrInvalidEmailTemplateLocale
 	}
 	var actorPtr *uuid.UUID
 	if actor != uuid.Nil {

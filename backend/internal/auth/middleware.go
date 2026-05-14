@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -26,6 +27,13 @@ const (
 // (без БД мы не можем lookup и middleware вернёт 401).
 func Middleware(secret string, pool *pgxpool.Pool) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		// OAuth completion: browser calls this with HttpOnly handoff cookie only
+		// (no Authorization). Fiber's app.Group("/v1/me", Middleware) registers
+		// a Use("/v1/me") layer that would otherwise match this path first.
+		if c.Method() == http.MethodGet && c.Path() == "/v1/me/session-handoff" {
+			return c.Next()
+		}
+
 		header := c.Get("Authorization")
 		// Case-insensitive Bearer — некоторые клиенты шлют lowercase.
 		if len(header) < 7 || !strings.EqualFold(header[:7], "Bearer ") {
