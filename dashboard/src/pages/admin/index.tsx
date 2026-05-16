@@ -11,7 +11,7 @@ export function AdminRoute() {
   useEffect(() => {
     // Если we know me и юзер не super_admin — kick на /dashboard.
     if (me.isSuccess && me.data?.global_role !== "super_admin") {
-      navigate("/dashboard", { replace: true });
+      void navigate("/dashboard", { replace: true });
     }
   }, [me.isSuccess, me.data, navigate]);
 

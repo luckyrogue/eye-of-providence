@@ -16,7 +16,7 @@ export function AuthRoute({ mode }: { mode: "login" | "register" }) {
 
   // Уже залогинен — сразу туда же.
   useEffect(() => {
-    if (isAuthed) navigate(postLoginDest, { replace: true });
+    if (isAuthed) void navigate(postLoginDest, { replace: true });
   }, [isAuthed, navigate, postLoginDest]);
 
   // Если в URL ?invite=CODE — Auth компонент сам подхватит, мы просто пропускаем mode-prop.
@@ -25,7 +25,7 @@ export function AuthRoute({ mode }: { mode: "login" | "register" }) {
 
   function onAuth(r: { token: string; user_id: string; display_name?: string }) {
     setAuth(r);
-    navigate(postLoginDest, { replace: true });
+    void navigate(postLoginDest, { replace: true });
   }
 
   return (

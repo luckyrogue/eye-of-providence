@@ -17,7 +17,7 @@ export function OnboardingRoute() {
 
   useEffect(() => {
     if (!isAuthed) {
-      navigate(buildLoginURL(location.pathname + location.search), { replace: true });
+      void navigate(buildLoginURL(location.pathname + location.search), { replace: true });
     }
   }, [isAuthed, navigate, location.pathname, location.search]);
 
@@ -29,7 +29,7 @@ export function OnboardingRoute() {
     if (!status.data) return;
     const completed = status.data.teams_count > 0 && status.data.has_event;
     if (status.data.dismissed || completed) {
-      navigate("/dashboard", { replace: true });
+      void navigate("/dashboard", { replace: true });
     }
   }, [status.data, navigate]);
 
@@ -52,9 +52,11 @@ export function OnboardingRoute() {
 
   function finish() {
     dismiss.mutate(undefined, {
-      onSettled: () => navigate("/dashboard", { replace: true }),
+      onSettled: () => void navigate("/dashboard", { replace: true }),
     });
   }
 
-  return <Onboarding initialStep={initialStep} initialTeamID={initialTeamID} onFinish={finish} />;
+  return (
+    <Onboarding initialStep={initialStep} initialTeamID={initialTeamID} onFinish={() => finish()} />
+  );
 }
