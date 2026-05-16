@@ -93,6 +93,7 @@ jobs:
       contents: read
       security-events: write
       pull-requests: read
+      actions: read # требуется для osv-scanner reusable workflow
 
   backend:
     name: backend
