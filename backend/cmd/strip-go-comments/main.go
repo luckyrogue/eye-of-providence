@@ -63,7 +63,6 @@ func keepCommentGroup(g *ast.CommentGroup) bool {
 		switch {
 		case strings.HasPrefix(t, "//go:"):
 			return true
-			return true
 		case strings.HasPrefix(t, "//line "):
 			return true
 		case strings.HasPrefix(t, "// #cgo"), strings.HasPrefix(t, "//#cgo"):
@@ -71,6 +70,8 @@ func keepCommentGroup(g *ast.CommentGroup) bool {
 		case strings.HasPrefix(t, "//export "):
 			return true
 		case strings.HasPrefix(t, "//extern "):
+			return true
+		case strings.Contains(strings.ToLower(t), "nolint"):
 			return true
 		}
 	}

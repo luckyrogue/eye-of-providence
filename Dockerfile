@@ -81,24 +81,33 @@ FROM caddy:2.11-builder-alpine AS caddy-builder
 RUN xcaddy build v2.11.2 \
     --with github.com/go-jose/go-jose/v3@v3.0.5 \
     --with github.com/go-jose/go-jose/v4@v4.1.4 \
-    --with go.opentelemetry.io/otel@v1.41.0 \
+    --with go.opentelemetry.io/otel@v1.43.0 \
     --with go.opentelemetry.io/otel/sdk@v1.43.0 \
+    --with go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.43.0 \
+    --with go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp@v1.43.0 \
+    --with go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp@v0.19.0 \
+    --with github.com/smallstep/certificates@v0.30.0 \
     --with github.com/mholt/caddy-ratelimit \
     --output /out/caddy
 
 ############################
 # Final image: Caddy + Go API
 ############################
-# Pinned specific minor (vs floating `2-alpine`) для reproducibility.
-# Bump после review каждого нового minor — см. .trivyignore для CVE waivers
-# (smallstep/certificates SCEP, grpc-go authz — not-exploitable в нашей
-# config с auto_https off + нет gRPC endpoints).
-FROM caddy:2.11-alpine
+# Pinned Alpine 3.23 (вместо caddy:2.11-alpine) — caddy upstream сидит на
+# Alpine 3.22, где curl/libcurl застряли на 8.14.x. Alpine 3.23 main уже
+# содержит curl 8.19.0-r0 с фиксами CVE-2025-14017/14524/14819, CVE-2026-1965/
+# 3783/3784/3805. Свой caddy всё равно собираем из xcaddy выше, поэтому
+# дополнительные слои base-image от caddy не нужны.
+FROM alpine:3.23
 
-# Подтягиваем последние patch-версии apk-пакетов (libcrypto3, libssl3, libxml2,
-# zlib и пр.), даже если base-image отстал на пару дней. Trivy gates на
-# CRITICAL — фиксят vendors через apk-репозиторий быстрее, чем в base-tag.
-RUN apk upgrade --no-cache && rm -rf /var/cache/apk/*
+# wget — для HEALTHCHECK; ca-certificates — для outbound TLS из Go API.
+# apk upgrade подтягивает любые post-release patch'и (libssl3, zlib и пр.).
+RUN apk upgrade --no-cache \
+ && apk add --no-cache ca-certificates wget tzdata \
+ && rm -rf /var/cache/apk/*
+
+# Caddyfile location + state dirs (раньше предоставлялись caddy:2.11-alpine).
+RUN mkdir -p /etc/caddy /data /config
 
 # Caddy binary — наш custom build с current Go, replaces upstream vulnerable.
 COPY --from=caddy-builder /out/caddy /usr/bin/caddy
