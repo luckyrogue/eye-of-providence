@@ -156,7 +156,6 @@ pub fn persist_pairing(token: &str, user_id: &str) -> Result<()> {
 }
 
 fn hostname() -> String {
-    std::env::var("HOST").unwrap_or_else(|_| {
-        std::env::var("COMPUTERNAME").unwrap_or_else(|_| "desktop".to_string())
-    })
+    std::env::var("HOST")
+        .unwrap_or_else(|_| std::env::var("COMPUTERNAME").unwrap_or_else(|_| "desktop".to_string()))
 }

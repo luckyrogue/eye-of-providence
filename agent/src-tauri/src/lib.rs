@@ -13,6 +13,7 @@ use tracing_appender::{non_blocking, rolling};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 use crate::core::auth;
+use crate::core::crypto::LocalCrypto;
 use crate::core::ingest::{AuthEmitter, CredsProvider, Ingest, WakeUp};
 use crate::core::local_api;
 use crate::core::preflight::{self, CheckResult, PreflightInput};
@@ -69,7 +70,8 @@ pub fn run() {
         .setup(|app| {
             // Tray — добавлен pending-count item (disabled, обновляется раз в 5с).
             let show = MenuItem::with_id(app, "show", "Open dashboard", true, None::<&str>)?;
-            let pending_item = MenuItem::with_id(app, "pending", "Pending: …", false, None::<&str>)?;
+            let pending_item =
+                MenuItem::with_id(app, "pending", "Pending: …", false, None::<&str>)?;
             let pause = MenuItem::with_id(app, "pause", "Pause tracking", true, None::<&str>)?;
             let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
@@ -123,8 +125,8 @@ pub fn run() {
                 .build(&logs_dir)
                 .expect("rolling file appender");
             let (file_writer, file_guard) = non_blocking(file_appender);
-            let env_filter = EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("info"));
+            let env_filter =
+                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
             tracing_subscriber::registry()
                 .with(env_filter)
                 .with(fmt::layer().with_writer(std::io::stdout))
@@ -135,7 +137,17 @@ pub fn run() {
             let db_path = data_dir.join("eop.sqlite");
             tracing::info!(path = %db_path.display(), "opening local store");
 
-            let store = Arc::new(LocalStore::open(&db_path)?);
+            // Encryption key — открываем или генерим в Keychain/DPAPI до того
+            // как привязываем SQLite. Если keyring недоступен (например, на
+            // headless CI или Linux без secret-service), `?` уронит startup —
+            // это правильно: plaintext fallback нарушил бы privacy claim из
+            // README §8. Лучше hard fail с понятной ошибкой в логе, чем
+            // тихий downgrade.
+            let crypto = Arc::new(LocalCrypto::open_or_init().map_err(|e| {
+                tracing::error!(error = %e, "failed to init local DB encryption key");
+                e
+            })?);
+            let store = Arc::new(LocalStore::open(&db_path, crypto)?);
             let local_api_port: u16 = std::env::var("EOP_LOCAL_API_PORT")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -275,7 +287,6 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
-
 #[tauri::command]
 fn status() -> serde_json::Value {
     serde_json::json!({
@@ -332,7 +343,9 @@ fn account_info() -> Result<auth::AccountInfo, String> {
 }
 
 #[tauri::command]
-async fn pair_begin(state: tauri::State<'_, AgentState>) -> Result<auth::PairBeginResponse, String> {
+async fn pair_begin(
+    state: tauri::State<'_, AgentState>,
+) -> Result<auth::PairBeginResponse, String> {
     let backend = auth::get_backend_url().map_err(|e| e.to_string())?;
     auth::pair_begin(&state.http, &backend)
         .await
