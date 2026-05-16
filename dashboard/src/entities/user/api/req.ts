@@ -172,6 +172,39 @@ export async function deleteMyData(): Promise<void> {
   clearSession();
 }
 
+// exportMyData — GDPR Article 20. Тянет полный JSON-bundle (profile +
+// devices + projects + consent + reports + api_tokens (без hashed) +
+// events) и триггерит save dialog в браузере. responseType blob нужен
+// чтобы axios не парсил большой JSON в строку — рендерим как файл.
+export async function exportMyData(): Promise<void> {
+  const r = await http.get("/v1/me/export", { responseType: "blob" });
+  const blob =
+    r.data instanceof Blob
+      ? r.data
+      : new Blob([JSON.stringify(r.data)], {
+          type: "application/json",
+        });
+  const url = URL.createObjectURL(blob);
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    // Имя файла backend проставляет через Content-Disposition; если
+    // браузер по какой-то причине не подхватил — fallback имя ниже.
+    const cd =
+      typeof r.headers?.["content-disposition"] === "string"
+        ? r.headers["content-disposition"]
+        : "";
+    const m = /filename="?([^";]+)"?/.exec(cd);
+    a.download = m?.[1] ?? `eop-export-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    // Освобождаем blob через короткий таймаут — Safari нужно время на download.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
+
 export const useAuthConfig = () =>
   useQuery({ queryKey: userKeys.authConfig, queryFn: fetchAuthConfig, staleTime: Infinity });
 
@@ -258,6 +291,12 @@ export function useDeleteMyData() {
   return useMutation({
     mutationFn: deleteMyData,
     onSuccess: () => qc.clear(),
+  });
+}
+
+export function useExportMyData() {
+  return useMutation({
+    mutationFn: exportMyData,
   });
 }
 
