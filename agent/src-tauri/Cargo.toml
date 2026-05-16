@@ -51,4 +51,8 @@ windows = { version = "0.58", features = [
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_System_Threading",
     "Win32_System_DataExchange",
+    # GetTickCount для idle-detection (см. platform/windows/mod.rs).
+    # Feature был выпущен — собирался только локально на macOS, где
+    # cfg(target_os = "windows") блок исключён.
+    "Win32_System_SystemInformation",
 ] }

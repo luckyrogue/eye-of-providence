@@ -79,7 +79,12 @@ fn last_input_seconds() -> u32 {
             cbSize: std::mem::size_of::<LASTINPUTINFO>() as u32,
             dwTime: 0,
         };
-        if GetLastInputInfo(&mut info).is_err() {
+        // GetLastInputInfo возвращает `BOOL`, в `windows` 0.58 у BOOL нет
+        // `is_err()` — это `windows::core::BOOL`, обёртка над i32. Проверяем
+        // через `.as_bool()` (true ↔ success). Реверс — если false, значит
+        // системный вызов провалился (теоретически возможно при low-memory),
+        // отдаём 0 = «активен» чтобы не дропать события.
+        if !GetLastInputInfo(&mut info).as_bool() {
             return 0;
         }
         let now = GetTickCount();
