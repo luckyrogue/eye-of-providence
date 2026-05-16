@@ -75,9 +75,19 @@ RUN pnpm -F @eop/dashboard build
 FROM caddy:2.11-builder-alpine AS caddy-builder
 # --with overrides force-bump sub-dependencies в caddy go.sum:
 #   - go-jose v3+v4 → patched (CVE-2026-34986 JWE DoS)
-#   - otel 1.41 → fixed CVE-2026-29181 (baggage header DoS)
+#   - otel 1.43 → fixed CVE-2026-29181 (baggage header DoS)
 #   - otel/sdk 1.43 → fixed CVE-2026-39883 (BSD kenv PATH hijack)
+#   - otel/exporters otlp{trace,metric}http 1.43 — semver-aligned с sdk выше
 # Все semver-compatible upgrades. xcaddy validates через go mod tidy.
+#
+# NB: НЕ добавлять --with github.com/smallstep/certificates — у root-модуля
+# нет импортируемого пакета (multi-package layout), xcaddy не соберётся
+# с "build constraints exclude all Go files". CVE smallstep уже waived
+# в .trivyignore — not-exploitable в нашей config (нет SCEP/ACME endpoint).
+#
+# NB: НЕ добавлять --with otlploghttp@v0.x — log-exporter живёт на v0.x
+# track и тянет несовместимую otel v0.19.0 через свой go.mod, ломая весь
+# build. Дождаться v1.x stable релиза log-exporter'а.
 RUN xcaddy build v2.11.2 \
     --with github.com/go-jose/go-jose/v3@v3.0.5 \
     --with github.com/go-jose/go-jose/v4@v4.1.4 \
@@ -85,8 +95,6 @@ RUN xcaddy build v2.11.2 \
     --with go.opentelemetry.io/otel/sdk@v1.43.0 \
     --with go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.43.0 \
     --with go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp@v1.43.0 \
-    --with go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp@v0.19.0 \
-    --with github.com/smallstep/certificates@v0.30.0 \
     --with github.com/mholt/caddy-ratelimit \
     --output /out/caddy
 
