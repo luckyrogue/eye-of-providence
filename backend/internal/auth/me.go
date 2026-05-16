@@ -201,6 +201,12 @@ func buildExportBundle(ctx context.Context, s MeService, userID uuid.UUID) (*Exp
 	return out, nil
 }
 
+// loadProfile signature parity с sibling-loader'ами ниже (loadPgList и т.д.) —
+// error возврат используется на caller-side через if err := ...; err != nil.
+// Тело сейчас error не порождает (Scan ошибки трактуются как "профиль удалён"),
+// но менять контракт ради unparam — потерять симметрию интерфейса лоадеров.
+//
+//nolint:unparam // intentional: signature parity with peer loaders
 func loadProfile(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, out *ExportBundle) error {
 	row := pool.QueryRow(ctx,
 		`SELECT email, name, github_login, role, team_id, locale, created_at
