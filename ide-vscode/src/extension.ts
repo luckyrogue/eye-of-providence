@@ -1,3 +1,6 @@
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 import * as vscode from "vscode";
 
 // Attribution v2 в IDE:
@@ -280,6 +283,19 @@ async function flushAll(verbose: boolean) {
     return;
   }
 
+  // README §3.3 architecture: events → local Tauri agent (encrypted SQLite +
+  // offline queue + retry) → backend. Если agent запущен на этой машине,
+  // шлём ему — events окажутся в едином буфере + получат re-emission при
+  // offline. Если local agent недоступен (не запущен / другая машина / token
+  // file отсутствует), падаем на cloud-direct ниже.
+  if (await trySendToLocalAgent(events, verbose)) {
+    await saveQueue([]);
+    authRequired = false;
+    retryAttempt = 0;
+    await renderStatus();
+    return;
+  }
+
   const url = getBackendUrl();
   const token = await secretStorage.get(SECRET_TOKEN_KEY);
   if (!token) {
@@ -522,6 +538,120 @@ function getBackendUrl(): string {
   const cfg = vscode.workspace.getConfiguration("eop");
   return (cfg.get<string>("backendUrl") ?? "https://eop.rysdavletov.org/api").replace(/\/$/, "");
 }
+
+// --- Local agent fallback (Block #2/4) -------------------------------------
+//
+// VS Code extension по умолчанию отправляет события в локальный Tauri-agent
+// на 127.0.0.1, который буферизует их в encrypted SQLite, делает retry и сам
+// шлёт в cloud. Это:
+//   - даёт offline-resilience (если cloud недоступен, agent держит queue)
+//   - объединяет potok событий от IDE, browser extension, OS-watcher,
+//     CLI hooks в один pipeline (вместо четырёх отдельных HTTP-клиентов)
+//   - соответствует архитектуре README §3.3
+//
+// Если local agent недоступен (не запущен / другая машина / token file
+// отсутствует) — `trySendToLocalAgent` возвращает false и `flushAll` падает
+// на cloud-direct (legacy path, остаётся для backwards-compat).
+
+function getLocalAgentEnabled(): boolean {
+  const cfg = vscode.workspace.getConfiguration("eop");
+  return cfg.get<boolean>("localAgent.enabled", true);
+}
+
+function getLocalAgentUrl(): string {
+  const cfg = vscode.workspace.getConfiguration("eop");
+  return (cfg.get<string>("localAgent.url") ?? "http://127.0.0.1:7373").replace(/\/$/, "");
+}
+
+// localAgentDataDir — путь, куда Tauri пишет `eop.local-token`. Идентификатор
+// `com.eyeofprovidence.agent` синхронизирован с agent/src-tauri/tauri.conf.json
+// (поле `identifier`). Если кто-то меняет bundle id в Tauri — НЕ ЗАБЫТЬ обновить
+// здесь.
+function localAgentDataDir(): string {
+  const ident = "com.eyeofprovidence.agent";
+  switch (process.platform) {
+    case "darwin":
+      return path.join(os.homedir(), "Library", "Application Support", ident);
+    case "win32":
+      return path.join(process.env.APPDATA ?? os.homedir(), ident);
+    default:
+      return path.join(
+        process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"),
+        ident,
+      );
+  }
+}
+
+// Кэшируем токен — файл не меняется в рамках одной сессии extension. Если
+// agent был перезапущен и сгенерил новый токен, первый flush после рестарта
+// получит 401 от local agent и упадёт на cloud — на следующем flush кеш
+// инвалидируется (мы сбрасываем его на ошибку).
+let cachedLocalToken: string | null | undefined = undefined;
+
+async function readLocalAgentToken(): Promise<string | null> {
+  if (cachedLocalToken !== undefined) return cachedLocalToken;
+  try {
+    const p = path.join(localAgentDataDir(), "eop.local-token");
+    const buf = await fs.promises.readFile(p, "utf8");
+    cachedLocalToken = buf.trim();
+    return cachedLocalToken;
+  } catch {
+    cachedLocalToken = null;
+    return null;
+  }
+}
+
+async function trySendToLocalAgent(events: EventPayload[], verbose: boolean): Promise<boolean> {
+  if (!getLocalAgentEnabled()) return false;
+  const token = await readLocalAgentToken();
+  if (!token) {
+    logger.debug("local-agent: no token file, skipping");
+    return false;
+  }
+  const url = getLocalAgentUrl();
+
+  // 1.5s timeout — local loopback should be <50ms. Если agent повис, не
+  // хотим блокировать flush на десятки секунд: лучше быстро упасть и пойти
+  // в cloud напрямую.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 1500);
+  try {
+    setStatus("sending");
+    const res = await fetch(`${url}/v1/local/ingest`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ events }),
+      signal: ctrl.signal,
+    });
+    if (res.status === 401) {
+      // Токен ротировал — сбросим кэш, следующий вызов перечитает.
+      logger.warn("local-agent: 401, invalidating token cache");
+      cachedLocalToken = undefined;
+      return false;
+    }
+    if (!res.ok) {
+      logger.debug(`local-agent: non-ok ${res.status}, falling back to cloud`);
+      return false;
+    }
+    logger.info(`local-agent: forwarded ${events.length} events to 127.0.0.1`);
+    if (verbose) {
+      vscode.window.showInformationMessage(`EoP: sent ${events.length} events (via local agent)`);
+    }
+    return true;
+  } catch (err) {
+    // Connection refused / timeout / DNS — agent не запущен или
+    // недоступен. Молчаливый fall back, иначе на каждой flush IDE будет
+    // ругаться WARN'ами пока пользователь не запустит desktop app.
+    logger.debug(`local-agent: unreachable (${String(err)}), falling back to cloud`);
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+// ---------------------------------------------------------------------------
 
 function getFlushIntervalMs(): number {
   const cfg = vscode.workspace.getConfiguration("eop");

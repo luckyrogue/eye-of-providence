@@ -84,6 +84,16 @@
           "type": "number",
           "default": 80,
           "description": "Inserts >= N chars (in single edit) считаются вставкой/AI suggestion, не typed"
+        },
+        "eop.localAgent.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Send events to local Tauri agent first (127.0.0.1) when available. README §3.3 architecture: events → local agent's encrypted SQLite → backend. Если agent не запущен / другая машина — autom. fall back на eop.backendUrl."
+        },
+        "eop.localAgent.url": {
+          "type": "string",
+          "default": "http://127.0.0.1:7373",
+          "description": "Local Tauri agent HTTP endpoint. Must match EOP_LOCAL_API_PORT в agent."
         }
       }
     }
