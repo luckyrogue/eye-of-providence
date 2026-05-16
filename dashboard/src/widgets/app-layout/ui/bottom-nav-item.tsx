@@ -1,6 +1,9 @@
+// Min-height 56px и tap-target ≥ 44px — по Material Design / iOS HIG.
+
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@eop/ui";
+
 export function BottomNavItem({
   to,
   icon,

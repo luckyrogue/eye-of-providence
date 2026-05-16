@@ -1,5 +1,7 @@
 import { FolderGit2, GitCommit, Settings, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+
+// `ownerOnly: true` фильтруется в page-shell (не тут).
 export const TEAM_DETAIL_TABS = [
   { id: "members", i18nKey: "team_detail.tabs.members", icon: Users },
   { id: "projects", i18nKey: "team_detail.tabs.projects", icon: FolderGit2 },
@@ -11,4 +13,5 @@ export const TEAM_DETAIL_TABS = [
   icon: LucideIcon;
   ownerOnly?: boolean;
 }>;
+
 export type TeamDetailTabKey = (typeof TEAM_DETAIL_TABS)[number]["id"];

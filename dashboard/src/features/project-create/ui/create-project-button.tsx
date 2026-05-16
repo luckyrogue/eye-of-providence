@@ -4,17 +4,21 @@ import { Button, PromptDialog } from "@eop/ui";
 import { Plus } from "lucide-react";
 import { useCreateProject } from "../../../entities/team";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+
 type Stage = "closed" | "name" | "repo";
+
 export function CreateProjectButton({ teamID }: { teamID: string }) {
   const { t } = useTranslation(["app", "common"]);
   const create = useCreateProject(teamID);
   const runToast = useMutationToast();
   const [stage, setStage] = useState<Stage>("closed");
   const [name, setName] = useState("");
+
   function close() {
     setStage("closed");
     setName("");
   }
+
   async function commit(repoURL: string) {
     const r = await runToast(create.mutateAsync({ name, repoURL }), {
       success: t("app:team_detail.projects_create_success"),
@@ -22,6 +26,7 @@ export function CreateProjectButton({ teamID }: { teamID: string }) {
     });
     if (r) close();
   }
+
   return (
     <>
       <Button size="sm" onClick={() => setStage("name")} disabled={create.isPending}>

@@ -1,3 +1,13 @@
+// i18next setup для dashboard.
+//
+// Поддерживаемые локали: ru / en / kk / es.
+// Detection: localStorage('eop_locale') > navigator.language > 'ru'.
+//
+// Для type-safety: типы ключей подсасываются из ru/common.json (как
+// "канонический" namespace). Остальные локали должны иметь те же ключи.
+//
+// Lazy-load: пока тащим всё через import — namespaces маленькие.
+
 import {
   createI18n,
   LOCALE_LABELS,
@@ -5,6 +15,7 @@ import {
   SUPPORTED_LOCALES,
   type Locale,
 } from "@eop/i18n";
+
 import enCommon from "./locales/en/common.json";
 import enErrors from "./locales/en/errors.json";
 import enAuth from "./locales/en/auth.json";
@@ -15,6 +26,7 @@ import enInsights from "./locales/en/insights.json";
 import enDeveloper from "./locales/en/developer.json";
 import enChangelog from "./locales/en/changelog.json";
 import enPwa from "./locales/en/pwa.json";
+
 import ruCommon from "./locales/ru/common.json";
 import ruErrors from "./locales/ru/errors.json";
 import ruAuth from "./locales/ru/auth.json";
@@ -25,6 +37,7 @@ import ruInsights from "./locales/ru/insights.json";
 import ruDeveloper from "./locales/ru/developer.json";
 import ruChangelog from "./locales/ru/changelog.json";
 import ruPwa from "./locales/ru/pwa.json";
+
 import kkCommon from "./locales/kk/common.json";
 import kkErrors from "./locales/kk/errors.json";
 import kkAuth from "./locales/kk/auth.json";
@@ -35,6 +48,7 @@ import kkInsights from "./locales/kk/insights.json";
 import kkDeveloper from "./locales/kk/developer.json";
 import kkChangelog from "./locales/kk/changelog.json";
 import kkPwa from "./locales/kk/pwa.json";
+
 import esCommon from "./locales/es/common.json";
 import esErrors from "./locales/es/errors.json";
 import esAuth from "./locales/es/auth.json";
@@ -45,7 +59,9 @@ import esInsights from "./locales/es/insights.json";
 import esDeveloper from "./locales/es/developer.json";
 import esChangelog from "./locales/es/changelog.json";
 import esPwa from "./locales/es/pwa.json";
+
 export { SUPPORTED_LOCALES, LOCALE_LABELS, LOCALE_STORAGE_KEY, type Locale };
+
 const resources = {
   en: {
     common: enCommon,
@@ -96,6 +112,7 @@ const resources = {
     pwa: esPwa,
   },
 };
+
 const i18n = createI18n({
   resources,
   fallbackLng: "ru",
@@ -113,4 +130,5 @@ const i18n = createI18n({
     "pwa",
   ],
 });
+
 export default i18n;

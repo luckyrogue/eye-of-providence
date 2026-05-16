@@ -5,6 +5,7 @@ import { Button, Form, InputField } from "@eop/ui";
 import { useChangeMyPassword } from "../../../entities/user";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { changePasswordSchema, type ChangePasswordValues } from "../../../shared/lib/schemas";
+
 export function ChangePasswordForm() {
   const { t } = useTranslation(["common", "auth", "errors"]);
   const runToast = useMutationToast();
@@ -14,6 +15,7 @@ export function ChangePasswordForm() {
     defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
   });
   const tr = (msg?: string) => (msg ? t(msg as never) : msg);
+
   async function onSubmit(values: ChangePasswordValues) {
     const ok = await runToast(
       change.mutateAsync({
@@ -27,6 +29,7 @@ export function ChangePasswordForm() {
     );
     if (ok !== undefined) form.reset();
   }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">

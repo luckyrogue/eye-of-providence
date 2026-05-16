@@ -2,6 +2,9 @@ import { useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Eyebrow } from "@eop/ui";
 import { useContent, type FaqItemsBlock, type FaqItem } from "../../../shared/content";
+
+// Auto-derive a kebab-case anchor from the question if the CMS row omits
+// an explicit `anchor`. Strictly lowercase a-z 0-9 with single hyphens.
 function slugifyQuestion(q: string): string {
   return q
     .toLowerCase()
@@ -9,14 +12,22 @@ function slugifyQuestion(q: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
 }
+
 export function FAQ() {
   const { t } = useTranslation("landing");
+
+  // i18n is the synchronous fallback when the CMS row is missing/offline.
+  // FAQ schema requires minItems: 3, so the i18n JSON ships at least 3
+  // items per locale (Phase 4 i18n seed). Defensive .slice(0,10) for the
+  // upper bound matches the backend's maxItems: 10.
   const fallback = useMemo<FaqItemsBlock>(() => {
     const items = t("faq.items", { returnObjects: true }) as FaqItem[];
     return { items: Array.isArray(items) ? items.slice(0, 10) : [] };
   }, [t]);
+
   const data = useContent<FaqItemsBlock>("landing.faq.items", fallback);
   const items = data.items;
+
   return (
     <section id="faq" className="py-24 border-t bg-muted/20">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">

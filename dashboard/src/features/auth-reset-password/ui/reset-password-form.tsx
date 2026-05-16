@@ -5,6 +5,7 @@ import { Button, Form, InputField } from "@eop/ui";
 import { resetPassword } from "../../../entities/user";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { resetPasswordSchema, type ResetPasswordValues } from "../../../shared/lib/schemas";
+
 export function ResetPasswordForm({ token, onDone }: { token: string; onDone: () => void }) {
   const { t } = useTranslation(["auth", "errors"]);
   const runToast = useMutationToast();
@@ -13,12 +14,14 @@ export function ResetPasswordForm({ token, onDone }: { token: string; onDone: ()
     defaultValues: { password: "", confirmPassword: "" },
   });
   const tr = (msg?: string) => (msg ? t(msg as never) : msg);
+
   async function onSubmit(values: ResetPasswordValues) {
     const ok = await runToast(resetPassword(token, values.password), {
       error: t("errors:reset_password_failed"),
     });
     if (ok !== undefined) onDone();
   }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">

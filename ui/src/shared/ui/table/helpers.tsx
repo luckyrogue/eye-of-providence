@@ -1,9 +1,14 @@
+// Готовая колонка-чекбокс для row selection (master в шапке + чекбокс в строке).
+// API соответствует доке shadcn data-table.
 import type { ColumnDef } from "@tanstack/react-table";
+
 import { Checkbox } from "../checkbox";
+
 export type SelectColumnLabels = {
   selectAll?: string;
   selectRow?: string;
 };
+
 export function selectColumn<TData>(labels?: SelectColumnLabels): ColumnDef<TData> {
   return {
     id: "__select__",

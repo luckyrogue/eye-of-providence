@@ -1,11 +1,18 @@
+// CMS-lite editor page (Phase 4).
+//
+// Two-pane layout: slug tree on the left, single-slug editor on the right.
+// The editor itself owns the locale tabs + Monaco + live preview iframe.
+
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@eop/ui";
 import { ContentBlockEditor, SlugTree } from "../../../features/admin-content";
 import { CONTENT_SLUGS, type ContentSlug } from "../../../shared/content";
+
 export function ContentEditorPage() {
   const { t } = useTranslation("app");
   const [selected, setSelected] = useState<ContentSlug | null>(CONTENT_SLUGS[0] ?? null);
+
   return (
     <div className="eop-card">
       <div className="card-head">

@@ -1,3 +1,8 @@
+// Insights widget — narrative-карточки на dashboard.
+//
+// Backend (`GET /v1/me/insights`) возвращает [{key, vars}], frontend резолвит
+// локализованную строку через `t(\`insights:${key}\`, vars)`.
+
 import { useTranslation } from "react-i18next";
 import {
   Card,
@@ -11,9 +16,11 @@ import {
 import { Sparkles } from "lucide-react";
 import { useInsights } from "../../../entities/user";
 import { InsightRow } from "./insight-row";
+
 export function InsightsWidget() {
   const { t } = useTranslation("insights");
   const { data: insights, isPending } = useInsights();
+
   return (
     <Card className="card-hover reveal">
       <CardHeader>

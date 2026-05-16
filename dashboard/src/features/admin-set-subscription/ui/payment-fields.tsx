@@ -2,12 +2,14 @@ import { Controller, type Control } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { CheckboxField, Input, SimpleSelect, type SimpleSelectOption } from "@eop/ui";
 import type { SubscriptionForm } from "../model";
+
 const METHOD_OPTIONS: SimpleSelectOption[] = [
   { value: "manual_transfer", label: "manual_transfer" },
   { value: "cash", label: "cash" },
   { value: "stripe", label: "stripe" },
   { value: "other", label: "other" },
 ];
+
 export function SubscriptionPaymentFields({
   control,
   enabled,

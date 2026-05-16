@@ -7,11 +7,13 @@ import {
   type PreflightCheck,
   type PreflightStatus,
 } from "../shared/api/tauri";
+
 const STATUS_DOT: Record<PreflightStatus, string> = {
   ok: "bg-success",
   warn: "bg-warning",
   error: "bg-destructive",
 };
+
 function badgeLabel(t: (key: string) => string, status: PreflightStatus): string {
   switch (status) {
     case "ok":
@@ -22,13 +24,17 @@ function badgeLabel(t: (key: string) => string, status: PreflightStatus): string
       return t("badge_error");
   }
 }
-const PREFLIGHT_TIMEOUT_MS = 25000;
+
+const PREFLIGHT_TIMEOUT_MS = 25_000;
+
 export function OnboardingPage() {
   const { t } = useTranslation("agent");
   const [checks, setChecks] = useState<PreflightCheck[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Сбрасывает устаревшие ответы при повторных кликах / Strict Mode. */
   const refreshGen = useRef(0);
+
   const refresh = useCallback(async () => {
     const id = ++refreshGen.current;
     setBusy(true);
@@ -59,17 +65,21 @@ export function OnboardingPage() {
       if (id === refreshGen.current) setBusy(false);
     }
   }, [t]);
+
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
   const errors = checks.filter((c) => c.status === "error");
   const warns = checks.filter((c) => c.status === "warn");
+
   const desc =
     errors.length > 0
       ? t("setup_desc_blockers", { errors: errors.length, warnings: warns.length })
       : warns.length > 0
         ? t("setup_desc_warns", { count: warns.length })
         : t("setup_desc_ok");
+
   return (
     <div className="space-y-4">
       <Card>

@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Sparkles, Upload, Loader2 } from "lucide-react";
-import { Button, toast } from "@eop/ui";
+import { toast } from "@eop/ui";
 import { useGenerateReport } from "../../entities/report";
 import {
   KpiGrid,
@@ -12,11 +12,13 @@ import {
   LanguageBars,
   AttributionLog,
 } from "../../widgets/dashboard-v2/ui/widgets";
+
 export function DashboardRoute() {
   const { t, i18n } = useTranslation("app");
   const today = new Date();
   const generate = useGenerateReport();
   const localeTag = i18nToBcp47(i18n.language);
+
   const handleGenerate = () => {
     generate.mutate("weekly", {
       onSuccess: () => toast.success(t("dashboard.report_generated_toast")),
@@ -24,6 +26,7 @@ export function DashboardRoute() {
     });
   };
   const handleExport = () => {
+    // TODO: backend endpoint /v1/events/export — пока нет, показываем info.
     toast.info(t("dashboard.export_not_available"));
   };
   return (
@@ -41,17 +44,18 @@ export function DashboardRoute() {
           </div>
         </div>
         <div className="page-head-actions flex gap-2">
-          <Button
+          {/* eslint-disable-next-line no-restricted-syntax -- custom-styled CTA (artifact 1:1) */}
+          <button
             type="button"
-            variant="outline"
             onClick={handleExport}
-            className="inline-flex h-10 items-center gap-2 rounded-lg px-3 text-[13px]"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[13px] hover:bg-foreground/5"
             style={{ borderColor: "hsl(var(--eop-line-strong))" }}
           >
             <Upload className="h-3.5 w-3.5" />
             {t("dashboard.page_head_action_export")}
-          </Button>
-          <Button
+          </button>
+          {/* eslint-disable-next-line no-restricted-syntax -- custom-styled CTA (artifact 1:1) */}
+          <button
             type="button"
             onClick={handleGenerate}
             disabled={generate.isPending}
@@ -63,7 +67,7 @@ export function DashboardRoute() {
               <Sparkles className="h-3.5 w-3.5" />
             )}
             {t("dashboard.page_head_action_report")}
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -75,6 +79,12 @@ export function DashboardRoute() {
         </div>
       </div>
 
+      {/* Layout: Heatmap 8 + Gauge 4 (top row) → Donut 5 + Languages 7
+          (middle) → Trend 12 (full width) → Attribution 12 (live).
+          Удалены TimelineCard/ProvidersList/ProjectsList/FocusSessions —
+          нет backend endpoints, mock data вводила в заблуждение.
+          Вернутся когда добавим /v1/timeline /v1/summary/providers
+          /v1/summary/projects /v1/sessions/focus. */}
       <div className="eop-grid grid grid-cols-12 gap-[14px]">
         <HeatmapCard />
         <GaugeCard />
@@ -86,6 +96,9 @@ export function DashboardRoute() {
     </>
   );
 }
+
+// i18nToBcp47 — наш storage хранит "ru"/"en"/"kk"/"es", но Intl нужны BCP-47
+// теги ("ru-RU", "en-US", "kk-KZ", "es-ES"). Маппим в наиболее ходовой регион.
 function i18nToBcp47(lng: string): string {
   const base = lng.split("-")[0];
   switch (base) {

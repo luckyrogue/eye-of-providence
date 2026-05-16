@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { pendingCount } from "../shared/api/tauri";
+
 export function StatusPage() {
   const { t } = useTranslation("agent");
   const [pending, setPending] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
   async function refresh() {
     try {
       setPending(await pendingCount());
@@ -15,11 +17,13 @@ export function StatusPage() {
       setPending(null);
     }
   }
+
   useEffect(() => {
     void refresh();
     const id = setInterval(() => void refresh(), 5000);
     return () => clearInterval(id);
   }, []);
+
   const description = error
     ? t("status_error")
     : pending === null
@@ -27,6 +31,7 @@ export function StatusPage() {
       : pending === 0
         ? t("status_all_sent")
         : t("status_buffer", { count: pending });
+
   return (
     <Card>
       <CardHeader>

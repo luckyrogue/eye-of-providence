@@ -1,3 +1,7 @@
+// Forma для редактирования team flags. RHF + zod.
+// Allowlist из 6 ключей. Boolean → switch, number → input с min.
+// Empty / clear → null (back to plan default).
+
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
@@ -7,25 +11,27 @@ import { Button, Input } from "@eop/ui";
 import { Loader2 } from "lucide-react";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { useTeamFlags, useUpdateTeamFlags, type TeamFlagsPayload } from "../api";
+
 type BoolFlagKey =
   | "enable_insights"
   | "enable_team_reports"
   | "enable_anomaly_detection"
   | "enable_webhooks";
+
 type NumFlagKey = "k_anon_threshold" | "audit_log_retention_days";
+
 const BOOL_FLAGS: BoolFlagKey[] = [
   "enable_insights",
   "enable_team_reports",
   "enable_anomaly_detection",
   "enable_webhooks",
 ];
-const NUM_FLAGS: {
-  key: NumFlagKey;
-  min: number;
-}[] = [
+
+const NUM_FLAGS: { key: NumFlagKey; min: number }[] = [
   { key: "k_anon_threshold", min: 1 },
   { key: "audit_log_retention_days", min: 30 },
 ];
+
 const schema = z.object({
   enable_insights: z.union([z.boolean(), z.null()]),
   enable_team_reports: z.union([z.boolean(), z.null()]),
@@ -34,7 +40,9 @@ const schema = z.object({
   k_anon_threshold: z.union([z.number().int().min(1), z.null()]),
   audit_log_retention_days: z.union([z.number().int().min(30), z.null()]),
 });
+
 type FormValues = z.infer<typeof schema>;
+
 const EMPTY: FormValues = {
   enable_insights: null,
   enable_team_reports: null,
@@ -43,19 +51,24 @@ const EMPTY: FormValues = {
   k_anon_threshold: null,
   audit_log_retention_days: null,
 };
+
 export function TeamFlagsForm({ teamID }: { teamID: string }) {
   const { t } = useTranslation("app");
   const flags = useTeamFlags(teamID);
   const update = useUpdateTeamFlags();
   const runToast = useMutationToast();
+
   const initial = useMemo<FormValues>(() => coerceFlags(flags.data ?? {}), [flags.data]);
+
   const { register, handleSubmit, reset, watch, setValue, formState } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: EMPTY,
   });
+
   useEffect(() => {
     reset(initial);
   }, [initial, reset]);
+
   async function onSubmit(values: FormValues) {
     const payload: TeamFlagsPayload = {};
     for (const k of BOOL_FLAGS) payload[k] = values[k];
@@ -65,6 +78,7 @@ export function TeamFlagsForm({ teamID }: { teamID: string }) {
       error: t("admin.team_flags.toast.save_failed"),
     });
   }
+
   async function onResetAll() {
     const cleared: TeamFlagsPayload = {};
     for (const k of BOOL_FLAGS) cleared[k] = null;
@@ -74,6 +88,7 @@ export function TeamFlagsForm({ teamID }: { teamID: string }) {
       error: t("admin.team_flags.toast.save_failed"),
     });
   }
+
   if (flags.isPending) {
     return (
       <div className="text-sm text-muted-foreground py-6 flex items-center gap-2">
@@ -89,6 +104,7 @@ export function TeamFlagsForm({ teamID }: { teamID: string }) {
       </div>
     );
   }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
       <p className="text-xs text-muted-foreground">{t("admin.team_flags.intro")}</p>
@@ -116,33 +132,36 @@ export function TeamFlagsForm({ teamID }: { teamID: string }) {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <Button
+                {/* eslint-disable-next-line no-restricted-syntax -- switch UI primitive */}
+                <button
                   type="button"
                   role="switch"
                   aria-checked={checked}
-                  variant="ghost"
-                  size="sm"
                   aria-label={t(`admin.team_flags.${key}.label`)}
                   onClick={() =>
                     setValue(key, value === true ? false : value === false ? null : true, {
                       shouldDirty: true,
                     })
                   }
-                  className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0 hover:bg-transparent ${checked ? "bg-foreground" : "bg-muted"}`}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    checked ? "bg-foreground" : "bg-muted"
+                  }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform ${
+                      checked ? "translate-x-4" : "translate-x-0.5"
+                    }`}
                   />
-                </Button>
+                </button>
                 {isOverride && (
-                  <Button
+                  // eslint-disable-next-line no-restricted-syntax
+                  <button
                     type="button"
-                    variant="link"
-                    className="h-auto p-0 text-[11px] text-muted-foreground"
+                    className="text-[11px] text-muted-foreground underline"
                     onClick={() => setValue(key, null, { shouldDirty: true })}
                   >
                     {t("admin.team_flags.action.clear")}
-                  </Button>
+                  </button>
                 )}
               </div>
             </div>
@@ -163,14 +182,14 @@ export function TeamFlagsForm({ teamID }: { teamID: string }) {
                   {t(`admin.team_flags.${key}.label`)}
                 </label>
                 {isOverride && (
-                  <Button
+                  // eslint-disable-next-line no-restricted-syntax
+                  <button
                     type="button"
-                    variant="link"
-                    className="h-auto p-0 text-[11px] text-muted-foreground"
+                    className="text-[11px] text-muted-foreground underline"
                     onClick={() => setValue(key, null, { shouldDirty: true })}
                   >
                     {t("admin.team_flags.action.clear")}
-                  </Button>
+                  </button>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">{t(`admin.team_flags.${key}.desc`)}</p>
@@ -220,6 +239,7 @@ export function TeamFlagsForm({ teamID }: { teamID: string }) {
     </form>
   );
 }
+
 function coerceFlags(raw: Record<string, unknown>): FormValues {
   const out: FormValues = { ...EMPTY };
   for (const k of BOOL_FLAGS) {

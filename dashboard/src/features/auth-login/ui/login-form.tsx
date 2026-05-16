@@ -7,23 +7,28 @@ import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { loginSchema, type LoginValues } from "../../../shared/lib/schemas";
 import { OAuthButtonRow } from "../../auth-oauth";
 import { PasskeyLoginButton } from "../../auth-passkey";
+
 export function LoginForm({ onSuccess }: { onSuccess: (r: AuthResponse) => void }) {
   const { t } = useTranslation(["auth", "errors"]);
   const runToast = useMutationToast();
   const authConfig = useAuthConfig();
   const providers = authConfig.data?.providers ?? ["github"];
   const passkeyEnabled = authConfig.data?.passkey_enabled ?? false;
+
   const form = useForm<LoginValues>({
     defaultValues: { email: "", password: "" },
     resolver: zodResolver(loginSchema),
   });
+
   const tr = (msg?: string) => (msg ? t(msg as never) : msg);
+
   async function onSubmit(values: LoginValues) {
     const r = await runToast(login(values.email, values.password), {
       error: t("errors:auth_failed"),
     });
     if (r) onSuccess(r);
   }
+
   return (
     <div className="space-y-4">
       {passkeyEnabled && <PasskeyLoginButton />}

@@ -1,9 +1,9 @@
+// How it works — 4 step cards с inline SVG-диаграммой на каждом (artifact 1:1).
+
 import { useTranslation } from "react-i18next";
-type Step = {
-  num: string;
-  title: string;
-  body: string;
-};
+
+type Step = { num: string; title: string; body: string };
+
 function HowDiagram({ kind }: { kind: "observe" | "categorize" | "attribute" | "synthesize" }) {
   const stroke = "rgba(255,255,255,0.5)";
   const acc = "hsl(var(--accent))";
@@ -87,7 +87,9 @@ function HowDiagram({ kind }: { kind: "observe" | "categorize" | "attribute" | "
       );
   }
 }
+
 const KINDS = ["observe", "categorize", "attribute", "synthesize"] as const;
+
 export function HowItWorks() {
   const { t } = useTranslation("landing");
   const steps = t("how.steps", { returnObjects: true }) as Step[];

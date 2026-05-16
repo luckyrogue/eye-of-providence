@@ -1,15 +1,21 @@
+// Пагинация для DataTable: счётчик выделенных строк + переключатель размера
+// страницы + индикатор «N of M» + первая/предыдущая/следующая/последняя.
 import type { Table } from "@tanstack/react-table";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+
 import { Button } from "../button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../select";
 import type { DataTableLabels } from "./types";
+
 export type DataTablePaginationProps<TData> = {
   table: Table<TData>;
   pageSizeOptions?: number[];
   showSelectionCount?: boolean;
   labels?: DataTableLabels;
 };
+
 const DEFAULT_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
 export function DataTablePagination<TData>({
   table,
   pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
@@ -20,6 +26,7 @@ export function DataTablePagination<TData>({
   const total = table.getFilteredRowModel().rows.length;
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
+
   return (
     <div className="flex items-center justify-between gap-2 px-1 py-2">
       <div className="flex-1 text-xs text-muted-foreground">

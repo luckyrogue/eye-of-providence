@@ -1,3 +1,6 @@
+// <DataTable<TData,TValue>> — Reusable Component из shadcn доки поверх @tanstack/react-table.
+// Покрывает Basic Table, Row Actions, Pagination, Sorting, Filtering, Visibility, Row Selection.
+// i18n-агностично: caller передаёт labels, headers/cells рендерит сам.
 import * as React from "react";
 import {
   type ColumnDef,
@@ -14,6 +17,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+
 import { cn } from "../../lib/cn";
 import { Input } from "../input";
 import { Skeleton } from "../skeleton";
@@ -21,29 +25,45 @@ import { DataTablePagination } from "./data-table-pagination";
 import { DataTableViewOptions } from "./data-table-view-options";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./table";
 import type { DataTableLabels } from "./types";
+
 export type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  filterableColumn?: {
-    id: string;
-    placeholder?: string;
-  };
+
+  // Filtering — встроенный input, фильтрует по одной колонке.
+  filterableColumn?: { id: string; placeholder?: string };
+
+  // Visibility
   enableColumnVisibility?: boolean;
   initialColumnVisibility?: VisibilityState;
+
+  // Pagination
   enablePagination?: boolean;
   pageSize?: number;
   pageSizeOptions?: number[];
+
+  // Row selection
   enableRowSelection?: boolean;
   onSelectionChange?: (selectedRows: TData[]) => void;
+
+  // Expandable rows (например, AddMemberRow в TeamsTable).
   getRowCanExpand?: (row: Row<TData>) => boolean;
   renderSubComponent?: (row: Row<TData>) => React.ReactNode;
+
+  // Toolbar slot для caller-кнопок (рядом с фильтром / Columns).
   toolbarRight?: React.ReactNode;
+
+  // States
   isLoading?: boolean;
   emptyState?: React.ReactNode;
+
+  // i18n-агностично
   labels?: DataTableLabels;
+
   className?: string;
   tableClassName?: string;
 };
+
 export function DataTable<TData, TValue>({
   columns,
   data,
@@ -70,6 +90,7 @@ export function DataTable<TData, TValue>({
     initialColumnVisibility ?? {},
   );
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+
   const table = useReactTable({
     data,
     columns,
@@ -94,13 +115,19 @@ export function DataTable<TData, TValue>({
       pagination: pageSize ? { pageIndex: 0, pageSize } : undefined,
     },
   });
+
+  // Прокидываем выделенные строки наверх (TanStack хранит их как { [rowId]: true }).
   React.useEffect(() => {
     if (!onSelectionChange) return;
     const rows = table.getFilteredSelectedRowModel().rows.map((r) => r.original);
     onSelectionChange(rows);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rowSelection]);
+
   const filterColumn = filterableColumn ? table.getColumn(filterableColumn.id) : undefined;
+
   const showToolbar = !!filterableColumn || enableColumnVisibility || !!toolbarRight;
+
   return (
     <div className={cn("w-full space-y-2", className)}>
       {showToolbar && (

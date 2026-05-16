@@ -1,7 +1,14 @@
+// Admin panel — production-grade super_admin view. Под eop-theme:
+// page-head + KPI grid + tab-segmented control в стиле topbar date-pick.
+//
+// Все хуки уже подключены к backend (useAdminStats / useAdminTeams /
+// useAdminUsers + payments + delete + role + subscription mutations).
+// Здесь добавляем loading skeletons + error states + refresh UX.
+
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { toast, IconButton, Tabs, TabsList, TabsTrigger } from "@eop/ui";
+import { toast } from "@eop/ui";
 import { Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 import { adminKeys, useAdminStats, useAdminTeams, useAdminUsers } from "../../entities/admin";
 import { ADMIN_TABS, type AdminProps, type AdminTabKey } from "./model";
@@ -16,6 +23,7 @@ import { EmailTemplatesPage } from "./ui/email-templates";
 import { ContentEditorPage } from "./ui/content-editor";
 import { WebhooksCrossTeam } from "./ui/webhooks-cross-team";
 import { APITokensCrossUser } from "./ui/api-tokens-cross-user";
+
 export function Admin({ tz }: AdminProps) {
   const { t } = useTranslation("app");
   const qc = useQueryClient();
@@ -23,9 +31,11 @@ export function Admin({ tz }: AdminProps) {
   const stats = useAdminStats();
   const teams = useAdminTeams();
   const users = useAdminUsers();
+
   const isLoading = stats.isPending || teams.isPending || users.isPending;
   const errored = stats.isError || teams.isError || users.isError;
   const isFetching = stats.isFetching || teams.isFetching || users.isFetching;
+
   const refresh = async () => {
     try {
       await qc.invalidateQueries({ queryKey: adminKeys.all });
@@ -34,6 +44,7 @@ export function Admin({ tz }: AdminProps) {
       toast.error(t("admin.refresh_failed") || "Refresh failed");
     }
   };
+
   return (
     <>
       <div className="page-head">
@@ -52,30 +63,34 @@ export function Admin({ tz }: AdminProps) {
           </div>
         </div>
         <div className="page-head-actions flex items-center gap-2">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as AdminTabKey)}>
-            <TabsList className="eop-tab-pills h-auto gap-0 rounded-lg bg-transparent p-0">
-              {ADMIN_TABS.map((it) => (
-                <TabsTrigger
-                  key={it.id}
-                  value={it.id}
-                  className="rounded-none border-0 font-mono text-[12px] shadow-none ring-0 focus-visible:ring-0 data-[state=active]:bg-[hsl(232_13%_14%)] data-[state=active]:text-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
-                >
-                  {t(it.i18nKey)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-          <IconButton
-            title={t("admin.refresh") || "Refresh"}
-            disabled={isFetching}
+          <div className="eop-tab-pills">
+            {ADMIN_TABS.map((it) => (
+              // eslint-disable-next-line no-restricted-syntax -- segmented control (artifact pattern)
+              <button
+                key={it.id}
+                type="button"
+                onClick={() => setTab(it.id)}
+                className={tab === it.id ? "on" : ""}
+              >
+                {t(it.i18nKey)}
+              </button>
+            ))}
+          </div>
+          {/* eslint-disable-next-line no-restricted-syntax -- icon-btn refresh */}
+          <button
+            type="button"
             onClick={() => void refresh()}
+            disabled={isFetching}
+            aria-label={t("admin.refresh") || "Refresh"}
+            className="inline-flex items-center justify-center h-10 w-10 rounded-lg border transition-colors hover:bg-foreground/5 disabled:opacity-60"
+            style={{ borderColor: "hsl(var(--border))" }}
           >
             {isFetching ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4" />
             )}
-          </IconButton>
+          </button>
         </div>
       </div>
 

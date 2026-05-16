@@ -5,6 +5,7 @@ import { Button, Form, InputField } from "@eop/ui";
 import { useChangeMyEmail } from "../../../entities/user";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { changeEmailSchema, type ChangeEmailValues } from "../../../shared/lib/schemas";
+
 export function ChangeEmailForm({ currentEmail }: { currentEmail?: string }) {
   const { t } = useTranslation(["common", "auth", "errors"]);
   const runToast = useMutationToast();
@@ -14,6 +15,7 @@ export function ChangeEmailForm({ currentEmail }: { currentEmail?: string }) {
     defaultValues: { currentPassword: "", email: currentEmail ?? "" },
   });
   const tr = (msg?: string) => (msg ? t(msg as never) : msg);
+
   async function onSubmit(values: ChangeEmailValues) {
     const ok = await runToast(
       change.mutateAsync({ currentPassword: values.currentPassword, email: values.email }),
@@ -24,6 +26,7 @@ export function ChangeEmailForm({ currentEmail }: { currentEmail?: string }) {
     );
     if (ok !== undefined) form.reset({ currentPassword: "", email: values.email });
   }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">

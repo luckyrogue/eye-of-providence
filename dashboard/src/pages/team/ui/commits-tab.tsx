@@ -5,10 +5,12 @@ import { useTeamCommits, type Commit } from "../../../entities/team";
 import { dtLabels } from "../../../shared/lib/data-table-labels";
 import { formatDate } from "../../../shared/lib/tz";
 import { renderMessageWithLinks } from "../../../shared/lib/task-refs";
+
 export function CommitsTab({ teamID, tz }: { teamID: string; tz: string }) {
   const { t } = useTranslation(["app", "common"]);
   const commits = useTeamCommits(teamID);
   const list: Commit[] = commits.data ?? [];
+
   const columns = useMemo<DataTableColumn<Commit>[]>(
     () => [
       {
@@ -83,6 +85,7 @@ export function CommitsTab({ teamID, tz }: { teamID: string; tz: string }) {
     ],
     [t, tz],
   );
+
   if (list.length === 0 && !commits.isPending) {
     return (
       <EmptyState
@@ -92,6 +95,7 @@ export function CommitsTab({ teamID, tz }: { teamID: string; tz: string }) {
       />
     );
   }
+
   return (
     <DataTable
       columns={columns}
@@ -105,6 +109,7 @@ export function CommitsTab({ teamID, tz }: { teamID: string; tz: string }) {
     />
   );
 }
+
 function CommitMessage({ message }: { message: string }) {
   const segments = renderMessageWithLinks(message);
   return (

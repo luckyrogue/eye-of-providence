@@ -1,9 +1,15 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Button } from "@eop/ui";
+
+// 404 страница — отдаётся для любого pathпо catch-all маршрута.
+// Минимальная по UX-весу: один CTA на главную + ссылка на dashboard,
+// если юзер залогинен (выбор делается через localStorage без хука,
+// чтобы страница работала и без AuthProvider).
 export function NotFound() {
   const { t } = useTranslation("common");
   const hasSession = typeof window !== "undefined" && !!localStorage.getItem("eop_token");
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-background text-foreground px-6">
       <div className="max-w-md w-full text-center space-y-6">

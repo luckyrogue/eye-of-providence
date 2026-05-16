@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { LangSwitch } from "../../../shared/ui/lang-switch";
+
 export function Nav() {
   const { t } = useTranslation("landing");
   const isAuthed = typeof window !== "undefined" && !!localStorage.getItem("eop_user_id");

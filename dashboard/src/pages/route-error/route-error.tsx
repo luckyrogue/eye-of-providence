@@ -1,10 +1,14 @@
 import { useTranslation } from "react-i18next";
 import { Link, useRouteError } from "react-router-dom";
 import { Button } from "@eop/ui";
+
+// Soft retry вместо `window.location.reload()`: повторный mount перезапускает
+// loaders и react-query queries без полного перезагрузки страницы.
 export function RouteError() {
   const error = useRouteError();
   const { t } = useTranslation("common");
   const detail = error instanceof Error ? error.message : String(error ?? "");
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-background text-foreground px-6">
       <div className="max-w-md w-full text-center space-y-6">

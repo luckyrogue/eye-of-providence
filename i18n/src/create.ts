@@ -3,9 +3,16 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
 import { LOCALE_STORAGE_KEY, SUPPORTED_LOCALES } from "./constants";
 import type { CreateI18nOptions } from "./types";
+
+/**
+ * Отдельный экземпляр i18next (не singleton) + react-i18next + browser detector.
+ * Вызывать один раз при старте приложения до первого render.
+ */
 export function createI18n(opts: CreateI18nOptions): i18n {
   const inst = i18next.createInstance();
   inst.use(LanguageDetector).use(initReactI18next);
+  // i18next.init возвращает Promise; loading ресурсов из памяти синхронен,
+  // дожидаться его смысла нет — callers сами вызывают создание до первого render.
   void inst.init({
     resources: opts.resources,
     fallbackLng: opts.fallbackLng ?? "ru",
@@ -20,6 +27,7 @@ export function createI18n(opts: CreateI18nOptions): i18n {
       caches: ["localStorage"],
     },
   });
+  // Sync <html lang> с активной локалью: важно для скринридеров и spell-check.
   if (typeof document !== "undefined") {
     const apply = (lng: string) => {
       const base = lng.split("-")[0];

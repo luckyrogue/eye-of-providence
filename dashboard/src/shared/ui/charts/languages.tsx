@@ -1,18 +1,10 @@
-type LangCell = {
-  lang: string;
-  category: string;
-  chars: number;
-};
+// Локальный shape вместо импорта из entities/event: shared/* — низший слой FSD.
+type LangCell = { lang: string; category: string; chars: number };
+
 export function Languages({ cells, top = 6 }: { cells: LangCell[]; top?: number }) {
   const byLang = new Map<
     string,
-    {
-      manual: number;
-      ai: number;
-      refactor: number;
-      other: number;
-      total: number;
-    }
+    { manual: number; ai: number; refactor: number; other: number; total: number }
   >();
   for (const c of cells) {
     const v = byLang.get(c.lang) ?? { manual: 0, ai: 0, refactor: 0, other: 0, total: 0 };
@@ -23,13 +15,17 @@ export function Languages({ cells, top = 6 }: { cells: LangCell[]; top?: number 
     v.total += c.chars;
     byLang.set(c.lang, v);
   }
+
   const sorted = Array.from(byLang.entries())
     .sort((a, b) => b[1].total - a[1].total)
     .slice(0, top);
+
   if (sorted.length === 0) {
     return <p className="text-sm text-muted-foreground">Нет данных по языкам за этот период.</p>;
   }
+
   const max = Math.max(1, ...sorted.map(([, v]) => v.total));
+
   return (
     <div className="space-y-3">
       {sorted.map(([lang, v]) => {

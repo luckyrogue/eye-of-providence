@@ -1,13 +1,16 @@
 import type { ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../shared/ui/card";
 import { cn } from "../shared/lib/cn";
+
 export type StatTileAccent = "purple" | "blue" | "amber" | "neutral";
+
 const accentClasses: Record<StatTileAccent, string> = {
   purple: "from-purple-500/20",
   blue: "from-blue-500/20",
   amber: "from-amber-500/20",
   neutral: "from-foreground/10",
 };
+
 export function StatTile({
   label,
   value,

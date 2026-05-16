@@ -4,6 +4,10 @@ import { Button, cn, PromptDialog } from "@eop/ui";
 import { Plus } from "lucide-react";
 import { useCreateTeam } from "../../../entities/team";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+
+// Side-effects после создания (выбор активной команды, switchTeam, …)
+// решает родитель через `onCreated(teamID)` — фича сама не знает, что
+// делать с id.
 export function CreateTeamButton({
   disabled,
   blockedReason,
@@ -19,6 +23,7 @@ export function CreateTeamButton({
   const create = useCreateTeam();
   const runToast = useMutationToast();
   const [open, setOpen] = useState(false);
+
   async function submit(name: string) {
     try {
       const r = await create.mutateAsync(name);
@@ -26,11 +31,7 @@ export function CreateTeamButton({
       onCreated?.(r.id);
       setOpen(false);
     } catch (e) {
-      const code = (
-        e as {
-          code?: string;
-        }
-      ).code;
+      const code = (e as { code?: string }).code;
       const errorMsg = code
         ? t(`errors:${code}`, { defaultValue: t("errors:generic") })
         : t("errors:generic");
@@ -39,6 +40,7 @@ export function CreateTeamButton({
       });
     }
   }
+
   return (
     <>
       <Button

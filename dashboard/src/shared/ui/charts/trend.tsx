@@ -1,16 +1,9 @@
-type TrendPoint = {
-  date: string;
-  category: string;
-  ms: number;
-};
+// Локальный shape вместо импорта из entities/event: shared/* не должен знать о выше-лежащих
+// слоях FSD. Структурная совместимость обеспечивает работу с TrendPoint из entities.
+type TrendPoint = { date: string; category: string; ms: number };
+
 export function Trend({ points }: { points: TrendPoint[] }) {
-  const byDate = new Map<
-    string,
-    {
-      manual: number;
-      ai: number;
-    }
-  >();
+  const byDate = new Map<string, { manual: number; ai: number }>();
   for (const p of points) {
     const v = byDate.get(p.date) ?? { manual: 0, ai: 0 };
     if (p.category === "ai") v.ai += p.ms;
@@ -21,6 +14,7 @@ export function Trend({ points }: { points: TrendPoint[] }) {
   if (sorted.length === 0) {
     return <p className="text-sm text-muted-foreground">Пока нет данных за этот период.</p>;
   }
+
   const W = 600;
   const H = 180;
   const pad = { l: 36, r: 12, t: 8, b: 26 };
@@ -28,6 +22,7 @@ export function Trend({ points }: { points: TrendPoint[] }) {
   const innerH = H - pad.t - pad.b;
   const max = Math.max(1, ...sorted.flatMap(([, v]) => [v.manual, v.ai]));
   const stepX = sorted.length > 1 ? innerW / (sorted.length - 1) : innerW;
+
   const linePath = (key: "manual" | "ai") =>
     sorted
       .map(([, v], i) => {
@@ -36,6 +31,8 @@ export function Trend({ points }: { points: TrendPoint[] }) {
         return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
       })
       .join(" ");
+
+  // Area path для лёгкой заливки под линией manual
   const areaPath = (key: "manual" | "ai") => {
     const top = sorted
       .map(([, v], i) => {
@@ -47,6 +44,7 @@ export function Trend({ points }: { points: TrendPoint[] }) {
     const lastX = pad.l + (sorted.length - 1) * stepX;
     return `${top} L ${lastX} ${pad.t + innerH} L ${pad.l} ${pad.t + innerH} Z`;
   };
+
   return (
     <div className="space-y-2">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-44">

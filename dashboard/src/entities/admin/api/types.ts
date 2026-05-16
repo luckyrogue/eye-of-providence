@@ -4,6 +4,7 @@ type AdminStats = {
   members_total: number;
   beta_limit: number;
 };
+
 type AdminTeam = {
   id: string;
   name: string;
@@ -15,6 +16,7 @@ type AdminTeam = {
   member_count: number;
   owner_email?: string;
 };
+
 type AdminUser = {
   id: string;
   email: string;
@@ -23,6 +25,7 @@ type AdminUser = {
   created_at: string;
   teams_count?: number;
 };
+
 type Payment = {
   id: string;
   amount_cents: number;
@@ -33,4 +36,5 @@ type Payment = {
   paid_at: string;
   recorded_by: string;
 };
+
 export type { AdminStats, AdminTeam, AdminUser, Payment };

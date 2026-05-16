@@ -1,3 +1,20 @@
+// shadcn/ui Form — copy-paste из registry. Поверх react-hook-form.
+// Использование (canonical):
+//
+//   const form = useForm<MyValues>({ ... });
+//
+//   <Form {...form}>
+//     <form onSubmit={form.handleSubmit(onSubmit)}>
+//       <FormField control={form.control} name="email" render={({ field }) => (
+//         <FormItem>
+//           <FormLabel>Email</FormLabel>
+//           <FormControl><Input type="email" {...field} /></FormControl>
+//           <FormDescription>...</FormDescription>
+//           <FormMessage />
+//         </FormItem>
+//       )} />
+//     </form>
+//   </Form>
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import {
@@ -10,14 +27,16 @@ import {
 } from "react-hook-form";
 import { Label } from "./label";
 import { cn } from "../lib/cn";
+
 export const Form = FormProvider;
+
 type FormFieldContextValue<
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
-> = {
-  name: TName;
-};
+> = { name: TName };
+
 const FormFieldContext = React.createContext<FormFieldContextValue>({} as FormFieldContextValue);
+
 export function FormField<
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
@@ -28,10 +47,10 @@ export function FormField<
     </FormFieldContext.Provider>
   );
 }
-type FormItemContextValue = {
-  id: string;
-};
+
+type FormItemContextValue = { id: string };
 const FormItemContext = React.createContext<FormItemContextValue>({} as FormItemContextValue);
+
 export const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext);
   const itemContext = React.useContext(FormItemContext);
@@ -50,6 +69,7 @@ export const useFormField = () => {
     ...fieldState,
   };
 };
+
 export const FormItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => {
     const id = React.useId();
@@ -61,6 +81,7 @@ export const FormItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HT
   },
 );
 FormItem.displayName = "FormItem";
+
 export const FormLabel = React.forwardRef<
   React.ElementRef<typeof Label>,
   React.ComponentPropsWithoutRef<typeof Label>
@@ -80,6 +101,7 @@ export const FormLabel = React.forwardRef<
   );
 });
 FormLabel.displayName = "FormLabel";
+
 export const FormControl = React.forwardRef<
   React.ElementRef<typeof Slot>,
   React.ComponentPropsWithoutRef<typeof Slot>
@@ -96,6 +118,7 @@ export const FormControl = React.forwardRef<
   );
 });
 FormControl.displayName = "FormControl";
+
 export const FormDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
@@ -111,11 +134,14 @@ export const FormDescription = React.forwardRef<
   );
 });
 FormDescription.displayName = "FormDescription";
+
 export const FormMessage = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, children, ...props }, ref) => {
   const { error, formMessageId } = useFormField();
+  // Если передали children (например, переведённое сообщение) — используем их,
+  // иначе показываем сырое error.message (ключ zod / текст валидатора).
   const body =
     error && (children === undefined || children === null || children === "")
       ? String(error?.message ?? "")

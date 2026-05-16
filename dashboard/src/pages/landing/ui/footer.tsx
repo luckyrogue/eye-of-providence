@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Eye } from "lucide-react";
+
 export function Footer() {
   const { t } = useTranslation("landing");
   const productLinks = [
@@ -47,15 +48,13 @@ export function Footer() {
     </footer>
   );
 }
+
 function FooterColumn({
   title,
   links,
 }: {
   title: string;
-  links: {
-    href: string;
-    label: string;
-  }[];
+  links: { href: string; label: string }[];
 }) {
   return (
     <div>

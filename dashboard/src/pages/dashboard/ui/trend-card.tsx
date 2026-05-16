@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Trend } from "../../../shared/ui/charts/trend";
 import type { TrendPoint } from "../../../entities/event";
+
 export function TrendCard({ points }: { points: TrendPoint[] }) {
   const { t } = useTranslation("app");
   return (

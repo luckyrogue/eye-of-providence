@@ -1,15 +1,16 @@
 import { useTranslation } from "react-i18next";
 import { Shield, Lock, GitBranch, Users, Trash2 } from "lucide-react";
+
 const ICONS = [Shield, Lock, GitBranch, Users, Trash2];
-type Principle = {
-  strong: string;
-  body: string;
-};
+
+type Principle = { strong: string; body: string };
+
 export function Privacy() {
   const { t } = useTranslation("landing");
   const principles = t("privacy.principles", { returnObjects: true }) as Principle[];
   const shieldSends = t("privacy.shieldSends", { returnObjects: true }) as string[];
   const shieldNoSends = t("privacy.shieldNoSends", { returnObjects: true }) as string[];
+
   return (
     <section id="privacy" className="py-[120px] px-4 sm:px-8 relative z-[2]">
       <div className="mx-auto max-w-[1200px] grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-10 lg:gap-[60px] items-start">

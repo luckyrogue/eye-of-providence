@@ -1,5 +1,7 @@
+// shadcn/ui Textarea — copy-paste из registry.
 import { forwardRef, type TextareaHTMLAttributes } from "react";
 import { cn } from "../../lib/cn";
+
 export const Textarea = forwardRef<
   HTMLTextAreaElement,
   TextareaHTMLAttributes<HTMLTextAreaElement>

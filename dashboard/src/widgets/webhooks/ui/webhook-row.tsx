@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { Webhook } from "../../../entities/webhook";
 import { DeleteWebhookButton } from "../../../features/webhook-delete";
+
 export function WebhookRow({ hook }: { hook: Webhook }) {
   const { t } = useTranslation("developer");
   const last =
@@ -10,6 +11,7 @@ export function WebhookRow({ hook }: { hook: Webhook }) {
           status: hook.last_status === -1 ? t("webhooks_status_network") : hook.last_status,
         })
       : t("webhooks_no_deliveries");
+
   return (
     <li className="flex items-center justify-between py-3 gap-4">
       <div className="min-w-0 flex-1">

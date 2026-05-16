@@ -1,3 +1,13 @@
+// Settings → Linked accounts card.
+//
+// Lists existing identities (provider + email + connected date + unlink) and
+// renders "Connect <provider>" buttons for the diff between
+// authConfig.providers and what the user already linked.
+//
+// Connecting uses the same OAuth start URL as the login page but with a
+// `return_to=/settings` hint baked in: the backend forwards this to its
+// cookie handoff, so on success we land on `/auth/complete?return_to=/settings`
+// and the new identity row shows up immediately.
 import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -17,21 +27,20 @@ import { GithubGlyph } from "../../auth-oauth/ui/glyphs/github-glyph";
 import { GoogleGlyph } from "../../auth-oauth/ui/glyphs/google-glyph";
 import { AppleGlyph } from "../../auth-oauth/ui/glyphs/apple-glyph";
 import { useIdentities, useUnlinkIdentity } from "../api";
+
 const API_BASE = import.meta.env.VITE_BACKEND_URL || "https://eop-api.rysdavletov.org";
-const GLYPHS: Record<
-  OAuthProvider,
-  ComponentType<{
-    className?: string;
-  }>
-> = {
+
+const GLYPHS: Record<OAuthProvider, ComponentType<{ className?: string }>> = {
   github: GithubGlyph,
   google: GoogleGlyph,
   apple: AppleGlyph,
 };
+
 function startLink(provider: OAuthProvider) {
   const returnTo = encodeURIComponent("/settings");
   window.location.href = `${API_BASE}/v1/auth/${provider}/login?return_to=${returnTo}`;
 }
+
 export function LinkedAccountsCard() {
   const { t, i18n } = useTranslation(["common", "auth"]);
   const authConfig = useAuthConfig();
@@ -40,10 +49,12 @@ export function LinkedAccountsCard() {
   const runToast = useMutationToast();
   const confirm = useConfirm();
   const locale = i18n.resolvedLanguage ?? "ru";
+
   const enabledProviders: OAuthProvider[] = authConfig.data?.providers ?? [];
   const linked: Identity[] = identities.data ?? [];
   const linkedProviders = new Set(linked.map((i) => i.provider));
   const availableProviders = enabledProviders.filter((p) => !linkedProviders.has(p));
+
   async function onUnlink(identity: Identity) {
     const ok = await confirm({
       title: t("common:settings.linked_unlink"),
@@ -56,10 +67,7 @@ export function LinkedAccountsCard() {
       await unlink.mutateAsync(identity.id);
       await runToast(Promise.resolve(true), {});
     } catch (e) {
-      const err = e as {
-        code?: string;
-        message?: string;
-      };
+      const err = e as { code?: string; message?: string };
       const msg =
         err.code === "last_auth_factor"
           ? t("common:settings.linked_lockout")
@@ -67,6 +75,7 @@ export function LinkedAccountsCard() {
       await runToast(Promise.reject(new Error(msg)), {});
     }
   }
+
   return (
     <Card>
       <CardHeader>

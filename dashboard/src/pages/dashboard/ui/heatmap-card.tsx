@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Heatmap } from "../../../shared/ui/charts/heatmap";
 import type { HeatmapCell } from "../../../entities/event";
+
 export function HeatmapCard({ cells, tz }: { cells: HeatmapCell[]; tz: string }) {
   const { t } = useTranslation("app");
   return (

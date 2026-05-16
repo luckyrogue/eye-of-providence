@@ -1,11 +1,12 @@
 import { Trans, useTranslation } from "react-i18next";
 import { Eyebrow } from "@eop/ui";
 import { Activity, Brain, Code2, Lock, Sparkles, Zap } from "lucide-react";
+
+// Иконки в коде, тексты — в локалях. Порядок сохраняется ↔ items[i] в JSON.
 const ICONS = [Brain, Activity, Code2, Lock, Sparkles, Zap];
-type FeatureItem = {
-  title: string;
-  desc: string;
-};
+
+type FeatureItem = { title: string; desc: string };
+
 export function Features() {
   const { t } = useTranslation("landing");
   const items = t("features.items", { returnObjects: true }) as FeatureItem[];
@@ -18,7 +19,7 @@ export function Features() {
             <Trans i18nKey="landing:features.heading" components={{ em: <em /> }} />
           </h2>
         </div>
-
+        {/* Flat grid с 1px gap'ом — карточки делятся линиями, не отдельно стоят */}
         <div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px rounded-2xl overflow-hidden border"
           style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--border))" }}

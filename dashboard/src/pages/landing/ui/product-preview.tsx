@@ -1,10 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { cn } from "@eop/ui";
+
 const ACCENTS = {
   purple: "from-purple-500/20",
   blue: "from-blue-500/20",
   amber: "from-amber-500/20",
 } as const;
+
 function PreviewStat({
   label,
   value,
@@ -31,7 +33,9 @@ function PreviewStat({
     </div>
   );
 }
+
 function FakeChart() {
+  // Cosmetic SVG для preview-карточки на лендинге.
   const points = [10, 22, 18, 30, 26, 38, 34, 48, 42, 56, 50, 62, 58, 70, 66, 76];
   const pointsAi = [4, 8, 6, 10, 12, 14, 16, 22, 26, 30, 34, 36, 40, 44, 48, 52];
   const max = 80;
@@ -72,6 +76,7 @@ function FakeChart() {
     </svg>
   );
 }
+
 export function ProductPreview() {
   const { t } = useTranslation("landing");
   return (

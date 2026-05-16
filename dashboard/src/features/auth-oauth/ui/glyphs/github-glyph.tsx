@@ -1,3 +1,4 @@
+// Official GitHub Octocat glyph. Inline SVG — lucide v1.x removed brand icons.
 export function GithubGlyph({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 16 16" fill="currentColor" className={className} aria-hidden="true">

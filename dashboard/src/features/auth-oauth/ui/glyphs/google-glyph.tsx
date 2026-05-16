@@ -1,3 +1,5 @@
+// Official Google "G" mark per Google branding guidelines.
+// Multi-color SVG — preserves brand colors regardless of currentColor.
 export function GoogleGlyph({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 48 48" className={className} aria-hidden="true">

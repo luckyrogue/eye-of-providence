@@ -6,26 +6,33 @@ import { fetchAuthConfig, type AuthConfig, type AuthResponse } from "../../entit
 import { LoginForm } from "../../features/auth-login";
 import { RegisterForm } from "../../features/auth-register";
 import { useInvitePreview } from "./model/use-invite-preview";
+
 type Mode = "login" | "register";
+
 export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
   const { t } = useTranslation("auth");
   const [mode, setMode] = useState<Mode>("login");
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
   const { inviteCode, invitePreview } = useInvitePreview();
+
   useEffect(() => {
     void fetchAuthConfig().then((cfg) => {
       setAuthConfig(cfg);
       if (cfg.is_first_user) setMode("register");
     });
   }, []);
+
+  // Если есть invite — форсируем register.
   useEffect(() => {
     if (inviteCode) setMode("register");
   }, [inviteCode]);
+
   const registrationBlocked = !!(
     authConfig?.invite_only &&
     !authConfig.is_first_user &&
     !inviteCode
   );
+
   return (
     <div className="relative px-4 sm:px-6">
       <div className="dot-grid pointer-events-none absolute inset-x-0 top-0 h-[420px] -z-10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />

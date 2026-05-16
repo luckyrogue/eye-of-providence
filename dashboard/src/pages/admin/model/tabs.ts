@@ -10,4 +10,5 @@ export const ADMIN_TABS = [
   { id: "tokens", i18nKey: "admin.tokens_cross.tab" },
   { id: "audit", i18nKey: "admin.audit" },
 ] as const;
+
 export type AdminTabKey = (typeof ADMIN_TABS)[number]["id"];

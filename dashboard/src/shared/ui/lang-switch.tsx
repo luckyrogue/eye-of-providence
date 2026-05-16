@@ -1,12 +1,19 @@
+// Lang switcher — globe icon + dropdown с 4 locales.
+// Заменил inline pill (EN|RU) — на mobile pill был полностью скрыт, что
+// делало смену языка невозможной. Globe-dropdown компактнее, работает
+// одинаково на mobile и desktop.
+
 import { useTranslation } from "react-i18next";
 import { Globe, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@eop/ui";
+
 const LANGS = [
   { code: "en", label: "English" },
   { code: "ru", label: "Русский" },
   { code: "kk", label: "Қазақша" },
   { code: "es", label: "Español" },
 ] as const;
+
 export function LangSwitch() {
   const { i18n } = useTranslation();
   const current = i18n.language.split("-")[0];

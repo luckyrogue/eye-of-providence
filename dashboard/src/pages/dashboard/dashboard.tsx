@@ -8,6 +8,7 @@ import { LanguagesCard } from "./ui/languages-card";
 import { ReportsCard } from "./ui/reports-card";
 import { StatsRow } from "./ui/stats-row";
 import { TrendCard } from "./ui/trend-card";
+
 export function Dashboard({ tz }: { tz: string }) {
   const events = useRecent(20);
   const summary = useSummary(7);
@@ -15,12 +16,14 @@ export function Dashboard({ tz }: { tz: string }) {
   const heatmap = useHeatmap(30, tz);
   const trend = useTrend(30, tz);
   const reports = useReports();
+
   const sumMap = summary.data ?? {};
   const totalMs = Object.values(sumMap).reduce((a, b) => a + b, 0);
   const aiMs = sumMap["ai"] ?? 0;
   const aiRatio = totalMs ? Math.round((aiMs / totalMs) * 100) : 0;
   const eventsList = events.data ?? [];
   const reportsList = reports.data ?? [];
+
   return (
     <>
       <StatsRow

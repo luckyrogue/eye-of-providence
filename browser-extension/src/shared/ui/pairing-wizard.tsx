@@ -10,25 +10,19 @@ import {
   setConfig,
   type PairBeginResponse,
 } from "../api/backend";
+
 type Phase =
-  | {
-      kind: "idle";
-    }
-  | {
-      kind: "starting";
-    }
-  | {
-      kind: "waiting";
-      pair: PairBeginResponse;
-    }
-  | {
-      kind: "expired";
-    }
-  | {
-      kind: "error";
-      message: string;
-    };
-const POLL_INTERVAL_MS = 2500;
+  | { kind: "idle" }
+  | { kind: "starting" }
+  | { kind: "waiting"; pair: PairBeginResponse }
+  | { kind: "expired" }
+  | { kind: "error"; message: string };
+
+const POLL_INTERVAL_MS = 2_500;
+
+// Единый flow для popup и options. Polling до claim или expire (POLL_INTERVAL_MS).
+// После успешного claim — onClaimed; в нём caller сохраняет token и
+// переключает UI в connected-state.
 export function PairingWizard({
   backend = DEFAULT_BACKEND,
   onClaimed,
@@ -39,13 +33,16 @@ export function PairingWizard({
   const { t } = useTranslation("popup");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const pollTimer = useRef<number | null>(null);
+
   const stopPoll = useCallback(() => {
     if (pollTimer.current !== null) {
       window.clearInterval(pollTimer.current);
       pollTimer.current = null;
     }
   }, []);
+
   useEffect(() => () => stopPoll(), [stopPoll]);
+
   const start = useCallback(async () => {
     setPhase({ kind: "starting" });
     try {
@@ -56,6 +53,8 @@ export function PairingWizard({
       setPhase({ kind: "error", message: t("pair_error") });
     }
   }, [backend, t]);
+
+  // Авто-poll после получения code.
   useEffect(() => {
     if (phase.kind !== "waiting") return;
     const { pair_id, secret } = phase.pair;
@@ -75,6 +74,7 @@ export function PairingWizard({
           onClaimed?.();
         }
       } catch (e) {
+        // network-flake — просто следующий тик попробует снова
         console.debug("[eop] poll failed", e);
       }
     };
@@ -85,6 +85,7 @@ export function PairingWizard({
       stopPoll();
     };
   }, [phase, backend, stopPoll, onClaimed]);
+
   if (phase.kind === "idle") {
     return (
       <div className="space-y-3">
@@ -125,6 +126,7 @@ export function PairingWizard({
       </div>
     );
   }
+  // waiting
   const dashboardURL = dashboardUrlFor(backend) + "/settings";
   return (
     <div className="space-y-3">

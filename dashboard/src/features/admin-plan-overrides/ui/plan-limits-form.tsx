@@ -1,3 +1,7 @@
+// Plan limit overrides form. RHF + zod.
+// 6 override keys. Empty → null (use plan default).
+// Каждое поле показывает плановый default в placeholder.
+
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
@@ -7,6 +11,7 @@ import { Button, Input } from "@eop/ui";
 import { Loader2 } from "lucide-react";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { usePlanOverrides, useUpdateTeamPlanLimits, type PlanOverridesPayload } from "../api";
+
 type OverrideKey =
   | "max_users_per_team"
   | "max_webhooks"
@@ -14,11 +19,8 @@ type OverrideKey =
   | "event_history_days"
   | "max_teams_per_user"
   | "audit_log_retention_days";
-const OVERRIDE_KEYS: {
-  key: OverrideKey;
-  min: number;
-  max: number;
-}[] = [
+
+const OVERRIDE_KEYS: { key: OverrideKey; min: number; max: number }[] = [
   { key: "max_users_per_team", min: 1, max: 10000 },
   { key: "max_webhooks", min: 0, max: 1000 },
   { key: "max_api_tokens", min: 0, max: 500 },
@@ -26,6 +28,7 @@ const OVERRIDE_KEYS: {
   { key: "max_teams_per_user", min: 1, max: 100 },
   { key: "audit_log_retention_days", min: 30, max: 3650 },
 ];
+
 const schema = z.object({
   max_users_per_team: z.union([z.number().int().min(1).max(10000), z.null()]),
   max_webhooks: z.union([z.number().int().min(0).max(1000), z.null()]),
@@ -34,7 +37,9 @@ const schema = z.object({
   max_teams_per_user: z.union([z.number().int().min(1).max(100), z.null()]),
   audit_log_retention_days: z.union([z.number().int().min(30).max(3650), z.null()]),
 });
+
 type FormValues = z.infer<typeof schema>;
+
 const EMPTY: FormValues = {
   max_users_per_team: null,
   max_webhooks: null,
@@ -43,23 +48,28 @@ const EMPTY: FormValues = {
   max_teams_per_user: null,
   audit_log_retention_days: null,
 };
+
 export function PlanLimitsForm({ teamID }: { teamID: string }) {
   const { t } = useTranslation("app");
   const overrides = usePlanOverrides(teamID);
   const update = useUpdateTeamPlanLimits();
   const runToast = useMutationToast();
+
   const initial = useMemo<FormValues>(
     () => coerceOverrides(overrides.data?.overrides ?? {}),
     [overrides.data?.overrides],
   );
   const planDefaults = overrides.data?.plan_defaults ?? {};
+
   const { register, handleSubmit, reset, formState, watch, setValue } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: EMPTY,
   });
+
   useEffect(() => {
     reset(initial);
   }, [initial, reset]);
+
   async function onSubmit(values: FormValues) {
     const payload: PlanOverridesPayload = {};
     for (const { key } of OVERRIDE_KEYS) payload[key] = values[key];
@@ -68,6 +78,7 @@ export function PlanLimitsForm({ teamID }: { teamID: string }) {
       error: t("admin.plan_overrides.toast.save_failed"),
     });
   }
+
   async function onResetAll() {
     const cleared: PlanOverridesPayload = {};
     for (const { key } of OVERRIDE_KEYS) cleared[key] = null;
@@ -76,6 +87,7 @@ export function PlanLimitsForm({ teamID }: { teamID: string }) {
       error: t("admin.plan_overrides.toast.save_failed"),
     });
   }
+
   if (overrides.isPending) {
     return (
       <div className="text-sm text-muted-foreground py-6 flex items-center gap-2">
@@ -91,6 +103,7 @@ export function PlanLimitsForm({ teamID }: { teamID: string }) {
       </div>
     );
   }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
       <p className="text-xs text-muted-foreground">{t("admin.plan_overrides.intro")}</p>
@@ -114,14 +127,14 @@ export function PlanLimitsForm({ teamID }: { teamID: string }) {
                   {t(`admin.plan_overrides.${key}.label`)}
                 </label>
                 {isOverride && (
-                  <Button
+                  // eslint-disable-next-line no-restricted-syntax
+                  <button
                     type="button"
-                    variant="link"
-                    className="h-auto p-0 text-[11px] text-muted-foreground"
+                    className="text-[11px] text-muted-foreground underline"
                     onClick={() => setValue(key, null, { shouldDirty: true })}
                   >
                     {t("admin.plan_overrides.action.clear")}
-                  </Button>
+                  </button>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -170,6 +183,7 @@ export function PlanLimitsForm({ teamID }: { teamID: string }) {
     </form>
   );
 }
+
 function coerceOverrides(raw: Record<string, unknown>): FormValues {
   const out: FormValues = { ...EMPTY };
   for (const { key } of OVERRIDE_KEYS) {

@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+
 export function CTASection() {
   const { t } = useTranslation("landing");
   return (

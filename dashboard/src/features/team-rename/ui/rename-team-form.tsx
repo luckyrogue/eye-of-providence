@@ -5,6 +5,8 @@ import { z } from "zod";
 import { Button, Form, InputField } from "@eop/ui";
 import { useUpdateTeam, type Team } from "../../../entities/team";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+
+// Сообщение валидации — i18n-ключ; разрешается через translateError на InputField.
 const renameSchema = z.object({
   name: z
     .string()
@@ -12,7 +14,9 @@ const renameSchema = z.object({
     .min(2, "team_rename.errors.too_short")
     .max(64, "team_rename.errors.too_long"),
 });
+
 type RenameForm = z.infer<typeof renameSchema>;
+
 export function RenameTeamForm({ team }: { team: Team }) {
   const { t } = useTranslation(["app", "common"]);
   const update = useUpdateTeam(team.id);
@@ -21,6 +25,7 @@ export function RenameTeamForm({ team }: { team: Team }) {
     defaultValues: { name: team.name },
     resolver: zodResolver(renameSchema),
   });
+
   async function onSave(values: RenameForm) {
     const name = values.name.trim();
     if (name === team.name) return;
@@ -30,6 +35,7 @@ export function RenameTeamForm({ team }: { team: Team }) {
     });
     if (ok !== null) form.reset({ name });
   }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSave)} className="space-y-2">

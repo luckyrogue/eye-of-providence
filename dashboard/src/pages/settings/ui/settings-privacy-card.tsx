@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Shield } from "lucide-react";
+
 export function SettingsPrivacyCard() {
   const { t } = useTranslation("common");
   const privacyItems = [

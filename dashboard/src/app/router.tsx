@@ -4,6 +4,7 @@ import { AppShellV2 } from "../widgets/app-shell-v2";
 import { RouteFallback } from "./route-fallback";
 import { NotFound } from "../pages/not-found";
 import { RouteError } from "../pages/route-error";
+
 const Landing = lazy(() => import("../pages/landing").then((m) => ({ default: m.Landing })));
 const AuthRoute = lazy(() => import("../pages/auth").then((m) => ({ default: m.AuthRoute })));
 const ForgotPasswordRoute = lazy(() =>
@@ -35,8 +36,11 @@ const IntegrationsRoute = lazy(() =>
   import("../pages/integrations").then((m) => ({ default: m.IntegrationsRoute })),
 );
 const AdminRoute = lazy(() => import("../pages/admin").then((m) => ({ default: m.AdminRoute })));
+
 const wrap = (node: ReactNode) => <Suspense fallback={<RouteFallback />}>{node}</Suspense>;
+
 const eb = { errorElement: <RouteError /> };
+
 export const router = createBrowserRouter([
   { path: "/", element: wrap(<Landing />), ...eb },
   { path: "/landing", element: <Navigate to="/" replace />, ...eb },

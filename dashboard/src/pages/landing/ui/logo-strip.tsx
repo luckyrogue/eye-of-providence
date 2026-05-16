@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Activity, Brain, Code2, FileText, GitBranch, Sparkles } from "lucide-react";
+
 const SOURCES = [
   { name: "VS Code", Icon: Code2 },
   { name: "Cursor", Icon: Sparkles },
@@ -8,6 +9,7 @@ const SOURCES = [
   { name: "Browser", Icon: Activity },
   { name: "CLI", Icon: FileText },
 ];
+
 export function LogoStrip() {
   const { t } = useTranslation("landing");
   return (

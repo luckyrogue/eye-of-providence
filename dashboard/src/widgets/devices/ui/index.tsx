@@ -4,9 +4,11 @@ import { Laptop2 } from "lucide-react";
 import { useDevices } from "../../../entities/device";
 import { ClaimDeviceForm } from "../../../features/device-claim";
 import { DevicesTable } from "./devices-table";
+
 export function DevicesWidget() {
   const { t } = useTranslation("developer");
   const devices = useDevices();
+
   return (
     <Card>
       <CardHeader>

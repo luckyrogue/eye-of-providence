@@ -10,6 +10,14 @@ import { Pricing } from "./ui/pricing";
 import { CTASection } from "./ui/cta-section";
 import { Footer } from "./ui/footer";
 import { PreviewBanner } from "./ui/preview-banner";
+
+// Eop theme выставлен глобально на documentElement (см. index.html inline-script),
+// bg-grid/glow — на body::before/::after (см. ui/styles.css). Этот компонент
+// просто стакает секции в order, который соответствует Claude artifact 1:1.
+//
+// PreviewProvider exposes ?preview=<slug> to all child useContent() calls
+// so the admin "Preview" button can overlay one draft slug on top of the
+// otherwise-published landing page (Phase 4 CMS-lite).
 export function Landing() {
   return (
     <PreviewProvider>

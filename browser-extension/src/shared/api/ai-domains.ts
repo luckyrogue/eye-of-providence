@@ -1,7 +1,7 @@
-export type AiInfo = {
-  provider: string;
-  channel: string;
-};
+// AI domain → provider/channel mapping. Single source of truth для background и content scripts.
+
+export type AiInfo = { provider: string; channel: string };
+
 const MAP: Record<string, AiInfo> = {
   "chatgpt.com": { provider: "openai", channel: "chat" },
   "chat.openai.com": { provider: "openai", channel: "chat" },
@@ -18,9 +18,11 @@ const MAP: Record<string, AiInfo> = {
   "v0.dev": { provider: "vercel", channel: "agent" },
   "lovable.dev": { provider: "lovable", channel: "agent" },
 };
+
 export function aiInfoForHost(host: string): AiInfo | null {
   return MAP[host] ?? null;
 }
+
 export function isAiHost(host: string): boolean {
   return host in MAP;
 }

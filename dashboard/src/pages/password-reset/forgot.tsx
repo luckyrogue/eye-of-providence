@@ -4,9 +4,11 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Mail } from "lucide-react";
 import { ForgotPasswordForm } from "../../features/auth-forgot-password";
+
 export function ForgotPasswordRoute() {
   const { t } = useTranslation("auth");
   const [sent, setSent] = useState(false);
+
   return (
     <div className="min-h-screen">
       <div className="mx-auto max-w-md px-4 pt-12 sm:pt-16 pb-12">

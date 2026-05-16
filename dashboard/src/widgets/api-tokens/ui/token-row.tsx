@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { APIToken } from "../../../entities/user";
 import { RevokeTokenButton } from "../../../features/api-token-revoke";
+
 export function TokenRow({ token }: { token: APIToken }) {
   const { t } = useTranslation("developer");
   const lastUsed = token.last_used_at
@@ -9,6 +10,7 @@ export function TokenRow({ token }: { token: APIToken }) {
   const expires = token.expires_at
     ? t("tokens_expires", { at: new Date(token.expires_at).toLocaleDateString() })
     : t("tokens_no_expiry");
+
   return (
     <li className="flex items-center justify-between py-3 gap-4">
       <div className="min-w-0 flex-1">

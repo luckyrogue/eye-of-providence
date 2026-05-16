@@ -1,10 +1,14 @@
+// Radix Select primitives (shadcn-style).
+
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { forwardRef } from "react";
 import { cn } from "../../lib/cn";
+
 export const Select = SelectPrimitive.Root;
 export const SelectGroup = SelectPrimitive.Group;
 export const SelectValue = SelectPrimitive.Value;
+
 export const SelectTrigger = forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
@@ -28,6 +32,7 @@ export const SelectTrigger = forwardRef<
   </SelectPrimitive.Trigger>
 ));
 SelectTrigger.displayName = "SelectTrigger";
+
 const SelectScrollUpButton = forwardRef<
   React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>
@@ -41,6 +46,7 @@ const SelectScrollUpButton = forwardRef<
   </SelectPrimitive.ScrollUpButton>
 ));
 SelectScrollUpButton.displayName = "SelectScrollUpButton";
+
 const SelectScrollDownButton = forwardRef<
   React.ElementRef<typeof SelectPrimitive.ScrollDownButton>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>
@@ -54,6 +60,7 @@ const SelectScrollDownButton = forwardRef<
   </SelectPrimitive.ScrollDownButton>
 ));
 SelectScrollDownButton.displayName = "SelectScrollDownButton";
+
 export const SelectContent = forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
@@ -84,6 +91,7 @@ export const SelectContent = forwardRef<
   </SelectPrimitive.Portal>
 ));
 SelectContent.displayName = "SelectContent";
+
 export const SelectLabel = forwardRef<
   React.ElementRef<typeof SelectPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
@@ -98,6 +106,7 @@ export const SelectLabel = forwardRef<
   />
 ));
 SelectLabel.displayName = "SelectLabel";
+
 export const SelectItem = forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
@@ -121,6 +130,7 @@ export const SelectItem = forwardRef<
   </SelectPrimitive.Item>
 ));
 SelectItem.displayName = "SelectItem";
+
 export const SelectSeparator = forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>

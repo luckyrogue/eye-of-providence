@@ -1,20 +1,24 @@
+// SSO admin CRUD endpoints. Public OIDC flow требует реального IdP'а
+// или mock-сервера — это вне scope первого Phase. Здесь только админка.
+
 import { test, expect } from "../fixtures/index.js";
 import { ApiError, createApiClient, apiRegister } from "../helpers/api.js";
 import { uniqueEmail, uniqueTeamName } from "../helpers/db.js";
+
 interface TeamCreate {
   id: string;
 }
+
 test.describe("sso admin", () => {
   test("get returns configured=false на чистой команде", async ({ api }) => {
     const team = await api.fetch<TeamCreate>("/v1/teams", {
       method: "POST",
       body: JSON.stringify({ name: uniqueTeamName("sso-empty") }),
     });
-    const r = await api.fetch<{
-      configured: boolean;
-    }>(`/v1/teams/${team.id}/sso`);
+    const r = await api.fetch<{ configured: boolean }>(`/v1/teams/${team.id}/sso`);
     expect(r.configured).toBe(false);
   });
+
   test("save oidc config → get returns it (без client_secret)", async ({ api }) => {
     const team = await api.fetch<TeamCreate>("/v1/teams", {
       method: "POST",
@@ -31,9 +35,7 @@ test.describe("sso admin", () => {
       jit_provision: true,
       jit_role: "member",
     };
-    const saved = await api.fetch<{
-      config: Record<string, unknown>;
-    }>(`/v1/teams/${team.id}/sso`, {
+    const saved = await api.fetch<{ config: Record<string, unknown> }>(`/v1/teams/${team.id}/sso`, {
       method: "PUT",
       body: JSON.stringify(config),
     });
@@ -41,6 +43,8 @@ test.describe("sso admin", () => {
     expect(saved.config.has_client_secret).toBe(true);
     expect(saved.config.oidc_client_secret).toBeUndefined();
     expect(saved.config.allowed_domains).toEqual(["acme.com", "subsidiary.io"]);
+
+    // GET после save'а.
     const fetched = await api.fetch<{
       configured: boolean;
       config: Record<string, unknown>;
@@ -48,6 +52,7 @@ test.describe("sso admin", () => {
     expect(fetched.configured).toBe(true);
     expect(fetched.config.oidc_issuer).toBe("https://accounts.example.com");
   });
+
   test("save без client_secret на новую config → missing_client_secret", async ({ api }) => {
     const team = await api.fetch<TeamCreate>("/v1/teams", {
       method: "POST",
@@ -70,11 +75,13 @@ test.describe("sso admin", () => {
       expect(err.code).toBe("missing_client_secret");
     }
   });
+
   test("update keeps existing client_secret if not provided", async ({ api }) => {
     const team = await api.fetch<TeamCreate>("/v1/teams", {
       method: "POST",
       body: JSON.stringify({ name: uniqueTeamName("sso-update") }),
     });
+    // Initial save с secret'ом.
     await api.fetch(`/v1/teams/${team.id}/sso`, {
       method: "PUT",
       body: JSON.stringify({
@@ -85,27 +92,28 @@ test.describe("sso admin", () => {
         oidc_client_secret: "secret-v1",
       }),
     });
-    const updated = await api.fetch<{
-      config: {
-        has_client_secret: boolean;
-      };
-    }>(`/v1/teams/${team.id}/sso`, {
-      method: "PUT",
-      body: JSON.stringify({
-        provider: "oidc",
-        enabled: true,
-        oidc_issuer: "https://idp.example.com",
-        oidc_client_id: "id1",
-      }),
-    });
+    // Update без secret'а — должен пройти.
+    const updated = await api.fetch<{ config: { has_client_secret: boolean } }>(
+      `/v1/teams/${team.id}/sso`,
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          provider: "oidc",
+          enabled: true,
+          oidc_issuer: "https://idp.example.com",
+          oidc_client_id: "id1",
+        }),
+      },
+    );
     expect(updated.config.has_client_secret).toBe(true);
   });
+
   test("non-member cannot read team SSO config", async ({ api, session }) => {
     const team = await api.fetch<TeamCreate>("/v1/teams", {
       method: "POST",
       body: JSON.stringify({ name: uniqueTeamName("sso-acl") }),
     });
-    void session;
+    void session; // owner — нам нужен другой юзер.
     const outsider = await apiRegister(uniqueEmail("sso-outsider"), "TestPassword123!");
     const outClient = createApiClient(outsider.token);
     try {
@@ -117,6 +125,7 @@ test.describe("sso admin", () => {
       expect(err.code).toBe("not_member");
     }
   });
+
   test("delete removes config (subsequent GET → configured=false)", async ({ api }) => {
     const team = await api.fetch<TeamCreate>("/v1/teams", {
       method: "POST",
@@ -133,12 +142,11 @@ test.describe("sso admin", () => {
       }),
     });
     await api.fetch(`/v1/teams/${team.id}/sso`, { method: "DELETE" });
-    const after = await api.fetch<{
-      configured: boolean;
-    }>(`/v1/teams/${team.id}/sso`);
+    const after = await api.fetch<{ configured: boolean }>(`/v1/teams/${team.id}/sso`);
     expect(after.configured).toBe(false);
   });
 });
+
 test.describe("sso public endpoints", () => {
   test("start с non-existent team → sso_not_configured", async () => {
     const c = createApiClient();
@@ -157,6 +165,7 @@ test.describe("sso public endpoints", () => {
       expect(err.code).toBe("sso_not_configured");
     }
   });
+
   test("invalid team_id → invalid_team_id", async () => {
     const c = createApiClient();
     try {
@@ -170,9 +179,11 @@ test.describe("sso public endpoints", () => {
       expect(err.code).toBe("invalid_team_id");
     }
   });
+
   test("oidc callback missing params → missing_params", async () => {
     const c = createApiClient();
     try {
+      // GET (callback method) — handle через fetch с method=GET.
       await c.fetch("/v1/sso/oidc/callback");
       throw new Error("expected to throw");
     } catch (e) {

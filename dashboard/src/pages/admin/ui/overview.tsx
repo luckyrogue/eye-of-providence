@@ -1,12 +1,20 @@
+// Admin overview — 4 KPI tiles в стиле dashboard v2 (eop-card).
+//   1. Total users (with super_admin count)
+//   2. Total teams (с beta limit indicator)
+//   3. Total memberships (отражает density: members_total / teams_total)
+//   4. Beta health: free slots remaining
+
 import { useTranslation } from "react-i18next";
 import { Users, Building2, Crown, Activity } from "lucide-react";
 import type { AdminStats } from "../../../entities/admin";
+
 export function Overview({ stats, teamsCount }: { stats: AdminStats; teamsCount?: number }) {
   const { t } = useTranslation("app");
   const betaSlotsFree =
     stats.beta_limit > 0 ? Math.max(0, stats.beta_limit - stats.teams_total) : null;
   const avgMembersPerTeam =
     stats.teams_total > 0 ? (stats.members_total / stats.teams_total).toFixed(1) : "0.0";
+
   return (
     <div className="kpi-grid">
       <Tile
@@ -59,6 +67,7 @@ export function Overview({ stats, teamsCount }: { stats: AdminStats; teamsCount?
     </div>
   );
 }
+
 function Tile({
   icon,
   label,

@@ -13,10 +13,13 @@ import {
   InputField,
 } from "@eop/ui";
 import { ArrowRight, Building2, Loader2 } from "lucide-react";
+
 const companyFormSchema = z.object({
   name: z.string().trim().min(2, "company.errors.too_short").max(100, "company.errors.too_long"),
 });
+
 type CompanyForm = z.infer<typeof companyFormSchema>;
+
 export function CompanyStep({
   busy,
   onSubmit,
@@ -29,6 +32,7 @@ export function CompanyStep({
     defaultValues: { name: "" },
     resolver: zodResolver(companyFormSchema),
   });
+
   return (
     <Card className="card-hover reveal">
       <CardHeader>

@@ -1,6 +1,8 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select-primitives";
 import type { SimpleSelectOption } from "./types";
+
 export type { SimpleSelectOption } from "./types";
+
 export function SimpleSelect({
   value,
   onValueChange,

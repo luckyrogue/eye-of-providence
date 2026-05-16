@@ -4,18 +4,22 @@ import { Button, SecretField, toast } from "@eop/ui";
 import { Plus } from "lucide-react";
 import { useCreateInvite } from "../../../entities/team";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+
+// Видимость по роли решает родитель: owner/admin-гард тут не дублируется.
 export function CreateInviteBlock({ teamID }: { teamID: string }) {
   const { t } = useTranslation("app");
   const createInvite = useCreateInvite(teamID);
   const runToast = useMutationToast();
   const [code, setCode] = useState<string | null>(null);
   const inviteUrl = code ? `${window.location.origin}/?invite=${code}` : "";
+
   async function generate() {
     const r = await runToast(createInvite.mutateAsync(), {
       error: t("team_detail.invite_create_failed"),
     });
     if (r) setCode(r.code);
   }
+
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
       <div className="flex flex-row items-start justify-between gap-3">

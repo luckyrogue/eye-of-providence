@@ -9,22 +9,9 @@ type EventRow = {
   duration_ms: number;
   chars_in: number;
 };
-type LangCell = {
-  lang: string;
-  category: string;
-  chars: number;
-  ms: number;
-};
-type HeatmapCell = {
-  dow: number;
-  hour: number;
-  category: string;
-  ms: number;
-};
-type TrendPoint = {
-  date: string;
-  category: string;
-  chars: number;
-  ms: number;
-};
+
+type LangCell = { lang: string; category: string; chars: number; ms: number };
+type HeatmapCell = { dow: number; hour: number; category: string; ms: number };
+type TrendPoint = { date: string; category: string; chars: number; ms: number };
+
 export type { EventRow, LangCell, HeatmapCell, TrendPoint };

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Button, getInitials } from "@eop/ui";
+import { getInitials } from "@eop/ui";
 import { useAuth } from "../../../entities/session";
 import { useMe } from "../../../entities/user";
 import { formatShortDisplayName } from "../../../shared/lib/display-name";
 import { useAuthRedirect } from "../../app-layout/lib/use-auth-redirect";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
+
 export function AppShellV2() {
   const { t } = useTranslation("common");
   const { isAuthed, logout } = useAuth();
@@ -16,7 +17,9 @@ export function AppShellV2() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const section = sectionLabel(location.pathname, t);
+
   if (!isAuthed) return null;
+
   const first = me.data?.display_name?.trim();
   const last = me.data?.last_name?.trim();
   const userName =
@@ -25,6 +28,7 @@ export function AppShellV2() {
       : (me.data?.email?.split("@")[0] ?? t("topbar.user_default"));
   const avatarLabel =
     first && last ? getInitials(`${first} ${last}`) : userName.slice(0, 2).toUpperCase();
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-[248px_1fr] min-h-screen">
       <Sidebar
@@ -38,12 +42,12 @@ export function AppShellV2() {
         onNavigate={() => setSidebarOpen(false)}
       />
       {sidebarOpen && (
-        <Button
+        // eslint-disable-next-line no-restricted-syntax -- backdrop overlay; IconButton не подходит (full-screen click target)
+        <button
           type="button"
-          variant="ghost"
           aria-label={t("topbar.menu_toggle")}
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-[90] h-auto min-h-0 w-full rounded-none bg-black/60 p-0 hover:bg-black/60 md:hidden backdrop-blur-sm"
+          className="md:hidden fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm"
         />
       )}
       <main className="flex min-h-0 w-full min-w-0 flex-col">
@@ -62,6 +66,7 @@ export function AppShellV2() {
     </div>
   );
 }
+
 function sectionLabel(path: string, t: (k: string) => string): string {
   if (path.startsWith("/dashboard") || path.startsWith("/team"))
     return t("topbar.section_workspace");

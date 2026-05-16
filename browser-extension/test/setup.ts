@@ -1,9 +1,15 @@
+// chrome.storage / chrome.runtime mock для vitest. Достаточно minimal-shape:
+// in-memory Map за storage.local и no-op для runtime.onMessage etc.
+
 type Listener = (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => void;
+
 const localStore = new Map<string, unknown>();
 const onChangedListeners = new Set<Listener>();
+
 function emit(changes: Record<string, chrome.storage.StorageChange>) {
   for (const fn of onChangedListeners) fn(changes, "local");
 }
+
 const storageLocal: Partial<chrome.storage.LocalStorageArea> = {
   async get(keys?: string | string[] | Record<string, unknown> | null) {
     const out: Record<string, unknown> = {};
@@ -41,6 +47,7 @@ const storageLocal: Partial<chrome.storage.LocalStorageArea> = {
     localStore.clear();
   },
 };
+
 const chromeMock = {
   storage: {
     local: storageLocal,
@@ -67,11 +74,10 @@ const chromeMock = {
   },
   windows: { WINDOW_ID_NONE: -1, onFocusChanged: { addListener: () => {} } },
 };
-(
-  globalThis as unknown as {
-    chrome: typeof chromeMock;
-  }
-).chrome = chromeMock;
+
+(globalThis as unknown as { chrome: typeof chromeMock }).chrome = chromeMock;
+
+// Сброс между тестами.
 import { afterEach } from "vitest";
 afterEach(() => {
   localStore.clear();

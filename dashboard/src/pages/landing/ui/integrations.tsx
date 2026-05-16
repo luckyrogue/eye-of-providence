@@ -1,11 +1,13 @@
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+
 type Item = {
   name: string;
   icon: string;
   ready?: boolean;
   soon?: boolean;
 };
+
 const ITEMS: Item[] = [
   { name: "VS Code", icon: "VSCode", ready: true },
   { name: "Cursor", icon: "Cursor", ready: true },
@@ -20,6 +22,7 @@ const ITEMS: Item[] = [
   { name: "macOS", icon: "Apple", ready: true },
   { name: "Windows", icon: "Windows", ready: true },
 ];
+
 const Icons: Record<string, ReactElement> = {
   VSCode: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -88,6 +91,7 @@ const Icons: Record<string, ReactElement> = {
     </svg>
   ),
 };
+
 export function Integrations() {
   const { t } = useTranslation("landing");
   return (

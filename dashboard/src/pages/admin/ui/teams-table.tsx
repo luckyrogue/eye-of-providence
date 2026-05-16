@@ -20,6 +20,7 @@ import { dtLabels } from "../../../shared/lib/data-table-labels";
 import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { formatDate } from "../../../shared/lib/tz";
 import { TeamDrawer } from "./team-drawer";
+
 export function TeamsTable({
   teams,
   users,
@@ -35,6 +36,7 @@ export function TeamsTable({
   const confirm = useConfirm();
   const deleteTeam = useAdminDeleteTeam();
   const runToast = useMutationToast();
+
   const destroy = useCallback(
     async (team: AdminTeam) => {
       const ok = await confirm({
@@ -52,6 +54,7 @@ export function TeamsTable({
     },
     [confirm, deleteTeam, runToast, t],
   );
+
   const columns = useMemo<DataTableColumn<AdminTeam>[]>(
     () => [
       {
@@ -141,6 +144,7 @@ export function TeamsTable({
     ],
     [t, tz, deleteTeam.isPending, destroy],
   );
+
   return (
     <>
       <div className="eop-card">

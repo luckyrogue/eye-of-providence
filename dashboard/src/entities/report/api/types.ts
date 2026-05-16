@@ -6,5 +6,7 @@ type Report = {
   generated_at: string;
   prompt_version: string;
 };
+
 type ReportPeriod = "weekly" | "monthly" | "daily";
+
 export type { Report, ReportPeriod };

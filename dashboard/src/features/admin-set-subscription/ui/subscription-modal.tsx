@@ -22,6 +22,7 @@ import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
 import { DEFAULT_SUBSCRIPTION_FORM, subscriptionFormSchema, type SubscriptionForm } from "../model";
 import { SubscriptionPaymentFields } from "./payment-fields";
 import { SubscriptionPaymentsList } from "./payments-list";
+
 export function SubscriptionModal({
   team,
   tz,
@@ -36,11 +37,13 @@ export function SubscriptionModal({
   const runToast = useMutationToast();
   const confirm = useConfirm();
   const payments = useAdminPayments(team?.id ?? null);
+
   const form = useForm<SubscriptionForm>({
     defaultValues: DEFAULT_SUBSCRIPTION_FORM,
     resolver: zodResolver(subscriptionFormSchema),
   });
   const { handleSubmit, watch, setValue, reset, register, control } = form;
+
   useEffect(() => {
     if (team) {
       reset({
@@ -51,6 +54,7 @@ export function SubscriptionModal({
       });
     }
   }, [team, reset]);
+
   function quickExtend(months: number) {
     const current = watch("until");
     const base = current ? new Date(current) : new Date();
@@ -58,6 +62,7 @@ export function SubscriptionModal({
     base.setMonth(base.getMonth() + months);
     setValue("until", base.toISOString().slice(0, 10), { shouldDirty: true });
   }
+
   async function onSave(values: SubscriptionForm) {
     if (!team) return;
     const payload: SetSubscriptionReq = {
@@ -81,6 +86,7 @@ export function SubscriptionModal({
     });
     if (ok !== null) onClose();
   }
+
   async function revoke() {
     if (!team) return;
     const proceed = await confirm({
@@ -99,9 +105,11 @@ export function SubscriptionModal({
     );
     if (ok !== null) onClose();
   }
+
   if (!team) return null;
   const plan = watch("plan");
   const recordPayment = watch("recordPayment");
+
   return (
     <Dialog open={!!team} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>

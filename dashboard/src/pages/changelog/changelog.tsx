@@ -1,18 +1,23 @@
+// Public changelog — marketing page. Не требует auth.
+
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, Eyebrow, Skeleton } from "@eop/ui";
 import type { ChangelogDoc } from "./model/types";
 import { Timeline } from "./ui/timeline";
+
 export function Changelog() {
   const { t } = useTranslation("changelog");
   const [doc, setDoc] = useState<ChangelogDoc | null>(null);
   const [error, setError] = useState(false);
+
   useEffect(() => {
     fetch("/changelog.json")
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then(setDoc)
       .catch(() => setError(true));
   }, []);
+
   return (
     <main className="relative min-h-screen">
       <div className="dot-grid pointer-events-none absolute inset-x-0 top-0 h-[420px] -z-10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />

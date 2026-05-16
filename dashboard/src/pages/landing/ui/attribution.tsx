@@ -1,9 +1,7 @@
 import { useTranslation } from "react-i18next";
-type StreamRow = {
-  ts: string;
-  tag: string;
-  msg: string;
-};
+
+type StreamRow = { ts: string; tag: string; msg: string };
+
 export function Attribution() {
   const { t } = useTranslation("landing");
   const stream = t("attribution.stream", { returnObjects: true }) as StreamRow[];

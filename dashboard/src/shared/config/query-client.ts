@@ -1,19 +1,16 @@
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "@eop/ui";
+
 export function httpErrorStatus(err: unknown): number | undefined {
   if (typeof err !== "object" || err === null) return undefined;
-  const e = err as {
-    status?: number;
-    response?: {
-      status?: number;
-    };
-  };
+  const e = err as { status?: number; response?: { status?: number } };
   return e.status ?? e.response?.status;
 }
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30000,
+      staleTime: 30_000,
       retry: 1,
       refetchOnWindowFocus: false,
     },

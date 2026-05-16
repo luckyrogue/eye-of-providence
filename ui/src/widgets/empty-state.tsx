@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../shared/lib/cn";
+
 export function EmptyState({
   eyebrow,
   title,

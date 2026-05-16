@@ -1,14 +1,14 @@
 const KEY = "eop_tz";
+
 export function getTz(): string {
   return localStorage.getItem(KEY) || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 }
+
 export function setTz(tz: string) {
   localStorage.setItem(KEY, tz);
 }
-const TIMEZONES: {
-  label: string;
-  value: string;
-}[] = [
+
+const TIMEZONES: { label: string; value: string }[] = [
   { label: "Москва (UTC+3)", value: "Europe/Moscow" },
   { label: "Санкт-Петербург (UTC+3)", value: "Europe/Moscow" },
   { label: "Казань (UTC+3)", value: "Europe/Moscow" },
@@ -24,7 +24,9 @@ const TIMEZONES: {
   { label: "San Francisco (UTC-8)", value: "America/Los_Angeles" },
   { label: "UTC", value: "UTC" },
 ];
+
 export const UNIQUE_TIMEZONES = Array.from(new Map(TIMEZONES.map((t) => [t.value, t])).values());
+
 export function formatDate(iso: string, tz: string): string {
   return new Date(iso).toLocaleString("ru-RU", {
     timeZone: tz,
@@ -35,6 +37,7 @@ export function formatDate(iso: string, tz: string): string {
     minute: "2-digit",
   });
 }
+
 export function formatTime(iso: string, tz: string): string {
   return new Date(iso).toLocaleTimeString("ru-RU", {
     timeZone: tz,

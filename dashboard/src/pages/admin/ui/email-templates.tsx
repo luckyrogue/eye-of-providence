@@ -1,14 +1,23 @@
+// Email templates editor page. Two-column layout:
+//   • left  — list of [key, locale] pairs (matrix view).
+//   • right — Monaco editor + iframe preview.
+//
+// Outer state: currently selected (key, locale). Editor компонент
+// сам подтягивает detail и кладёт назад через mutate.
+
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { EmptyState, Button } from "@eop/ui";
+import { EmptyState } from "@eop/ui";
 import {
   useEmailTemplates,
   type EmailTemplateKey,
   type EmailTemplateLocale,
 } from "../../../entities/admin";
 import { EmailTemplateEditor } from "../../../features/admin-email-template";
+
 const ALL_KEYS: EmailTemplateKey[] = ["password_reset", "team_invite", "subscription_activated"];
 const ALL_LOCALES: EmailTemplateLocale[] = ["en", "ru", "kk", "es"];
+
 export function EmailTemplatesPage() {
   const { t } = useTranslation("app");
   const matrix = useEmailTemplates();
@@ -16,10 +25,13 @@ export function EmailTemplatesPage() {
     key: EmailTemplateKey;
     locale: EmailTemplateLocale;
   } | null>({ key: "password_reset", locale: "en" });
+
+  // Маппинг [key, locale] → has_override для значка "overridden / default".
   const overrideMap = new Map<string, boolean>();
   for (const row of matrix.data ?? []) {
     overrideMap.set(`${row.key}:${row.locale}`, row.has_override);
   }
+
   return (
     <div className="eop-card">
       <div className="card-head">
@@ -45,11 +57,13 @@ export function EmailTemplatesPage() {
                   const overridden = overrideMap.get(`${key}:${locale}`) ?? false;
                   return (
                     <li key={locale}>
-                      <Button
+                      {/* eslint-disable-next-line no-restricted-syntax */}
+                      <button
                         type="button"
-                        variant="ghost"
                         onClick={() => setSelected({ key, locale })}
-                        className={`h-auto w-full justify-between rounded-none px-3 py-2 text-sm font-normal ${active ? "bg-foreground/10" : ""}`}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors hover:bg-foreground/5 ${
+                          active ? "bg-foreground/10" : ""
+                        }`}
                       >
                         <span className="font-mono">{locale}</span>
                         <span
@@ -67,7 +81,7 @@ export function EmailTemplatesPage() {
                             ? t("admin.email_templates.badge.overridden")
                             : t("admin.email_templates.badge.default")}
                         </span>
-                      </Button>
+                      </button>
                     </li>
                   );
                 })}
