@@ -43,6 +43,10 @@ jobs:
       docker: ${{ steps.filter.outputs.docker }}
       ci: ${{ steps.filter.outputs.ci }}
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
       - uses: actions/checkout@v6
         with: { persist-credentials: false }
       - id: filter
@@ -151,6 +155,8 @@ jobs:
       contents: read
       packages: write
       security-events: write
+      id-token: write # cosign keyless OIDC
+      attestations: write # actions/attest-* (SLSA provenance + SBOM)
 
   deploy:
     name: deploy

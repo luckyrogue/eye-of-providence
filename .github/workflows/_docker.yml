@@ -1,8 +1,19 @@
-# Reusable: build, scan, push combined image.
+# Reusable: build, scan, sign, attest, push.
 #
-# Push происходит ТОЛЬКО на main (callerproверяет github.ref). На PR — load.
-# Trivy: CRITICAL = block (exit 1), HIGH = report (exit 0). HIGH SARIF
-# выгружается в GH Security tab, чтобы видеть тренд.
+# Payment-grade pipeline:
+#   1. harden-runner          — egress audit (Phase 1; flip to block после baseline)
+#   2. buildx + build-push    — multi-arch image
+#   3. trivy CRITICAL=block / HIGH=report
+#   4. cosign keyless sign    — OIDC через GitHub, ничего хранить не надо
+#   5. SLSA Build L3 attest   — actions/attest-build-provenance (native GitHub)
+#   6. SBOM CycloneDX         — anchore/sbom-action + attest-sbom
+#
+# Verify pulled image локально:
+#   cosign verify ghcr.io/luckyrogue/eop:<sha> \
+#     --certificate-identity-regexp '^https://github\.com/luckyrogue/eye-of-providence' \
+#     --certificate-oidc-issuer https://token.actions.githubusercontent.com
+#
+# Push происходит ТОЛЬКО на main (caller проверяет github.ref). На PR — load.
 name: _docker
 
 on:
@@ -16,20 +27,35 @@ on:
       image:
         description: "Полное имя образа с тегом github.sha"
         value: ${{ jobs.build.outputs.image }}
+      digest:
+        description: "Image digest (для downstream attestations)"
+        value: ${{ jobs.build.outputs.digest }}
 
 permissions:
   contents: read
   packages: write
   security-events: write
+  id-token: write # cosign keyless OIDC
+  attestations: write # actions/attest-* artifacts в GH attestation store
 
 jobs:
   build:
-    name: docker / build + scan
+    name: docker / build + scan + sign
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
       image: ${{ steps.meta.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          # Phase 1 = audit-only. После 2 недель baseline'а через GH Security
+          # Insights переключим на block + явный allow-list (ghcr.io, github.com,
+          # objects.githubusercontent.com, gomodproxy, npmjs.org, pypi.org и т.д.).
+          egress-policy: audit
+          disable-sudo: true
+
       - uses: actions/checkout@v6
         with: { persist-credentials: false }
       - uses: docker/setup-buildx-action@v4
@@ -47,6 +73,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
       - name: Build (& push if main)
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -61,8 +88,13 @@ jobs:
             ${{ env.IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          provenance: true
+          # buildkit-level attestations (SBOM + provenance в образ). Дополняют
+          # GitHub-native attestations ниже, не заменяют — GH attestations
+          # подписаны Sigstore и проверяются `gh attestation verify`.
+          provenance: mode=max
           sbom: true
+
+      # === Vulnerability scan (build gate) ===
       - name: Trivy CRITICAL (block)
         uses: aquasecurity/trivy-action@master
         with:
@@ -90,3 +122,45 @@ jobs:
         with:
           sarif_file: trivy-image.sarif
           category: trivy-image
+
+      # === Sign + attest (только на push, иначе digest пустой) ===
+      - name: Install cosign
+        if: ${{ inputs.push }}
+        uses: sigstore/cosign-installer@d7d6e057b6c4fa3179f7f6e44df8b0c84b81f7e3 # v3.7.0
+        with:
+          cosign-release: v2.4.1
+
+      - name: Cosign sign (keyless via OIDC)
+        if: ${{ inputs.push }}
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          cosign sign --yes "${IMAGE}@${IMAGE_DIGEST}"
+
+      - name: Attest build provenance (SLSA L3 via GH)
+        if: ${{ inputs.push }}
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      # === SBOM (CycloneDX) — generate + upload + attest ===
+      - name: Generate SBOM (CycloneDX)
+        if: ${{ inputs.push }}
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+          upload-artifact: true
+          upload-artifact-retention: 90
+
+      - name: Attest SBOM
+        if: ${{ inputs.push }}
+        uses: actions/attest-sbom@v2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          sbom-path: sbom.cdx.json
+          push-to-registry: true

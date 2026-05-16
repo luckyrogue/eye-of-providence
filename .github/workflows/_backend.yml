@@ -1,8 +1,12 @@
-# Reusable: backend lint + unit + integration + build.
+# Reusable: backend lint + unit + integration + build + coverage gate.
 #
 # Вызывается из ci.yml. permissions наследуются от caller'а (минимум — read).
 # Postgres-services поднимаются только для integration-job, чтобы lint/unit
 # не ждали PG ready.
+#
+# Coverage gate: total < threshold → fail. Текущий baseline ~15%, floor=12%
+# (ratchet -2pp). Поднимаем threshold раз в спринт после крупных test-ассеров.
+# Цель — 80% к v1.0 (особенно на auth/billing/ingest/migrate — payment-critical).
 name: _backend
 
 on:
@@ -12,6 +16,10 @@ on:
         type: boolean
         default: true
         description: "Запускать integration-тесты (требуют PG)"
+      coverage-threshold:
+        type: number
+        default: 12
+        description: "Минимальный % покрытия (fail если ниже)"
 
 permissions:
   contents: read
@@ -22,6 +30,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
@@ -43,6 +55,10 @@ jobs:
     defaults:
       run: { working-directory: backend }
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
       - uses: actions/checkout@v6
         with: { persist-credentials: false }
       - uses: actions/setup-go@v6
@@ -56,6 +72,24 @@ jobs:
         run: go test -race -count=1 -coverprofile=coverage.out ./...
       - name: Build
         run: go build ./...
+
+      # Coverage gate — payment-grade требование. Парсим total%, сравниваем
+      # с threshold, печатаем annotation если ниже. Не использует toolchain —
+      # чисто go cover + awk, переносимо.
+      - name: Coverage gate
+        env:
+          THRESHOLD: ${{ inputs.coverage-threshold }}
+        run: |
+          set -euo pipefail
+          TOTAL=$(go tool cover -func=coverage.out | awk '/^total:/ {gsub("%","",$3); print $3}')
+          echo "Coverage: ${TOTAL}% (threshold: ${THRESHOLD}%)"
+          echo "## Backend coverage" >> "$GITHUB_STEP_SUMMARY"
+          echo "**${TOTAL}%** (gate: ${THRESHOLD}%)" >> "$GITHUB_STEP_SUMMARY"
+          if awk "BEGIN{exit !(${TOTAL} < ${THRESHOLD})}"; then
+            echo "::error::backend coverage ${TOTAL}% < ${THRESHOLD}% (gate fail)"
+            exit 1
+          fi
+
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v7
@@ -88,6 +122,10 @@ jobs:
     env:
       EOP_TEST_PG_DSN: postgres://eop:eop_dev@localhost:5432/eop_test?sslmode=disable
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
       - uses: actions/checkout@v6
         with: { persist-credentials: false }
       - uses: actions/setup-go@v6

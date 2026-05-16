@@ -1,10 +1,11 @@
 # Reusable: security checks.
-#   - CodeQL: SAST для Go + JS/TS (semantic-search-based)
-#   - gitleaks: secret detection в diff'е
-#   - trivy fs: source-level CVE-scan (npm/go.sum lockfiles)
-#   - SBOM: spdx-json artifact для compliance
+#   - CodeQL          — SAST для Go + JS/TS (semantic-search)
+#   - gitleaks        — secret detection в diff'е
+#   - trivy-fs        — source-level CVE-scan (npm/go.sum lockfiles)
+#   - osv-scanner     — Google OSV для всех manifest'ов (pnpm/go/cargo)
+#   - dependency-rev  — PR-only, блокирует вулнерабельные deps на ввозе
 #
-# CodeQL и trivy fs аплоадят SARIF в GH Security tab — Code Scanning alerts.
+# Все SARIF загружаются в Code Scanning → Security tab.
 name: _security
 
 on:
@@ -29,6 +30,10 @@ jobs:
           - language: javascript-typescript
             build-mode: none
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
       - uses: actions/checkout@v6
         with: { persist-credentials: false }
       - if: matrix.language == 'go'
@@ -52,6 +57,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
@@ -66,6 +75,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
       - uses: actions/checkout@v6
         with: { persist-credentials: false }
       - name: Trivy fs scan (SARIF, non-blocking)
@@ -85,3 +98,57 @@ jobs:
         with:
           sarif_file: trivy-fs.sarif
           category: trivy-fs
+
+  # OSV-Scanner — Google's free vuln DB сканер по всем lockfiles
+  # (pnpm-lock.yaml, go.sum, Cargo.lock, etc.). Дополняет Trivy: OSV
+  # покрывает экосистемы лучше, Trivy — OS-пакеты.
+  osv-scanner:
+    name: security / osv-scanner
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with: { persist-credentials: false }
+      - name: Run OSV-Scanner
+        uses: google/osv-scanner-action/osv-scanner-action@v2.0.2
+        with:
+          scan-args: |-
+            --recursive
+            --skip-git
+            --format=sarif
+            --output=osv-results.sarif
+            ./
+        continue-on-error: true # non-blocking первые 2 недели; ratchet после baseline
+      - name: Upload OSV SARIF to Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: osv-results.sarif
+          category: osv-scanner
+
+  # Dependency Review — PR-only. Блокирует merge если PR ввозит deps
+  # с известными уязвимостями high severity или GPL-incompatible лицензиями.
+  # На push в main не запускаем — там уже поздно (deps уже в коде).
+  dependency-review:
+    name: security / dependency-review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with: { persist-credentials: false }
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          # Лицензии — блокируем только viral copyleft (GPL/AGPL — несовместимо
+          # с проприетарным backend). LGPL/MPL — ok через dynamic linking.
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0
+          comment-summary-in-pr: on-failure

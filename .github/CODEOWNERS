@@ -8,11 +8,29 @@
 # default fallback
 *                           @luckyrogue
 
-# Critical paths требуют review:
+# Critical paths требуют review (payment-grade — никакого self-merge без второго
+# approver'а когда команда вырастет; branch protection enforces в Settings).
 .github/                    @luckyrogue
 infra/                      @luckyrogue
 Dockerfile                  @luckyrogue
-backend/internal/migrate/   @luckyrogue
-backend/internal/auth/      @luckyrogue
 .env.example                @luckyrogue
 SECURITY.md                 @luckyrogue
+.trivyignore                @luckyrogue
+
+# Backend — security/payments-critical модули:
+backend/internal/auth/      @luckyrogue
+backend/internal/migrate/   @luckyrogue
+backend/internal/ingest/    @luckyrogue
+backend/internal/plans/     @luckyrogue
+backend/internal/publicapi/ @luckyrogue
+backend/internal/audit/     @luckyrogue
+backend/internal/teams/     @luckyrogue
+
+# Любой webhook handler — потенциальная point of trust для платёжных систем.
+backend/internal/webhooks/  @luckyrogue
+
+# Frontend — auth и checkout / settings flow.
+dashboard/src/pages/auth/        @luckyrogue
+dashboard/src/pages/settings/    @luckyrogue
+dashboard/src/pages/team/        @luckyrogue
+dashboard/src/pages/pricing/     @luckyrogue

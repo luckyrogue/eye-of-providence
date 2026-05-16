@@ -20,7 +20,18 @@ jobs:
     environment:
       name: production
       url: ${{ vars.HEALTH_URL }}
+    # Concurrency lock per-environment: один deploy в production за раз.
+    # Параллельные deploy = race на image-pull / healthcheck-window.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          # Deploy шлёт только в dokploy webhook + опционально curl /healthz.
+          # После baseline переключим на block с явным allow-list.
+          egress-policy: audit
       - name: Trigger Dokploy webhook
         env:
           WEBHOOK: ${{ secrets.DOKPLOY_WEBHOOK }}
