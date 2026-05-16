@@ -8,11 +8,15 @@
 // Если нужно reset state в середине suite — вызывать `resetAll()` из
 // отдельного `beforeAll` в spec файле где это требуется.
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
-const PG_DSN =
-  process.env.E2E_PG_DSN || "postgres://eop:eop_dev@localhost:5432/eop?sslmode=disable";
-const CH_URL = process.env.E2E_CH_URL || "http://localhost:8123";
+// PG/CH connect-strings раньше пробрасывались внутрь shell-команды через
+// `execSync(string)`. CodeQL js/indirect-command-line-injection (#137) — если
+// E2E_PG_DSN/E2E_CH_URL пришёл из process.env с метасимволами, он встроится
+// в шелл-команду как есть. Переехали на execFileSync с array-args (без shell):
+// connect-info теперь не нужна — psql/clickhouse-client внутри контейнеров уже
+// сконфигурированы под локальный compose-stack. Если в будущем понадобится
+// разный host/port, передаём через --host/--port отдельными элементами массива.
 const CH_USER = process.env.E2E_CH_USER || "eop";
 const CH_PASS = process.env.E2E_CH_PASS || "eop_dev";
 const CH_DB = process.env.E2E_CH_DB || "eop";
@@ -38,8 +42,12 @@ const PG_TABLES = [
 export function resetPostgres(): void {
   // Через psql напрямую — pg client'а в e2e package нет (не хотим тащить
   // ещё одну зависимость). docker exec → psql внутри контейнера.
+  // execFileSync(array) — без shell, никакая инъекция через PG_TABLES не
+  // пройдёт (имена таблиц hardcoded, но array-form всё равно безопаснее).
   const sql = `TRUNCATE ${PG_TABLES.join(", ")} CASCADE;`;
-  execSync(`docker exec eop-postgres psql -U eop -d eop -c "${sql}"`, { stdio: "pipe" });
+  execFileSync("docker", ["exec", "eop-postgres", "psql", "-U", "eop", "-d", "eop", "-c", sql], {
+    stdio: "pipe",
+  });
 }
 
 export function resetClickHouse(): void {
@@ -49,8 +57,17 @@ export function resetClickHouse(): void {
   const tables = ["events", "events_hourly_agg", "events_daily_agg"];
   for (const t of tables) {
     try {
-      execSync(
-        `docker exec eop-clickhouse clickhouse-client --user=${CH_USER} --password=${CH_PASS} --database=${CH_DB} --query="TRUNCATE TABLE IF EXISTS ${t}"`,
+      execFileSync(
+        "docker",
+        [
+          "exec",
+          "eop-clickhouse",
+          "clickhouse-client",
+          `--user=${CH_USER}`,
+          `--password=${CH_PASS}`,
+          `--database=${CH_DB}`,
+          `--query=TRUNCATE TABLE IF EXISTS ${t}`,
+        ],
         { stdio: "pipe" },
       );
     } catch {
@@ -63,7 +80,7 @@ export function resetClickHouse(): void {
 export function resetRedis(): void {
   // Кешированные responses в `eop:cache:*` — очистить.
   try {
-    execSync(`docker exec eop-redis redis-cli FLUSHALL`, { stdio: "pipe" });
+    execFileSync("docker", ["exec", "eop-redis", "redis-cli", "FLUSHALL"], { stdio: "pipe" });
   } catch {
     // Redis optional — backend gracefully degrades если недоступен.
   }

@@ -45,8 +45,5 @@ func ValidEvent(e store.Event) bool {
 	default:
 		return false
 	}
-	if e.DurationMS > 24*60*60*1000 {
-		return false
-	}
-	return true
+	return e.DurationMS <= 24*60*60*1000
 }

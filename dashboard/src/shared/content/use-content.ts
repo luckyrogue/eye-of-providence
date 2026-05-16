@@ -79,9 +79,13 @@ function usePreviewContent<T>(slug: ContentSlug, locale: ContentLocale, enabled:
 }
 
 // Empty-content guard — backend may return `{}` or `null` for a slug that
-// was reverted mid-flight; treat as "no content" and fall back.
-function isEmpty(value: unknown): boolean {
-  if (value == null) return true;
+// был reverted mid-flight; treat as "no content" and fall back. Единый guard
+// для null/undefined/{} — call site не должен дублировать nullish-check
+// (см. CodeQL #150 js/unneeded-defensive-code). Type-predicate возвращает
+// `value is null | undefined | EmptyObject`, чтобы TS сужал `T | undefined`
+// до `T` в else-ветке без повторных проверок у вызывающего кода.
+function isEmpty(value: unknown): value is null | undefined | Record<string, never> {
+  if (value === undefined || value === null) return true;
   if (typeof value === "object" && !Array.isArray(value)) {
     return Object.keys(value as Record<string, unknown>).length === 0;
   }
@@ -97,6 +101,6 @@ export function useContent<T>(slug: ContentSlug, fallback: T): T {
   const draft = usePreviewContent<T>(slug, locale, isPreviewingThis);
 
   const value = isPreviewingThis ? draft.data : published.data;
-  if (value === undefined || value === null || isEmpty(value)) return fallback;
+  if (isEmpty(value)) return fallback;
   return value;
 }
