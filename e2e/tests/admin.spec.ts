@@ -6,13 +6,31 @@
 
 import { test, expect } from "../fixtures/index.js";
 import { ApiError, createApiClient } from "../helpers/api.js";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 function promoteToSuperAdmin(userID: string): void {
   // INSERT может уже быть выполнен (юзер создан выше через API), нам нужно
   // обновить global_role. Через docker exec psql.
-  execSync(
-    `docker exec eop-postgres psql -U eop -d eop -c "UPDATE users SET global_role='super_admin' WHERE id='${userID}'"`,
+  //
+  // execFileSync(array) — без shell-инъекции через userID. SQL-инъекция тоже
+  // не вылетит: postgres treats $1 как параметр, но мы используем -c с inline
+  // строкой, поэтому ограничиваемся UUID-валидацией.
+  if (!/^[0-9a-f-]{36}$/i.test(userID)) {
+    throw new Error(`promoteToSuperAdmin: invalid userID ${userID}`);
+  }
+  execFileSync(
+    "docker",
+    [
+      "exec",
+      "eop-dev-postgres",
+      "psql",
+      "-U",
+      "eop",
+      "-d",
+      "eop",
+      "-c",
+      `UPDATE users SET global_role='super_admin' WHERE id='${userID}'`,
+    ],
     { stdio: "pipe" },
   );
 }

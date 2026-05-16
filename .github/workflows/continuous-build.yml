@@ -116,14 +116,18 @@ jobs:
           args: ${{ matrix.args }}
 
       # Собираем артефакты в плоский каталог для upload в release.
-      # tauri-action кладёт их в target/<triple>/release/bundle/<format>/
+      # tauri-action кладёт их в target/<triple>/release/bundle/<format>/.
+      # macOS runner — bash 3.x без `shopt -s globstar`, поэтому find вместо **.
       - name: Stage artifacts (unix)
         if: matrix.os != 'windows-latest'
         run: |
           mkdir -p artifacts
-          shopt -s globstar nullglob
-          for f in agent/src-tauri/target/**/release/bundle/**/*.{dmg,AppImage,deb}; do
-            cp "$f" artifacts/
+          find agent/src-tauri/target -type d -name bundle 2>/dev/null | while read -r dir; do
+            find "$dir" -type f \( \
+              -name '*.dmg' -o \
+              -name '*.AppImage' -o \
+              -name '*.deb' \
+            \) -exec cp {} artifacts/ \;
           done
           ls -la artifacts/
         shell: bash

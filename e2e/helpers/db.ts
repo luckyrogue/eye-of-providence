@@ -45,9 +45,11 @@ export function resetPostgres(): void {
   // execFileSync(array) — без shell, никакая инъекция через PG_TABLES не
   // пройдёт (имена таблиц hardcoded, но array-form всё равно безопаснее).
   const sql = `TRUNCATE ${PG_TABLES.join(", ")} CASCADE;`;
-  execFileSync("docker", ["exec", "eop-postgres", "psql", "-U", "eop", "-d", "eop", "-c", sql], {
-    stdio: "pipe",
-  });
+  execFileSync(
+    "docker",
+    ["exec", "eop-dev-postgres", "psql", "-U", "eop", "-d", "eop", "-c", sql],
+    { stdio: "pipe" },
+  );
 }
 
 export function resetClickHouse(): void {
@@ -61,7 +63,7 @@ export function resetClickHouse(): void {
         "docker",
         [
           "exec",
-          "eop-clickhouse",
+          "eop-dev-clickhouse",
           "clickhouse-client",
           `--user=${CH_USER}`,
           `--password=${CH_PASS}`,
@@ -80,7 +82,7 @@ export function resetClickHouse(): void {
 export function resetRedis(): void {
   // Кешированные responses в `eop:cache:*` — очистить.
   try {
-    execFileSync("docker", ["exec", "eop-redis", "redis-cli", "FLUSHALL"], { stdio: "pipe" });
+    execFileSync("docker", ["exec", "eop-dev-redis", "redis-cli", "FLUSHALL"], { stdio: "pipe" });
   } catch {
     // Redis optional — backend gracefully degrades если недоступен.
   }

@@ -42,13 +42,17 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # --- Infra ---
+      # Compose-файл сейчас один — docker-compose.dev.yml; api+dashboard сервисы
+      # в нём не стартуем, бэкенд CI поднимает через `go run` ниже. Когда появится
+      # отдельный docker-compose.prod.yml для self-host, можно завести и отдельный
+      # docker-compose.ci.yml только с PG/CH/Redis.
       - name: Start PG / CH / Redis
-        run: docker compose -f infra/docker-compose.yml up -d postgres clickhouse redis
+        run: docker compose -f infra/docker-compose.dev.yml up -d postgres clickhouse redis
 
       - name: Wait for Postgres
         run: |
           for i in $(seq 1 30); do
-            if docker exec eop-postgres pg_isready -U eop &>/dev/null; then
+            if docker exec eop-dev-postgres pg_isready -U eop &>/dev/null; then
               echo "postgres ready"; exit 0
             fi
             sleep 2
