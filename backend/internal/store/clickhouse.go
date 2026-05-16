@@ -37,6 +37,14 @@ func OpenClickHouse(dsn string) (*ClickHouseStore, error) {
 	return &ClickHouseStore{conn: conn}, nil
 }
 
+// Conn — escape hatch для тех, кому нужен low-level driver.Conn (например,
+// attribution worker, использующий PrepareBatch + custom queries). Через
+// EventStore-интерфейс эти операции не выразить, а тащить весь worker в
+// этот package было бы overkill.
+func (s *ClickHouseStore) Conn() driver.Conn {
+	return s.conn
+}
+
 func (s *ClickHouseStore) Insert(ctx context.Context, events []Event) error {
 	if len(events) == 0 {
 		return nil
