@@ -126,7 +126,7 @@ jobs:
       # === Sign + attest (только на push, иначе digest пустой) ===
       - name: Install cosign
         if: ${{ inputs.push }}
-        uses: sigstore/cosign-installer@d7d6e057b6c4fa3179f7f6e44df8b0c84b81f7e3 # v3.7.0
+        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
         with:
           cosign-release: v2.4.1
 
