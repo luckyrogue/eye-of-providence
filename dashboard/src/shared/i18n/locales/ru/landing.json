@@ -231,10 +231,10 @@
   },
   "pricing": {
     "eyebrow": "Тарифы",
-    "heading": "Бесплатно в бете. <em>Честные цены</em> на GA.",
+    "heading": "Бесплатно в раннем доступе. <em>Честные цены</em> на GA.",
     "lead": "Все платные фичи бесплатны до релиза в Q4 2026 — без карты, без таймера. После GA бесплатным останется только Free.",
     "most_popular": "Самый популярный",
-    "beta_badge": "Бесплатно в бете",
+    "beta_badge": "Бесплатно в раннем доступе",
     "compare_link": "Сравнить все фичи →",
     "tiers": [
       {
@@ -320,7 +320,7 @@
     "primary": "Скачать для macOS",
     "secondary": "Скачать для Windows",
     "heading": "Ship more. <em>Know how.</em>",
-    "lead": "Free during beta. Two minutes to try. Cancel any time.",
+    "lead": "Бесплатно в раннем доступе. Две минуты на пробу. Отмена в любой момент.",
     "button": "Начать бесплатно"
   },
   "footer": {

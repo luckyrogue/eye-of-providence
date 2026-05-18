@@ -1,6 +1,6 @@
 {
   "beta_banner": {
-    "title": "Programa Beta",
+    "title": "Acceso anticipado",
     "full": "Las {{limit}} plazas están ocupadas — open seats coming soon",
     "free_count": "{{slots}} de {{limit}} plazas libres"
   },
@@ -115,8 +115,8 @@
     "lead": "Puedes estar en varios — cambia abajo.",
     "new_team": "Nuevo equipo",
     "empty": "Aún no tienes equipos. Crea uno o pide una invitación.",
-    "blocked_owner": "Ya eres propietario de una empresa — en beta 1 owner = 1 company",
-    "blocked_beta_full": "Programa beta completo",
+    "blocked_owner": "Ya eres propietario de una empresa — en acceso anticipado 1 owner = 1 company",
+    "blocked_beta_full": "Acceso anticipado completo",
     "create_dialog_title": "Nuevo equipo",
     "create_dialog_lead": "Será el workspace donde tu equipo verá las métricas.",
     "create_dialog_label": "Nombre",
@@ -135,7 +135,7 @@
     "stat_users": "Usuarios",
     "stat_teams": "Equipos",
     "stat_members_total": "Miembros",
-    "beta_limit_value": "límite beta · {{n}}",
+    "beta_limit_value": "límite acceso anticipado · {{n}}",
     "beta_limit_unlimited": "sin límite",
     "stat_revenue": "Ingresos (todo el tiempo)",
     "users_email": "Correo",

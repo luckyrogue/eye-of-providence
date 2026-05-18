@@ -1,6 +1,6 @@
 {
-  "owner_limit": "In beta, one user can own only one company",
-  "beta_full": "Beta program is full",
+  "owner_limit": "In early access, one user can own only one company",
+  "beta_full": "Early access is full",
   "invite_invalid": "Invite is invalid or expired",
   "team_create_failed": "Failed to create company",
   "invite_create_failed": "Failed to create invite",

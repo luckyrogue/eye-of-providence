@@ -1,6 +1,6 @@
 {
-  "owner_limit": "En la beta, un usuario solo puede ser propietario de una empresa",
-  "beta_full": "Programa beta completo",
+  "owner_limit": "En el acceso anticipado, un usuario solo puede ser propietario de una empresa",
+  "beta_full": "Acceso anticipado completo",
   "invite_invalid": "Invitación inválida o expirada",
   "team_create_failed": "No se pudo crear la empresa",
   "invite_create_failed": "No se pudo crear la invitación",

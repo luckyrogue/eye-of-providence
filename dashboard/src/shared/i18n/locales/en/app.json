@@ -1,6 +1,6 @@
 {
   "beta_banner": {
-    "title": "Beta program",
+    "title": "Early access",
     "full": "All {{limit}} seats taken — open seats coming soon",
     "free_count": "{{slots}} of {{limit}} seats free"
   },
@@ -115,8 +115,8 @@
     "lead": "You can be in several — switch at the bottom.",
     "new_team": "New team",
     "empty": "You don't have any teams yet. Create one or ask for an invite.",
-    "blocked_owner": "You already own a company — in beta 1 owner = 1 company",
-    "blocked_beta_full": "Beta program is full",
+    "blocked_owner": "You already own a company — in early access 1 owner = 1 company",
+    "blocked_beta_full": "Early access is full",
     "create_dialog_title": "New team",
     "create_dialog_lead": "This will be the workspace where your team sees metrics.",
     "create_dialog_label": "Name",
@@ -132,7 +132,7 @@
     "refresh_failed": "Refresh failed",
     "error_title": "Failed to load some admin data",
     "error_lead": "Check backend connectivity and try refresh.",
-    "stat_beta_capacity": "Beta capacity",
+    "stat_beta_capacity": "Early access capacity",
     "beta_full": "all seats taken",
     "beta_slots_free": "{{n}} seats free",
     "avg_members_per_team": "~{{n}} avg / team",
@@ -188,7 +188,7 @@
     "stat_teams": "Teams",
     "stat_members_total": "Memberships",
     "stat_revenue": "Revenue (all time)",
-    "beta_limit_value": "beta limit · {{n}}",
+    "beta_limit_value": "early access limit · {{n}}",
     "beta_limit_unlimited": "no limit",
     "users_email": "Email",
     "users_name": "Name",

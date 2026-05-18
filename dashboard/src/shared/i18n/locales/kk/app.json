@@ -1,6 +1,6 @@
 {
   "beta_banner": {
-    "title": "Beta бағдарлама",
+    "title": "Ерте қол жетімділік",
     "full": "Барлық {{limit}} орын алынды — open seats coming soon",
     "free_count": "{{limit}} орыннан {{slots}} бос"
   },
@@ -116,8 +116,8 @@
     "lead": "Бірнеше командада бола аласыз — төменде ауысыңыз.",
     "new_team": "Жаңа команда",
     "empty": "Әзірге командаларыңыз жоқ. Жаңа құрыңыз немесе шақыру сұраңыз.",
-    "blocked_owner": "Сіз қазірдің өзінде компания иесісіз — бетада 1 owner = 1 company",
-    "blocked_beta_full": "Бета бағдарлама толды",
+    "blocked_owner": "Сіз қазірдің өзінде компания иесісіз — ерте қол жетімділікте 1 owner = 1 company",
+    "blocked_beta_full": "Ерте қол жетімділік толды",
     "create_dialog_title": "Жаңа команда",
     "create_dialog_lead": "Бұл командаңыз метриканы көретін workspace болады.",
     "create_dialog_label": "Аты",
@@ -136,7 +136,7 @@
     "stat_users": "Қолданушылар",
     "stat_teams": "Командалар",
     "stat_members_total": "Мүшеліктер",
-    "beta_limit_value": "бета лимиті · {{n}}",
+    "beta_limit_value": "ерте қол жетімділік лимиті · {{n}}",
     "beta_limit_unlimited": "лимит жоқ",
     "stat_revenue": "Кіріс (барлық уақыт)",
     "users_email": "Эл. пошта",

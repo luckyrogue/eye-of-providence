@@ -219,10 +219,10 @@
   },
   "pricing": {
     "eyebrow": "Precios",
-    "heading": "Gratis durante la beta. <em>Precios honestos</em> en GA.",
+    "heading": "Gratis durante el acceso anticipado. <em>Precios honestos</em> en GA.",
     "lead": "Todas las funciones de pago son gratis hasta el GA en Q4 2026. Después del GA, solo Free sigue gratis.",
     "most_popular": "Más popular",
-    "beta_badge": "Gratis en beta",
+    "beta_badge": "Gratis en acceso anticipado",
     "compare_link": "Comparar todas las funciones →",
     "tiers": [
       {
@@ -289,7 +289,7 @@
       { "q": "¿Qué recoge el agente?", "a": "Solo metadatos — nunca contenido." },
       {
         "q": "¿Cuándo termina lo gratis?",
-        "a": "Free para siempre. Pro/Business gratis en beta hasta Q4 2026."
+        "a": "Free para siempre. Pro/Business gratis en acceso anticipado hasta Q4 2026."
       },
       {
         "q": "¿Mi código sale a la nube?",
@@ -305,7 +305,7 @@
     "primary": "Descargar para macOS",
     "secondary": "Descargar para Windows",
     "heading": "Envía más. <em>Sabe cómo.</em>",
-    "lead": "Gratis durante la beta. Dos minutos para probar.",
+    "lead": "Gratis durante el acceso anticipado. Dos minutos para probar.",
     "button": "Empezar gratis"
   },
   "footer": {

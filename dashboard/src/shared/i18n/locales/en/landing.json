@@ -249,10 +249,10 @@
   },
   "pricing": {
     "eyebrow": "Pricing",
-    "heading": "Free during beta. <em>Honest pricing</em> at GA.",
+    "heading": "Free during early access. <em>Honest pricing</em> at GA.",
     "lead": "All paid features are free until GA in Q4 2026 — no credit card, no countdown. After GA, only Free tier stays $0.",
     "most_popular": "Most popular",
-    "beta_badge": "Free during beta",
+    "beta_badge": "Free in early access",
     "compare_link": "Compare all features →",
     "tiers": [
       {
@@ -322,7 +322,7 @@
       },
       {
         "q": "When does free end?",
-        "a": "Free tier stays free forever. Pro/Business free during beta until Q4 2026."
+        "a": "Free tier stays free forever. Pro/Business free during early access until Q4 2026."
       },
       {
         "q": "Is my code ever uploaded?",
@@ -338,7 +338,7 @@
     "primary": "Download for macOS",
     "secondary": "Download for Windows",
     "heading": "Ship more. <em>Know how.</em>",
-    "lead": "Free during beta. Two minutes to try. Cancel any time.",
+    "lead": "Free during early access. Two minutes to try. Cancel any time.",
     "button": "Get started — free"
   },
   "footer": {
