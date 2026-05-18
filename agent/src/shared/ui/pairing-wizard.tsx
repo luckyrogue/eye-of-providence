@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { Button } from "@eop/ui";
 import { openUrl, pairBegin, pairPoll, type PairBeginResponse } from "../api/tauri";
 

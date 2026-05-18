@@ -13,10 +13,10 @@ use tracing_appender::{non_blocking, rolling};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 use crate::core::auth;
+use crate::core::connection::{self, ConnectionStatus};
 use crate::core::crypto::LocalCrypto;
 use crate::core::ingest::{AuthEmitter, CredsProvider, Ingest, WakeUp};
 use crate::core::local_api;
-use crate::core::connection::{self, ConnectionStatus};
 use crate::core::preflight::{self, PreflightInput};
 use crate::core::store::LocalStore;
 use crate::core::watcher::{self, PauseFlag};
@@ -175,11 +175,7 @@ pub fn run() {
             let pf_dir = data_dir.clone();
             let startup_http = http.clone();
             tauri::async_runtime::spawn(async move {
-                for r in preflight::run(PreflightInput {
-                    data_dir: &pf_dir,
-                })
-                .await
-                {
+                for r in preflight::run(PreflightInput { data_dir: &pf_dir }).await {
                     match r.status {
                         preflight::CheckStatus::Ok => {
                             tracing::info!(check = %r.id, "{}", r.message)
@@ -386,13 +382,11 @@ fn is_paused(state: tauri::State<'_, AgentState>) -> bool {
 async fn connection_status(
     state: tauri::State<'_, AgentState>,
 ) -> Result<ConnectionStatus, String> {
-    Ok(
-        connection::status(connection::ConnectionInput {
-            local_api_port: state.local_api_port,
-            http: &state.http,
-        })
-        .await,
-    )
+    Ok(connection::status(connection::ConnectionInput {
+        local_api_port: state.local_api_port,
+        http: &state.http,
+    })
+    .await)
 }
 
 #[tauri::command]

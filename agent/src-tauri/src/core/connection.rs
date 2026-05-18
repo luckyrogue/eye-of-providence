@@ -34,10 +34,7 @@ pub struct ConnectionInput<'a> {
 
 pub async fn status(input: ConnectionInput<'_>) -> ConnectionStatus {
     let backend_url = crate::core::auth::get_backend_url().ok();
-    let paired = crate::core::auth::get_token()
-        .ok()
-        .flatten()
-        .is_some();
+    let paired = crate::core::auth::get_token().ok().flatten().is_some();
 
     let (backend, backend_url) = match backend_url {
         Some(url) if !url.trim().is_empty() => {
@@ -99,9 +96,7 @@ mod tests {
 
     #[tokio::test]
     async fn local_api_online_when_listening() {
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-            .await
-            .unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
         assert_eq!(probe_local_api(port).await, LocalApiState::Online);
     }
