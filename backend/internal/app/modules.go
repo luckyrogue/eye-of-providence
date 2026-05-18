@@ -56,6 +56,14 @@ func (a *API) RegisterProductRoutes() {
 		})
 	}
 	a.Content.RegisterPublicRoute(a.App)
+	// ВАЖНО: публичные routes (forgot/reset password) регистрируем
+	// ДО teams.RegisterRoutes. Последний вешает auth.Middleware на `/v1`
+	// через app.Group("/v1", mw) — fiber Use'ит middleware для всех
+	// последующих routes на этом prefix'е. Public-routes должны быть
+	// зарегистрированы раньше, иначе вернут 401 "missing_bearer".
+	auth.RegisterPasswordResetRoutes(a.App, auth.PasswordResetService{
+		Pool: a.Pool, Mailer: a.Mail, PublicURL: a.Cfg.PublicURL, Logger: a.Log,
+	})
 	teams.RegisterRoutes(a.App, teams.Service{
 		Pool: a.Pool, JWTSecret: a.Cfg.JWTSecret, Logger: a.Log,
 		InviteOnly: a.Cfg.InviteOnly, BetaTeamLimit: a.Cfg.BetaTeamLimit,
@@ -65,9 +73,6 @@ func (a *API) RegisterProductRoutes() {
 		TemplateStore: templateStore(a.Pool), EventStore: a.EventStore,
 	})
 	auth.RegisterIdentitiesRoutes(a.App, a.Auth)
-	auth.RegisterPasswordResetRoutes(a.App, auth.PasswordResetService{
-		Pool: a.Pool, Mailer: a.Mail, PublicURL: a.Cfg.PublicURL, Logger: a.Log,
-	})
 	auth.RegisterMeRoutes(a.App, auth.MeService{
 		JWTSecret: a.Cfg.JWTSecret, Pool: a.Pool, EventStore: a.EventStore, Logger: a.Log,
 	})

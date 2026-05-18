@@ -64,15 +64,18 @@ func newTestApp(t *testing.T, pool *pgxpool.Pool) (*fiber.App, Service) {
 		InviteOnly:    true,
 		BetaTeamLimit: 3,
 	}
-	RegisterRoutes(app, svc)
 	// /v1/auth/{forgot,reset}-password переехали из teams в auth
-	// после refactor'а — wire'им вручную чтобы integration suite
-	// password_reset_test.go не получал 401 на свои POST'ы.
+	// после refactor'а. ВАЖНО: регистрируем ДО teams.RegisterRoutes —
+	// последний вешает auth.Middleware на `/v1` через app.Use, который
+	// применяется ко всем последующим routes на этом prefix'е. Если
+	// зарегистрировать password-reset после, fiber вернёт 401
+	// "missing_bearer" вместо публичного 200.
 	auth.RegisterPasswordResetRoutes(app, auth.PasswordResetService{
 		Pool:      pool,
 		Logger:    logger,
 		PublicURL: "http://test.local",
 	})
+	RegisterRoutes(app, svc)
 	return app, svc
 }
 
