@@ -31,8 +31,7 @@ impl PlatformWatcher for MacosWatcher {
     }
 
     fn mouse_click_count(&self) -> u64 {
-        cg_event_counter(K_CG_EVENT_LEFT_MOUSE_DOWN)
-            + cg_event_counter(K_CG_EVENT_RIGHT_MOUSE_DOWN)
+        cg_event_counter(K_CG_EVENT_LEFT_MOUSE_DOWN) + cg_event_counter(K_CG_EVENT_RIGHT_MOUSE_DOWN)
     }
 
     fn clipboard_change_count(&self) -> i64 {

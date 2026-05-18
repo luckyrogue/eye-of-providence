@@ -55,7 +55,13 @@ pub fn spawn(
             tokio::time::sleep(poll_interval).await;
             if pause.paused() {
                 if let Some(app) = last_app.take() {
-                    flush_focus(&store, &app, accumulated_ms, accumulated_keys, accumulated_clicks);
+                    flush_focus(
+                        &store,
+                        &app,
+                        accumulated_ms,
+                        accumulated_keys,
+                        accumulated_clicks,
+                    );
                     accumulated_ms = 0;
                     accumulated_keys = 0;
                     accumulated_clicks = 0;
@@ -87,7 +93,8 @@ pub fn spawn(
                 last_clipboard = clipboard_now;
                 if let Some(digest) = watcher.clipboard_digest() {
                     let app_for_clip = current.clone().unwrap_or_else(|| "__unknown__".into());
-                    let ev = Event::clipboard_signal(app_for_clip, digest.sha256_hex, digest.size_bytes);
+                    let ev =
+                        Event::clipboard_signal(app_for_clip, digest.sha256_hex, digest.size_bytes);
                     if let Err(err) = store.push(&ev) {
                         tracing::warn!(error = %err, "store.push clipboard failed");
                     }
@@ -97,7 +104,13 @@ pub fn spawn(
             // idle > threshold → flush текущий focus, переключаемся в idle
             if idle >= idle_threshold_secs {
                 if let Some(app) = last_app.take() {
-                    flush_focus(&store, &app, accumulated_ms, accumulated_keys, accumulated_clicks);
+                    flush_focus(
+                        &store,
+                        &app,
+                        accumulated_ms,
+                        accumulated_keys,
+                        accumulated_clicks,
+                    );
                     accumulated_ms = 0;
                     accumulated_keys = 0;
                     accumulated_clicks = 0;
@@ -115,14 +128,26 @@ pub fn spawn(
                     accumulated_clicks = accumulated_clicks.saturating_add(delta_clicks);
                 }
                 (Some(prev), Some(_)) => {
-                    flush_focus(&store, prev, accumulated_ms, accumulated_keys, accumulated_clicks);
+                    flush_focus(
+                        &store,
+                        prev,
+                        accumulated_ms,
+                        accumulated_keys,
+                        accumulated_clicks,
+                    );
                     accumulated_ms = poll_interval.as_millis() as u32;
                     accumulated_keys = delta_keys;
                     accumulated_clicks = delta_clicks;
                     last_app = current;
                 }
                 (Some(prev), None) => {
-                    flush_focus(&store, prev, accumulated_ms, accumulated_keys, accumulated_clicks);
+                    flush_focus(
+                        &store,
+                        prev,
+                        accumulated_ms,
+                        accumulated_keys,
+                        accumulated_clicks,
+                    );
                     accumulated_ms = 0;
                     accumulated_keys = 0;
                     accumulated_clicks = 0;
@@ -148,7 +173,9 @@ fn flush_focus(store: &LocalStore, app: &str, ms: u32, keys: u32, clicks: u32) {
     let mut event = Event::os_focus(app, category, ms);
     event.chars_in = keys;
     if clicks > 0 {
-        event.meta.insert("mouse_clicks".to_string(), clicks.to_string());
+        event
+            .meta
+            .insert("mouse_clicks".to_string(), clicks.to_string());
     }
     if let Err(err) = store.push(&event) {
         tracing::warn!(error = %err, "store.push failed");

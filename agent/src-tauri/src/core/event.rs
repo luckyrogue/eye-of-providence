@@ -82,7 +82,11 @@ impl Event {
     ///
     /// Backend сравнит хеш с paste-событиями из IDE/browser плагинов
     /// чтобы атрибутировать вставку (typed vs pasted-AI vs pasted-other).
-    pub fn clipboard_signal(app_bundle: impl Into<String>, sha256_hex: String, size_bytes: usize) -> Self {
+    pub fn clipboard_signal(
+        app_bundle: impl Into<String>,
+        sha256_hex: String,
+        size_bytes: usize,
+    ) -> Self {
         let mut meta = BTreeMap::new();
         meta.insert("clipboard_sha256".to_string(), sha256_hex);
         meta.insert("clipboard_bytes".to_string(), size_bytes.to_string());
@@ -131,4 +135,3 @@ mod tests {
         assert!(!json.contains("\"meta\""));
     }
 }
-
