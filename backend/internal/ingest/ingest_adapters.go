@@ -28,16 +28,6 @@ func mapToStore(e domain.Event) store.Event {
 	}
 }
 
-func mapFromStore(e store.Event) domain.Event {
-	return domain.Event{
-		TS: e.TS, UserID: e.UserID, DeviceID: e.DeviceID, SessionID: e.SessionID,
-		AppBundle: e.AppBundle, Category: e.Category, Source: e.Source,
-		AIProvider: e.AIProvider, AIChannel: e.AIChannel, ProjectID: e.ProjectID,
-		FileLang: e.FileLang, DurationMS: e.DurationMS, CharsIn: e.CharsIn,
-		LinesAdded: e.LinesAdded, LinesRemoved: e.LinesRemoved, Meta: e.Meta,
-	}
-}
-
 func newIngestApp(st store.EventStore) *ingestapp.Service {
 	return ingestapp.New(ingestapp.Deps{Writer: eventWriterAdapter{st: st}})
 }

@@ -116,7 +116,7 @@ func (s *Service) membersApp() *membersapp.Service {
 type memberRoleAdapter struct{ s *Service }
 
 func (a memberRoleAdapter) TeamRole(ctx context.Context, userID, teamID uuid.UUID) (string, bool) {
-	return pgRoleReader{s: a.s}.TeamRole(ctx, userID, teamID)
+	return pgRoleReader(a).TeamRole(ctx, userID, teamID)
 }
 
 var _ invitesapp.RoleChecker = memberRoleAdapter{}

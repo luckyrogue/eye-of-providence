@@ -49,7 +49,7 @@ func (r rangeAggStore) AggregateByCategory(ctx context.Context, userID string, s
 type rangeAggAdapter struct{ st store.EventStore }
 
 func (a rangeAggAdapter) AggregateWindow(ctx context.Context, userID string, since, until time.Time) (map[string]uint64, error) {
-	return rangeagg.AggregateWindow(ctx, rangeAggStore{st: a.st}, userID, since, until)
+	return rangeagg.AggregateWindow(ctx, rangeAggStore(a), userID, since, until)
 }
 
 func newInsightsApp(st store.EventStore) *insightsapp.Service {

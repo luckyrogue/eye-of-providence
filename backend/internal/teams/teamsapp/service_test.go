@@ -12,8 +12,6 @@ import (
 
 type fakeTeams struct {
 	createErr error
-	owned     int
-	betaCount int
 }
 
 func (f fakeTeams) ListForUser(context.Context, uuid.UUID) ([]teamsapp.TeamRow, error) {

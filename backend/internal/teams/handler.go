@@ -2,8 +2,6 @@ package teams
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"net/mail"
 	"strings"
 	"time"
@@ -181,8 +179,3 @@ func (s Service) isSuperAdmin(c *fiber.Ctx) bool {
 	return err == nil && r == "super_admin"
 }
 
-func randomCode(bytes int) string {
-	b := make([]byte, bytes)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
-}
