@@ -1,5 +1,5 @@
+import { EopMark } from "@eop/ui";
 import { useTranslation } from "react-i18next";
-import { Eye } from "lucide-react";
 
 export function Footer() {
   const { t } = useTranslation("landing");
@@ -20,7 +20,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl grid grid-cols-2 md:grid-cols-4 gap-10 text-[13px]">
         <div className="col-span-2 md:col-span-2">
           <div className="flex items-center gap-3">
-            <Eye className="h-5 w-5 text-foreground" />
+            <EopMark size={20} className="text-accent" />
             <span className="font-display font-semibold tracking-tight text-[15px]">
               Eye of Providence
             </span>

@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
+import { EopMark } from "@eop/ui";
 import { Home, Plug, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -48,24 +49,8 @@ export function Sidebar({
   return (
     <aside className={`eop-sidebar ${open ? "open" : ""}`}>
       <div className="brand">
-        <span className="brand-mark grid place-items-center">
-          <svg viewBox="0 0 28 28" width="26" height="26">
-            <polygon
-              points="14,3 26,24 2,24"
-              fill="none"
-              stroke="hsl(var(--accent))"
-              strokeWidth="1.4"
-            />
-            <circle
-              cx="14"
-              cy="17"
-              r="3"
-              fill="none"
-              stroke="hsl(var(--accent))"
-              strokeWidth="1.4"
-            />
-            <circle cx="14" cy="17" r="1" fill="hsl(var(--accent))" />
-          </svg>
+        <span className="brand-mark grid place-items-center text-accent">
+          <EopMark size={26} />
         </span>
         <div className="brand-name">
           Eye of Providence

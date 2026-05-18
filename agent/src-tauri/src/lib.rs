@@ -325,9 +325,11 @@ fn permissions_status() -> PermissionsStatus {
     }
     #[cfg(not(target_os = "macos"))]
     {
+        // На Windows/Linux нет macOS Accessibility-разрешения; модуль
+        // platform::macos cfg'нут наружу, его функции звать нельзя.
         PermissionsStatus {
             accessibility: true,
-            app_name: platform::macos::accessibility_app_label(),
+            app_name: String::new(),
             optional: true,
         }
     }

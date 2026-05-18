@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
-import { Button, IconButton } from "@eop/ui";
-import { Activity, Eye, LogOut, Settings as SettingsIcon, Shield, Users } from "lucide-react";
+import { Button, EopMark, IconButton } from "@eop/ui";
+import { Activity, LogOut, Settings as SettingsIcon, Shield, Users } from "lucide-react";
 import { NavItem } from "./nav-item";
 import { LangSwitch } from "../../../shared/ui/lang-switch";
 
@@ -20,8 +20,8 @@ export function HeaderNav({
     >
       <div className="mx-auto max-w-6xl px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-2">
         <NavLink to="/dashboard" className="flex items-center gap-2 md:gap-3 group min-w-0">
-          <div className="h-9 w-9 shrink-0 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center transition-transform duration-300 ease-out-expo group-hover:rotate-[8deg]">
-            <Eye className="h-5 w-5 text-primary-foreground" />
+          <div className="h-9 w-9 shrink-0 rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-accent transition-transform duration-300 ease-out-expo group-hover:rotate-[8deg]">
+            <EopMark size={22} />
           </div>
           <div className="min-w-0">
             <h1 className="font-display text-base md:text-lg font-bold tracking-tightest leading-none truncate">

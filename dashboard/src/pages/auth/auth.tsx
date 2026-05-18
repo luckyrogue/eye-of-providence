@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
-import { Eye, Lock } from "lucide-react";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  EopMark,
+} from "@eop/ui";
+import { Lock } from "lucide-react";
 import { fetchAuthConfig, type AuthConfig, type AuthResponse } from "../../entities/user";
 import { LoginForm } from "../../features/auth-login";
 import { RegisterForm } from "../../features/auth-register";
@@ -47,8 +55,8 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
       </div>
       <Card className="max-w-md mx-auto card-hover reveal reveal-delay-2">
         <CardHeader>
-          <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-            <Eye className="h-6 w-6 text-primary-foreground" />
+          <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-accent">
+            <EopMark size={28} />
           </div>
           <CardTitle className="text-center font-display tracking-tight">
             {mode === "register" ? t("card_register") : t("card_login")}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
-import { SimpleSelect, Tabs, TabsList, TabsTrigger } from "@eop/ui";
+import { EopMark, SimpleSelect, Tabs, TabsList, TabsTrigger } from "@eop/ui";
 import { LOCALE_LABELS, SUPPORTED_LOCALES, type Locale } from "@eop/i18n";
 import { StatusPage } from "../pages/status";
 import { SettingsPage } from "../pages/settings";
@@ -31,9 +31,14 @@ export function App() {
     <main className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-2xl space-y-4">
         <header className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{t("app_title")}</h1>
-            <p className="text-sm text-muted-foreground">{t("app_subtitle")}</p>
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 text-accent">
+              <EopMark size={24} />
+            </span>
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">{t("app_title")}</h1>
+              <p className="text-sm text-muted-foreground">{t("app_subtitle")}</p>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <SimpleSelect

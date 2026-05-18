@@ -13,6 +13,7 @@
     "lint": "pnpm -r --parallel lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "gen-brand-icons": "node scripts/gen-brand-icons.mjs",
     "prepare": "husky",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d",
     "infra:down": "docker compose -f infra/docker-compose.yml down",

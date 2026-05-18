@@ -13,6 +13,7 @@ export {
   CardFooter,
 } from "./shared/ui/card";
 export { cn } from "./shared/lib/cn";
+export { EopMark } from "./shared/ui/eop-mark";
 export { PlanBadge, type Plan } from "./widgets/plan-badge";
 export { EmptyState } from "./widgets/empty-state";
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./shared/ui/tabs";

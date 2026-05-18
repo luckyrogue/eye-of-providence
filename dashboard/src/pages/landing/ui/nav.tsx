@@ -1,3 +1,4 @@
+import { EopMark } from "@eop/ui";
 import { useTranslation } from "react-i18next";
 import { LangSwitch } from "../../../shared/ui/lang-switch";
 
@@ -17,24 +18,8 @@ export function Nav() {
     >
       <div className="mx-auto max-w-[1400px] px-4 sm:px-8 h-[68px] flex items-center justify-between">
         <a href="/" className="flex items-center gap-3 group min-w-0">
-          <span className="h-7 w-7 grid place-items-center relative">
-            <svg viewBox="0 0 28 28" width="28" height="28">
-              <polygon
-                points="14,3 26,24 2,24"
-                fill="none"
-                stroke="hsl(var(--accent))"
-                strokeWidth="1.4"
-              />
-              <circle
-                cx="14"
-                cy="17"
-                r="3"
-                fill="none"
-                stroke="hsl(var(--accent))"
-                strokeWidth="1.4"
-              />
-              <circle cx="14" cy="17" r="1" fill="hsl(var(--accent))" />
-            </svg>
+          <span className="h-7 w-7 grid place-items-center text-accent">
+            <EopMark size={28} />
           </span>
           <span className="font-display font-semibold tracking-[-0.01em] text-[15px] truncate">
             <span className="sm:hidden">EoP</span>
