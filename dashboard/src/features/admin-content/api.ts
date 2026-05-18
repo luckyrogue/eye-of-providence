@@ -56,9 +56,17 @@ async function fetchList(): Promise<AdminContentListItem[]> {
   return r.data.items ?? [];
 }
 
+// Backend ждёт `:slug/:locale` в path (см. content.RegisterAdminRoutes).
+// Используем path params вместо query: иначе fiber router возвращает 404
+// "Cannot GET /v1/admin/content/<slug>" — он видит slug как leaf-сегмент,
+// но route'а на 1 параметр нет.
+function adminContentPath(slug: ContentSlug, locale: ContentLocale): string {
+  return `/v1/admin/content/${encodeURIComponent(slug)}/${encodeURIComponent(locale)}`;
+}
+
 async function fetchDetail(slug: ContentSlug, locale: ContentLocale): Promise<AdminContentDetail> {
-  const r = await http.get<AdminContentDetail>(`/v1/admin/content/${encodeURIComponent(slug)}`, {
-    params: { locale, include_draft: true },
+  const r = await http.get<AdminContentDetail>(adminContentPath(slug, locale), {
+    params: { include_draft: true },
   });
   return r.data;
 }
@@ -71,8 +79,8 @@ async function saveDetail(
 ): Promise<AdminContentDetail> {
   try {
     const r = await http.put<AdminContentDetail>(
-      `/v1/admin/content/${encodeURIComponent(slug)}`,
-      { locale, content: payload.content, publish: payload.publish },
+      adminContentPath(slug, locale),
+      { content: payload.content, publish: payload.publish },
       { headers: etag ? { "If-Match": etag } : undefined },
     );
     return r.data;
@@ -89,7 +97,7 @@ async function saveDetail(
 }
 
 async function revertDetail(slug: ContentSlug, locale: ContentLocale): Promise<void> {
-  await http.delete(`/v1/admin/content/${encodeURIComponent(slug)}`, { params: { locale } });
+  await http.delete(adminContentPath(slug, locale));
 }
 
 export const useContentList = () => useQuery({ queryKey: keys.list(), queryFn: fetchList });

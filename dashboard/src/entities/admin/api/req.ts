@@ -274,31 +274,22 @@ const fetchEmailTemplates = () =>
     .get<{ templates: EmailTemplateRow[] }>("/v1/admin/email-templates")
     .then((r) => r.data.templates ?? []);
 
+// Backend ждёт `:key/:locale` в path (`teams.RegisterAdminRoutes`) — query
+// форма возвращала 404 "Cannot GET /v1/admin/email-templates/<key>".
+const emailTemplatePath = (key: EmailTemplateKey, locale: EmailTemplateLocale) =>
+  `/v1/admin/email-templates/${encodeURIComponent(key)}/${encodeURIComponent(locale)}`;
+
 const fetchEmailTemplate = (key: EmailTemplateKey, locale: EmailTemplateLocale) =>
-  http
-    .get<EmailTemplateDetail>(
-      `/v1/admin/email-templates/${encodeURIComponent(key)}?locale=${encodeURIComponent(locale)}`,
-    )
-    .then((r) => r.data);
+  http.get<EmailTemplateDetail>(emailTemplatePath(key, locale)).then((r) => r.data);
 
 const saveEmailTemplate = (
   key: EmailTemplateKey,
   locale: EmailTemplateLocale,
   payload: EmailTemplateSaveReq,
-) =>
-  http
-    .put<EmailTemplateDetail>(
-      `/v1/admin/email-templates/${encodeURIComponent(key)}?locale=${encodeURIComponent(locale)}`,
-      payload,
-    )
-    .then((r) => r.data);
+) => http.put<EmailTemplateDetail>(emailTemplatePath(key, locale), payload).then((r) => r.data);
 
 const revertEmailTemplate = (key: EmailTemplateKey, locale: EmailTemplateLocale) =>
-  http
-    .delete(
-      `/v1/admin/email-templates/${encodeURIComponent(key)}?locale=${encodeURIComponent(locale)}`,
-    )
-    .then(() => undefined);
+  http.delete(emailTemplatePath(key, locale)).then(() => undefined);
 
 export const useEmailTemplates = () =>
   useQuery({ queryKey: adminEmailTemplatesKey(), queryFn: fetchEmailTemplates });

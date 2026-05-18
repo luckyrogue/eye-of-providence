@@ -65,13 +65,15 @@ function usePreviewContent<T>(slug: ContentSlug, locale: ContentLocale, enabled:
     retry: false,
     refetchOnWindowFocus: false,
     queryFn: async () => {
+      // Backend routes (`content.RegisterAdminRoutes`) ждут `:slug/:locale`
+      // path params; query-вариант возвращает 404 "Cannot GET".
       const r = await http.get<{
         slug: string;
         locale: string;
         content: T;
         draft_content?: T | null;
-      }>(`/v1/admin/content/${encodeURIComponent(slug)}`, {
-        params: { locale, include_draft: true },
+      }>(`/v1/admin/content/${encodeURIComponent(slug)}/${encodeURIComponent(locale)}`, {
+        params: { include_draft: true },
       });
       return r.data.draft_content ?? r.data.content;
     },
