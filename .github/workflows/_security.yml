@@ -3,7 +3,8 @@
 #   - gitleaks        — secret detection в diff'е
 #   - trivy-fs        — source-level CVE-scan (npm/go.sum lockfiles)
 #   - osv-scanner     — Google OSV для всех manifest'ов (pnpm/go/cargo)
-#   - dependency-rev  — PR-only, блокирует вулнерабельные deps на ввозе
+#
+# dependency-review — PR-only, в ci.yml (не здесь: workflow_call ломает event_name).
 #
 # Все SARIF загружаются в Code Scanning → Security tab.
 name: _security
@@ -119,26 +120,3 @@ jobs:
         -r
         --skip-git
         ./
-
-  # Dependency Review — PR-only. Блокирует merge если PR ввозит deps
-  # с известными уязвимостями high severity или GPL-incompatible лицензиями.
-  # На push в main не запускаем — там уже поздно (deps уже в коде).
-  dependency-review:
-    name: security / dependency-review
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Harden runner
-        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
-        with:
-          egress-policy: audit
-      - uses: actions/checkout@v6
-        with: { persist-credentials: false }
-      - uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: high
-          # Лицензии — блокируем только viral copyleft (GPL/AGPL — несовместимо
-          # с проприетарным backend). LGPL/MPL — ok через dynamic linking.
-          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0
-          comment-summary-in-pr: on-failure

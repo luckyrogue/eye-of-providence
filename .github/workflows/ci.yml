@@ -2,7 +2,8 @@
 #
 # Архитектура:
 #   1. detect-changes — paths-filter определяет какие зоны затронуты.
-#   2. _security.yml — всегда (codeql + gitleaks + trivy fs).
+#   2. _security.yml — всегда (codeql + gitleaks + trivy fs + osv).
+#      dependency-review — отдельный job, только pull_request (ci.yml).
 #   3. _backend / _frontend / _agent-rust — только если соответствующие
 #      пути изменились или ветка main (полный прогон).
 #   4. _docker — после успеха backend + frontend + security.
@@ -94,6 +95,31 @@ jobs:
       security-events: write
       pull-requests: read
       actions: read # требуется для osv-scanner reusable workflow
+
+  # Dependency Review — только PR. Блокирует merge при high CVE или GPL/AGPL.
+  # Вынесено из _security.yml: в reusable workflow_call event_name ≠ pull_request.
+  dependency-review:
+    name: security / dependency-review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write # comment-summary-in-pr: on-failure
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with: { persist-credentials: false }
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          # Лицензии — блокируем только viral copyleft (GPL/AGPL — несовместимо
+          # с проприетарным backend). LGPL/MPL — ok через dynamic linking.
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0
+          comment-summary-in-pr: on-failure
 
   backend:
     name: backend
