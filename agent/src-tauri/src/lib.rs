@@ -293,9 +293,12 @@ pub fn run() {
 
 #[tauri::command]
 fn status() -> serde_json::Value {
+    // version читается из Cargo.toml (CARGO_PKG_VERSION) — единый источник
+    // правды; channel держим выровненным с dashboard sidebar version_label.
     serde_json::json!({
         "status": "ok",
-        "phase": "8-final"
+        "version": env!("CARGO_PKG_VERSION"),
+        "channel": "beta",
     })
 }
 

@@ -13,7 +13,7 @@
     "changelog": "Жаңалықтар"
   },
   "hero": {
-    "eyebrow": "v0.4 · public beta · macOS + Windows",
+    "eyebrow": "v0.4 · ашық бета · macOS + Windows",
     "title1": "Кодың ",
     "titleAccent": "шынымен",
     "title2": " қайдан ",
@@ -26,7 +26,7 @@
     "meta1": "Белсенді құрылғылар",
     "meta2": "Іске қосылған",
     "meta3": "Open source",
-    "badge": "v0.4 · public beta · macOS + Windows",
+    "badge": "v0.4 · ашық бета · macOS + Windows",
     "heading": "Кодың шынымен <em>қайдан келетінін көр</em>.",
     "lead": "Eye of Providence қанша өзің жазғаныңды және қанша AI жазғанын өлшейді.",
     "cta_primary": "Агентті жүктеу",
