@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   check:
-    name: agent-rust / check
+    name: agent-rust / cargo check
     runs-on: macos-latest
     timeout-minutes: 20
     defaults:
