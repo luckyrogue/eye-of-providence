@@ -6,16 +6,25 @@
 git clone https://github.com/luckyrogue/eye-of-providence.git
 cd eye-of-providence
 
-# Поднять весь стек (postgres + clickhouse + redis + api)
-docker compose -f infra/docker-compose.full.yml up -d --build
+# 1. Настроить секреты — НЕ оставляй CHANGE_ME в .env
+cp .env.example .env
+# отредактируй POSTGRES_PASSWORD, CLICKHOUSE_PASSWORD, EOP_JWT_SECRET, EOP_ALLOWED_ORIGINS
 
-# Применить миграции (один раз после первого запуска)
-docker exec -i eop-postgres-1 psql -U eop -d eop < backend/migrations/001_init.up.sql
-docker exec -i eop-clickhouse-1 clickhouse-client --user eop --password eop_dev \
-  --database eop --multiquery < backend/migrations/clickhouse_001_init.sql
+# 2. (Опционально, но рекомендовано) — verify image signature перед deploy'ем.
+# См. .github/SECURITY.md → "Verifying release artifacts". Заодно
+# зафиксируй конкретный SHA в .env: EOP_IMAGE=ghcr.io/luckyrogue/eop:<sha>
+
+# 3. Поднять весь стек (postgres + clickhouse + redis + unified eop image)
+docker compose -f infra/docker-compose.full.yml up -d
 ```
 
-API будет доступен на `http://localhost:8080`.
+Дашборд + API доступны на `http://localhost:3000` (порт меняется через
+`EOP_PUBLIC_PORT` в `.env`). Поставь reverse proxy с TLS перед ним для
+production (Caddy / Traefik / nginx).
+
+Миграции применяются автоматически на старте API (`EOP_AUTO_MIGRATE=true`).
+Если хочешь ручной контроль — выстави `EOP_AUTO_MIGRATE=false` и запусти
+`docker exec eop-app /usr/local/bin/migrate` отдельно.
 
 ## Конфигурация (env)
 
@@ -43,12 +52,17 @@ API будет доступен на `http://localhost:8080`.
 
 ## Production checklist
 
-- [ ] `EOP_JWT_SECRET` — длинный (≥ 32 байта), случайный.
+- [ ] `EOP_JWT_SECRET` — длинный (≥ 32 байта), случайный (`openssl rand -hex 32`).
+- [ ] `POSTGRES_PASSWORD` / `CLICKHOUSE_PASSWORD` — не CHANGE_ME, не дефолтные.
 - [ ] HTTPS (reverse proxy: nginx, Caddy, Traefik).
-- [ ] Postgres backups (`pg_dump` cron).
+- [ ] Image pinning — `EOP_IMAGE=ghcr.io/luckyrogue/eop:<sha>` вместо `:latest`.
+- [ ] Image verification — cosign + SLSA provenance (см. `.github/SECURITY.md`).
+- [ ] Postgres backups (`pg_dump` cron на named volume `postgres_data`).
 - [ ] ClickHouse storage tier (TTL уже выставлен на 18 мес в `events` таблице).
-- [ ] Метрики: scrape `/metrics` — пока не выставлены, добавить в Phase 7.5.
-- [ ] Rate limit на ingest endpoint — Phase 7.5.
+- [ ] Reverse-proxy rate-limit (Caddy/Traefik) перед `/v1/ingest` — backend
+      сам режет 120 req/min, но edge-layer защищает API от exhaustion.
+- [ ] `EOP_INVITE_ONLY=true` если не хочешь публичной регистрации.
+- [ ] `EOP_ENABLE_DEV_TOKEN=false` — гарантированно отключить debug-токены.
 
 ## Удаление пользователя
 

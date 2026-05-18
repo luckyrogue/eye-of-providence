@@ -64,22 +64,26 @@ fn check_accessibility() -> CheckResult {
                 id,
                 label,
                 status: CheckStatus::Ok,
-                message: "Granted. Keystroke counts будут работать.".into(),
+                message: "Granted. Доступны расширенные сигналы для attribution.".into(),
                 action_url: None,
                 action_label: None,
             };
         }
-        return CheckResult {
+        // Базовые keystroke/mouse counts работают БЕЗ Accessibility — через
+        // публичный CGEventSourceCounterForEventType. Accessibility теперь
+        // нужен только для будущих фич (focused text-field detection и т.п.),
+        // поэтому статус «info», а не «warn».
+        CheckResult {
             id,
             label,
-            status: CheckStatus::Warn,
-            message: "Не выдан. Без него только foreground app, без keystroke counts.".into(),
+            status: CheckStatus::Ok,
+            message: "Не выдан. Базовые keystroke counts работают; Accessibility опционален для будущих фич.".into(),
             action_url: Some(
                 "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
                     .into(),
             ),
             action_label: Some("Open System Settings".into()),
-        };
+        }
     }
     #[cfg(not(target_os = "macos"))]
     {

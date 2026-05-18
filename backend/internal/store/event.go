@@ -6,21 +6,26 @@ import (
 )
 
 type Event struct {
-	TS           time.Time `json:"ts"`
-	UserID       string    `json:"user_id"`
-	DeviceID     string    `json:"device_id"`
-	SessionID    string    `json:"session_id"`
-	AppBundle    string    `json:"app_bundle"`
-	Category     string    `json:"category"`
-	Source       string    `json:"source"`
-	AIProvider   string    `json:"ai_provider,omitempty"`
-	AIChannel    string    `json:"ai_channel,omitempty"`
-	ProjectID    string    `json:"project_id,omitempty"`
-	FileLang     string    `json:"file_lang,omitempty"`
-	DurationMS   uint32    `json:"duration_ms"`
-	CharsIn      uint32    `json:"chars_in"`
-	LinesAdded   uint32    `json:"lines_added"`
-	LinesRemoved uint32    `json:"lines_removed"`
+	TS           time.Time         `json:"ts"`
+	UserID       string            `json:"user_id"`
+	DeviceID     string            `json:"device_id"`
+	SessionID    string            `json:"session_id"`
+	AppBundle    string            `json:"app_bundle"`
+	Category     string            `json:"category"`
+	Source       string            `json:"source"`
+	AIProvider   string            `json:"ai_provider,omitempty"`
+	AIChannel    string            `json:"ai_channel,omitempty"`
+	ProjectID    string            `json:"project_id,omitempty"`
+	FileLang     string            `json:"file_lang,omitempty"`
+	DurationMS   uint32            `json:"duration_ms"`
+	CharsIn      uint32            `json:"chars_in"`
+	LinesAdded   uint32            `json:"lines_added"`
+	LinesRemoved uint32            `json:"lines_removed"`
+	// Meta — небольшой набор безопасных полей расширения (нет контента,
+	// см. proto/event.proto). На текущий момент используется агентом для
+	// clipboard_sha256 + clipboard_bytes (фингерпринт без содержимого).
+	// Сериализуется как JSON-объект в ClickHouse `meta` String-колонку.
+	Meta map[string]string `json:"meta,omitempty"`
 }
 
 type EventStore interface {

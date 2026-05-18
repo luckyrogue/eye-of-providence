@@ -33,6 +33,28 @@ func TestEventCrossPlatformContract(t *testing.T) {
 	}
 }
 
+func TestEventMetaRoundtrip(t *testing.T) {
+	// agent отправляет meta как JSON-объект; backend десериализует и
+	// ClickHouse-инсерт пакует обратно в String. Тут проверяем что
+	// JSON-контракт стабилен: ключи отсортированы (BTreeMap у Rust-агента),
+	// пустые карты не сериализуются.
+	src := `{"ts":"2026-05-04T16:00:00Z","user_id":"00000000-0000-0000-0000-000000000001","device_id":"","session_id":"","app_bundle":"firefox","category":"other","source":"os","duration_ms":0,"chars_in":0,"lines_added":0,"lines_removed":0,"meta":{"clipboard_bytes":"42","clipboard_sha256":"abc"}}`
+	var e Event
+	if err := json.Unmarshal([]byte(src), &e); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if e.Meta["clipboard_sha256"] != "abc" || e.Meta["clipboard_bytes"] != "42" {
+		t.Fatalf("meta lost in roundtrip: %#v", e.Meta)
+	}
+	out, err := json.Marshal(e)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if string(out) != src {
+		t.Errorf("meta JSON drift\n got: %s\nwant: %s", out, src)
+	}
+}
+
 func TestEventStoreInsertContract(t *testing.T) {
 	ctx := context.Background()
 	mem := NewMemory()

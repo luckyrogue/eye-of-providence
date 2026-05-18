@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -68,11 +69,17 @@ func (s *ClickHouseStore) Insert(ctx context.Context, events []Event) error {
 		deviceUUID, _ := safeUUID(e.DeviceID)
 		sessionUUID, _ := safeUUID(e.SessionID)
 		projectUUID, _ := safeUUID(e.ProjectID)
+		meta := ""
+		if len(e.Meta) > 0 {
+			if b, err := json.Marshal(e.Meta); err == nil {
+				meta = string(b)
+			}
+		}
 		if err := batch.Append(
 			e.TS, userUUID, deviceUUID, sessionUUID,
 			e.AppBundle, e.Category, e.Source,
 			e.AIProvider, e.AIChannel, projectUUID, e.FileLang,
-			e.DurationMS, e.CharsIn, e.LinesAdded, e.LinesRemoved, "",
+			e.DurationMS, e.CharsIn, e.LinesAdded, e.LinesRemoved, meta,
 		); err != nil {
 			return err
 		}

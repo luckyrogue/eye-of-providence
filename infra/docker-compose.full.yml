@@ -1,0 +1,164 @@
+# Production self-host stack — referenced by docs/self-hosting.md.
+#
+# Что внутри:
+#   - postgres 16     — users, teams, devices, projects, reports (state)
+#   - clickhouse 24   — events, attribution (analytics)
+#   - redis 7         — rate-limit + session cache (используется backend'ом)
+#   - eop             — unified image (Caddy + Go API + dashboard SPA, см. Dockerfile)
+#
+# Поднимать:
+#   cp .env.example .env  # обязательно поменять CHANGE_ME-значения
+#   docker compose -f infra/docker-compose.full.yml up -d
+#
+# Image verification (рекомендовано перед прод-deploy'ем):
+#   SHA=<commit-sha>
+#   IMG="ghcr.io/luckyrogue/eop:${SHA}"
+#   cosign verify "$IMG" \
+#     --certificate-identity-regexp '^https://github\.com/luckyrogue/eye-of-providence/' \
+#     --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+#   gh attestation verify oci://"$IMG" --owner luckyrogue \
+#     --predicate-type 'https://slsa.dev/provenance/v1'
+# (полный recipe — .github/SECURITY.md → "Verifying release artifacts")
+#
+# Тюнинг под self-host без public IP:
+#   - DB-порты по умолчанию НЕ exposed на host. Backup-инструменты заходят
+#     через `docker exec`. Хочешь подключаться pgcli/dbeaver'ом — раскомментируй
+#     блоки `ports:` под postgres/clickhouse и bind на 127.0.0.1.
+#   - eop сервис слушает на ${EOP_PUBLIC_PORT:-3000} — поставь reverse proxy
+#     (Caddy/Traefik) перед ним для TLS.
+
+x-restart: &default-restart
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:16.6-alpine
+    container_name: eop-postgres
+    <<: *default-restart
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-eop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-eop}
+      # tune для self-host single-host workload — payment-grade durability,
+      # синхронные commits, fsync, без replication.
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eop} -d ${POSTGRES_DB:-eop}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    # Без `ports:` — postgres доступен только внутри compose-сети.
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.10.4-alpine
+    container_name: eop-clickhouse
+    <<: *default-restart
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-eop}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-eop}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD must be set in .env}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: eop-redis
+    <<: *default-restart
+    # AOF + fsync everysec — переживёт `docker stop`, но не аварийный
+    # power-loss последней секунды. Для rate-limit/session-cache достаточно.
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  eop:
+    # GHCR image — Cosign-signed + SLSA L3 attestation. Замени `:latest`
+    # на конкретный SHA для production (см. .github/SECURITY.md verify recipe).
+    image: ${EOP_IMAGE:-ghcr.io/luckyrogue/eop:latest}
+    # Альтернатива — build из локального source'а. Раскомментируй и закомментируй image:
+    # build:
+    #   context: ..
+    #   dockerfile: Dockerfile
+    container_name: eop-app
+    <<: *default-restart
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${EOP_PUBLIC_PORT:-3000}:3000"
+    environment:
+      EOP_ENV: ${EOP_ENV:-production}
+      EOP_HTTP_ADDR: ":8080"
+      EOP_POSTGRES_DSN: ${EOP_POSTGRES_DSN:-postgres://${POSTGRES_USER:-eop}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-eop}?sslmode=disable}
+      EOP_CLICKHOUSE_DSN: ${EOP_CLICKHOUSE_DSN:-clickhouse://${CLICKHOUSE_USER:-eop}:${CLICKHOUSE_PASSWORD}@clickhouse:9000/${CLICKHOUSE_DB:-eop}}
+      EOP_REDIS_ADDR: ${EOP_REDIS_ADDR:-redis:6379}
+      EOP_JWT_SECRET: ${EOP_JWT_SECRET:?EOP_JWT_SECRET must be set — generate with `openssl rand -hex 32`}
+      EOP_ALLOWED_ORIGINS: ${EOP_ALLOWED_ORIGINS:?EOP_ALLOWED_ORIGINS must be set (e.g. https://your-domain.tld)}
+      EOP_AUTO_MIGRATE: ${EOP_AUTO_MIGRATE:-true}
+      EOP_INVITE_ONLY: ${EOP_INVITE_ONLY:-true}
+      EOP_ENABLE_DEV_TOKEN: "false"
+      EOP_REPORTS_CRON_SEC: ${EOP_REPORTS_CRON_SEC:-21600}
+      EOP_GEMINI_API_KEY: ${EOP_GEMINI_API_KEY:-}
+      EOP_GITHUB_CLIENT_ID: ${EOP_GITHUB_CLIENT_ID:-}
+      EOP_GITHUB_CLIENT_SECRET: ${EOP_GITHUB_CLIENT_SECRET:-}
+      EOP_GITHUB_CALLBACK_URL: ${EOP_GITHUB_CALLBACK_URL:-}
+      EOP_RESEND_API_KEY: ${EOP_RESEND_API_KEY:-}
+      EOP_MAIL_FROM: ${EOP_MAIL_FROM:-}
+      EOP_PUBLIC_URL: ${EOP_PUBLIC_URL:-}
+      # CSP connect-src — должен включать сам публичный URL чтобы fetch
+      # к /api работал из браузера. Caddy подставит через {$CSP_CONNECT_SRC}.
+      CSP_CONNECT_SRC: ${CSP_CONNECT_SRC:-'self'}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    # read_only с tmpfs для пишущих путей — defense-in-depth (RCE attacker
+    # не сможет дропнуть webshell в /tmp с persistence). Caddy и Go API сами
+    # ничего долгоживущего не пишут в FS — всё в /data (volume) и /tmp (tmpfs).
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - eop_caddy_data:/data
+      - eop_caddy_config:/config
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+  clickhouse_logs:
+  redis_data:
+  eop_caddy_data:
+  eop_caddy_config:
