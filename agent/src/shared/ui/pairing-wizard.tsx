@@ -111,7 +111,10 @@ export function PairingWizard({ backend, onClaimed }: { backend: string; onClaim
       </div>
     );
   }
-  const dashboardURL = `https://${dashboardHost(backend)}/settings`;
+  // Pairing-форма (ClaimDeviceForm) сидит в DevicesWidget на странице
+  // /integrations, не на /settings — иначе пользователь открывает дашборд
+  // и не видит куда вводить код.
+  const dashboardURL = `https://${dashboardHost(backend)}/integrations`;
   return (
     <div className="space-y-3">
       <div className="space-y-1">

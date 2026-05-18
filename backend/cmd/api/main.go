@@ -22,29 +22,23 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"github.com/eye-of-providence/backend/internal/analytics"
-	"github.com/eye-of-providence/backend/internal/anomaly"
+	eopapp "github.com/eye-of-providence/backend/internal/app"
+	"github.com/eye-of-providence/backend/internal/anomalyapp"
 	"github.com/eye-of-providence/backend/internal/audit"
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/cache"
 	"github.com/eye-of-providence/backend/internal/config"
 	"github.com/eye-of-providence/backend/internal/content"
-	"github.com/eye-of-providence/backend/internal/devices"
 	"github.com/eye-of-providence/backend/internal/httperr"
-	"github.com/eye-of-providence/backend/internal/ingest"
-	"github.com/eye-of-providence/backend/internal/insights"
 	eoplog "github.com/eye-of-providence/backend/internal/log"
 	"github.com/eye-of-providence/backend/internal/mailer"
 	"github.com/eye-of-providence/backend/internal/metrics"
 	"github.com/eye-of-providence/backend/internal/migrate"
 	"github.com/eye-of-providence/backend/internal/plans"
-	"github.com/eye-of-providence/backend/internal/prcomment"
-	"github.com/eye-of-providence/backend/internal/publicapi"
 	"github.com/eye-of-providence/backend/internal/push"
 	"github.com/eye-of-providence/backend/internal/reports"
 	"github.com/eye-of-providence/backend/internal/sso"
 	"github.com/eye-of-providence/backend/internal/store"
-	"github.com/eye-of-providence/backend/internal/teams"
 	"github.com/eye-of-providence/backend/internal/webhooks"
 )
 
@@ -230,12 +224,6 @@ func main() {
 
 	auth.RegisterSessionHandoffRoute(app, authService)
 
-	devices.RegisterRoutes(app, devices.Service{
-		Pool:      pgPool,
-		Logger:    log,
-		JWTSecret: cfg.JWTSecret,
-	})
-
 	mail := chooseMailer(cfg, log)
 
 	planSvc := plans.Service{Enforce: cfg.PlanLimitsEnforced}
@@ -243,31 +231,14 @@ func main() {
 	auditSvc := audit.Service{Pool: pgPool, Logger: log}
 
 	var hookSvc *webhooks.Service
-	var hooksDispatcher teams.WebhookDispatcher
 	if pgPool != nil {
 		hookSvc = webhooks.New(pgPool, log)
 		hookSvc.Plans = planSvc
-		webhooks.RegisterRoutes(app, hookSvc, cfg.JWTSecret, pgPool)
-		hooksDispatcher = hookSvc
 	}
 
 	var ssoRegistry *sso.Registry
 	if pgPool != nil {
 		ssoRegistry = sso.NewRegistry(pgPool, strings.TrimRight(cfg.PublicURL, "/")+"/api/v1/sso/oidc/callback")
-		sso.RegisterRoutes(app, sso.Service{
-			Pool:      pgPool,
-			Registry:  ssoRegistry,
-			Logger:    log,
-			JWTSecret: cfg.JWTSecret,
-			PublicURL: strings.TrimRight(cfg.PublicURL, "/"),
-		})
-	}
-
-	teams.EventStore = eventStore
-
-	var templateStore *mailer.PGTemplateStore
-	if pgPool != nil {
-		templateStore = mailer.NewPGTemplateStore(pgPool)
 	}
 
 	contentSvc := &content.Service{
@@ -278,51 +249,20 @@ func main() {
 		Pool:      pgPool,
 	}
 	if cfg.RedisAddr != "" {
-
 		rcfg, rerr := redis.ParseURL(cfg.RedisAddr)
 		if rerr != nil {
 			rcfg = &redis.Options{Addr: cfg.RedisAddr}
 		}
 		contentSvc.Cache = content.NewCache(redis.NewClient(rcfg))
 	}
-	contentSvc.RegisterPublicRoute(app)
 
-	teams.RegisterRoutes(app, teams.Service{
-		Pool:           pgPool,
-		JWTSecret:      cfg.JWTSecret,
-		Logger:         log,
-		InviteOnly:     cfg.InviteOnly,
-		BetaTeamLimit:  cfg.BetaTeamLimit,
-		Mailer:         mail,
-		PublicURL:      cfg.PublicURL,
-		Webhooks:       hooksDispatcher,
-		Plans:          planSvc,
-		Audit:          auditSvc,
-		AuthProviders:  authService.ProvidersList(),
-		PasskeyEnabled: webauthnSvc != nil,
-		TemplateStore:  templateStore,
-	})
-
-	auth.RegisterIdentitiesRoutes(app, authService)
-
-	auth.RegisterMeRoutes(app, auth.MeService{
-		JWTSecret:  cfg.JWTSecret,
-		Pool:       pgPool,
-		EventStore: eventStore,
-		Logger:     log,
-	})
-	ingest.RegisterRoutes(app, eventStore, log, cfg.JWTSecret, pgPool)
-	analytics.RegisterRoutes(app, eventStore, log, cfg.JWTSecret, pgPool)
-	insights.RegisterRoutes(app, eventStore, log, cfg.JWTSecret, pgPool)
-	publicapi.RegisterRoutes(app, eventStore, log, cfg.JWTSecret, pgPool)
-	if pgPool != nil {
-		prcomment.RegisterRoutes(app, prcomment.Service{
-			Pool:         pgPool,
-			JWTSecret:    cfg.JWTSecret,
-			Logger:       log,
-			DashboardURL: cfg.PublicURL,
-		})
-	}
+	gemini := reports.NewGeminiClient(cfg.GeminiAPIKey, "gemini-2.5-flash")
+	(&eopapp.API{
+		App: app, Cfg: cfg, Log: log, Pool: pgPool, EventStore: eventStore,
+		ReportStore: reportStore, Gemini: gemini, Auth: authService, WebAuthn: webauthnSvc,
+		Mail: mail, Plans: planSvc, Audit: auditSvc, Webhooks: hookSvc,
+		SSORegistry: ssoRegistry, Content: contentSvc,
+	}).RegisterProductRoutes()
 
 	if pgPool != nil && ssoRegistry != nil {
 		ssoAdmin := sso.AdminService{Pool: pgPool, Registry: ssoRegistry, Logger: log, Plans: planSvc, Audit: auditSvc}
@@ -346,16 +286,6 @@ func main() {
 	}
 	_ = pushSvc
 
-	gemini := reports.NewGeminiClient(cfg.GeminiAPIKey, "gemini-2.5-flash")
-	reports.RegisterRoutes(app, reports.Service{
-		Store:      reportStore,
-		EventStore: eventStore,
-		Gemini:     gemini,
-		Logger:     log,
-		Pool:       pgPool,
-		JWTSecret:  cfg.JWTSecret,
-	})
-
 	if cfg.ReportsCronSec > 0 {
 		cron := &reports.Cron{
 			Interval:   time.Duration(cfg.ReportsCronSec) * time.Second,
@@ -376,16 +306,16 @@ func main() {
 	}
 
 	if hookSvc != nil {
-		var pushOpt anomaly.PushSender
+		var pushOpt anomalyapp.PushSender
 		if pushSvc != nil && cfg.VAPIDPublicKey != "" {
 			pushOpt = pushSvc
 		}
-		anomalyCron := &anomaly.Cron{
-			Interval:   24 * time.Hour,
-			EventStore: eventStore,
-			Webhooks:   hookSvc,
-			Push:       pushOpt,
-			Logger:     log,
+		anomalyCron := &anomalyapp.Scanner{
+			Interval: 24 * time.Hour,
+			Events:   anomalyapp.EventStoreAdapter{Store: eventStore},
+			Webhooks: hookSvc,
+			Push:     pushOpt,
+			Logger:   log,
 		}
 		go func() {
 			defer func() {

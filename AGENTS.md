@@ -71,6 +71,12 @@ pnpm -F @eop/dashboard build    # production build конкретного пак
 
 Rust (`agent/src-tauri`) — `cargo test --lib` (store/preflight). VS Code — `pnpm -F eop-vscode test` (vscode-test, при наличии display).
 
+## Documentation
+
+- Документация **для людей** (деплой, API, архитектура, runbooks) — в [`docs/`](docs/).
+- `AGENTS.md` в корне и в пакетах (`backend/AGENTS.md`, `dashboard/AGENTS.md`) — правила для AI, не переносить в `docs/`.
+- `README.md` у пакета (`browser-extension/`, `ide-vscode/`) остаётся рядом с кодом.
+
 ## Distribution (closed beta)
 
 Артефакты собираются в `.github/workflows/release.yml` на push тэга `v*.*.*` или ручным trigger'ом:

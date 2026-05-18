@@ -20,7 +20,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
-	"github.com/eye-of-providence/backend/internal/attribution"
+	"github.com/eye-of-providence/backend/internal/attribution/attributionapp"
 	"github.com/eye-of-providence/backend/internal/config"
 	"github.com/eye-of-providence/backend/internal/log"
 	"github.com/eye-of-providence/backend/internal/store"
@@ -58,7 +58,7 @@ func main() {
 		logger.Fatal("clickhouse connect failed", zap.Error(err))
 	}
 
-	w := attribution.New(ch.Conn(), pg, logger.Named("attribution"))
+	w := attributionapp.New(ch.Conn(), pg, logger.Named("attribution"))
 	err = w.Run(ctx)
 	// Закрываем ресурсы явно перед выходом — defer пропускается при os.Exit,
 	// поэтому даже на error-пути выпускаем pg/ch чтобы коннекты не висели.

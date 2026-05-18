@@ -12,16 +12,20 @@ var supportedLocales = map[string]bool{"ru": true, "en": true, "kk": true, "es":
 
 type Service struct {
 	profile ProfileReader
+	writer  ProfileWriter
 	tokens  TokenWriter
+	issuer  SessionIssuer
 }
 
 type Deps struct {
 	Profile ProfileReader
+	Writer  ProfileWriter
 	Tokens  TokenWriter
+	Issuer  SessionIssuer
 }
 
 func New(d Deps) *Service {
-	return &Service{profile: d.Profile, tokens: d.Tokens}
+	return &Service{profile: d.Profile, writer: d.Writer, tokens: d.Tokens, issuer: d.Issuer}
 }
 
 func (s *Service) GetProfile(ctx context.Context, claims SessionClaims) (map[string]any, error) {
@@ -119,4 +123,69 @@ func (s *Service) RevokeAPIToken(ctx context.Context, userID, tokenID uuid.UUID)
 		return false, ErrDBNotConfigured
 	}
 	return s.tokens.Revoke(ctx, userID, tokenID)
+}
+
+func (s *Service) PatchName(ctx context.Context, userID uuid.UUID, displayName, lastName *string) error {
+	if displayName == nil && lastName == nil {
+		return ErrNoFields
+	}
+	if s.writer == nil {
+		return nil
+	}
+	return s.writer.UpdateName(ctx, userID, displayName, lastName)
+}
+
+func (s *Service) ChangeEmail(ctx context.Context, userID uuid.UUID, email, password string, verifyFn func(hash, password string) bool) (token, newEmail string, err error) {
+	if s.writer == nil {
+		return "", email, nil
+	}
+	hash, has, err := s.writer.PasswordHash(ctx, userID)
+	if err != nil {
+		return "", "", err
+	}
+	if !has || hash == "" {
+		return "", "", ErrNoPasswordSet
+	}
+	if verifyFn != nil && !verifyFn(hash, password) {
+		return "", "", ErrInvalidCredentials
+	}
+	if err := s.writer.UpdateEmail(ctx, userID, email, password); err != nil {
+		return "", "", err
+	}
+	if s.issuer != nil {
+		tok, err := s.issuer.IssueAfterCredentialChange(ctx, userID, email)
+		if err != nil {
+			return "", "", err
+		}
+		return tok, email, nil
+	}
+	return "", email, nil
+}
+
+func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, email, currentPassword, newPassword string,
+	verifyFn func(hash, password string) bool, hashFn func(password string) (string, error)) (string, error) {
+	if s.writer == nil {
+		return "", nil
+	}
+	hash, has, err := s.writer.PasswordHash(ctx, userID)
+	if err != nil {
+		return "", err
+	}
+	if !has || hash == "" {
+		return "", ErrNoPasswordSet
+	}
+	if verifyFn != nil && !verifyFn(hash, currentPassword) {
+		return "", ErrInvalidCredentials
+	}
+	newHash, err := hashFn(newPassword)
+	if err != nil {
+		return "", err
+	}
+	if err := s.writer.UpdatePassword(ctx, userID, newHash); err != nil {
+		return "", err
+	}
+	if s.issuer != nil {
+		return s.issuer.IssueAfterCredentialChange(ctx, userID, email)
+	}
+	return "", nil
 }

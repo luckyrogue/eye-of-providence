@@ -28,6 +28,12 @@ golangci-lint run ./...  # ★ блокер
 
 Если падает любая стадия — diagnose root cause. **Не комитти broken state.**
 
+## Documentation
+
+- **Продуктовая и ops-документация для людей** — только в корневом [`docs/`](../docs/) (деплой, API, threat model, архитектура).
+- **Не** дублировать в `backend/docs/` — один источник правды.
+- Исключения: `backend/AGENTS.md` (правила для агентов), `README` пакета, промпты/runtime-конфиг в `internal/` (не «доки»).
+
 ## Architectural conventions
 
 ### Package layout
@@ -41,15 +47,47 @@ golangci-lint run ./...  # ★ блокер
   `push`, `prcomment`, `anomaly`, `reports`, `store`, `cache`, `httperr`,
   `metrics`, `migrate`, `mailer`, `config`, `log`.
 
-### Clean architecture (incremental)
+### Clean Architecture + DDD (incremental)
 
-- Внутри `internal/<domain>/` допускаются **подпакеты** с явными границами:
-  application/use case без `fiber`/`pgx` в сигнатурах, **порты** (интерфейсы)
-  рядом с use case, реализации портов в родительском пакете или в
-  `*_adapters.go` (см. `internal/teams/emailtemplates` + wiring в
-  `emailtemplates_adapters.go`).
-- Новые вертикальные фичи по возможности идут через use case + тонкие HTTP
-  handlers; существующий код мигрируется **strangler**-ом по одному срезу.
+Цель: **bounded context** на домен (`internal/<domain>/`), внутри — слои с
+зависимостями только внутрь (delivery → application → domain ← infrastructure).
+
+| Слой DDD / CA | Пакет | Ответственность |
+|---------------|--------|-----------------|
+| **Domain** | `internal/<domain>/domain/` | Сущности, value objects, доменные ошибки, инварианты, **интерфейс репозитория** (порт persistence с точки зрения домена) |
+| **Application** | `internal/<domain>/<slice>app/` или корневой `contentapp/` | Use cases / application services: оркестрация без Fiber/pgx в публичном API |
+| **Ports (app)** | `ports.go` рядом с application | Интерфейсы: cache, audit, внешние ACL (super-admin), clock — всё, что не домен |
+| **Infrastructure** | `store.go`, `cache.go`, `*_adapters.go` в корне домена | PG/Redis/mailer — реализации портов |
+| **Delivery** | `handler.go` / `RegisterRoutes` | HTTP: parse → вызов application → `httperr` |
+
+Правила:
+
+- **Domain** не импортирует `fiber`, `pgx`, `zap`, другие bounded contexts.
+- **Application** импортирует только `domain` + свои порты; не знает про SQL/Redis.
+- **Delivery** тонкий: валидация transport (query/path/body), маппинг в DTO use case.
+- Один **aggregate root** на срез там, где есть жизненный цикл и инварианты (напр. `content` → `domain.Block` по `slug+locale`).
+- Ubiquitous language в именах: `Publish`, `SaveDraft`, `Revert`, не `Upsert` в HTTP handler.
+
+Упрощённый эталон (полный DDD-слой): [`internal/content/`](internal/content/) — `domain/`, `contentapp/`, `handler.go`.
+
+Классический тонкий срез (без отдельного `domain/`): [`internal/teams/emailtemplates/`](internal/teams/emailtemplates/) — порты + `Service` + wiring в [`emailtemplates_adapters.go`](internal/teams/emailtemplates_adapters.go).
+
+Подробнее: [`docs/architecture-bc.md`](../docs/architecture-bc.md). Шаблон нового BC: [`internal/_template/`](internal/_template/). CI guard: `bash scripts/check-domain-imports.sh`.
+
+#### Чеклист нового bounded context
+
+1. `internal/<bc>/domain/` — entities, VOs, `errors.go`, repository/read ports при необходимости
+2. `internal/<bc>/<bc>app/` (или `<slice>app/`) — `service.go`, `ports.go`, `service_test.go` с fake ports
+3. `handler.go` — только Fiber + `httperr` + parse/marshal
+4. `store.go` / `*_adapters.go` — pgx/CH/mailer ACL
+5. `go test ./internal/<bc>/...` зелёный; integration при наличии
+6. Строка в таблице миграции ниже: `domain + *app + handler`
+
+**Naming:** один aggregate → `<bc>app` (`contentapp`); несколько срезов → `membersapp`, `invitesapp` под общим `teams/domain`. Не смешивать `teamapp` и `teamsapp` в одном BC.
+
+**ACL между BC:** только application port в `ports.go` + реализация в `*_adapters.go` родителя; не импортировать чужой `handler.go`.
+
+- Новые фичи — use case + тонкие handlers; legacy — **strangler** по одному срезу.
 - Публичный audit API для IP: `audit.ClientIP(c *fiber.Ctx)` — общий helper
   для записи IP без дублирования X-Forwarded-For логики.
 
@@ -59,24 +97,22 @@ golangci-lint run ./...  # ★ блокер
 
 | Домен | Срез / подпакет | Примечание |
 |-------|-----------------|------------|
-| teams | `emailtemplates` | эталон |
-| teams | `teamflags`, `teamplanlimits`, `adminlists` | admin Phase 3 |
-| auth | `meapp` | GET/PATCH /v1/me, API tokens |
-| auth | `oauthapp` | OAuth upsert identity |
-| auth | `passwordapp` | password login (teams вызывает `auth.NewPasswordLoginService`) |
-| auth | `webauthnapp` | обёртка над WebAuthn begin/finish |
-| devices | `devicelist` | GET /v1/me/devices |
-| webhooks | `webhooklist` | GET /v1/me/webhooks |
-| push | `pushlist` | GET /v1/me/push/subscriptions |
-| sso | `ssostart` | POST /v1/sso/start |
-| ingest | `batchapp` | валидация и подготовка batch /v1/ingest |
-| publicapi | `eventsapp` | GET /v1/public/events |
-| analytics | `recentapp` | GET /v1/events/recent |
-| prcomment | `CommentBody` (тип в корне пакета) | aggregate + markdown без цикла импортов |
-| insights | `rangeagg` | окно prev7d для fan-out |
-| reports | `periodapp` | resolve периода generate |
-| content | — | следующий срез (избегать циклов с родительским `content`) |
-| anomaly | — | логика в `detector.go` + `detector_test`; cron остаётся инфраструктурным entrypoint |
+| content | `domain`, `contentapp`, `handler` | эталон (полный DDD) |
+| analytics | `domain`, `analyticsapp`, `handler` | EventReadStore port + adapters |
+| publicapi | `domain`, `publicapiapp`, `handler` | scoped public read API |
+| ingest | `domain`, `ingestapp`, `handler` | PrepareBatch + PersistBatch |
+| insights | `domain`, `insightsapp`, `rangeagg`, `handler` | Generate + fan-out |
+| reports | `domain`, `reportsapp`, `periodapp`, `handler` | ReportGenerator port, cron → app |
+| teams | `domain`, `teamsapp`, `membersapp`, `invitesapp`, `authapp`, `registrationapp`, `projectsapp`, `commitsapp`, `adminapp`, `emailtemplates`, … | thin `teams.go` / `members.go` / `commits.go`; `admin_handlers.go` |
+| auth | `meapp`, `passwordresetapp`, `oauthapp`, `oauthflowapp`, `identitiesapp`, `passkeysapp`, `passwordapp`, `webauthnapp`, `sessionapp`, `apitokensapp` | `/v1/me/*` credentials + `/v1/auth/forgot|reset-password` in auth delivery |
+| devices | `domain`, `devicesapp`, `pairingapp`, `handler` | |
+| webhooks | `domain`, `webhooksapp` (CRUD + `Dispatcher`), `handler` | `webhooks.Service.Dispatch` → `webhooksapp.Dispatcher` |
+| push | `domain`, `pushapp`, `handler` | |
+| sso | `domain`, `ssoapp`, `handler` | |
+| prcomment | `domain`, `prcommentapp`, `handler` | |
+| anomaly | `anomalyapp` (scan + detect), `detector` | `cmd/api` wires `anomalyapp.Scanner` |
+| attribution | `attributionapp`, `worker` | cmd/worker wiring |
+| app | `internal/app` | composition root (`cmd/api` → `RegisterProductRoutes`) |
 
 ### Error handling
 

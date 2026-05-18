@@ -47,6 +47,9 @@ jobs:
           version: v2.12
           working-directory: backend
           args: --timeout=5m
+      - name: domain import guard
+        working-directory: backend
+        run: bash scripts/check-domain-imports.sh
 
   unit:
     name: backend / unit

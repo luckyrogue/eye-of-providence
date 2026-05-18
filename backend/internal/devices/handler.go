@@ -50,7 +50,7 @@ func pairBeginHandler(s Service) fiber.Handler {
 			return httperr.BadRequest(c, "invalid_body", "invalid body")
 		}
 		req.Kind = strings.ToLower(strings.TrimSpace(req.Kind))
-		res, err := PairBegin(c.Context(), s.Pool, req.Kind, req.Name)
+		res, err := newPairingApp(s.Pool).Begin(c.Context(), req.Kind, req.Name)
 		if errors.Is(err, ErrInvalidKind) {
 			return httperr.BadRequest(c, "invalid_kind", "kind must be one of ext|agent|ide")
 		}
@@ -75,7 +75,7 @@ func pollHandler(s Service) fiber.Handler {
 		if err != nil {
 			return httperr.BadRequest(c, "invalid_pair_id", "pair_id must be uuid")
 		}
-		res, err := Poll(c.Context(), s.Pool, pid, req.Secret)
+		res, err := newPairingApp(s.Pool).Poll(c.Context(), pid, req.Secret)
 		if errors.Is(err, ErrPairingNotFound) {
 			return httperr.NotFound(c, "pairing_not_found", "pairing not found or expired")
 		}
@@ -108,7 +108,7 @@ func claimHandler(s Service) fiber.Handler {
 		if err := c.BodyParser(&req); err != nil {
 			return httperr.BadRequest(c, "invalid_body", "invalid body")
 		}
-		dev, err := Claim(c.Context(), s.Pool, uid, req.Code, req.Name)
+		dev, err := newPairingApp(s.Pool).Claim(c.Context(), uid, req.Code, req.Name)
 		if errors.Is(err, ErrCodeNotFound) {
 			return httperr.NotFound(c, "code_not_found", "code invalid or expired")
 		}
@@ -133,7 +133,7 @@ func listHandler(s Service) fiber.Handler {
 		if err != nil {
 			return httperr.Unauthorized(c, "invalid_subject", "invalid subject")
 		}
-		devs, err := newDeviceListService(s.Pool).ListMyDevices(c.Context(), uid)
+		devs, err := newDevicesApp(s.Pool).List(c.Context(), uid)
 		if err != nil {
 			s.Logger.Error("devices list failed", zap.Error(err))
 			return httperr.Internal(c)
@@ -156,7 +156,7 @@ func revokeHandler(s Service) fiber.Handler {
 		if err != nil {
 			return httperr.BadRequest(c, "invalid_id", "invalid device id")
 		}
-		ok, err := Revoke(c.Context(), s.Pool, uid, deviceID)
+		ok, err := newDevicesApp(s.Pool).Revoke(c.Context(), uid, deviceID)
 		if err != nil {
 			s.Logger.Error("device revoke failed", zap.Error(err))
 			return httperr.Internal(c)

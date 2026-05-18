@@ -1,21 +1,20 @@
 package ingest
 
 import (
-	"errors"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/httperr"
-	"github.com/eye-of-providence/backend/internal/ingest/batchapp"
+	"github.com/eye-of-providence/backend/internal/ingest/domain"
+	"github.com/eye-of-providence/backend/internal/ingest/ingestapp"
 	"github.com/eye-of-providence/backend/internal/metrics"
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
 type request struct {
-	Events []store.Event `json:"events"`
+	Events []domain.Event `json:"events"`
 }
 
 type response struct {
@@ -26,6 +25,7 @@ type response struct {
 const maxEventsPerBatch = 5000
 
 func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwtSecret string, pool *pgxpool.Pool) {
+	svc := newIngestApp(st)
 	g := app.Group("/v1", auth.Middleware(jwtSecret, pool))
 
 	g.Post("/ingest", auth.RequireScope("write:ingest", "admin"), func(c *fiber.Ctx) error {
@@ -38,9 +38,9 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 			return httperr.BadRequest(c, "invalid_body", "invalid body")
 		}
 
-		valid, accepted, rejected, err := batchapp.PrepareIngest(claims.UserID, req.Events, maxEventsPerBatch)
+		valid, res, err := svc.PrepareBatch(claims.UserID, req.Events, maxEventsPerBatch)
 		if err != nil {
-			if errors.Is(err, batchapp.ErrBatchTooLarge) {
+			if ingestapp.IsBatchTooLarge(err) {
 				return httperr.Send(c, httperr.ProblemDetails{
 					Status: fiber.StatusRequestEntityTooLarge,
 					Code:   "batch_too_large",
@@ -54,16 +54,16 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 		}
 
 		if len(valid) > 0 {
-			if err := st.Insert(c.Context(), valid); err != nil {
+			if err := svc.PersistBatch(c.Context(), valid); err != nil {
 				metrics.IngestErrors.Inc()
 				logger.Error("store insert failed", zap.Error(err), zap.Int("count", len(valid)))
 				return httperr.Internal(c)
 			}
 		}
 
-		metrics.IngestEventsAccepted.Add(uint64(accepted))
-		metrics.IngestEventsRejected.Add(uint64(rejected))
-		logger.Debug("ingest batch", zap.String("user", claims.UserID), zap.Int("accepted", accepted), zap.Int("rejected", rejected))
-		return c.JSON(response{Accepted: accepted, Rejected: rejected})
+		metrics.IngestEventsAccepted.Add(uint64(res.Accepted))
+		metrics.IngestEventsRejected.Add(uint64(res.Rejected))
+		logger.Debug("ingest batch", zap.String("user", claims.UserID), zap.Int("accepted", res.Accepted), zap.Int("rejected", res.Rejected))
+		return c.JSON(response{Accepted: res.Accepted, Rejected: res.Rejected})
 	})
 }

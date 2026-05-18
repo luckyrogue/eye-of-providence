@@ -4,6 +4,7 @@ import { useTeams } from "../../entities/team";
 import { useProfile } from "../../entities/user";
 import { LinkedAccountsCard } from "../../features/linked-accounts";
 import type { Locale } from "../../shared/i18n";
+import { DevicesWidget } from "../../widgets/devices";
 import { SettingsDangerZone } from "./ui/settings-danger-zone";
 import { SettingsEmailCard } from "./ui/settings-email-card";
 import { SettingsLocaleTimezoneCard } from "./ui/settings-locale-timezone-card";
@@ -46,6 +47,11 @@ export function Settings({ onWiped }: { onWiped: () => void }) {
       <LinkedAccountsCard />
 
       <SettingsPasskeyCard />
+
+      {/* DevicesWidget также живёт на /integrations, но дублируем здесь —
+          desktop-агент исторически шлёт пользователя на /settings, и без
+          этого карточки тут не было куда вводить pairing-код. */}
+      <DevicesWidget />
 
       <SettingsEmailCard hasPassword={hasPassword} currentEmail={profile.data?.email} />
 

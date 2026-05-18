@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/eye-of-providence/backend/internal/reports/reportsapp"
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
@@ -23,70 +23,42 @@ func (c *Cron) Run(ctx context.Context) {
 	if c.Interval <= 0 {
 		c.Interval = 6 * time.Hour
 	}
+	appSvc := NewReportsApp(c.Store, c.EventStore, c.Gemini)
 	t := time.NewTicker(c.Interval)
 	defer t.Stop()
 
-	c.tick(ctx)
+	c.tick(ctx, appSvc)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			c.tick(ctx)
+			c.tick(ctx, appSvc)
 		}
 	}
 }
 
-func (c *Cron) tick(ctx context.Context) {
+func (c *Cron) tick(ctx context.Context, appSvc *reportsapp.Service) {
 	since := time.Now().UTC().Add(-7 * 24 * time.Hour)
-	users, err := c.EventStore.ActiveUserIDs(ctx, since)
+	users, err := appSvc.ActiveUserIDs(ctx, since)
 	if err != nil {
 		c.Logger.Warn("cron: ActiveUserIDs failed", zap.Error(err))
 		return
 	}
 
 	from, to, key := weeklyPeriod(time.Now().UTC())
+	now := time.Now().UTC()
 
 	for _, uid := range users {
-		if c.userHasReport(uid, key) {
+		if appSvc.HasPeriod(uid, key) {
 			continue
 		}
-		if err := c.generateFor(ctx, uid, key, from, to); err != nil {
+		if err := appSvc.GenerateWeeklyIfMissing(ctx, uid, from, to, key, now); err != nil {
 			c.Logger.Warn("cron: generate failed", zap.String("user", uid), zap.Error(err))
 		} else {
 			c.Logger.Info("cron: generated", zap.String("user", uid), zap.String("period", key))
 		}
 	}
-}
-
-func (c *Cron) userHasReport(userID, period string) bool {
-	for _, r := range c.Store.ListForUser(userID, 50) {
-		if r.Period == period {
-			return true
-		}
-	}
-	return false
-}
-
-func (c *Cron) generateFor(ctx context.Context, userID, period string, from, to time.Time) error {
-	nc, err := BuildContext(ctx, c.EventStore, userID, period, from, to)
-	if err != nil {
-		return err
-	}
-	body, err := c.Gemini.Generate(ctx, nc)
-	if err != nil {
-		return err
-	}
-	c.Store.Save(Report{
-		ID:            uuid.NewString(),
-		UserID:        userID,
-		Period:        period,
-		Model:         c.Gemini.Model,
-		BodyMD:        body,
-		GeneratedAt:   time.Now().UTC(),
-		PromptVersion: promptVersion,
-	})
-	return nil
 }
 
 func weeklyPeriod(now time.Time) (time.Time, time.Time, string) {

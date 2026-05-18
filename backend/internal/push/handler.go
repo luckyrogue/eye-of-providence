@@ -36,7 +36,7 @@ func listHandler(s *Service) fiber.Handler {
 		if err != nil {
 			return httperr.Unauthorized(c, "invalid_subject", "invalid subject")
 		}
-		subs, err := newPushListService(s).List(c.Context(), uid)
+		subs, err := newPushApp(s).List(c.Context(), uid)
 		if err != nil {
 			return httperr.Internal(c)
 		}
@@ -64,7 +64,7 @@ func subscribeHandler(s *Service) fiber.Handler {
 		if len(ua) > 256 {
 			ua = ua[:256]
 		}
-		if err := s.Subscribe(c.Context(), uid, req.Endpoint, req.Keys.P256dh, req.Keys.Auth, ua); err != nil {
+		if err := newPushApp(s).Subscribe(c.Context(), uid, req.Endpoint, req.Keys.P256dh, req.Keys.Auth, ua); err != nil {
 			return httperr.BadRequest(c, "subscribe_failed", err.Error())
 		}
 		return c.JSON(fiber.Map{"status": "ok"})
@@ -83,7 +83,7 @@ func unsubscribeHandler(s *Service) fiber.Handler {
 		if err := c.BodyParser(&req); err != nil {
 			return httperr.BadRequest(c, "invalid_body", "invalid body")
 		}
-		ok, err := s.Unsubscribe(c.Context(), uid, req.Endpoint)
+		ok, err := newPushApp(s).Unsubscribe(c.Context(), uid, req.Endpoint)
 		if err != nil {
 			return httperr.Internal(c)
 		}

@@ -4,14 +4,12 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"net/mail"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
@@ -81,6 +79,8 @@ type Service struct {
 	PasskeyEnabled bool
 
 	TemplateStore *mailer.PGTemplateStore
+
+	EventStore EventStoreLike
 }
 
 func (s Service) actorInfo(c *fiber.Ctx) (uuid.UUID, string) {
@@ -108,8 +108,6 @@ func RegisterRoutes(app *fiber.App, s Service) {
 	a := app.Group("/v1/auth")
 	a.Post("/register", s.handleRegister)
 	a.Post("/login", s.handleLogin)
-	a.Post("/forgot-password", s.handleForgotPassword)
-	a.Post("/reset-password", s.handleResetPassword)
 	a.Get("/config", s.handleAuthConfig)
 	app.Get("/v1/invites/:code", s.handleInvitePreview)
 
@@ -118,10 +116,6 @@ func RegisterRoutes(app *fiber.App, s Service) {
 	g.Get("/teams", s.handleListMyTeams)
 	g.Post("/teams", s.handleCreateTeam)
 	g.Get("/beta/info", s.handleBetaInfo)
-
-	g.Patch("/me/email", s.handleChangeMyEmail)
-	g.Patch("/me/password", s.handleChangeMyPassword)
-	g.Patch("/me/name", s.handleChangeMyName)
 
 	t := g.Group("/teams/:id")
 	t.Get("/", s.handleTeamDetail)
@@ -177,25 +171,7 @@ func userID(c *fiber.Ctx) uuid.UUID {
 }
 
 func (s Service) teamRole(ctx context.Context, userID, teamID uuid.UUID) (string, bool) {
-	var role string
-	err := s.Pool.QueryRow(ctx,
-		"SELECT role FROM team_members WHERE user_id=$1 AND team_id=$2",
-		userID, teamID).Scan(&role)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", false
-	}
-	if err != nil {
-		return "", false
-	}
-	return role, true
-}
-
-func (s Service) addMember(ctx context.Context, teamID, userID uuid.UUID, role string) error {
-	_, err := s.Pool.Exec(ctx, `
-		INSERT INTO team_members (team_id, user_id, role)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (team_id, user_id) DO NOTHING`, teamID, userID, role)
-	return err
+	return s.membersApp().TeamRole(ctx, userID, teamID)
 }
 
 func (s Service) isSuperAdmin(c *fiber.Ctx) bool {

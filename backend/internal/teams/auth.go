@@ -5,26 +5,26 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"go.uber.org/zap"
 
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/auth/passwordapp"
+	"github.com/eye-of-providence/backend/internal/teams/authapp"
+	"github.com/eye-of-providence/backend/internal/teams/invitesapp"
 	"github.com/eye-of-providence/backend/internal/httperr"
 )
 
 func (s Service) handleAuthConfig(c *fiber.Ctx) error {
-	var userCount int
-	if s.Pool != nil {
-		_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM users").Scan(&userCount)
+	rc, err := s.registrationApp().BeforeRegister(c.Context())
+	if err != nil {
+		return s.internalErr(c, err)
 	}
-
 	providers := s.AuthProviders
 	if providers == nil {
 		providers = []string{}
 	}
 	return c.JSON(fiber.Map{
 		"invite_only":     s.InviteOnly,
-		"is_first_user":   userCount == 0,
+		"is_first_user":   rc.IsFirstUser,
 		"providers":       providers,
 		"passkey_enabled": s.PasskeyEnabled,
 	})
@@ -62,16 +62,16 @@ func (s Service) handleRegister(c *fiber.Ctx) error {
 	}
 	req.DisplayName = dn
 
-	var userCount int
-	_ = s.Pool.QueryRow(c.Context(), "SELECT count(*) FROM users").Scan(&userCount)
-	isFirstUser := userCount == 0
+	rc, err := s.registrationApp().BeforeRegister(c.Context())
+	if err != nil {
+		return s.internalErr(c, err)
+	}
 
-	if s.InviteOnly && !isFirstUser {
+	if s.InviteOnly && !rc.IsFirstUser {
 		if req.InviteCode == nil || *req.InviteCode == "" {
 			return httperr.Forbidden(c, "invite_required", "registration is invite-only")
 		}
-
-		if _, err := s.findInvite(c.Context(), *req.InviteCode); err != nil {
+		if _, err := s.invitesApp().Find(c.Context(), *req.InviteCode); err != nil {
 			return httperr.BadRequest(c, "invite_invalid", "invite invalid or expired")
 		}
 	}
@@ -81,18 +81,14 @@ func (s Service) handleRegister(c *fiber.Ctx) error {
 		return httperr.Conflict(c, "email_taken", "email already taken (or DB error)")
 	}
 
-	if isFirstUser {
-		_, _ = s.Pool.Exec(c.Context(),
-			"UPDATE users SET global_role='super_admin' WHERE id=$1", user.ID)
-		s.Logger.Info("first user promoted to super_admin", zap.String("email", user.Email))
-	}
+	_ = s.registrationApp().AfterRegister(c.Context(), user.ID.String(), rc)
 
 	var joinedTeam *uuid.UUID
 	if req.InviteCode != nil && *req.InviteCode != "" {
-		teamID, err := s.consumeInvite(c.Context(), *req.InviteCode, user.ID)
-		if err == nil {
-			_ = s.addMember(c.Context(), teamID, user.ID, "member")
+		if teamID, err := s.invitesApp().Accept(c.Context(), *req.InviteCode, user.ID); err == nil {
 			joinedTeam = &teamID
+		} else if errors.Is(err, invitesapp.ErrPlanLimitExceeded) {
+			return httperr.Forbidden(c, "plan_limit_exceeded", err.Error())
 		}
 	}
 
@@ -124,13 +120,12 @@ func (s Service) handleLogin(c *fiber.Ctx) error {
 	}
 	email, ok := validateEmail(req.Email)
 	if !ok || !validatePassword(req.Password) {
-
 		return httperr.Unauthorized(c, "invalid_credentials", "invalid email or password")
 	}
 	req.Email = email
-	user, err := auth.NewPasswordLoginService(s.Pool).VerifyLogin(c.Context(), req.Email, req.Password)
+	user, err := s.authApp().Login(c.Context(), req.Email, req.Password)
 	if err != nil {
-		if errors.Is(err, passwordapp.ErrInvalidCredentials) {
+		if errors.Is(err, passwordapp.ErrInvalidCredentials) || errors.Is(err, authapp.ErrInvalidCredentials) {
 			return httperr.Unauthorized(c, "invalid_credentials", "invalid email or password")
 		}
 		return s.internalErr(c, err)

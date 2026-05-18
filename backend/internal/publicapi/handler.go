@@ -10,19 +10,21 @@ import (
 
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/httperr"
+	"github.com/eye-of-providence/backend/internal/publicapi/publicapiapp"
 	"github.com/eye-of-providence/backend/internal/store"
 )
 
 func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwtSecret string, pool *pgxpool.Pool) {
+	svc := newPublicAPIApp(st)
 	g := app.Group("/v1/public",
 		auth.Middleware(jwtSecret, pool),
 		auth.RequireScope("read", "admin"),
 	)
 
-	g.Get("/events", eventsHandler(st, logger))
-	g.Get("/summary", summaryHandler(st, logger))
-	g.Get("/languages", languagesHandler(st, logger))
-	g.Get("/trend", trendHandler(st, logger))
+	g.Get("/events", eventsHandler(svc, logger))
+	g.Get("/summary", summaryHandler(svc, logger))
+	g.Get("/languages", languagesHandler(svc, logger))
+	g.Get("/trend", trendHandler(svc, logger))
 }
 
 func daysParam(c *fiber.Ctx, fallback int) int {
@@ -33,14 +35,14 @@ func daysParam(c *fiber.Ctx, fallback int) int {
 	return n
 }
 
-func eventsHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
+func eventsHandler(svc *publicapiapp.Service, logger *zap.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		claims := auth.ClaimsFromCtx(c)
 		limit, _ := strconv.Atoi(c.Query("limit", "100"))
 		if limit <= 0 || limit > 1000 {
 			limit = 100
 		}
-		events, err := newEventsApp(st).ListRecent(c.Context(), claims.UserID, limit)
+		events, err := svc.ListRecent(c.Context(), claims.UserID, limit)
 		if err != nil {
 			logger.Error("public events failed", zap.Error(err))
 			return httperr.Internal(c)
@@ -53,12 +55,12 @@ func eventsHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
 	}
 }
 
-func summaryHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
+func summaryHandler(svc *publicapiapp.Service, logger *zap.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		claims := auth.ClaimsFromCtx(c)
 		days := daysParam(c, 7)
-		since := time.Now().UTC().Add(-time.Duration(days) * 24 * time.Hour)
-		agg, err := st.AggregateByCategory(c.Context(), claims.UserID, since)
+		_, since := publicapiapp.WindowFromDays(days)
+		agg, err := svc.Summary(c.Context(), claims.UserID, since)
 		if err != nil {
 			logger.Error("public summary failed", zap.Error(err))
 			return httperr.Internal(c)
@@ -71,12 +73,12 @@ func summaryHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
 	}
 }
 
-func languagesHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
+func languagesHandler(svc *publicapiapp.Service, logger *zap.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		claims := auth.ClaimsFromCtx(c)
 		days := daysParam(c, 30)
-		since := time.Now().UTC().Add(-time.Duration(days) * 24 * time.Hour)
-		cells, err := st.LanguageBreakdown(c.Context(), claims.UserID, since)
+		_, since := publicapiapp.WindowFromDays(days)
+		cells, err := svc.Languages(c.Context(), claims.UserID, since)
 		if err != nil {
 			logger.Error("public langs failed", zap.Error(err))
 			return httperr.Internal(c)
@@ -89,13 +91,14 @@ func languagesHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
 	}
 }
 
-func trendHandler(st store.EventStore, logger *zap.Logger) fiber.Handler {
+func trendHandler(svc *publicapiapp.Service, logger *zap.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		claims := auth.ClaimsFromCtx(c)
 		days := daysParam(c, 30)
-		since := time.Now().UTC().Add(-time.Duration(days) * 24 * time.Hour).Truncate(24 * time.Hour)
+		_, since := publicapiapp.WindowFromDays(days)
+		since = since.Truncate(24 * time.Hour)
 		tz := c.Query("tz", "UTC")
-		points, err := st.DailyTrend(c.Context(), claims.UserID, since, tz)
+		points, err := svc.Trend(c.Context(), claims.UserID, since, tz)
 		if err != nil {
 			logger.Error("public trend failed", zap.Error(err))
 			return httperr.Internal(c)

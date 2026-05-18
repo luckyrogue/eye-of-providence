@@ -1,7 +1,6 @@
 package webhooks
 
 import (
-	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/rand"
@@ -18,7 +17,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/eye-of-providence/backend/internal/plans"
 )
@@ -193,99 +191,7 @@ func (s *Service) dispatchSync(userID uuid.UUID, event string, payload any) {
 	}
 	ctx, cancel := context.WithTimeout(parent, 60*time.Second)
 	defer cancel()
-
-	rows, err := s.Pool.Query(ctx, `
-		SELECT id, url, secret, format FROM webhooks
-		WHERE user_id = $1 AND active = true AND $2 = ANY(events)`, userID, event)
-	if err != nil {
-		s.Logger.Error("webhook lookup failed", zap.Error(err))
-		return
-	}
-	defer rows.Close()
-
-	type target struct {
-		id     uuid.UUID
-		url    string
-		secret string
-		format string
-	}
-	targets := []target{}
-	for rows.Next() {
-		var t target
-		if err := rows.Scan(&t.id, &t.url, &t.secret, &t.format); err != nil {
-			continue
-		}
-		targets = append(targets, t)
-	}
-
-	g, gctx := errgroup.WithContext(ctx)
-	g.SetLimit(8)
-	for _, t := range targets {
-		g.Go(func() error {
-			s.deliver(gctx, t.id, t.url, t.secret, t.format, event, payload)
-			return nil
-		})
-	}
-	_ = g.Wait()
-}
-
-func (s *Service) deliver(ctx context.Context, id uuid.UUID, url, secret, format, event string, payload any) {
-	body, err := formatPayload(Format(format), event, payload)
-	if err != nil {
-		s.Logger.Error("format payload", zap.String("format", format), zap.Error(err))
-		return
-	}
-	sig := signPayload(secret, body)
-
-	delays := []time.Duration{0, 1 * time.Second, 3 * time.Second, 9 * time.Second}
-	var lastStatus int
-	for attempt, delay := range delays {
-		if delay > 0 {
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(delay):
-			}
-		}
-		status, err := s.send(ctx, url, sig, event, body)
-		lastStatus = status
-		if err == nil && status < 500 {
-
-			break
-		}
-		s.Logger.Debug("webhook retry",
-			zap.String("url", url),
-			zap.Int("status", status),
-			zap.Int("attempt", attempt),
-			zap.Error(err),
-		)
-		if err != nil {
-			lastStatus = -1
-		}
-	}
-
-	_, _ = s.Pool.Exec(ctx,
-		`UPDATE webhooks SET last_delivery_at = now(), last_status = $1 WHERE id = $2`,
-		lastStatus, id,
-	)
-}
-
-func (s *Service) send(ctx context.Context, url, sig, event string, body []byte) (int, error) {
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
-	if err != nil {
-		return -1, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-EoP-Signature", "sha256="+sig)
-	req.Header.Set("X-EoP-Event", event)
-	req.Header.Set("User-Agent", "eop-webhooks/1.0")
-
-	res, err := s.HTTPClient.Do(req)
-	if err != nil {
-		return -1, err
-	}
-	defer res.Body.Close()
-	return res.StatusCode, nil
+	s.newDispatcher().DispatchSync(ctx, userID, event, payload)
 }
 
 func signPayload(secret string, body []byte) string {

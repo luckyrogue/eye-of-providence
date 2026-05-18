@@ -12,6 +12,7 @@ import (
 
 	"github.com/eye-of-providence/backend/internal/auth"
 	"github.com/eye-of-providence/backend/internal/httperr"
+	"github.com/eye-of-providence/backend/internal/prcomment/prcommentapp"
 )
 
 type Service struct {
@@ -51,13 +52,19 @@ func postHandler(s Service) fiber.Handler {
 			return httperr.BadRequest(c, "invalid_request", err.Error())
 		}
 
-		comment, agg, err := (&CommentBody{Pool: s.Pool, Base: s.DashboardURL}).Markdown(c.Context(), uid, req.SHAs)
+		agg, comment, err := newPRCommentApp(s.Pool, s.DashboardURL, s.HTTPClient).PostPRComment(c.Context(), uid, prcommentapp.PostRequest{
+			Provider: req.Provider, Host: req.Host, Repo: req.Repo, PRNumber: req.PRNumber,
+			SHAs: req.SHAs, ProviderToken: req.ProviderToken,
+		})
 		if err != nil {
-			s.Logger.Error("pr-comment aggregate failed", zap.Error(err))
-			return httperr.Internal(c)
-		}
-
-		if err := postComment(c.Context(), s.HTTPClient, req, comment); err != nil {
+			var aggFailed bool
+			if comment == "" {
+				aggFailed = true
+			}
+			if aggFailed {
+				s.Logger.Error("pr-comment aggregate failed", zap.Error(err))
+				return httperr.Internal(c)
+			}
 			s.Logger.Warn("pr-comment post failed",
 				zap.String("provider", req.Provider),
 				zap.Error(err))

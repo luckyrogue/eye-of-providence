@@ -87,6 +87,8 @@ func apiTokenToRow(a APIToken) meapp.TokenRow {
 func newMeAppService(s MeService) *meapp.Service {
 	return meapp.New(meapp.Deps{
 		Profile: pgMeProfile{pool: s.Pool},
+		Writer:  pgMeProfileWriter{pool: s.Pool},
 		Tokens:  pgMeTokens{pool: s.Pool},
+		Issuer:  meSessionIssuer{pool: s.Pool, jwtSecret: s.JWTSecret},
 	})
 }

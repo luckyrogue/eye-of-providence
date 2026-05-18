@@ -43,7 +43,7 @@ func (s Service) handleStart(c *fiber.Ctx) error {
 		return httperr.BadRequest(c, "invalid_team_id", "team_id must be uuid")
 	}
 
-	url, err := newSSOStartService(s).AuthorizeURL(c.Context(), teamID, req.ReturnTo)
+	url, err := newSSOApp(s).AuthorizeURL(c.Context(), teamID, req.ReturnTo)
 	if errors.Is(err, ErrConfigNotFound) {
 		return httperr.NotFound(c, "sso_not_configured", "SSO not configured for this team")
 	}

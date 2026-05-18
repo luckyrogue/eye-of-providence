@@ -29,6 +29,17 @@ type ProfileReader interface {
 	UpdateLocale(ctx context.Context, userID uuid.UUID, locale string) error
 }
 
+type ProfileWriter interface {
+	UpdateName(ctx context.Context, userID uuid.UUID, displayName, lastName *string) error
+	PasswordHash(ctx context.Context, userID uuid.UUID) (hash string, hasPassword bool, err error)
+	UpdateEmail(ctx context.Context, userID uuid.UUID, email, password string) error
+	UpdatePassword(ctx context.Context, userID uuid.UUID, newHash string) error
+}
+
+type SessionIssuer interface {
+	IssueAfterCredentialChange(ctx context.Context, userID uuid.UUID, email string) (token string, err error)
+}
+
 type TokenRow struct {
 	ID         uuid.UUID  `json:"id"`
 	Name       string     `json:"name"`

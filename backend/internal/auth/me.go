@@ -72,6 +72,8 @@ func RegisterMeRoutes(app *fiber.App, s MeService) {
 	g.Post("/tokens", createTokenHandler(s))
 	g.Delete("/tokens/:id", revokeTokenHandler(s))
 
+	registerMeCredentialRoutes(g, s)
+
 	// GDPR Article 20 — right to data portability. Возвращаем machine-readable
 	// JSON со всеми данными пользователя: profile + projects + devices +
 	// consent + reports + полная история events (cap ~200k, см. store/export.go).

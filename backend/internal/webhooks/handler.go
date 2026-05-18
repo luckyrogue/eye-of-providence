@@ -81,7 +81,7 @@ func listHandler(svc *Service) fiber.Handler {
 		if err != nil {
 			return sendAuthErr(c, err)
 		}
-		hooks, err := newWebhookListService(svc).List(c.Context(), uid)
+		hooks, err := newWebhooksApp(svc).List(c.Context(), uid)
 		if err != nil {
 			return httperr.Internal(c)
 		}
