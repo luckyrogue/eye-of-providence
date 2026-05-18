@@ -1,20 +1,13 @@
 //! Auth для desktop-агента.
 //!
-//! Хранилище: `keyring` крейт даёт нативный backend на каждой ОС
-//!   - macOS  → Keychain
-//!   - Windows → Credential Manager
-//!   - Linux  → secret-service (gnome-keyring / kwallet)
-//!
-//! Что храним:
-//!   - token       — opaque eop_*** API token (scope=write:ingest, kind=agent)
-//!   - backend_url — URL без хвостового `/api/` (нормализуем при чтении)
-//!   - user_id     — uuid для отображения в Settings
-//!
-//! Pairing flow реализован в tauri-командах `pair_begin` / `pair_poll`.
+//! Production: токен и URL после pairing хранятся в OS keychain.
+//! Dev: `EOP_BACKEND_URL` / `EOP_BEARER_TOKEN` в `.env` переопределяют keyring.
 
 use anyhow::{anyhow, Context, Result};
 use keyring::Entry;
 use serde::{Deserialize, Serialize};
+
+use super::env;
 
 const SERVICE: &str = "eop-agent";
 const ACCOUNT_TOKEN: &str = "ingest-token";
@@ -23,11 +16,13 @@ const ACCOUNT_USER: &str = "user-id";
 
 pub const DEFAULT_BACKEND: &str = "https://eop.rysdavletov.org/api";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct AccountInfo {
-    pub user_id: Option<String>,
     pub backend_url: String,
-    pub has_token: bool,
+    pub paired: bool,
+    pub user_id: Option<String>,
+    /// true только если токен взят из env (dev), не из keyring.
+    pub token_from_env: bool,
 }
 
 fn entry(account: &str) -> Result<Entry> {
@@ -55,20 +50,25 @@ fn delete(account: &str) -> Result<()> {
     }
 }
 
-/// Прочесть токен (если связан). Возвращает `Ok(None)` если не привязан.
+fn env_token() -> Option<String> {
+    env::non_empty("EOP_BEARER_TOKEN").or_else(|| env::non_empty("EOP_AGENT_TOKEN"))
+}
+
+/// Ingest token: env (dev) → keyring (после pairing).
 pub fn get_token() -> Result<Option<String>> {
+    if let Some(t) = env_token() {
+        return Ok(Some(t));
+    }
     read_opt(ACCOUNT_TOKEN)
 }
 
-/// URL бэкенда. Fallback на env (`EOP_BACKEND_URL`) для dev, дальше — DEFAULT.
+/// URL бэкенда: keyring → env → default.
 pub fn get_backend_url() -> Result<String> {
     if let Some(v) = read_opt(ACCOUNT_BACKEND)? {
         return Ok(v);
     }
-    if let Ok(v) = std::env::var("EOP_BACKEND_URL") {
-        if !v.trim().is_empty() {
-            return Ok(v);
-        }
+    if let Some(v) = env::non_empty("EOP_BACKEND_URL") {
+        return Ok(v);
     }
     Ok(DEFAULT_BACKEND.to_string())
 }
@@ -78,10 +78,14 @@ pub fn set_backend_url(url: &str) -> Result<()> {
 }
 
 pub fn account_info() -> Result<AccountInfo> {
+    let from_env = env_token().is_some();
+    let paired = from_env || read_opt(ACCOUNT_TOKEN)?.is_some();
+    let user_id = read_opt(ACCOUNT_USER)?.or_else(|| env::non_empty("EOP_USER_ID"));
     Ok(AccountInfo {
-        user_id: read_opt(ACCOUNT_USER)?,
         backend_url: get_backend_url()?,
-        has_token: get_token()?.is_some(),
+        paired,
+        user_id,
+        token_from_env: from_env,
     })
 }
 
@@ -148,7 +152,6 @@ pub async fn pair_poll(
     Ok(resp.json::<PollResponse>().await?)
 }
 
-/// Сохранить полученный после claim token + user_id в keyring.
 pub fn persist_pairing(token: &str, user_id: &str) -> Result<()> {
     write(ACCOUNT_TOKEN, token)?;
     write(ACCOUNT_USER, user_id)?;

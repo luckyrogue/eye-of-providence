@@ -16,7 +16,8 @@ use crate::core::auth;
 use crate::core::crypto::LocalCrypto;
 use crate::core::ingest::{AuthEmitter, CredsProvider, Ingest, WakeUp};
 use crate::core::local_api;
-use crate::core::preflight::{self, CheckResult, PreflightInput};
+use crate::core::connection::{self, ConnectionStatus};
+use crate::core::preflight::{self, PreflightInput};
 use crate::core::store::LocalStore;
 use crate::core::watcher::{self, PauseFlag};
 
@@ -44,6 +45,8 @@ struct LogGuard(Option<non_blocking::WorkerGuard>);
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    crate::core::env::load_env_files();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
@@ -54,14 +57,15 @@ pub fn run() {
             status,
             pending_count,
             check_accessibility,
-            preflight_run,
+            permissions_status,
+            open_permissions_settings,
+            connection_status,
             set_paused,
             is_paused,
             account_info,
             pair_begin,
             pair_poll,
             logout,
-            set_backend_url,
             open_logs_folder,
             open_url,
             get_autostart,
@@ -167,32 +171,36 @@ pub fn run() {
                 wake: wake.clone(),
             });
 
-            // Preflight на старте — пишем в лог, дальше UI запросит сам через команду.
+            // Стартовые проверки — в лог; UI опрашивает connection_status.
             let pf_dir = data_dir.clone();
+            let startup_http = http.clone();
             tauri::async_runtime::spawn(async move {
-                let backend = auth::get_backend_url().ok();
-                let token = auth::get_token().ok().flatten();
-                let results = preflight::run(PreflightInput {
+                for r in preflight::run(PreflightInput {
                     data_dir: &pf_dir,
-                    local_api_port,
-                    check_local_api_port: false,
-                    backend_url: backend.as_deref(),
-                    bearer_token: token.as_deref(),
                 })
-                .await;
-                for r in &results {
+                .await
+                {
                     match r.status {
                         preflight::CheckStatus::Ok => {
                             tracing::info!(check = %r.id, "{}", r.message)
-                        }
-                        preflight::CheckStatus::Warn => {
-                            tracing::warn!(check = %r.id, "{}", r.message)
                         }
                         preflight::CheckStatus::Error => {
                             tracing::error!(check = %r.id, "{}", r.message)
                         }
                     }
                 }
+                let conn = connection::status(connection::ConnectionInput {
+                    local_api_port,
+                    http: &startup_http,
+                })
+                .await;
+                tracing::info!(
+                    backend = ?conn.backend,
+                    local_api = ?conn.local_api,
+                    port = conn.local_api_port,
+                    paired = conn.paired,
+                    "connection status"
+                );
             });
 
             // Local API для browser extension и IDE plugin.
@@ -300,6 +308,57 @@ fn pending_count(state: tauri::State<'_, AgentState>) -> Result<i64, String> {
     state.store.pending_count().map_err(|e| e.to_string())
 }
 
+#[derive(serde::Serialize)]
+struct PermissionsStatus {
+    accessibility: bool,
+    /// Имя в System Settings → Accessibility (включите именно его).
+    app_name: String,
+    /// Базовое отслеживание работает и без Accessibility.
+    optional: bool,
+}
+
+#[tauri::command]
+fn permissions_status() -> PermissionsStatus {
+    #[cfg(target_os = "macos")]
+    {
+        return PermissionsStatus {
+            accessibility: platform::macos::has_accessibility(),
+            app_name: platform::macos::accessibility_app_label(),
+            optional: true,
+        };
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        PermissionsStatus {
+            accessibility: true,
+            app_name: platform::macos::accessibility_app_label(),
+            optional: true,
+        }
+    }
+}
+
+#[tauri::command]
+fn open_permissions_settings() -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        open_target(
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        open_target("ms-settings:privacy").map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let _ = std::process::Command::new("xdg-open")
+            .arg("https://wiki.archlinux.org/title/XDG_Desktop_Portal")
+            .spawn();
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn check_accessibility() -> bool {
     #[cfg(target_os = "macos")]
@@ -324,17 +383,16 @@ fn is_paused(state: tauri::State<'_, AgentState>) -> bool {
 }
 
 #[tauri::command]
-async fn preflight_run(state: tauri::State<'_, AgentState>) -> Result<Vec<CheckResult>, String> {
-    let backend = auth::get_backend_url().ok();
-    let token = auth::get_token().ok().flatten();
-    Ok(preflight::run(PreflightInput {
-        data_dir: &state.data_dir,
-        local_api_port: state.local_api_port,
-        check_local_api_port: true,
-        backend_url: backend.as_deref(),
-        bearer_token: token.as_deref(),
-    })
-    .await)
+async fn connection_status(
+    state: tauri::State<'_, AgentState>,
+) -> Result<ConnectionStatus, String> {
+    Ok(
+        connection::status(connection::ConnectionInput {
+            local_api_port: state.local_api_port,
+            http: &state.http,
+        })
+        .await,
+    )
 }
 
 #[tauri::command]
@@ -376,11 +434,6 @@ fn logout(state: tauri::State<'_, AgentState>) -> Result<(), String> {
     auth::logout().map_err(|e| e.to_string())?;
     state.wake.notify();
     Ok(())
-}
-
-#[tauri::command]
-fn set_backend_url(url: String) -> Result<(), String> {
-    auth::set_backend_url(&url).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

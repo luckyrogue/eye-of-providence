@@ -61,8 +61,24 @@ fn frontmost_bundle_id() -> Option<String> {
     None
 }
 
-/// Проверяет, есть ли у процесса Accessibility permission.
-/// На macOS использует AXIsProcessTrustedWithOptions из ApplicationServices.
+/// Имя процесса в System Settings → Privacy → Accessibility (может отличаться от
+/// `eop-agent` в dev и `Eye of Providence` в .app bundle).
+#[cfg(target_os = "macos")]
+pub fn accessibility_app_label() -> String {
+    if let Ok(exe) = std::env::current_exe() {
+        let path = exe.to_string_lossy();
+        if path.contains("Eye of Providence") {
+            return "Eye of Providence".into();
+        }
+        if let Some(stem) = exe.file_stem() {
+            return stem.to_string_lossy().into_owned();
+        }
+    }
+    "Eye of Providence".into()
+}
+
+/// Проверяет Accessibility для **текущего** процесса (`AXIsProcessTrusted`).
+/// После включения в System Settings нужен перезапуск агента.
 #[cfg(target_os = "macos")]
 pub fn has_accessibility() -> bool {
     #[link(name = "ApplicationServices", kind = "framework")]
@@ -70,6 +86,11 @@ pub fn has_accessibility() -> bool {
         fn AXIsProcessTrusted() -> u8;
     }
     unsafe { AXIsProcessTrusted() != 0 }
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn accessibility_app_label() -> String {
+    "Eye of Providence".into()
 }
 
 #[cfg(not(target_os = "macos"))]

@@ -20,8 +20,6 @@ function dashboardHost(backend: string): string {
   }
 }
 
-// Polling до claim или expire (POLL_INTERVAL_MS). После успешного claim
-// вызывает onClaimed — caller сам перетягивает account-info из бэка.
 export function PairingWizard({ backend, onClaimed }: { backend: string; onClaimed?: () => void }) {
   const { t } = useTranslation("agent");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
@@ -79,9 +77,6 @@ export function PairingWizard({ backend, onClaimed }: { backend: string; onClaim
   if (phase.kind === "idle") {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          <Trans ns="agent" i18nKey="settings_not_paired" />
-        </p>
         <Button size="sm" onClick={() => void start()}>
           {t("settings_pair_start")}
         </Button>
@@ -111,9 +106,7 @@ export function PairingWizard({ backend, onClaimed }: { backend: string; onClaim
       </div>
     );
   }
-  // Pairing-форма (ClaimDeviceForm) сидит в DevicesWidget на странице
-  // /integrations, не на /settings — иначе пользователь открывает дашборд
-  // и не видит куда вводить код.
+
   const dashboardURL = `https://${dashboardHost(backend)}/integrations`;
   return (
     <div className="space-y-3">
