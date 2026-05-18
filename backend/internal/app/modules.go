@@ -56,14 +56,18 @@ func (a *API) RegisterProductRoutes() {
 		})
 	}
 	a.Content.RegisterPublicRoute(a.App)
-	// ВАЖНО: публичные routes (forgot/reset password) регистрируем
-	// ДО teams.RegisterRoutes. Последний вешает auth.Middleware на `/v1`
-	// через app.Group("/v1", mw) — fiber Use'ит middleware для всех
+	// ВАЖНО: публичные routes (forgot/reset password + devices/pair, poll)
+	// регистрируем ДО teams.RegisterRoutes. Последний вешает auth.Middleware
+	// на `/v1` через app.Group("/v1", mw) — fiber Use'ит middleware для всех
 	// последующих routes на этом prefix'е. Public-routes должны быть
 	// зарегистрированы раньше, иначе вернут 401 "missing_bearer".
 	auth.RegisterPasswordResetRoutes(a.App, auth.PasswordResetService{
 		Pool: a.Pool, Mailer: a.Mail, PublicURL: a.Cfg.PublicURL, Logger: a.Log,
 	})
+	// devices.RegisterRoutes регистрирует и public (/v1/devices/{pair,poll}),
+	// и auth-protected (/v1/me/devices/*) — последние имеют свой
+	// auth.Middleware на group level, поэтому их статус не меняется.
+	devices.RegisterRoutes(a.App, devices.Service{Pool: a.Pool, Logger: a.Log, JWTSecret: a.Cfg.JWTSecret})
 	teams.RegisterRoutes(a.App, teams.Service{
 		Pool: a.Pool, JWTSecret: a.Cfg.JWTSecret, Logger: a.Log,
 		InviteOnly: a.Cfg.InviteOnly, BetaTeamLimit: a.Cfg.BetaTeamLimit,
@@ -85,7 +89,6 @@ func (a *API) RegisterProductRoutes() {
 			Pool: a.Pool, JWTSecret: a.Cfg.JWTSecret, Logger: a.Log, DashboardURL: a.Cfg.PublicURL,
 		})
 	}
-	devices.RegisterRoutes(a.App, devices.Service{Pool: a.Pool, Logger: a.Log, JWTSecret: a.Cfg.JWTSecret})
 	reports.RegisterRoutes(a.App, reports.Service{
 		Store: a.ReportStore, EventStore: a.EventStore, Gemini: a.Gemini,
 		Logger: a.Log, JWTSecret: a.Cfg.JWTSecret, Pool: a.Pool,
