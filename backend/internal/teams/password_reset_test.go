@@ -4,12 +4,35 @@ package teams
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/eye-of-providence/backend/internal/auth"
 )
+
+// newResetToken / hashResetToken — inline-копии хелперов из старого
+// `password_reset.go`. Сам файл переехал в `auth/passwordresetapp/`
+// после refactor'а и перестал экспортировать эти функции. Тесты
+// сидят на интеграционном уровне (вставляют hash в `password_resets`
+// через raw SQL), поэтому проще держать helpers здесь, чем тащить
+// passwordresetapp.TokenGenerator зависимость в integration suite.
+func newResetToken() (string, string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", "", err
+	}
+	tok := hex.EncodeToString(b)
+	return tok, hashResetToken(tok), nil
+}
+
+func hashResetToken(s string) string {
+	h := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(h[:])
+}
 
 func TestNewResetToken_DistinctTokens(t *testing.T) {
 	tok1, hash1, err := newResetToken()
