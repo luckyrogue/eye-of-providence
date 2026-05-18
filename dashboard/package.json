@@ -15,7 +15,7 @@
   "dependencies": {
     "@eop/i18n": "workspace:*",
     "@eop/ui": "workspace:*",
-    "@hookform/resolvers": "^3",
+    "@hookform/resolvers": "^5",
     "@monaco-editor/react": "^4.7.0",
     "@simplewebauthn/browser": "^13.3.0",
     "@tanstack/react-query": "^5.100.10",
