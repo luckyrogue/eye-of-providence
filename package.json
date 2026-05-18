@@ -1,7 +1,7 @@
 {
   "name": "eye-of-providence",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.1.0",
   "packageManager": "pnpm@9.12.3",
   "scripts": {
     "agent:dev": "pnpm -F @eop/agent tauri dev",

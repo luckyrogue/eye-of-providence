@@ -13,7 +13,7 @@
     "changelog": "Changelog"
   },
   "hero": {
-    "eyebrow": "v0.4 · публичная бета · macOS + Windows",
+    "eyebrow": "v0.1 · публичная альфа · macOS + Windows",
     "title1": "Увидь, откуда ",
     "titleAccent": "код",
     "title2": " действительно ",
@@ -26,7 +26,7 @@
     "meta1": "Активных устройств",
     "meta2": "Запущено с",
     "meta3": "С открытым кодом",
-    "badge": "v0.4 · публичная бета · macOS + Windows",
+    "badge": "v0.1 · публичная альфа · macOS + Windows",
     "heading": "Увидь, откуда твой код <em>действительно приходит</em>.",
     "lead": "Eye of Providence измеряет, сколько вы пишете сами и сколько за вас пишет AI.",
     "cta_primary": "Скачать агент",

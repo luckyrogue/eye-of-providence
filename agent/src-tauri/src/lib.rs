@@ -298,7 +298,7 @@ fn status() -> serde_json::Value {
     serde_json::json!({
         "status": "ok",
         "version": env!("CARGO_PKG_VERSION"),
-        "channel": "beta",
+        "channel": "alpha",
     })
 }
 

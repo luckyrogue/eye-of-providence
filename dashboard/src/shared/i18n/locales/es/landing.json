@@ -13,7 +13,7 @@
     "changelog": "Changelog"
   },
   "hero": {
-    "eyebrow": "v0.4 · beta pública · macOS + Windows",
+    "eyebrow": "v0.1 · alpha pública · macOS + Windows",
     "title1": "Ve de dónde ",
     "titleAccent": "viene",
     "title2": " realmente ",
@@ -26,7 +26,7 @@
     "meta1": "Dispositivos activos",
     "meta2": "En vivo desde",
     "meta3": "Open source",
-    "badge": "v0.4 · beta pública · macOS + Windows",
+    "badge": "v0.1 · alpha pública · macOS + Windows",
     "heading": "Ve de dónde <em>viene realmente</em> tu código.",
     "lead": "Eye of Providence mide cuánto escribes tú y cuánto escribe la IA.",
     "cta_primary": "Descargar agente",

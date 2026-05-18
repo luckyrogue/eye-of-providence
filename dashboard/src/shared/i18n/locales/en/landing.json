@@ -13,7 +13,7 @@
     "changelog": "Changelog"
   },
   "hero": {
-    "eyebrow": "v0.4 · public beta · macOS + Windows",
+    "eyebrow": "v0.1 · public alpha · macOS + Windows",
     "title1": "See where your ",
     "titleAccent": "code",
     "title2": " really ",
@@ -26,7 +26,7 @@
     "meta1": "Active devices",
     "meta2": "Live since",
     "meta3": "Open source",
-    "badge": "v0.4 · public beta · macOS + Windows",
+    "badge": "v0.1 · public alpha · macOS + Windows",
     "heading": "See where your code <em>really comes from</em>.",
     "lead": "Eye of Providence measures how much you write yourself, how much your AI writes for you, and where the rest of your time goes.",
     "cta_primary": "Download agent",
