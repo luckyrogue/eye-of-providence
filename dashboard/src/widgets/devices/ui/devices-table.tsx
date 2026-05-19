@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { DataTable, type DataTableColumn } from "@eop/ui";
 import type { Device } from "@/entities/device";
-import { RevokeDeviceButton } from "@/features/device-revoke";
+import { RevokeDeviceButton } from "./revoke-device-button";
 import { DeviceKindBadge } from "./device-kind-badge";
 
 export function DevicesTable({ devices, isLoading }: { devices: Device[]; isLoading: boolean }) {

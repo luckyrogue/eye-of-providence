@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { APIToken } from "@/entities/user";
-import { RevokeTokenButton } from "@/features/api-token-revoke";
+import { RevokeTokenButton } from "./revoke-token-button";
 
 export function TokenRow({ token }: { token: APIToken }) {
   const { t } = useTranslation("developer");

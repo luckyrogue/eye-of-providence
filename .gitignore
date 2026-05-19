@@ -33,9 +33,6 @@ backend/bin/
 *.out
 coverage.txt
 
-# Proto generated
-proto/gen/
-
 # Local data
 *.sqlite
 *.db

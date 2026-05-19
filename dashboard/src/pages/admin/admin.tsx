@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertTriangle } from "lucide-react";
 import { useAdminStats, useAdminTeams, useAdminUsers } from "@/entities/admin";
-import { AdminRefreshButton } from "@/features/admin-refresh";
+import { AdminRefreshButton } from "./ui/admin-refresh-button";
 import { APITokensCrossUser } from "@/widgets/admin-api-tokens-cross-user";
 import { AuditLog } from "@/widgets/admin-audit";
 import { ContentEditorPage } from "@/widgets/admin-content-editor";

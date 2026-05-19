@@ -111,14 +111,15 @@ API **сам прогонит** все SQL-миграции при старте,
 Если хочешь применять вручную — выставь `EOP_AUTO_MIGRATE=false`:
 
 ```bash
-# Postgres
-psql -h <host> -U eop -d eop -f backend/migrations/001_init.up.sql
-psql -h <host> -U eop -d eop -f backend/migrations/002_teams_auth.up.sql
-psql -h <host> -U eop -d eop -f backend/migrations/003_multi_team_projects.up.sql
+# Postgres — полный список: backend/internal/migrate/sql/postgres/*.up.sql (по порядку)
+psql -h <host> -U eop -d eop -f backend/internal/migrate/sql/postgres/001_init.up.sql
+psql -h <host> -U eop -d eop -f backend/internal/migrate/sql/postgres/002_teams_auth.up.sql
+psql -h <host> -U eop -d eop -f backend/internal/migrate/sql/postgres/003_multi_team_projects.up.sql
+# … остальные NNN_*.up.sql
 
-# ClickHouse
+# ClickHouse — backend/internal/migrate/sql/clickhouse/*.up.sql
 clickhouse-client --host <host> --user eop --password <CH_PASSWORD> --database eop \
-  --multiquery < backend/migrations/clickhouse_001_init.sql
+  --multiquery < backend/internal/migrate/sql/clickhouse/001_events.up.sql
 ```
 
 ## 6. Dashboard (Application)

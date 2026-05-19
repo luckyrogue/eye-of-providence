@@ -10,17 +10,24 @@ algoritm v1 (paste size + AI domains) даёт ~70%. v2 добавляет 3 и�
 
 ## Категории и полезная атрибуция
 
-ClickHouse `attribution_events` (`backend/internal/migrate/sql/clickhouse/002_attribution_events.up.sql`):
+Два слоя категорий:
 
-| `category` | `ai_provider` | `ai_channel` | Сигнал |
+- **Raw `events.category`** (ingest): `idle`, `manual`, `ai`, `reading`, `refactor`, `other`.
+- **Derived `attribution_events.category`** (worker): `typed`, `pasted_ai`, `pasted_other`,
+  `ai_inline`, `ai_agent`, `refactor`, `unknown` — см.
+  [`002_attribution_events.up.sql`](../backend/internal/migrate/sql/clickhouse/002_attribution_events.up.sql).
+
+Таблица ниже — маппинг **сырых** событий на сигналы (до worker Phase B):
+
+| raw `category` | `ai_provider` | `ai_channel` | Сигнал |
 |---|---|---|---|
-| `manual` | — | — | typing < pasteThreshold (80 chars) |
+| `manual` | — | — | typing / paste без AI-метки |
 | `ai` | `copilot` | `inline` | VS Code burst или single paste >= threshold |
-| `ai` | `cursor` | `inline` | Cursor (vscode.env.appName === "Cursor") + same heuristic |
-| `ai` | `claude-code` | `agent` | PostToolUse hook от Claude Code |
+| `ai` | `cursor` | `inline` | Cursor (`vscode.env.appName === "Cursor"`) + same heuristic |
+| `ai` | `claude-code` | `agent` | `eop-hook` на PostToolUse `Edit\|Write\|MultiEdit` |
 | `ai` | `openai` / `anthropic` | `chat` | browser-ext: chatgpt.com / claude.ai |
-| `refactor` | — | — | replace > threshold с inserted >= replaced × 0.5 |
-| `reading` | — | — | focus_ms без changes |
+| `refactor` | — | — | структурное изменение в IDE |
+| `reading` | — | — | focus без edits |
 
 ## VS Code / Cursor extension
 
@@ -65,18 +72,21 @@ ClickHouse `attribution_events` (`backend/internal/migrate/sql/clickhouse/002_at
 
    (или через `go install ./cmd/eop-hook` чтобы попало в `$GOBIN`).
 
-2. Получи EOP token (один раз):
+2. Получи EOP token (только **local dev**; в production `dev-token` отключён):
 
    ```sh
-   curl -X POST https://eop.rysdavletov.org/api/v1/auth/dev-token | jq -r .token
+   # backend с EOP_ENABLE_DEV_TOKEN=true (default в development)
+   curl -X POST http://localhost:8080/v1/auth/dev-token | jq -r .token
    ```
 
    Сохрани в `~/.zshrc` / `~/.bashrc`:
 
    ```sh
    export EOP_TOKEN="<token>"
-   export EOP_BACKEND="https://eop.rysdavletov.org/api"
+   export EOP_BACKEND="http://localhost:8080"   # или ваш self-host URL
    ```
+
+   В production используй API token из dashboard (`eop_<…>`) или device pairing.
 
 3. Подключи hook в Claude Code settings (`~/.claude/settings.json` для
    user-wide или `.claude/settings.json` в репо для project-only):
@@ -105,9 +115,10 @@ ClickHouse `attribution_events` (`backend/internal/migrate/sql/clickhouse/002_at
 
 ### Privacy
 
-Hook шлёт только counts (chars/lines/lang), **не контент** файлов. Полная
-схема в `validEvent()` (`backend/internal/ingest/handler.go`) гарантирует
-отсутствие text content в payload.
+Hook шлёт только counts (chars/lines/lang), **не контент** файлов. Валидация
+на ingest — `domain.ValidEvent()` в
+[`backend/internal/ingest/domain/event.go`](../backend/internal/ingest/domain/event.go);
+текстовых полей в wire-format нет.
 
 ### Failure-mode
 
@@ -117,7 +128,7 @@ Hook шлёт только counts (chars/lines/lang), **не контент** ф
 
 ## Browser extension
 
-Файл: `browser-extension/src/background.ts`. Без изменений в v2 — отслеживает
+Файл: `browser-extension/src/entrypoints/background.ts`. Без изменений в v2 — отслеживает
 focus на AI-доменах, эмитит `category=ai`, `ai_provider` из mapping
 `ai-domains.ts`, `ai_channel=chat` (не inline).
 

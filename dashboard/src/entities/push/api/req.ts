@@ -8,7 +8,7 @@
 //   5. при unsubscribe: subscription.unsubscribe() + POST /unsubscribe
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { http } from "@/shared/api/http";
+import { http } from "@/shared/api";
 import type { ListPushSubscriptionsRes, VAPIDInfoRes } from "./res";
 
 export const pushKeys = {

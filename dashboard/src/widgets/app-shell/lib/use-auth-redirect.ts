@@ -3,8 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/entities/session";
 import { useTeams } from "@/entities/team";
 import { useMe } from "@/entities/user";
-import { AUTH_FAILED_EVENT } from "@/shared/api/http";
-import { httpErrorStatus } from "@/shared/config/query-client";
+import { AUTH_FAILED_EVENT } from "@/shared/api";
+import { httpErrorStatus } from "@/shared/config";
 import { buildLoginURL } from "@/shared/lib/redirect";
 
 export function useAuthRedirect() {

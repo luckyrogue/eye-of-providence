@@ -1,1 +1,0 @@
-export { InsightsWidget } from "./ui";

@@ -1,7 +1,7 @@
 // /v1/teams/* — fetchers + TanStack hooks для всех team-endpoint'ов.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { http } from "@/shared/api/http";
+import { http } from "@/shared/api";
 import type {
   CreateInviteRes,
   CreateTeamRes,

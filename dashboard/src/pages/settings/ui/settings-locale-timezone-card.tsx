@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@eop/ui";
 import { Globe } from "lucide-react";
-import { LocaleSelect } from "@/features/locale-switch";
-import { TimezoneSelect } from "@/features/timezone-switch";
+import { LocaleSelect } from "./locale-select";
+import { TimezoneSelect } from "./timezone-select";
 
 export function SettingsLocaleTimezoneCard() {
   const { t } = useTranslation("common");

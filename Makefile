@@ -44,9 +44,6 @@ backend-auth:
 backend-reports:
 	cd backend && go run ./cmd/reports
 
-proto-gen:
-	cd proto && buf generate
-
 agent-dev:
 	pnpm -F @eop/agent tauri dev
 

@@ -34,7 +34,7 @@ production (Caddy / Traefik / nginx).
 | `EOP_HTTP_ADDR` | listen address | `:8080` |
 | `EOP_POSTGRES_DSN` | Postgres DSN; пусто = in-memory fallback | `postgres://eop:eop_dev@localhost:5432/eop?sslmode=disable` |
 | `EOP_CLICKHOUSE_DSN` | ClickHouse DSN; пусто = in-memory fallback | `clickhouse://eop:eop_dev@localhost:9000/eop` |
-| `EOP_REDIS_ADDR` | (зарезервировано — пока не используется) | `localhost:6379` |
+| `EOP_REDIS_ADDR` | Redis: analytics cache, WebAuthn challenge store (required в full compose) | `localhost:6379` |
 | `EOP_JWT_SECRET` | секрет для подписи JWT | dev-only-секрет, **обязательно поменять в production** |
 | `EOP_GEMINI_API_KEY` | ключ Google AI Studio; пусто = mock-режим (dev) | пусто |
 | `EOP_GITHUB_CLIENT_ID` | GitHub OAuth app | пусто |

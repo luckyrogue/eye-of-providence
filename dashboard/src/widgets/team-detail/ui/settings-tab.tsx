@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { DangerZone } from "@eop/ui";
 import type { Team } from "@/entities/team";
-import { DeleteTeamButton } from "@/features/team-delete";
-import { RenameTeamForm } from "@/features/team-rename";
+import { DeleteTeamButton } from "./delete-team-button";
+import { RenameTeamForm } from "./rename-team-form";
 
 export function SettingsTab({ team }: { team: Team }) {
   const { t } = useTranslation("app");

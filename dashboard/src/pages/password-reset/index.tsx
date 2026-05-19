@@ -1,2 +1,2 @@
-export { ForgotPasswordRoute } from "./forgot";
-export { ResetPasswordRoute } from "./reset";
+export { ForgotPasswordRoute } from "./ui/forgot";
+export { ResetPasswordRoute } from "./ui/reset";

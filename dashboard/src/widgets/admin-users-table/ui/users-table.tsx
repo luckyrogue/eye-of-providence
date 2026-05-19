@@ -13,9 +13,9 @@ import {
 import type { AdminUser } from "@/entities/admin";
 import { useAdminDeleteUser } from "@/entities/admin";
 import { useConfirm } from "@eop/ui";
-import { UserRoleSelect } from "@/features/admin-update-user-role";
+import { UserRoleSelect } from "./role-select";
 import { dtLabels } from "@/shared/lib/data-table-labels";
-import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
+import { useMutationToast } from "@/shared/hooks";
 import { formatDate } from "@/shared/lib/tz";
 
 export function UsersTable({ users, tz }: { users: AdminUser[]; tz: string }) {

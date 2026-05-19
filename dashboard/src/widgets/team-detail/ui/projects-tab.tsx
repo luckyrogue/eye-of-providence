@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@eop/ui";
 import { useProjects } from "@/entities/team";
-import { CreateProjectButton } from "@/features/project-create";
+import { CreateProjectButton } from "./create-project-button";
 import { isReadOnlyRole } from "../lib/roles";
 import { formatDate } from "@/shared/lib/tz";
 

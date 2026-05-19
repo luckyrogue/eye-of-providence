@@ -1,1 +1,1 @@
-export { RouteError } from "./route-error";
+export { RouteError } from "./ui/route-error";

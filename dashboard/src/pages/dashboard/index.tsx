@@ -1,1 +1,1 @@
-export { DashboardRoute } from "./dashboard";
+export { DashboardRoute } from "./ui/dashboard";

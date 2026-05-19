@@ -18,7 +18,7 @@ import {
   type CrossTeamWebhook,
 } from "@/entities/admin";
 import { dtLabels } from "@/shared/lib/data-table-labels";
-import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
+import { useMutationToast } from "@/shared/hooks";
 import { formatDate } from "@/shared/lib/tz";
 
 export function WebhooksCrossTeam({ tz }: { tz: string }) {

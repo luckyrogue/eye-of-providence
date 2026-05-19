@@ -5,7 +5,6 @@ pnpm-lock.yaml
 
 backend/
 ide-vscode/
-proto/
 infra/
 
 **/*.md

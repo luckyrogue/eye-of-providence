@@ -2,8 +2,10 @@
 
 Two stores: **Postgres** для transactional state (users, teams, devices,
 projects, reports, audit log) и **ClickHouse** для analytics (events,
-attribution, materialized aggregates). Источник правды wire-формата —
-[`proto/event.proto`](../proto/event.proto).
+attribution, materialized aggregates). Источник правды wire-формата ingest —
+[`docs/api/openapi.yaml`](api/openapi.yaml) (`components.schemas.Event`) и
+Go-тип [`backend/internal/ingest/domain/event.go`](../backend/internal/ingest/domain/event.go).
+Транспорт: JSON `POST /v1/ingest` (не protobuf/gRPC).
 
 Все SQL-миграции под версионным контролем в `backend/internal/migrate/sql/`
 (`postgres/NNN_*.up.sql` и `clickhouse/NNN_*.up.sql`). API применяет их
@@ -95,25 +97,60 @@ category Enum8(
 )
 ```
 
-Worker запускается батчами; pipeline:
+Worker запускается батчами. Состояние по фазам (см. комментарии в
+[`backend/internal/attribution/worker.go`](../backend/internal/attribution/worker.go)):
+
+**Phase A (сейчас):**
 1. читает свежие `events` с `category in (manual, ai)`;
-2. джойнит clipboard_sha256 paste-событий с last-seen `clipboard_signal`
-   (из browser ext / desktop agent) — окно 30 сек;
-3. для inline/agent — джойнит с IDE-plugin telemetry;
-4. пишет batch в `attribution_events`, idempotent через `(ts, user_id, project_id)` dedup.
+2. маппит каждое событие на `attribution_events.category` по плоским правилам
+   (`source`, `category`, `ai_channel` из raw event — без join'ов и без контента);
+3. пишет batch в `attribution_events`, idempotent через dedup по `(ts, user_id, project_id)`.
+
+**Phase B (roadmap):**
+1. джойнит `clipboard_sha256` paste-событий с last-seen `clipboard_signal`
+   (browser ext / desktop agent) — окно 30 сек → `pasted_ai` vs `pasted_other`;
+2. per-hunk attribution через diff snapshots в IDE extension;
+3. точное различение inline/agent без эвристик там, где есть direct API hooks.
 
 ### 2.3 Materialized aggregates
 
-- `events_hourly_agg` (`003_events_hourly_agg.up.sql`) — `SummingMergeTree`
-  по `(user_id, bucket_ts, category, file_lang)`. Покрывает hot queries:
-  `AggregateByCategory`, `DailyTrend`, `LanguageBreakdown`, `Heatmap`.
-  Reduction ~330× для 100 active users.
-- `events_daily_agg` (`004_events_daily_agg.up.sql`) — то же на day-bucket
-  для long-range запросов (30/90 days).
+Cascading MVs (`backend/internal/migrate/sql/clickhouse/003_*`, `004_*`):
 
-Materialized views (`*_mv`) поддерживают agg-таблицы in real-time на
-каждом insert. Backfill после миграции — один-shot INSERT с `WHERE ts <
-toStartOfHour(now()) - INTERVAL 1 HOUR`, безопасно к double-count.
+```
+events (raw)  →  events_hourly_agg  →  events_daily_agg
+              events_hourly_mv       events_daily_mv
+```
+
+- `events_hourly_agg` — `SummingMergeTree` по `(user_id, bucket_ts, category, file_lang)`.
+  Hot queries: `AggregateByCategory`, `DailyTrend`, `LanguageBreakdown`, `Heatmap`.
+- `events_daily_agg` — day-bucket для long-range (30/90 days).
+
+**Routing** (`store/clickhouse.go`): `AggregateByCategory` / bulk → **daily** MV when
+`since ≥ 30d`, else hourly. `DailyTrend`, `LanguageBreakdown`, `Heatmap` stay on hourly
+(tz / day-of-week semantics).
+
+**Reduction** (100 active users): raw ~10M rows/day → hourly ~290K (**35×**) → daily ~12K
+(**840×** vs raw).
+
+Materialized views roll up each INSERT in real-time. Backfill on first migration apply;
+on large prod DBs monitor `system.merges` — prefer chunked backfill by day/week.
+
+**Benchmark** (`go run ./cmd/ch-bench` from `backend/`):
+
+```sh
+EOP_CH_DSN="clickhouse://default:@localhost:19000/eop_test" \
+  go run ./cmd/ch-bench --users=10 --days=30 --events-per-user-per-day=10000
+```
+
+Local CH 24, 3M events (10×30×10K): `AggregateByCategory` p95 ~1 ms on daily MV vs ~8 ms
+on hourly. Flags: `--skip-seed` if DB already seeded.
+
+### 2.4 Redis read cache (`store/cached.go`)
+
+Decorator over `EventStore` when Redis is reachable. TTLs: `AggregateByCategory` 10m,
+`AggregateByCategoryBulk` 5m, `LanguageBreakdown` 10m, `DailyTrend` 5m, `Heatmap` 10m.
+Keys: `eop:cache:{prefix}:{userID}:{params}`. Not cached: `Insert`, `ListRecent`,
+`ActiveUserIDs`; `DeleteUserData` invalidates user keys. Redis down → miss + log, no fail.
 
 ## 3. Event flow
 
@@ -145,11 +182,11 @@ toStartOfHour(now()) - INTERVAL 1 HOUR`, безопасно к double-count.
 ## 4. Cross-cutting invariants
 
 - **`user_id` всегда UUIDv4**, никогда не email и не client-supplied. Backend
-  переписывает `event.user_id` из JWT-claims (`ingest/handler.go`), даже
+  переписывает `event.user_id` из JWT-claims (`ingestapp/service.go`), даже
   если агент прислал что-то другое.
 - **Никакого контента**. Все таблицы хранят либо счётчики, либо хеши, либо
-  enum-категории. Подробнее — `proto/event.proto` комментарии и
-  [`docs/privacy.md` §1.1](privacy.md#11-никогда-не-покидает-машину-пользователя).
+  enum-категории. `meta` — только безопасные ключи (`clipboard_sha256`, …).
+  Подробнее — [`docs/privacy.md` §1.1](privacy.md#11-никогда-не-покидает-машину-пользователя).
 - **idempotent miграции**. Все `001..N` под advisory_lock + `IF NOT EXISTS`,
   rollback'и в `*.down.sql`. Backfill в hourly_agg повторно-безопасен.
 - **TTL — единственный механизм retention** для analytics. Не полагаемся на
@@ -159,8 +196,8 @@ toStartOfHour(now()) - INTERVAL 1 HOUR`, безопасно к double-count.
 ## 5. Расширение
 
 При добавлении нового поля в Event:
-1. Обнови `proto/event.proto` (комментарий с invariant если safe-field).
-2. Добавь поле в `backend/internal/store/event.go` `Event` struct.
+1. Обнови `components.schemas.Event` в [`docs/api/openapi.yaml`](api/openapi.yaml).
+2. Добавь поле в `backend/internal/ingest/domain/event.go` и `backend/internal/store/event.go`.
 3. Добавь column в `001_events.up.sql` через новую миграцию `005_*.up.sql`
    (`ALTER TABLE events ADD COLUMN ... AFTER existing_col`).
 4. Обнови `Insert()` в `clickhouse.go` (новый поз. arg в `batch.Append`).

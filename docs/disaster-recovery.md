@@ -13,7 +13,7 @@
 | API + dashboard | 30 min | n/a (stateless) |
 | Postgres (auth, teams, payments, audit) | 1 h | 24 h (daily dump) |
 | ClickHouse (events) | 4 h | 24 h (snapshot) |
-| Redis (cache) | 5 min | n/a (rebuildable) |
+| Redis (cache + WebAuthn) | 5 min | n/a (cache rebuildable; required at runtime) |
 
 These are **beta** targets. For GA contractual SLAs we tighten RPO Postgres to 1h via WAL streaming.
 
@@ -27,14 +27,14 @@ These are **beta** targets. For GA contractual SLAs we tighten RPO Postgres to 1
    Retention: 30 days local, 90 days S3.
 2. **ClickHouse** — daily volume snapshot via Dokploy (or `clickhouse-backup`
    to S3). Single table `events` + materialized views.
-3. **Container images** — GHCR `ghcr.io/luckyrogue/eye-of-providence:*`
+3. **Container images** — GHCR `ghcr.io/luckyrogue/eop:*`
    (immutable per-deploy tag + `:main` floating).
 4. **Configuration** — env vars in Dokploy UI; export via Dokploy CLI weekly
    to git-encrypted repo (NOT to public eye-of-providence repo).
 5. **Migrations** — already in image (`backend/internal/migrate/sql/postgres/*.up.sql`).
 
 What is **NOT** backed up:
-- Redis cache — rebuildable on cold start
+- Redis data — cache rebuildable on cold start; WebAuthn pending challenges are ephemeral
 - Pairing codes — ephemeral (10 min TTL)
 - Push subscriptions — users can re-subscribe (UA-bound)
 
@@ -80,7 +80,8 @@ docker exec eop-clickhouse clickhouse-backup upload eop-$(date +%Y%m%d)
 
 ```bash
 # 1. Stop API to prevent concurrent writes during restore.
-docker compose -f infra/docker-compose.full.yml stop api
+# Service name in compose is `eop`; container_name is `eop-app` (for docker exec).
+docker compose -f infra/docker-compose.full.yml stop eop
 
 # 2. Drop target DB (DESTRUCTIVE — only on confirmed loss).
 docker exec eop-postgres psql -U eop -d postgres -c "DROP DATABASE IF EXISTS eop;"
@@ -98,7 +99,7 @@ docker exec eop-postgres psql -U eop -d eop -c \
    UNION ALL SELECT 'audit_log', count(*) FROM audit_log;"
 
 # 5. Start API; миграции автоприменятся если backup был старше последней miграции.
-docker compose -f infra/docker-compose.full.yml start api
+docker compose -f infra/docker-compose.full.yml start eop
 
 # 6. Check /healthz returns 200.
 curl -fsS http://localhost:8080/healthz
@@ -120,7 +121,7 @@ docker exec eop-clickhouse clickhouse-backup restore eop-YYYYMMDD
 ### Full DR (region failure)
 
 1. **Provision new host** in alternative region (Dokploy on new VM).
-2. **Pull latest image:** `docker pull ghcr.io/luckyrogue/eye-of-providence:main`.
+2. **Pull latest image:** `docker pull ghcr.io/luckyrogue/eop:main`.
 3. **Restore env vars** from git-encrypted backup.
 4. **Restore Postgres + ClickHouse** dumps from S3.
 5. **Update DNS** (`eop.rysdavletov.org` A record → new host IP).
@@ -216,7 +217,7 @@ docker exec eop-api /usr/local/bin/migrate \
 - **On-call rotation:** see `#oncall` Slack channel
 - **Cloud account access:** Vault `secret/eop/prod-aws` + `secret/eop/dokploy`
 - **Domain control:** Cloudflare account, `eop.rysdavletov.org` zone
-- **Image registry:** GitHub → Settings → Packages → `eye-of-providence`
+- **Image registry:** GitHub → Settings → Packages → `eop`
 
 ---
 

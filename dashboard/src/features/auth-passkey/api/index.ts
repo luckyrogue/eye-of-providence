@@ -25,7 +25,7 @@ import {
   type PublicKeyCredentialRequestOptionsJSON,
   type RegistrationResponseJSON,
 } from "@simplewebauthn/browser";
-import { http } from "@/shared/api/http";
+import { http } from "@/shared/api";
 import type { Passkey } from "@/entities/user";
 
 export const passkeyKeys = {

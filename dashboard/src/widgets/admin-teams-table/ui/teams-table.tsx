@@ -14,10 +14,10 @@ import {
 } from "@eop/ui";
 import type { AdminTeam, AdminUser } from "@/entities/admin";
 import { useAdminDeleteTeam } from "@/entities/admin";
-import { AddMemberForm } from "@/features/admin-add-team-member";
-import { SubscriptionModal } from "@/features/admin-set-subscription";
+import { AddMemberForm } from "./add-member-form";
+import { SubscriptionModal } from "./subscription-modal";
 import { dtLabels } from "@/shared/lib/data-table-labels";
-import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
+import { useMutationToast } from "@/shared/hooks";
 import { formatDate } from "@/shared/lib/tz";
 import { TeamDrawer } from "./team-drawer";
 

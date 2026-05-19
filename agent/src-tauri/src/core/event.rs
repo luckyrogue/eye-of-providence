@@ -1,4 +1,4 @@
-// Event types — mirror proto/event.proto.
+// Event types — JSON wire format for POST /v1/ingest (see docs/api/openapi.yaml Event).
 // JSON-сериализация для отправки в backend (Phase 1).
 
 use std::collections::BTreeMap;
@@ -48,7 +48,7 @@ pub struct Event {
     pub lines_added: u32,
     pub lines_removed: u32,
     /// Безопасные расширения без контента: clipboard_sha256/clipboard_bytes,
-    /// mouse_clicks и т.п. См. proto/event.proto Event.meta. BTreeMap чтобы
+    /// mouse_clicks и т.п. См. OpenAPI Event.meta. BTreeMap чтобы
     /// JSON-сериализация была детерминированной (помогает в тестах и при
     /// дедупе хешей событий на бэкенде).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]

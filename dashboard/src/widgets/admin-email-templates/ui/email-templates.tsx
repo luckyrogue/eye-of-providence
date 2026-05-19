@@ -13,7 +13,7 @@ import {
   type EmailTemplateKey,
   type EmailTemplateLocale,
 } from "@/entities/admin";
-import { EmailTemplateEditor } from "@/features/admin-email-template";
+import { EmailTemplateEditor } from "./email-template-editor";
 
 const ALL_KEYS: EmailTemplateKey[] = ["password_reset", "team_invite", "subscription_activated"];
 const ALL_LOCALES: EmailTemplateLocale[] = ["en", "ru", "kk", "es"];

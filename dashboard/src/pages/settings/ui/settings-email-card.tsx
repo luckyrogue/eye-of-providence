@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Mail } from "lucide-react";
-import { ChangeEmailForm } from "@/features/change-email";
+import { ChangeEmailForm } from "./change-email-form";
 
 export function SettingsEmailCard({
   hasPassword,

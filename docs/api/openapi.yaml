@@ -148,6 +148,11 @@ paths:
                 properties:
                   invite_only: { type: boolean }
                   is_first_user: { type: boolean }
+                  providers:
+                    type: array
+                    items: { type: string }
+                    description: Enabled OAuth providers (e.g. github, google)
+                  passkey_enabled: { type: boolean }
 
   # --- Me ---
   /v1/me:
@@ -551,9 +556,17 @@ components:
 
     Event:
       type: object
+      description: >
+        Ingest atom. Must NOT contain file content, prompts, or clipboard text —
+        only counts, hashes, and enums. Backend overwrites user_id from JWT.
       required: [app_bundle, source, category]
       properties:
         ts: { type: string, format: date-time }
+        user_id:
+          type: string
+          description: Ignored on ingest; set from Bearer token.
+        device_id: { type: string }
+        session_id: { type: string }
         app_bundle: { type: string, description: "e.g. com.microsoft.VSCode" }
         source: { type: string, enum: [os, browser, ide, cli] }
         category:
@@ -562,12 +575,17 @@ components:
         ai_provider:
           type: string
           description: "copilot | cursor | claude-code | openai | anthropic | ..."
-        ai_channel: { type: string, enum: [inline, chat, agent] }
+        ai_channel: { type: string, enum: [chat, inline, agent, cli] }
+        project_id: { type: string }
         file_lang: { type: string }
-        duration_ms: { type: integer, minimum: 0 }
+        duration_ms: { type: integer, minimum: 0, maximum: 86400000 }
         chars_in: { type: integer, minimum: 0 }
         lines_added: { type: integer, minimum: 0 }
         lines_removed: { type: integer, minimum: 0 }
+        meta:
+          type: object
+          additionalProperties: { type: string }
+          description: "Safe extensions only, e.g. clipboard_sha256, clipboard_bytes, mouse_clicks"
 
     LangCell:
       type: object

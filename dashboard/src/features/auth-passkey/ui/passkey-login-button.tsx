@@ -11,7 +11,7 @@
 import { useTranslation } from "react-i18next";
 import { Button } from "@eop/ui";
 import { Fingerprint } from "lucide-react";
-import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
+import { useMutationToast } from "@/shared/hooks";
 import { useLoginPasskey } from "../api";
 
 function mapBrowserError(e: unknown, t: (k: string) => string): string {

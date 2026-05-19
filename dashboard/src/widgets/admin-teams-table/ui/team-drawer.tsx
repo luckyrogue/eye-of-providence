@@ -8,8 +8,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import type { AdminTeam } from "@/entities/admin";
-import { TeamFlagsForm } from "@/features/admin-team-flags";
-import { PlanLimitsForm } from "@/features/admin-plan-overrides";
+import { TeamFlagsForm } from "./team-flags-form";
+import { PlanLimitsForm } from "./plan-limits-form";
 import { formatDate } from "@/shared/lib/tz";
 
 type DrawerTab = "info" | "flags" | "limits";

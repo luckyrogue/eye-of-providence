@@ -1,13 +1,13 @@
 // Webhooks management — Settings page section.
 //
-// Симметрия с api-tokens widget: список + create-feature + delete-feature.
+// Симметрия с api-tokens widget: список + create/delete dialogs.
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Plus, Webhook as WebhookIcon } from "lucide-react";
 import { useWebhooks } from "@/entities/webhook";
-import { CreateWebhookDialog } from "@/features/webhook-create";
+import { CreateWebhookDialog } from "./create-webhook-dialog";
 import { WebhookRow } from "./webhook-row";
 
 export function WebhooksWidget() {

@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { toast, useConfirm } from "@eop/ui";
 import { Power, ShieldCheck } from "lucide-react";
 import { useAdminSSODisable, useAdminSSOList, type AdminSSOConfig } from "@/entities/admin";
-import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
+import { useMutationToast } from "@/shared/hooks";
 import { formatDate } from "@/shared/lib/tz";
 
 export function SSOConfigs({ tz }: { tz: string }) {

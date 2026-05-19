@@ -36,12 +36,25 @@ flowchart TD
   `@` → `dashboard/src`, настроен в `vite.config.ts` + `tsconfig.json`).
 - Не используйте глубокие relative-пути (`../../../entities/...`) — только `@/`.
 - Снаружи слайса импортируйте только через **barrel** (`@/entities/team`, не
-  `@/entities/team/api/req`). ESLint: `warn` на внутренние сегменты.
+  `@/entities/team/api/req`). ESLint: **error** на внутренние сегменты entities/features/widgets.
+- **shared** — только через сегментные barrels: `@/shared/api`, `@/shared/config`,
+  `@/shared/hooks` (не `@/shared/api/http`, не корневой `@/shared/index.ts`).
 - Горизонтальные импорты между слайсами одного слоя — **error** (ESLint + Steiger).
 - Cross-feature / cross-page композиция — на уровне **pages** или **widgets**, не
   внутри `features/*`.
+- **`features/`** — только слайсы с **2+** внешними потребителями (сейчас:
+  `auth-passkey`). Остальные действия живут в `pages/*/ui` или `widgets/*/ui`.
 - Не вводите суффиксы `*-v2` / `v2.tsx` в публичных именах: после миграции
   переименовывайте в каноничное имя (`app-shell`, `dashboard.tsx`).
+
+## Steiger (CI: `pnpm steiger`)
+
+- `fsd/forbidden-imports`, `no-public-api-sidestep`, `no-segmentless-slices`,
+  `insignificant-slice` (features/pages/app) — **error**.
+- `fsd/insignificant-slice` **off** для `widgets/**` и `entities/**`: виджеты —
+  композиция страниц; entities — переиспользуемый доменный слой.
+- `fsd/excessive-slicing` — **warn** (префиксы `admin-*`, `dashboard-*` считаются группами).
+- Проверка: `pnpm -F @eop/dashboard steiger` — 0 errors перед merge.
 
 ## Сегменты внутри слайса (одинаковы для всех слоёв)
 

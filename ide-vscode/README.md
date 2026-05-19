@@ -52,7 +52,7 @@ Click the status bar item to open the dashboard.
 - `eop.pasteThresholdChars` — minimum chars in a single insert to be treated
   as AI / paste (default 80).
 
-## Status: closed beta
+## Status: alpha
 
 Distributed as a `.vsix` for invited testers. Install via
 `code --install-extension eop-vscode-0.0.1.vsix` or **Extensions →

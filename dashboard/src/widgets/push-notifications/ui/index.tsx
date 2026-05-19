@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Bell } from "lucide-react";
 import { PUSH_SUPPORTED, useVAPIDKey, usePushSubscriptions } from "@/entities/push";
-import { EnablePushButton } from "@/features/push-subscribe";
+import { EnablePushButton } from "./enable-push-button";
 import { SubscriptionRow } from "./subscription-row";
 
 export function PushNotificationsWidget() {

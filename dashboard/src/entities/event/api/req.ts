@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { http } from "@/shared/api/http";
+import { http } from "@/shared/api";
 import type { EventRow } from "./types";
 import type { HeatmapRes, IngestRes, LanguagesRes, RecentRes, SummaryRes, TrendRes } from "./res";
 

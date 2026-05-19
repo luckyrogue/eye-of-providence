@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { http } from "@/shared/api/http";
+import { http } from "@/shared/api";
 import type { WebhookEvent, WebhookFormat } from "./types";
 import type { CreateWebhookRes, ListWebhooksRes } from "./res";
 

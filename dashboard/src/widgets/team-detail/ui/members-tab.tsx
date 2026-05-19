@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { MemberStat, TeamMember } from "@/entities/team";
-import { CreateInviteBlock } from "@/features/team-create-invite";
+import { CreateInviteBlock } from "./create-invite-block";
 import { ObserverHint } from "./role-hint";
 import { isReadOnlyRole } from "../lib/roles";
 import { MemberRow } from "./member-row";

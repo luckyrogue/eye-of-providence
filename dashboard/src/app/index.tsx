@@ -6,7 +6,7 @@ import { ConfirmProvider, Toaster } from "@eop/ui";
 import "@eop/ui/styles.css";
 import "../shared/i18n"; // side-effect: инициализирует i18next до первого render'а
 import { ErrorBoundary } from "./error-boundary";
-import { queryClient } from "@/shared/config/query-client";
+import { queryClient } from "@/shared/config";
 import { router } from "./router";
 import { registerSW } from "@/shared/lib/pwa";
 

@@ -3,7 +3,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eyebrow, Stepper } from "@eop/ui";
 import { createInvite, createTeam, teamsKeys } from "@/entities/team";
-import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
+import { useMutationToast } from "@/shared/hooks";
 import { SESSION_KEYS } from "@/shared/lib/session-storage";
 import { ONBOARDING_STEPS, type OnboardingStep } from "./model/steps";
 import { CompanyStep } from "./ui/company-step";

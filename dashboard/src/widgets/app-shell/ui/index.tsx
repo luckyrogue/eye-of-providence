@@ -6,6 +6,7 @@ import { useAuth } from "@/entities/session";
 import { useMe } from "@/entities/user";
 import { formatShortDisplayName } from "@/shared/lib/display-name";
 import { useAuthRedirect } from "../lib/use-auth-redirect";
+import { ResilienceBanners } from "./resilience-banners";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 
@@ -59,6 +60,7 @@ export function AppShell() {
             window.location.href = "/login";
           }}
         />
+        <ResilienceBanners />
         <div className="eop-dash-content mx-auto w-full">
           <Outlet />
         </div>

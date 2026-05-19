@@ -1,1 +1,1 @@
-export { AuthCompleteRoute } from "./auth-complete";
+export { AuthCompleteRoute } from "./ui/auth-complete";

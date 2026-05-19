@@ -2,8 +2,8 @@ import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback, getInitials } from "@eop/ui";
 import { Brain } from "lucide-react";
 import type { MemberStat, TeamMember } from "@/entities/team";
-import { RemoveMemberButton } from "@/features/team-remove-member";
-import { MemberRoleSelect } from "@/features/team-update-member-role";
+import { RemoveMemberButton } from "./remove-member-button";
+import { MemberRoleSelect } from "./member-role-select";
 import { isReadOnlyRole } from "../lib/roles";
 
 export function MemberRow({

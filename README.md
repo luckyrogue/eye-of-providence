@@ -52,35 +52,31 @@
 │  │  ┌───────────▼─────────────┐ │  ┌──────────▼────────────┐   │
 │  │  │ Rust core               │ │  │  IDE / CLI plugins    │   │
 │  │  │ • macOS: NSWorkspace,   │ │  │  • VS Code (TS)       │   │
-│  │  │   CGEventTap            │ │  │  • JetBrains (Kotlin, │   │
-│  │  │ • Windows: WinEventHook,│ │  │    опц., V1)          │   │
-│  │  │   GetLastInputInfo      │ │  │  • Claude Code hooks  │   │
-│  │  │ • shared: SQLite буфер, │ │  │  • git post-commit    │   │
-│  │  │   шифрование, отправка  │ │  └──────────┬────────────┘   │
+│  │  │   CGEventTap            │ │  │  • JetBrains (V1)     │   │
+│  │  │ • Windows: WinEventHook,│ │  │  • eop-hook (CLI)     │   │
+│  │  │   GetLastInputInfo      │ │  └──────────┬────────────┘   │
+│  │  │ • SQLite буфер, AES-GCM │ │             │                │
+│  │  │   batch → ingest        │ │             │                │
 │  │  └───────────┬─────────────┘ │             │                │
 │  └──────────────┼───────────────┘             │                │
 │                 └───────────────┬─────────────┘                │
 └─────────────────────────────────┼──────────────────────────────┘
-                                  │ HTTPS (gRPC + JSON)
+                                  │ HTTPS (JSON REST)
                                   ▼
 ┌────────────────────────────────────────────────────────────────┐
 │                  BACKEND (Go monorepo)                         │
 │                                                                │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │  Auth        │  │  Ingest      │  │  Analytics API       │  │
-│  │  (OAuth +    │  │  (gRPC+HTTP, │  │  (queries, exports)  │  │
-│  │   JWT)       │  │   batched)   │  │                      │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────────┬───────────┘  │
-│         │                 │                     │              │
-│  ┌──────▼─────────────────▼─────────────────────▼───────────┐  │
-│  │  Workers (Go) — attribution post-processing, aggregates  │  │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  cmd/api — unified HTTP API (auth, ingest, analytics, …)   │  │
+│  └──────────────────────────┬───────────────────────────────┘  │
+│  ┌──────────────────────────▼───────────────────────────────┐  │
+│  │  cmd/worker — attribution post-processing (Phase A)      │  │
 │  └──────────────────────────┬───────────────────────────────┘  │
 │                             │                                  │
 │  ┌──────────────────────────▼──────────────────────────────┐   │
 │  │   Postgres (users/teams/devices)                        │   │
 │  │   ClickHouse (events, sessions, attribution)            │   │
-│  │   Redis (rate limit, session cache)                     │   │
-│  │   S3 (raw event archive)                                │   │
+│  │   Redis (cache, WebAuthn challenges, rate limits)       │   │
 │  └──────────────────────────┬──────────────────────────────┘   │
 │                             │                                  │
 │                  ┌──────────▼─────────┐                        │
@@ -105,7 +101,7 @@
 - **Shared `ui/` пакет** — те же компоненты, что в web-дашборде и popup browser extension.
 
 **Rust core (~1500 строк, кросс-платформенно с тонкими platform-modules):**
-- `core/` — event schema (Protobuf), SQLite буфер (`rusqlite`), батчинг + retry + offline queue, шифрование (`age` / AES-GCM с ключом из Keychain/DPAPI), redaction engine.
+- `core/` — event schema (JSON, см. [`docs/api/openapi.yaml`](docs/api/openapi.yaml)), SQLite буфер (`rusqlite`), батчинг + retry + offline queue, AES-256-GCM (Keychain/DPAPI), redaction engine.
 - `platform/macos/` — обёртки над `NSWorkspace.frontmostApplication`, `CGEventTap` (keystroke counts), `CGEventSourceSecondsSinceLastEventType` (idle), `NSPasteboard` (change count + хеши). Crates: `objc2`, `core-foundation`, `cocoa`.
 - `platform/windows/` — обёртки над `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)`, `GetForegroundWindow` + `QueryFullProcessImageName`, `GetLastInputInfo`, `SetWindowsHookEx(WH_KEYBOARD_LL)`, `GetClipboardSequenceNumber`. Crate: `windows-rs`.
 - IPC: `tauri::command` для UI ↔ core, локальный HTTP `127.0.0.1:PORT` с токеном для browser extension и IDE plugins.
@@ -132,9 +128,9 @@
   - Cursor: hook на их extension events.
   - Chat panel usage tracking.
 - **JetBrains plugin** (Kotlin) — отложено до V1, через Platform SDK.
-- **Claude Code hooks:** `Stop`, `PostToolUse`, `UserPromptSubmit` хуки в `~/.claude/settings.json` → POST в local agent.
-- **Generic CLI wrapper:** опц. shell-функция-обёртка для `aider`, `gh copilot`, etc.
-- **Git hook (`post-commit`):** финальный attribution-pass на diff коммита.
+- **Claude Code:** `eop-hook` (`backend/cmd/eop-hook`) в `~/.claude/settings.json` на `Edit|Write|MultiEdit` → `POST /v1/ingest` (counts only). См. [`docs/attribution.md`](docs/attribution.md).
+- **Commits:** `POST /v1/commits` (CI/script). Git `post-commit` hook — roadmap.
+- **Generic CLI wrapper:** опц. shell-обёртка для `aider`, `gh copilot` — roadmap.
 
 ### 3.4 Web Dashboard
 - **React SPA** на Vite, тот же `ui/` пакет, что в Tauri и browser extension.
@@ -312,7 +308,7 @@ Materialized views для дешёвых агрегатов: daily/weekly per us
 3. **Open-source клиент** — код агента и расширения публичны, можно self-host backend.
 4. **Local-only mode** — solo-пользователь может вообще не подключать backend.
 5. **Team mode = explicit opt-in**, admin видит только агрегаты по команде, не индивидуальные сессии. Это прописывается на уровне consent в onboarding и enforced на бэкенде.
-6. **Данные deletable**: один клик "delete all my data" → реально стирает из CH/PG/S3.
+6. **Данные deletable**: один клик "delete all my data" → реально стирает из CH/PG.
 7. **Aggregation thresholds**: метрики команды показываются только если ≥5 активных людей (k-anonymity).
 8. **Audit log** — кто из админов что смотрел.
 
@@ -325,7 +321,7 @@ Materialized views для дешёвых агрегатов: daily/weekly per us
 ### MVP (6 недель)
 - **W1–2:** macOS native agent + локальный SQLite + базовая категоризация app→category. Onboarding-скрипт с permissions.
 - **W2–3:** Chrome extension для AI-сайтов. Связка с агентом через native messaging.
-- **W3–4:** Backend: auth (GitHub OAuth), ingest API, минимальный CH-схема, простой Next.js дашборд с personal-метриками.
+- **W3–4:** Backend: auth (GitHub OAuth), ingest API, минимальный CH-схема, Vite + React дашборд с personal-метриками.
 - **W4–5:** Windows agent (паритет с macOS на window/idle/keystroke counts).
 - **W5–6:** Attribution v1 (clipboard-based) + Claude Code hooks + VS Code extension для accept-events.
 
@@ -368,14 +364,14 @@ Materialized views для дешёвых агрегатов: daily/weekly per us
 
 3 основных языка: **TypeScript / React** для всех UI, **Rust** для core агента, **Go** для бэкенда. Kotlin — опц. для JetBrains plugin (V1).
 
-- **Desktop agent:** Tauri 2 + Rust core (`tokio`, `rusqlite`, `prost`) с тонкими platform-modules (`objc2`/`core-foundation` для macOS, `windows-rs` для Windows). UI на React + TypeScript + **shadcn/ui**.
+- **Desktop agent:** Tauri 2 + Rust core (`tokio`, `rusqlite`) с тонкими platform-modules (`objc2`/`core-foundation` для macOS, `windows-rs` для Windows). UI на React + TypeScript + **shadcn/ui**.
 - **Browser extension:** TypeScript + React + **shadcn/ui**, Manifest V3.
 - **IDE plugins:** TypeScript (VS Code). Kotlin для JetBrains — отложено.
-- **CLI hooks:** shell + Claude Code hooks API.
-- **Backend:** Go + **Fiber** (HTTP), **zap** (структурный, zero-alloc логгер), `sqlx`, ClickHouse Go client, gRPC через `connect-go`. Postgres, ClickHouse, Redis, S3.
+- **CLI:** `eop-hook` binary для Claude Code (`backend/cmd/eop-hook`).
+- **Backend:** Go + **Fiber** (JSON REST), **zap**, `pgx`, ClickHouse Go client. Postgres, ClickHouse, Redis.
 - **AI reports:** **Google Gemini API** (`gemini-2.5-flash` / `pro`) через официальный Go SDK (`google.golang.org/genai`), с context caching. Опц. локальный fallback через Ollama.
 - **Web dashboard:** React SPA на Vite, **shadcn/ui** (Radix UI + Tailwind), Recharts/Visx. Тот же `ui/` пакет, что и в Tauri / browser extension.
-- **Shared:** Protobuf-схемы для событий (общий контракт между Rust agent → Go backend → TS UI).
+- **Shared event contract:** JSON schema в [`docs/api/openapi.yaml`](docs/api/openapi.yaml) (`Event`); ingest `POST /v1/ingest`.
 - **Infra:** Docker, Kubernetes (или Fly.io на старте), Terraform, GitHub Actions.
 - **Observability:** OpenTelemetry, Grafana, Sentry.
 
@@ -393,27 +389,20 @@ eye-of-providence/
 │       └── platform/windows/ # WinEventHook, GetLastInputInfo, clipboard
 ├── browser-extension/      # MV3, TS + React (использует ui/)
 ├── ide-vscode/             # TS extension
-├── cli-hooks/              # claude-code hooks, aider wrapper, git post-commit
 ├── backend/                # Go monorepo (Fiber + zap)
 │   ├── cmd/
-│   │   ├── auth/
-│   │   ├── ingest/
-│   │   ├── analytics/
-│   │   ├── reports/        # AI-отчёты (Gemini), cron + on-demand
-│   │   └── worker/         # attribution post-processing
+│   │   ├── api/            # production HTTP API
+│   │   ├── worker/         # attribution post-processing
+│   │   ├── eop-hook/       # Claude Code ingest hook
+│   │   ├── migrate/        # standalone migrations CLI
+│   │   └── reports/        # AI reports cron (dev/ops)
 │   ├── internal/
-│   │   └── reports/
-│   │       └── prompts/    # system prompts + few-shot для Gemini
-│   └── migrations/
+│   │   └── migrate/sql/    # Postgres + ClickHouse migrations
+│   └── …
 ├── dashboard/              # React SPA (Vite), переиспользует ui/
-├── ui/                     # shared React components на shadcn/ui (используется в agent, dashboard, extension popup)
-├── proto/                  # Protobuf-схемы (events, ingest API)
-├── infra/                  # Terraform, k8s manifests, docker-compose для self-host
-├── docs/
-│   ├── privacy.md
-│   ├── attribution.md
-│   ├── data-model.md
-│   └── self-hosting.md
+├── ui/                     # shared React components на shadcn/ui
+├── infra/                  # docker-compose для self-host
+├── docs/                   # см. docs/README.md
 └── README.md
 ```
 

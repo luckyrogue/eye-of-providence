@@ -1,7 +1,7 @@
 // API tokens management — Settings page section.
 //
-// Тонкий widget: список токенов из entities/user + создание/отзыв через
-// features. Plaintext-secret виден ровно один раз — feature сама держит
+// Тонкий widget: список токенов из entities/user + создание/отзыв.
+// Plaintext-secret виден ровно один раз — create-token-dialog держит
 // двухшаговую модалку.
 
 import { useState } from "react";
@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { KeyRound, Plus } from "lucide-react";
 import { useTokens } from "@/entities/user";
-import { CreateTokenDialog } from "@/features/api-token-create";
+import { CreateTokenDialog } from "./create-token-dialog";
 import { TokenRow } from "./token-row";
 
 export function APITokensWidget() {

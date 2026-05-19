@@ -1,18 +1,7 @@
-// PWA bootstrap helpers.
-//
-// registerSW — регистрирует service-worker (только в production: dev-build
-// постоянно меняется, sw caching мешает HMR).
-//
-// useInstallPrompt — capture'ит beforeinstallprompt event (Android Chrome /
-// Edge / Samsung Internet) для UI-кнопки "Установить app". iOS не emits
-// этот event — там install через Share → Add to home screen, мы только
-// показываем hint один раз.
-
 import { useEffect, useState } from "react";
 
 const INSTALL_HINT_DISMISSED_KEY = "eop_install_hint_dismissed";
 
-// BeforeInstallPromptEvent — chromium-only experimental API, не в TS-libs.
 type BeforeInstallPromptEvent = Event & {
   readonly platforms: string[];
   prompt: () => Promise<void>;
@@ -21,13 +10,10 @@ type BeforeInstallPromptEvent = Event & {
 
 export function registerSW() {
   if (!("serviceWorker" in navigator) || import.meta.env.DEV) return;
-  // Wait for window load чтобы не конкурировать с initial render.
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js")
       .then((reg) => {
-        // SW update: при появлении нового версии sw.js шлём custom event;
-        // useUpdatePrompt в app-layout превращает это в toast c кнопкой "Reload".
         reg.addEventListener("updatefound", () => {
           const newWorker = reg.installing;
           if (!newWorker) return;
@@ -44,9 +30,6 @@ export function registerSW() {
   });
 }
 
-// useUpdatePrompt — слушает eop:sw-update-available и возвращает {available, reload}.
-// reload() триггерит location.reload — браузер на следующем navigation подхватит
-// активированный SW.
 export function useUpdatePrompt() {
   const [available, setAvailable] = useState(false);
   useEffect(() => {
@@ -62,7 +45,6 @@ export function useUpdatePrompt() {
   };
 }
 
-// useOnlineStatus — баннер "вы офлайн". navigator.onLine + online/offline events.
 export function useOnlineStatus() {
   const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
   useEffect(() => {
@@ -78,7 +60,6 @@ export function useOnlineStatus() {
   return online;
 }
 
-// isStandalone — пользователь уже запустил из home-screen (iOS / Android PWA).
 export function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
   return (
@@ -89,18 +70,11 @@ export function isStandalone(): boolean {
   );
 }
 
-// isIOS — нам нужен иной copy ("Share → Add to home screen" вместо install
-// button), потому что Safari не реализует beforeinstallprompt.
 export function isIOS(): boolean {
   if (typeof navigator === "undefined") return false;
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !("MSStream" in window);
 }
 
-// useInstallPrompt — returns:
-//   - canInstall: можно показать "Install" button (chromium на Android/Desktop)
-//   - showIOSHint: iOS-specific instruction (Share → Add to home screen)
-//   - install: вызвать prompt (только если canInstall)
-//   - dismiss: спрятать hint навсегда (localStorage flag)
 export function useInstallPrompt() {
   const [event, setEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(

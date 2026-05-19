@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.0.1 — Closed beta
+## 0.0.1 — Alpha
 
 - Manual / AI inline / refactor attribution per language with burst detection
   for streaming completions.

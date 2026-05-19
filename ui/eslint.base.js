@@ -207,12 +207,17 @@ function fsdPublicApiBlocks() {
     files: [`src/${layer}/**/*.{ts,tsx}`],
     rules: {
       "no-restricted-imports": [
-        "warn",
+        "error",
         {
           patterns: [
             ...warnPatterns(entityInternals, "entities"),
             ...warnPatterns(featureInternals, "features"),
             ...warnPatterns(widgetInternals, "widgets"),
+            {
+              group: ["@/shared/api/**", "@/shared/config/**", "@/shared/hooks/**"],
+              message:
+                "FSD public API: import shared segments via @/shared/api|config|hooks, not deep paths.",
+            },
           ],
         },
       ],

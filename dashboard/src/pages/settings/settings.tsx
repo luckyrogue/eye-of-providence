@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useDevices } from "@/entities/device";
 import { useTeams } from "@/entities/team";
 import { useProfile } from "@/entities/user";
-import { LinkedAccountsCard } from "@/features/linked-accounts";
+import { LinkedAccountsCard } from "./ui/linked-accounts-card";
 import type { Locale } from "@/shared/i18n";
 import { DevicesWidget } from "@/widgets/devices";
 import { SettingsDangerZone } from "./ui/settings-danger-zone";

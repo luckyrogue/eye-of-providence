@@ -1,32 +1,3 @@
-# Production self-host stack — referenced by docs/self-hosting.md.
-#
-# Что внутри:
-#   - postgres 16     — users, teams, devices, projects, reports (state)
-#   - clickhouse 24   — events, attribution (analytics)
-#   - redis 7         — rate-limit + session cache (используется backend'ом)
-#   - eop             — unified image (Caddy + Go API + dashboard SPA, см. Dockerfile)
-#
-# Поднимать:
-#   cp .env.example .env  # обязательно поменять CHANGE_ME-значения
-#   docker compose -f infra/docker-compose.full.yml up -d
-#
-# Image verification (рекомендовано перед прод-deploy'ем):
-#   SHA=<commit-sha>
-#   IMG="ghcr.io/luckyrogue/eop:${SHA}"
-#   cosign verify "$IMG" \
-#     --certificate-identity-regexp '^https://github\.com/luckyrogue/eye-of-providence/' \
-#     --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
-#   gh attestation verify oci://"$IMG" --owner luckyrogue \
-#     --predicate-type 'https://slsa.dev/provenance/v1'
-# (полный recipe — .github/SECURITY.md → "Verifying release artifacts")
-#
-# Тюнинг под self-host без public IP:
-#   - DB-порты по умолчанию НЕ exposed на host. Backup-инструменты заходят
-#     через `docker exec`. Хочешь подключаться pgcli/dbeaver'ом — раскомментируй
-#     блоки `ports:` под postgres/clickhouse и bind на 127.0.0.1.
-#   - eop сервис слушает на ${EOP_PUBLIC_PORT:-3000} — поставь reverse proxy
-#     (Caddy/Traefik) перед ним для TLS.
-
 x-restart: &default-restart
   restart: unless-stopped
 
@@ -39,8 +10,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-eop}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
       POSTGRES_DB: ${POSTGRES_DB:-eop}
-      # tune для self-host single-host workload — payment-grade durability,
-      # синхронные commits, fsync, без replication.
       POSTGRES_INITDB_ARGS: "--data-checksums"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -51,7 +20,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
-    # Без `ports:` — postgres доступен только внутри compose-сети.
 
   clickhouse:
     image: clickhouse/clickhouse-server:24.10.4-alpine
@@ -80,8 +48,6 @@ services:
     image: redis:7.4-alpine
     container_name: eop-redis
     <<: *default-restart
-    # AOF + fsync everysec — переживёт `docker stop`, но не аварийный
-    # power-loss последней секунды. Для rate-limit/session-cache достаточно.
     command:
       - redis-server
       - --appendonly
@@ -97,13 +63,7 @@ services:
       retries: 5
 
   eop:
-    # GHCR image — Cosign-signed + SLSA L3 attestation. Замени `:latest`
-    # на конкретный SHA для production (см. .github/SECURITY.md verify recipe).
     image: ${EOP_IMAGE:-ghcr.io/luckyrogue/eop:latest}
-    # Альтернатива — build из локального source'а. Раскомментируй и закомментируй image:
-    # build:
-    #   context: ..
-    #   dockerfile: Dockerfile
     container_name: eop-app
     <<: *default-restart
     depends_on:
@@ -134,8 +94,6 @@ services:
       EOP_RESEND_API_KEY: ${EOP_RESEND_API_KEY:-}
       EOP_MAIL_FROM: ${EOP_MAIL_FROM:-}
       EOP_PUBLIC_URL: ${EOP_PUBLIC_URL:-}
-      # CSP connect-src — должен включать сам публичный URL чтобы fetch
-      # к /api работал из браузера. Caddy подставит через {$CSP_CONNECT_SRC}.
       CSP_CONNECT_SRC: ${CSP_CONNECT_SRC:-'self'}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
@@ -143,9 +101,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 60s
-    # read_only с tmpfs для пишущих путей — defense-in-depth (RCE attacker
-    # не сможет дропнуть webshell в /tmp с persistence). Caddy и Go API сами
-    # ничего долгоживущего не пишут в FS — всё в /data (volume) и /tmp (tmpfs).
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777

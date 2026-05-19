@@ -22,7 +22,7 @@ type Event struct {
 	LinesAdded   uint32            `json:"lines_added"`
 	LinesRemoved uint32            `json:"lines_removed"`
 	// Meta — небольшой набор безопасных полей расширения (нет контента,
-	// см. proto/event.proto). На текущий момент используется агентом для
+	// см. docs/api/openapi.yaml Event.meta). Используется агентом для
 	// clipboard_sha256 + clipboard_bytes (фингерпринт без содержимого).
 	// Сериализуется как JSON-объект в ClickHouse `meta` String-колонку.
 	Meta map[string]string `json:"meta,omitempty"`

@@ -72,7 +72,7 @@ golangci-lint run ./...  # ★ блокер
 
 Классический тонкий срез (без отдельного `domain/`): [`internal/teams/emailtemplates/`](internal/teams/emailtemplates/) — порты + `Service` + wiring в [`emailtemplates_adapters.go`](internal/teams/emailtemplates_adapters.go).
 
-Подробнее: [`docs/architecture-bc.md`](../docs/architecture-bc.md). Шаблон нового BC: [`internal/_template/`](internal/_template/). CI guard: `bash scripts/check-domain-imports.sh`.
+Шаблон нового BC: [`internal/_template/`](internal/_template/). CI guard: `bash scripts/check-domain-imports.sh`.
 
 #### Чеклист нового bounded context
 
@@ -171,7 +171,7 @@ Extensions: map[string]any{...}})`.
 ### ClickHouse perf
 
 - 3-tier cascading materialized views: `events` → `events_hourly_agg` (35×) →
-  `events_daily_agg` (840× total). См. `docs/clickhouse-perf.md`.
+  `events_daily_agg` (840× total). См. `docs/data-model.md` §2.3–2.4.
 - Routing logic: long-range queries (≥30d) → daily MV; короткие — hourly.
 - Redis cache layer (`internal/store/cached.go`) поверх для read-heavy
   aggregations с TTL 5-10 min.

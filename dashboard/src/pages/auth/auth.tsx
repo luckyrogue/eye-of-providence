@@ -11,10 +11,10 @@ import {
 } from "@eop/ui";
 import { Lock } from "lucide-react";
 import { fetchAuthConfig, type AuthConfig, type AuthResponse } from "@/entities/user";
-import { LoginForm } from "@/features/auth-login";
-import { OAuthButtonRow } from "@/features/auth-oauth";
 import { PasskeyLoginButton } from "@/features/auth-passkey";
-import { RegisterForm } from "@/features/auth-register";
+import { LoginForm } from "./ui/login-form";
+import { OAuthButtonRow } from "./ui/oauth-button-row";
+import { RegisterForm } from "./ui/register-form";
 import { AuthOAuthSeparator } from "./ui/auth-oauth-separator";
 import { useInvitePreview } from "./model/use-invite-preview";
 

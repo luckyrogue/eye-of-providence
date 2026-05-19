@@ -77,7 +77,7 @@ Rust (`agent/src-tauri`) — `cargo test --lib` (store/preflight). VS Code — `
 - `AGENTS.md` в корне и в пакетах (`backend/AGENTS.md`, `dashboard/AGENTS.md`) — правила для AI, не переносить в `docs/`.
 - `README.md` у пакета (`browser-extension/`, `ide-vscode/`) остаётся рядом с кодом.
 
-## Distribution (closed beta)
+## Distribution (alpha)
 
 Артефакты собираются в `.github/workflows/release.yml` на push тэга `v*.*.*` или ручным trigger'ом:
 

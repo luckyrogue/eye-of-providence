@@ -6,7 +6,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@eop/ui";
-import { ContentBlockEditor, SlugTree } from "@/features/admin-content";
+import { ContentBlockEditor } from "./content-block-editor";
+import { SlugTree } from "./slug-tree";
 import { CONTENT_SLUGS, type ContentSlug } from "@/shared/content";
 
 export function ContentEditorPage() {

@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { User } from "lucide-react";
-import { ChangeNameForm } from "@/features/change-name";
+import { ChangeNameForm } from "./change-name-form";
 
 export function SettingsNameCard({
   displayName,
