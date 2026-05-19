@@ -71,7 +71,10 @@ RUN pnpm -F @eop/dashboard build
 #   go-jose:   v3+v4   → patched (CVE-2026-34986 fixed)
 #
 # caddy:2.11-builder-alpine содержит Go 1.26.3 + xcaddy + ca-certificates.
-# `xcaddy build v2.11.2` builds tag explicitly — reproducible.
+# `xcaddy build v2.11.3` builds tag explicitly — reproducible.
+# v2.11.3 фиксит CVE-2026-45135 (FastCGI splitPos Unicode handling allows
+# execution of non-PHP files). У нас FastCGI handler не настроен, но всё
+# равно держим патч-уровень up-to-date.
 FROM caddy:2.11-builder-alpine AS caddy-builder
 # --with overrides force-bump sub-dependencies в caddy go.sum:
 #   - go-jose v3+v4 → patched (CVE-2026-34986 JWE DoS)
@@ -88,7 +91,7 @@ FROM caddy:2.11-builder-alpine AS caddy-builder
 # NB: НЕ добавлять --with otlploghttp@v0.x — log-exporter живёт на v0.x
 # track и тянет несовместимую otel v0.19.0 через свой go.mod, ломая весь
 # build. Дождаться v1.x stable релиза log-exporter'а.
-RUN xcaddy build v2.11.2 \
+RUN xcaddy build v2.11.3 \
     --with github.com/go-jose/go-jose/v3@v3.0.5 \
     --with github.com/go-jose/go-jose/v4@v4.1.4 \
     --with go.opentelemetry.io/otel@v1.43.0 \
