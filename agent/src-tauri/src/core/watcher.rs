@@ -117,7 +117,9 @@ pub fn spawn(
                 }
                 let idle_event =
                     Event::os_focus("__idle__", Category::Idle, poll_interval.as_millis() as u32);
-                let _ = store.push(&idle_event);
+                if let Err(err) = store.push(&idle_event) {
+                    tracing::warn!(error = %err, "store.push idle failed");
+                }
                 continue;
             }
 

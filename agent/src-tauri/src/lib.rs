@@ -201,13 +201,20 @@ pub fn run() {
 
             // Local API для browser extension и IDE plugin.
             // Token живёт в data_dir, browser-extension читает его через user-paste.
+            // CSPRNG: rand::rngs::OsRng (тот же что и crypto.rs использует для
+            // AES-GCM nonces). Раньше использовался SystemTime::subsec_nanos —
+            // предсказуем при known boot time, недопустимо для shared secret.
             let token_path = data_dir.join("eop.local-token");
             let token = if token_path.exists() {
                 std::fs::read_to_string(&token_path)?.trim().to_string()
             } else {
-                let new_tok: String = (0..32)
-                    .map(|_| {
-                        let n: u8 = rand_byte() % 36;
+                use rand::RngCore;
+                let mut buf = [0u8; 32];
+                rand::rngs::OsRng.fill_bytes(&mut buf);
+                let new_tok: String = buf
+                    .iter()
+                    .map(|b| {
+                        let n = b % 36;
                         if n < 10 {
                             (b'0' + n) as char
                         } else {
@@ -486,11 +493,3 @@ fn open_target(target: &str) -> std::io::Result<()> {
     Ok(())
 }
 
-fn rand_byte() -> u8 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let n = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.subsec_nanos())
-        .unwrap_or(0);
-    (n & 0xff) as u8
-}

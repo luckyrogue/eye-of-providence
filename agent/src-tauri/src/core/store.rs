@@ -1,16 +1,8 @@
-// Local SQLite-буфер событий: WAL mode, retry-friendly, encrypted-at-rest.
-// Pop возвращает события + lease_id, чтобы при ошибке отправки можно было
-// поставить их обратно в очередь без потерь.
-//
-// Encryption:
-//   Каждая запись `event_buffer.payload` — AES-256-GCM ciphertext поверх
-//   serde_json(Event). Ключ хранится в Keychain/DPAPI через `core/crypto`.
-//   См. crypto.rs для формата и threat model.
-
 use anyhow::{Context, Result};
+use parking_lot::Mutex;
 use rusqlite::{params, Connection};
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use super::crypto::LocalCrypto;
 use super::event::Event;
@@ -31,14 +23,6 @@ impl LocalStore {
         })
     }
 
-    // migrate — версионируем SQLite через PRAGMA user_version. Каждая миграция
-    // выполняется один раз; user_version подтверждает factual состояние схемы.
-    // Чтобы добавить новую — append-only: добавьте match-ветку с очередным
-    // номером, не редактируя предыдущие.
-    //
-    // v1 → v2: payload TEXT (plaintext JSON) → payload BLOB (AES-GCM ciphertext).
-    // Старые plaintext-записи дропаем — это локальный send-buffer, потеря
-    // unsent данных приемлема (события обычно отправляются за 15 секунд).
     fn migrate(conn: &Connection) -> Result<()> {
         let current: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
         let migrations: &[(i64, &str)] = &[
@@ -57,9 +41,6 @@ impl LocalStore {
             ),
             (
                 2,
-                // Шифрование at-rest. Колонка теперь BLOB; старые plaintext-
-                // записи дропаем (одноразовая «потеря» unsent buffer'а
-                // при апгрейде агента — acceptable).
                 r#"
                 DROP TABLE IF EXISTS event_buffer;
                 CREATE TABLE event_buffer (
@@ -84,7 +65,7 @@ impl LocalStore {
     }
 
     pub fn push(&self, event: &Event) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock();
         let json = serde_json::to_vec(event).context("serialize event")?;
         let payload = self.crypto.seal(&json).context("seal event payload")?;
         let now = chrono::Utc::now().timestamp();
@@ -95,15 +76,8 @@ impl LocalStore {
         Ok(())
     }
 
-    /// Берёт до `limit` событий из буфера, проставляет lease до `lease_secs` секунд вперёд.
-    /// Возвращает (id, Event) — id нужен для commit/release.
-    ///
-    /// Если запись не расшифровывается (например, ключ был ротирован вручную,
-    /// или диск битый) — событие тихо дропается и логируется. Альтернатива
-    /// (вернуть ошибку и остановить весь pump) хуже: один corrupted row
-    /// заблокирует всю очередь.
     pub fn lease_batch(&self, limit: usize, lease_secs: i64) -> Result<Vec<(i64, Event)>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock();
         let now = chrono::Utc::now().timestamp();
         let lease_until = now + lease_secs;
 
@@ -151,7 +125,6 @@ impl LocalStore {
                 }
             }
         }
-        // Чистим corrupted строки чтобы pump не тыкался в них на каждом цикле.
         if !corrupted.is_empty() {
             let placeholders = corrupted.iter().map(|_| "?").collect::<Vec<_>>().join(",");
             let sql = format!("DELETE FROM event_buffer WHERE id IN ({})", placeholders);
@@ -165,12 +138,11 @@ impl LocalStore {
         Ok(out)
     }
 
-    /// commit — окончательно удаляет события (после успешной отправки).
     pub fn commit(&self, ids: &[i64]) -> Result<()> {
         if ids.is_empty() {
             return Ok(());
         }
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock();
         let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let sql = format!("DELETE FROM event_buffer WHERE id IN ({})", placeholders);
         let params: Vec<Box<dyn rusqlite::ToSql>> = ids
@@ -182,12 +154,11 @@ impl LocalStore {
         Ok(())
     }
 
-    /// release — снимает lease, чтобы события снова стали доступны (после ошибки отправки).
     pub fn release(&self, ids: &[i64]) -> Result<()> {
         if ids.is_empty() {
             return Ok(());
         }
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock();
         let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let sql = format!(
             "UPDATE event_buffer SET lease_until = NULL WHERE id IN ({})",
@@ -203,17 +174,13 @@ impl LocalStore {
     }
 
     pub fn pending_count(&self) -> Result<i64> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock();
         let n: i64 = conn.query_row("SELECT COUNT(*) FROM event_buffer", [], |r| r.get(0))?;
         Ok(n)
     }
 
-    /// gc — удаляет события старше `older_than_secs` секунд. Защита от
-    /// бесконечного роста SQLite если backend недоступен длительное время
-    /// (offline > week → ~360k events × 5s polling = пара GB локально).
-    /// Возвращает количество удалённых строк.
     pub fn gc(&self, older_than_secs: i64) -> Result<usize> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock();
         let cutoff = chrono::Utc::now().timestamp() - older_than_secs;
         let n = conn.execute(
             "DELETE FROM event_buffer WHERE created_at < ?1",
@@ -228,12 +195,6 @@ mod tests {
     use super::*;
     use crate::core::event::{Category, Event};
 
-    // tmp_store — открывает SQLite на in-memory path. Для unit-тестов не
-    // нужен реальный файл; rusqlite поддерживает ":memory:" but миграции
-    // и pragma WAL требуют named file → используем tempfile.
-    //
-    // Crypto в тестах — детерминированный test-key через `LocalCrypto::with_key`,
-    // не трогает системный keyring.
     fn tmp_store() -> (LocalStore, tempfile::NamedTempFile) {
         let f = tempfile::NamedTempFile::new().unwrap();
         let crypto = Arc::new(LocalCrypto::with_key([7u8; 32]));
@@ -253,7 +214,6 @@ mod tests {
         let v: i64 = s
             .conn
             .lock()
-            .unwrap()
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         assert!(
@@ -264,11 +224,8 @@ mod tests {
 
     #[test]
     fn payload_column_is_blob_not_text() {
-        // Гарантирует что v2-миграция реально применилась — payload должен
-        // быть BLOB, чтобы plaintext-чтение через `sqlite3 .dump` не выдало
-        // содержимое событий.
         let (s, _f) = tmp_store();
-        let conn = s.conn.lock().unwrap();
+        let conn = s.conn.lock();
         let type_: String = conn
             .query_row(
                 "SELECT type FROM pragma_table_info('event_buffer') WHERE name = 'payload'",
@@ -288,13 +245,38 @@ mod tests {
         assert_eq!(s.pending_count().unwrap(), 2);
     }
 
+    // Regression: со std::sync::Mutex паника внутри одного потока, удерживающего
+    // lock, отравляла Mutex — все последующие .lock().unwrap() в других потоках
+    // также паниковали и убивали watcher/tray/ingest loop. parking_lot::Mutex
+    // не отравляется: паника одного потока не влияет на acquire'ы других.
+    #[test]
+    fn mutex_does_not_poison_on_panic() {
+        use std::sync::Arc as StdArc;
+        let (s, _f) = tmp_store();
+        let s = StdArc::new(s);
+
+        // Поток 1: берёт lock, паникует пока держит его.
+        let s1 = StdArc::clone(&s);
+        let join = std::thread::spawn(move || {
+            let _guard = s1.conn.lock();
+            panic!("intentional panic while holding the lock");
+        });
+        let _ = join.join(); // Ожидаем Err — поток упал, это норм.
+
+        // Поток 2: после паники должен по-прежнему успешно работать со store.
+        // Со std::sync::Mutex здесь .pending_count() паниковал бы;
+        // с parking_lot — отдаёт реальный ответ.
+        let n = s.pending_count().expect("pending_count after poisoned thread");
+        assert_eq!(n, 0);
+        s.push(&ev("post-panic")).expect("push after poisoned thread");
+        assert_eq!(s.pending_count().unwrap(), 1);
+    }
+
     #[test]
     fn stored_payload_is_ciphertext_not_plaintext() {
-        // Critical: дамп SQLite не должен содержать `app_bundle` или другие
-        // поля Event в plaintext.
         let (s, _f) = tmp_store();
         s.push(&ev("com.apple.dt.Xcode")).unwrap();
-        let conn = s.conn.lock().unwrap();
+        let conn = s.conn.lock();
         let blob: Vec<u8> = conn
             .query_row("SELECT payload FROM event_buffer LIMIT 1", [], |r| r.get(0))
             .unwrap();
@@ -328,7 +310,6 @@ mod tests {
         s.push(&ev("b")).unwrap();
         let first = s.lease_batch(10, 60).unwrap();
         assert_eq!(first.len(), 2);
-        // Повторный lease не должен видеть свежие активные lease'ы.
         let second = s.lease_batch(10, 60).unwrap();
         assert_eq!(second.len(), 0);
     }
@@ -347,13 +328,9 @@ mod tests {
     #[test]
     fn gc_removes_old_rows_only() {
         let (s, _f) = tmp_store();
-        // Свежий event — должен остаться.
         s.push(&ev("fresh")).unwrap();
-        // Имитируем старый event, выставляя created_at вручную. Payload =
-        // valid encrypted blob с другим event'ом, чтобы migrate-схема BLOB
-        // приняла INSERT (раньше тут писали `'{}'` plaintext, теперь не пройдёт).
         {
-            let conn = s.conn.lock().unwrap();
+            let conn = s.conn.lock();
             let blob = s
                 .crypto
                 .seal(b"{\"fake\":\"old\"}")
@@ -373,10 +350,8 @@ mod tests {
     fn corrupted_row_is_dropped_not_blocking() {
         let (s, _f) = tmp_store();
         s.push(&ev("good")).unwrap();
-        // Вставляем мусор как payload — decrypt должен упасть, и lease_batch
-        // должен дропнуть строку, продолжив с «good».
         {
-            let conn = s.conn.lock().unwrap();
+            let conn = s.conn.lock();
             conn.execute(
                 "INSERT INTO event_buffer (payload, created_at) VALUES (?1, ?2)",
                 params![vec![0u8; 50], chrono::Utc::now().timestamp()],
@@ -385,9 +360,7 @@ mod tests {
         }
         assert_eq!(s.pending_count().unwrap(), 2);
         let batch = s.lease_batch(10, 60).unwrap();
-        // Один валидный + один corrupted дропнут → возвращается 1.
         assert_eq!(batch.len(), 1);
-        // Corrupted строка должна быть удалена, остаётся только leased good.
         assert_eq!(s.pending_count().unwrap(), 1);
     }
 }

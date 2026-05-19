@@ -29,6 +29,10 @@ thiserror = "2"
 keyring = "3"
 tauri-plugin-autostart = "2"
 tauri-plugin-notification = "2"
+# parking_lot::Mutex — never poisons (см. core/store.rs). std::sync::Mutex
+# панически распространяет panic между tokio-задачами; parking_lot держит
+# tray + watcher + ingest pump живыми когда что-то сломалось в одном из них.
+parking_lot = "0.12"
 # Local SQLite encryption: AES-256-GCM AEAD на каждую запись `event_buffer.payload`.
 # Ключ генерим один раз и храним в Keychain/Credential Manager через `keyring`.
 # Формат записи: [12-byte nonce | ciphertext+16-byte auth tag].
