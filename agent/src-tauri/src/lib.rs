@@ -492,4 +492,3 @@ fn open_target(target: &str) -> std::io::Result<()> {
     }
     Ok(())
 }
-

@@ -266,9 +266,12 @@ mod tests {
         // Поток 2: после паники должен по-прежнему успешно работать со store.
         // Со std::sync::Mutex здесь .pending_count() паниковал бы;
         // с parking_lot — отдаёт реальный ответ.
-        let n = s.pending_count().expect("pending_count after poisoned thread");
+        let n = s
+            .pending_count()
+            .expect("pending_count after poisoned thread");
         assert_eq!(n, 0);
-        s.push(&ev("post-panic")).expect("push after poisoned thread");
+        s.push(&ev("post-panic"))
+            .expect("push after poisoned thread");
         assert_eq!(s.pending_count().unwrap(), 1);
     }
 
