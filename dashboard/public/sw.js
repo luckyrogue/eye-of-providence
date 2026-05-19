@@ -9,7 +9,7 @@
 //
 // Push event handler заглушка готова под Web Push API (Phase B).
 
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL_CACHE = `eop-shell-${VERSION}`;
 const ASSET_CACHE = `eop-assets-${VERSION}`;
 const SHELL_URLS = ["/", "/index.html", "/manifest.webmanifest", "/favicon.svg"];
@@ -69,6 +69,13 @@ self.addEventListener("fetch", (event) => {
         }
       })(),
     );
+    return;
+  }
+
+  // Locale markdown — never cache (updates without content hash; SW stale cache
+  // caused old /legal/privacy.md to stick after deploy).
+  if (url.pathname.startsWith("/legal/") || url.pathname.startsWith("/docs/")) {
+    event.respondWith(fetch(req, { cache: "no-store" }));
     return;
   }
 

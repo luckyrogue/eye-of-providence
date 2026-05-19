@@ -33,7 +33,7 @@ export async function fetchLocalizedMarkdown(
 ): Promise<{ text: string; path: string; localeUsed: Locale }> {
   for (const path of localizedMarkdownPaths(base, file, locale)) {
     const localeUsed = path.split("/")[2] as Locale;
-    const r = await fetch(path);
+    const r = await fetch(path, { cache: "no-store" });
     if (r.ok) return { text: await r.text(), path, localeUsed };
   }
   throw new Error(`missing markdown: ${base}/${file}`);

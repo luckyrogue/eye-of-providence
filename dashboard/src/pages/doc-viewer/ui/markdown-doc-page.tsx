@@ -31,16 +31,34 @@ export function MarkdownDocPage({
   const locale = resolveContentLocale(i18n.resolvedLanguage ?? i18n.language);
 
   useEffect(() => {
+    let cancelled = false;
     setSource(null);
     setError(false);
     setLocaleUsed(null);
-    fetchLocalizedMarkdown(markdownBase, markdownFile, locale)
-      .then(({ text, localeUsed: used }) => {
-        setSource(text);
-        setLocaleUsed(used !== locale ? used : null);
-      })
-      .catch(() => setError(true));
-  }, [markdownBase, markdownFile, locale]);
+
+    const load = (lng: typeof locale) => {
+      fetchLocalizedMarkdown(markdownBase, markdownFile, lng)
+        .then(({ text, localeUsed: used }) => {
+          if (cancelled) return;
+          setSource(text);
+          setLocaleUsed(used !== lng ? used : null);
+        })
+        .catch(() => {
+          if (!cancelled) setError(true);
+        });
+    };
+
+    load(locale);
+    const onLanguageChanged = (lng: string) => {
+      load(resolveContentLocale(lng));
+    };
+    i18n.on("languageChanged", onLanguageChanged);
+
+    return () => {
+      cancelled = true;
+      i18n.off("languageChanged", onLanguageChanged);
+    };
+  }, [markdownBase, markdownFile, locale, i18n]);
 
   const back = backLabel ?? t("docs.back_home");
 

@@ -5,6 +5,7 @@
 
 import { useTranslation } from "react-i18next";
 import { Globe, Check } from "lucide-react";
+import { LOCALE_STORAGE_KEY } from "@eop/i18n";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@eop/ui";
 
 const LANGS = [
@@ -31,7 +32,10 @@ export function LangSwitch() {
         {LANGS.map((l) => (
           <DropdownMenuItem
             key={l.code}
-            onClick={() => void i18n.changeLanguage(l.code)}
+            onClick={() => {
+              localStorage.setItem(LOCALE_STORAGE_KEY, l.code);
+              void i18n.changeLanguage(l.code);
+            }}
             className="flex items-center justify-between gap-3 cursor-pointer"
           >
             <span className="flex items-center gap-2">
