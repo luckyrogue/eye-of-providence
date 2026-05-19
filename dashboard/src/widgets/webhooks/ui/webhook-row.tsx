@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import type { Webhook } from "../../../entities/webhook";
-import { DeleteWebhookButton } from "../../../features/webhook-delete";
+import type { Webhook } from "@/entities/webhook";
+import { DeleteWebhookButton } from "@/features/webhook-delete";
 
 export function WebhookRow({ hook }: { hook: Webhook }) {
   const { t } = useTranslation("developer");

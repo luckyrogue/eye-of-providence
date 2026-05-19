@@ -1,6 +1,10 @@
-// Минимальный ESLint flat config — guard-правила против реинтродукции
-// inline-дубликатов из "UI Dedup + Shadcn Audit" задаются в общей базе.
-// Не делаем полноценный stylistic linting (для этого есть tsc + Prettier).
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { baseConfig } from "@eop/ui/eslint.base.js";
 
-export default baseConfig({ fsdLayers: true });
+const dashboardRoot = path.dirname(fileURLToPath(import.meta.url));
+
+export default baseConfig({
+  fsdLayers: true,
+  fsdSrcRoot: path.join(dashboardRoot, "src"),
+});

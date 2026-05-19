@@ -1,8 +1,8 @@
 import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Input, SimpleSelect, type SimpleSelectOption } from "@eop/ui";
-import { useAdminAddMember, type AdminUser } from "../../../entities/admin";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useAdminAddMember, type AdminUser } from "@/entities/admin";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 type Role = "member" | "admin" | "owner";
 

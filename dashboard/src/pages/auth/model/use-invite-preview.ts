@@ -3,7 +3,7 @@
 // пустое состояние.
 
 import { useEffect, useState } from "react";
-import { previewInvite, type InvitePreview } from "../../../entities/team";
+import { previewInvite, type InvitePreview } from "@/entities/team";
 
 export function useInvitePreview() {
   const [inviteCode, setInviteCode] = useState<string | null>(null);

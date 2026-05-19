@@ -1,6 +1,6 @@
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Settings } from "./settings";
-import { useAuth } from "../../entities/session";
+import { useAuth } from "@/entities/session";
 
 export function SettingsRoute() {
   const [search] = useSearchParams();

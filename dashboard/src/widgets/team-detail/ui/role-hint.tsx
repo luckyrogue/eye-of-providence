@@ -1,0 +1,33 @@
+import type { ReactNode } from "react";
+import { isReadOnlyRole } from "../lib/roles";
+
+export function RoleGate({
+  role,
+  children,
+  fallback,
+}: {
+  role: string | undefined | null;
+  children: ReactNode;
+  fallback?: ReactNode;
+}) {
+  if (isReadOnlyRole(role)) return <>{fallback ?? null}</>;
+  return <>{children}</>;
+}
+
+export function ObserverHint({ label, hint }: { label: string; hint: string }) {
+  return (
+    <span
+      role="note"
+      title={hint}
+      className="inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] text-muted-foreground"
+      style={{ borderColor: "hsl(var(--border))" }}
+    >
+      <span
+        className="h-1.5 w-1.5 rounded-full"
+        style={{ background: "hsl(var(--muted-foreground))" }}
+        aria-hidden
+      />
+      {label}
+    </span>
+  );
+}

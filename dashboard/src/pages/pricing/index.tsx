@@ -1,17 +1,14 @@
-import { Nav } from "../landing/ui/nav";
-import { Footer } from "../landing/ui/footer";
-import { Pricing as PricingTiers } from "../landing/ui/pricing";
+import { MarketingLayout } from "@/widgets/marketing-layout";
+import { MarketingPricingTiers } from "@/widgets/marketing-pricing-tiers";
 import { ComparisonTable } from "./ui/comparison-table";
 
 export function PricingRoute() {
   return (
-    <div className="min-h-screen relative overflow-x-hidden">
-      <Nav />
+    <MarketingLayout>
       <main className="pt-[68px]">
-        <PricingTiers />
+        <MarketingPricingTiers />
         <ComparisonTable />
       </main>
-      <Footer />
-    </div>
+    </MarketingLayout>
   );
 }

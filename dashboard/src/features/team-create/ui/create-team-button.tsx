@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, cn, PromptDialog } from "@eop/ui";
 import { Plus } from "lucide-react";
-import { useCreateTeam } from "../../../entities/team";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useCreateTeam } from "@/entities/team";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 // Side-effects после создания (выбор активной команды, switchTeam, …)
 // решает родитель через `onCreated(teamID)` — фича сама не знает, что

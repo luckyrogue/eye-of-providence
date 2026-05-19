@@ -20,12 +20,10 @@ import {
   useConfirm,
 } from "@eop/ui";
 import { Link2, Trash2 } from "lucide-react";
-import type { Identity, OAuthProvider } from "../../../entities/user";
-import { useAuthConfig } from "../../../entities/user";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-import { GithubGlyph } from "../../auth-oauth/ui/glyphs/github-glyph";
-import { GoogleGlyph } from "../../auth-oauth/ui/glyphs/google-glyph";
-import { AppleGlyph } from "../../auth-oauth/ui/glyphs/apple-glyph";
+import type { Identity, OAuthProvider } from "@/entities/user";
+import { useAuthConfig } from "@/entities/user";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
+import { AppleGlyph, GithubGlyph, GoogleGlyph } from "@/shared/ui/oauth-glyphs";
 import { useIdentities, useUnlinkIdentity } from "../api";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || "https://eop-api.rysdavletov.org";

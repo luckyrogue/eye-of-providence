@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { Button, useConfirm } from "@eop/ui";
 import { Trash2 } from "lucide-react";
-import { useDeleteWebhook, type Webhook } from "../../../entities/webhook";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useDeleteWebhook, type Webhook } from "@/entities/webhook";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 export function DeleteWebhookButton({ webhook }: { webhook: Webhook }) {
   const { t } = useTranslation("developer");

@@ -3,8 +3,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { Button, Form, InputField } from "@eop/ui";
-import { useUpdateTeam, type Team } from "../../../entities/team";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useUpdateTeam, type Team } from "@/entities/team";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 // Сообщение валидации — i18n-ключ; разрешается через translateError на InputField.
 const renameSchema = z.object({

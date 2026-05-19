@@ -21,11 +21,11 @@ import {
   Monitor,
   User,
 } from "lucide-react";
-import type { Profile } from "../../../entities/user";
-import { formatShortDisplayName } from "../../../shared/lib/display-name";
-import { LOCALE_LABELS, type Locale } from "../../../shared/i18n";
+import type { Profile } from "@/entities/user";
+import { formatShortDisplayName } from "@/shared/lib/display-name";
+import { LOCALE_LABELS, type Locale } from "@/shared/i18n";
 import { formatJoinDate } from "../lib/format-join-date";
-import { GithubGlyph } from "./github-glyph";
+import { GithubGlyph } from "@/shared/ui/oauth-glyphs";
 import { ProfileStat } from "./profile-stat";
 
 export function SettingsProfileCard({

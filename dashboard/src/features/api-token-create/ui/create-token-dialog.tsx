@@ -11,8 +11,8 @@ import {
   SecretField,
   SimpleSelect,
 } from "@eop/ui";
-import { useCreateToken, type APIToken } from "../../../entities/user";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useCreateToken, type APIToken } from "@/entities/user";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 // Plaintext secret отображается ТОЛЬКО на момент создания: backend хранит
 // только хеш. Поэтому диалог двустадийный — форма → одноразовый показ token.

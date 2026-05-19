@@ -16,7 +16,7 @@ import {
   type EmailTemplateKey,
   type EmailTemplateLocale,
 } from "../api";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 // Lazy-load Monaco — heavy chunk. Suspense fallback показывает skeleton.
 const MonacoEditor = lazy(() =>

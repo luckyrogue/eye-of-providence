@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, Download, Search } from "lucide-react";
-import { useContent, type CtaBlock, type TextBlock } from "../../../shared/content";
+import { useContent, type CtaBlock, type TextBlock } from "@/shared/content";
 import { EyeScene } from "./eye-scene";
 
 function GithubIcon({ className }: { className?: string }) {

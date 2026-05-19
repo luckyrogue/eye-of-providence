@@ -20,8 +20,8 @@ import {
   CONTENT_SCHEMAS,
   type ContentLocale,
   type ContentSlug,
-} from "../../../shared/content";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+} from "@/shared/content";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 import { ConcurrentEditError, useContentBlock, useRevertContent, useSaveContent } from "../api";
 
 // Lazy-load Monaco — keeps the admin bundle lean. We use the same

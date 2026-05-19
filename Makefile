@@ -1,12 +1,10 @@
 .PHONY: help doctor dev dev-up dev-down dev-logs docker-build infra-up infra-down backend-ingest backend-auth backend-reports proto-gen agent-dev dashboard-dev clean
 
-# Подхват `.env` из корня репозитория для docker compose (интерполяция в infra/docker-compose.dev.yml).
 ENV_FILE := $(wildcard $(CURDIR)/.env)
 COMPOSE_ENV_FILE := $(if $(ENV_FILE),--env-file $(CURDIR)/.env,)
 
 help:
 	@echo "Eye of Providence — dev targets"
-	@echo "  make doctor                   — проверить установленные зависимости"
 	@echo "  make dev                      — поднять весь стек локально (api + dashboard + db, hot-reload)"
 	@echo "  make dev-down                 — погасить dev-стек"
 	@echo "  make dev-logs                 — следить за логами api + dashboard"
@@ -19,9 +17,6 @@ help:
 	@echo "  make proto-gen          — сгенерировать proto-код для Go и TS"
 	@echo "  make agent-dev          — запустить Tauri agent в dev"
 	@echo "  make dashboard-dev      — запустить web dashboard"
-
-doctor:
-	@./scripts/doctor.sh
 
 dev: dev-up
 

@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { Button, useConfirm } from "@eop/ui";
 import { Trash2 } from "lucide-react";
-import { useRevokeDevice, type Device } from "../../../entities/device";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useRevokeDevice, type Device } from "@/entities/device";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 export function RevokeDeviceButton({ device }: { device: Device }) {
   const { t } = useTranslation("developer");

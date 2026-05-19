@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { Button } from "@eop/ui";
 import { Download } from "lucide-react";
-import { useExportMyData } from "../../../entities/user";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useExportMyData } from "@/entities/user";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 // ExportMyDataButton — GDPR Article 20 "Right to data portability".
 // Single-click → backend стримит JSON со всеми данными пользователя

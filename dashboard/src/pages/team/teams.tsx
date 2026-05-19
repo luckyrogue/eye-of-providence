@@ -11,12 +11,12 @@ import {
   TabsTrigger,
 } from "@eop/ui";
 import { Users } from "lucide-react";
-import { useBetaInfo, useTeams } from "../../entities/team";
-import { useMe } from "../../entities/user";
-import { CreateTeamButton } from "../../features/team-create";
-import { SESSION_KEYS } from "../../shared/lib/session-storage";
-import { BetaBanner } from "../../widgets/beta-banner";
-import { TeamDetail } from "./ui/team-detail";
+import { useBetaInfo, useTeams } from "@/entities/team";
+import { useMe } from "@/entities/user";
+import { CreateTeamButton } from "@/features/team-create";
+import { SESSION_KEYS } from "@/shared/lib/session-storage";
+import { BetaBanner } from "@/widgets/beta-banner";
+import { TeamDetail } from "@/widgets/team-detail";
 
 export function Teams({ tz }: { tz: string }) {
   const { t } = useTranslation("app");
@@ -28,14 +28,10 @@ export function Teams({ tz }: { tz: string }) {
   );
 
   const teamsList = useMemo(() => teams.data ?? [], [teams.data]);
-  // 1 owner = 1 company invariant (бэкенд тоже ловит, но UI не должен звать
-  // запрос, обречённый на 403). Super_admin исключён.
   const isSuperAdmin = me.data?.global_role === "super_admin";
   const alreadyOwner = teamsList.some((tt) => tt.role === "owner");
   const ownerBlocked = alreadyOwner && !isSuperAdmin;
 
-  // Sync activeTeam с реальным списком: если ничего не выбрано, или выбранная
-  // команда удалена — переключиться на первую доступную.
   useEffect(() => {
     if (teamsList.length === 0) return;
     const exists = activeTeam && teamsList.some((tt) => tt.id === activeTeam);

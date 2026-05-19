@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Auth } from "./auth";
-import { useAuth } from "../../entities/session";
-import { readRedirect } from "../../shared/lib/redirect";
+import { useAuth } from "@/entities/session";
+import { readRedirect } from "@/shared/lib/redirect";
 
 export function AuthRoute({ mode }: { mode: "login" | "register" }) {
   const { isAuthed, setAuth } = useAuth();

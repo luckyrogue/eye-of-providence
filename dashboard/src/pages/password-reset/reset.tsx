@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { CheckCircle2, Lock } from "lucide-react";
-import { ResetPasswordForm } from "../../features/auth-reset-password";
+import { ResetPasswordForm } from "@/features/auth-reset-password";
 
 export function ResetPasswordRoute() {
   const { t } = useTranslation("auth");

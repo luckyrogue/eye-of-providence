@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SimpleSelect } from "@eop/ui";
-import { getTz, setTz, UNIQUE_TIMEZONES } from "../../../shared/lib/tz";
+import { getTz, setTz, UNIQUE_TIMEZONES } from "@/shared/lib/tz";
 
 export function TimezoneSelect() {
   const { t } = useTranslation("common");

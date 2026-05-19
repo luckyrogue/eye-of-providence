@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@eop/ui";
 import { Bell } from "lucide-react";
-import { useSubscribePush, useVAPIDKey } from "../../../entities/push";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-import { urlBase64ToUint8Array } from "../../../shared/lib/push";
+import { useSubscribePush, useVAPIDKey } from "@/entities/push";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
+import { urlBase64ToUint8Array } from "@/shared/lib/push";
 
 // variant: "primary" — крупная кнопка для пустого state, "ghost" — мелкая
 // для добавления второго устройства.

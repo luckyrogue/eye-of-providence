@@ -14,7 +14,7 @@ import {
   Skeleton,
 } from "@eop/ui";
 import { Sparkles } from "lucide-react";
-import { useInsights } from "../../../entities/user";
+import { useInsights } from "@/entities/user";
 import { InsightRow } from "./insight-row";
 
 export function InsightsWidget() {

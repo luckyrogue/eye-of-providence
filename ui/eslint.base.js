@@ -1,19 +1,13 @@
+import fs from "node:fs";
+import path from "node:path";
 import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 
-// Базовый flat ESLint config для всех frontend-пакетов.
-// Каждый пакет может extend и добавить свои overrides (chrome globals и т.п.).
-//
-// Опции:
-// - `files` — glob, по умолчанию src/**/*.{ts,tsx}
-// - `extraRules` — доп. правила/overrides
-// - `fsdLayers` — true, если пакет следует Feature-Sliced Design (запрет cross-layer импортов
-//   из верхних слоёв в нижние). Включаем точечно в `dashboard` (т.к. agent/extension/ui
-//   используют упрощённый или иной набор слоёв).
 export function baseConfig({
   files = ["src/**/*.{ts,tsx}"],
   extraRules = {},
   fsdLayers = false,
+  fsdSrcRoot = null,
 } = {}) {
   const blocks = [
     { ignores: ["dist/**", "node_modules/**", "public/**"] },
@@ -28,17 +22,13 @@ export function baseConfig({
         parserOptions: {
           ecmaFeatures: { jsx: true },
           sourceType: "module",
-          // projectService: true включает type-aware правила без явного project-ссылки.
-          // Поддерживается typescript-eslint >= 8.
           projectService: true,
         },
       },
       rules: {
-        // ---- React hooks
         "react-hooks/rules-of-hooks": "error",
         "react-hooks/exhaustive-deps": "warn",
 
-        // ---- TypeScript hygiene
         "@typescript-eslint/consistent-type-imports": [
           "warn",
           { prefer: "type-imports", fixStyle: "inline-type-imports" },
@@ -49,7 +39,6 @@ export function baseConfig({
           { checksVoidReturn: { attributes: false } },
         ],
 
-        // ---- Anti-pattern guards (UI primitives)
         "no-restricted-syntax": [
           "error",
           {
@@ -72,13 +61,64 @@ export function baseConfig({
     },
   ];
 
-  if (fsdLayers) blocks.push(...fsdLayerBlocks());
+  if (fsdLayers) {
+    blocks.push(...fsdLayerBlocks());
+    if (fsdSrcRoot) blocks.push(...fsdHorizontalBlocks(fsdSrcRoot));
+    blocks.push(...fsdPublicApiBlocks());
+  }
   return tseslint.config(...blocks);
 }
 
-// FSD cross-layer restrictions для пакетов с полной структурой
-// (app, pages, widgets, features, entities, shared). Реализовано через
-// `no-restricted-imports.patterns` с file-overrides.
+const FSD_LAYERS = ["entities", "features", "widgets", "pages"];
+const FSD_UPPER_BY_LAYER = {
+  shared: ["entities", "features", "widgets", "pages", "app"],
+  entities: ["features", "widgets", "pages", "app"],
+  features: ["widgets", "pages", "app"],
+  widgets: ["pages", "app"],
+  pages: ["app"],
+};
+
+function verticalPatterns(layer) {
+  const forbidden = FSD_UPPER_BY_LAYER[layer] ?? [];
+  return forbidden.flatMap((upper) => [
+    {
+      group: [`**/${upper}/**`],
+      message: `FSD: src/${layer} cannot import from src/${upper} (upper layer).`,
+    },
+    {
+      group: [`@/${upper}/**`, `~/${upper}/**`],
+      message: `FSD: src/${layer} cannot import from src/${upper} (upper layer).`,
+    },
+  ]);
+}
+
+function horizontalPatterns(layer, otherSlice) {
+  const rel = (prefix) => [`${prefix}${otherSlice}`, `${prefix}${otherSlice}/**`];
+  return [
+    {
+      group: [`@/${layer}/${otherSlice}`, `@/${layer}/${otherSlice}/**`],
+      message: `FSD: cannot import slice ${layer}/${otherSlice} from another ${layer} slice.`,
+    },
+    {
+      group: [`**/${layer}/${otherSlice}`, `**/${layer}/${otherSlice}/**`],
+      message: `FSD: cannot import slice ${layer}/${otherSlice} from another ${layer} slice.`,
+    },
+    {
+      group: [...rel("../"), ...rel("../../"), ...rel("../../../")],
+      message: `FSD: cannot import slice ${layer}/${otherSlice} from another ${layer} slice (relative path).`,
+    },
+  ];
+}
+
+function listFsdSlices(srcRoot, layer) {
+  const dir = path.join(srcRoot, layer);
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
+    .map((entry) => entry.name);
+}
+
 function fsdLayerBlocks() {
   const restrictFor = (layer, forbidden) => ({
     files: [`src/${layer}/**/*.{ts,tsx}`],
@@ -100,11 +140,82 @@ function fsdLayerBlocks() {
       ],
     },
   });
-  return [
-    restrictFor("shared", ["entities", "features", "widgets", "pages", "app"]),
-    restrictFor("entities", ["features", "widgets", "pages", "app"]),
-    restrictFor("features", ["widgets", "pages", "app"]),
-    restrictFor("widgets", ["pages", "app"]),
-    restrictFor("pages", ["app"]),
+  return [restrictFor("shared", FSD_UPPER_BY_LAYER.shared)];
+}
+
+function fsdHorizontalBlocks(srcRoot) {
+  const blocks = [];
+  for (const layer of FSD_LAYERS) {
+    const slices = listFsdSlices(srcRoot, layer);
+    for (const slice of slices) {
+      const others = slices.filter((name) => name !== slice);
+      if (others.length === 0) continue;
+      blocks.push({
+        files: [`src/${layer}/${slice}/**/*.{ts,tsx}`],
+        rules: {
+          "no-restricted-imports": [
+            "error",
+            {
+              patterns: [
+                ...verticalPatterns(layer),
+                ...others.flatMap((other) => horizontalPatterns(layer, other)),
+              ],
+            },
+          ],
+        },
+      });
+    }
+  }
+  return blocks;
+}
+
+function fsdPublicApiBlocks() {
+  const entityInternals = [
+    "@/entities/*/api/**",
+    "@/entities/*/lib/**",
+    "@/entities/*/model/**",
+    "**/entities/*/api/**",
+    "**/entities/*/lib/**",
+    "**/entities/*/model/**",
   ];
+  const featureInternals = [
+    "@/features/*/ui/**",
+    "@/features/*/api/**",
+    "@/features/*/model/**",
+    "@/features/*/lib/**",
+    "**/features/*/ui/**",
+    "**/features/*/api/**",
+    "**/features/*/model/**",
+    "**/features/*/lib/**",
+  ];
+  const widgetInternals = [
+    "@/widgets/*/ui/**",
+    "@/widgets/*/lib/**",
+    "@/widgets/*/model/**",
+    "**/widgets/*/ui/**",
+    "**/widgets/*/lib/**",
+    "**/widgets/*/model/**",
+  ];
+  const warnPatterns = (patterns, target) =>
+    patterns.map((group) => ({
+      group: [group],
+      message: `FSD public API: import ${target} via its slice barrel (index), not internal segments.`,
+    }));
+
+  const consumerLayers = ["widgets", "features", "pages", "app"];
+  return consumerLayers.map((layer) => ({
+    files: [`src/${layer}/**/*.{ts,tsx}`],
+    rules: {
+      "no-restricted-imports": [
+        "warn",
+        {
+          patterns: [
+            ...warnPatterns(entityInternals, "entities"),
+            ...warnPatterns(featureInternals, "features"),
+            ...warnPatterns(widgetInternals, "widgets"),
+          ],
+        },
+      ],
+    },
+  }));
 }

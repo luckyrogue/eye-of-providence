@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Globe, Cpu, Code2 } from "lucide-react";
-import type { Device } from "../../../entities/device";
+import type { Device } from "@/entities/device";
 
 const ICON: Record<string, typeof Globe> = {
   ext: Globe,

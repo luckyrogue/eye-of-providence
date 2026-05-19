@@ -4,7 +4,7 @@
 
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { CONTENT_SLUGS, type ContentSlug } from "../../../shared/content";
+import { CONTENT_SLUGS, type ContentSlug } from "@/shared/content";
 
 export function SlugTree({
   selected,

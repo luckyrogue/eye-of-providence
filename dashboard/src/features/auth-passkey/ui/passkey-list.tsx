@@ -6,9 +6,9 @@
 import { useTranslation } from "react-i18next";
 import { Button, useConfirm } from "@eop/ui";
 import { Fingerprint, Trash2 } from "lucide-react";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 import { usePasskeys, useRevokePasskey } from "../api";
-import type { Passkey } from "../../../entities/user";
+import type { Passkey } from "@/entities/user";
 
 function formatRelative(iso: string | null | undefined, locale: string): string | null {
   if (!iso) return null;

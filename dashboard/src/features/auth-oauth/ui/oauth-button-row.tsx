@@ -4,10 +4,8 @@
 import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@eop/ui";
-import type { OAuthProvider } from "../../../entities/user";
-import { GithubGlyph } from "./glyphs/github-glyph";
-import { GoogleGlyph } from "./glyphs/google-glyph";
-import { AppleGlyph } from "./glyphs/apple-glyph";
+import type { OAuthProvider } from "@/entities/user";
+import { AppleGlyph, GithubGlyph, GoogleGlyph } from "@/shared/ui/oauth-glyphs";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || "https://eop-api.rysdavletov.org";
 

@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { Button, useConfirm } from "@eop/ui";
 import { Trash2 } from "lucide-react";
-import { useRevokeToken, type APIToken } from "../../../entities/user";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useRevokeToken, type APIToken } from "@/entities/user";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 export function RevokeTokenButton({ token }: { token: APIToken }) {
   const { t } = useTranslation("developer");

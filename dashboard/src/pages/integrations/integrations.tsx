@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
-import { APITokensWidget } from "../../widgets/api-tokens";
-import { DevicesWidget } from "../../widgets/devices";
-import { PushNotificationsWidget } from "../../widgets/push-notifications";
-import { WebhooksWidget } from "../../widgets/webhooks";
+import { APITokensWidget } from "@/widgets/api-tokens";
+import { DevicesWidget } from "@/widgets/devices";
+import { PushNotificationsWidget } from "@/widgets/push-notifications";
+import { WebhooksWidget } from "@/widgets/webhooks";
 
 export function IntegrationsPage() {
   const { t } = useTranslation("common");

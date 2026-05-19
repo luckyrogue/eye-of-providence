@@ -7,7 +7,7 @@ import {
   getUserId,
   notifySessionChange,
   setSession,
-} from "../../../shared/lib/session-storage";
+} from "@/shared/lib/session-storage";
 
 export type AuthPayload = {
   user_id: string;

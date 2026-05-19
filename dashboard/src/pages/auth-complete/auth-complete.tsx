@@ -11,9 +11,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { AlertTriangle, Loader2 } from "lucide-react";
-import { completeSessionHandoff, fetchMe } from "../../entities/user";
-import { useAuth } from "../../entities/session";
-import { safeRedirect } from "../../shared/lib/redirect";
+import { completeSessionHandoff, fetchMe } from "@/entities/user";
+import { useAuth } from "@/entities/session";
+import { safeRedirect } from "@/shared/lib/redirect";
 
 type Phase = "loading" | "error";
 

@@ -1,50 +1,57 @@
-import { useHeatmap, useLanguages, useRecent, useSummary, useTrend } from "../../entities/event";
-import { useReports } from "../../entities/report";
-import { InstallPWA } from "../../features/install-pwa";
-import { InsightsWidget } from "../../widgets/insights";
-import { EventsCard } from "./ui/events-card";
-import { HeatmapCard } from "./ui/heatmap-card";
-import { LanguagesCard } from "./ui/languages-card";
-import { ReportsCard } from "./ui/reports-card";
-import { StatsRow } from "./ui/stats-row";
-import { TrendCard } from "./ui/trend-card";
+import { useTranslation } from "react-i18next";
+import { DashboardExportEventsButton } from "@/features/dashboard-export-events";
+import { DashboardGenerateReportButton } from "@/features/dashboard-generate-report";
+import { i18nToBcp47 } from "@/shared/lib/i18n-bcp47";
+import { AttributionLog } from "@/widgets/dashboard-attribution";
+import { GaugeCard } from "@/widgets/dashboard-gauge";
+import { HeatmapCard } from "@/widgets/dashboard-heatmap";
+import { KpiGrid } from "@/widgets/dashboard-kpi";
+import { LanguageBars } from "@/widgets/dashboard-languages";
+import { ProvenanceDonut } from "@/widgets/dashboard-provenance";
+import { RecapCard } from "@/widgets/dashboard-recap";
+import { TrendChart } from "@/widgets/dashboard-trend";
 
-export function Dashboard({ tz }: { tz: string }) {
-  const events = useRecent(20);
-  const summary = useSummary(7);
-  const languages = useLanguages(30);
-  const heatmap = useHeatmap(30, tz);
-  const trend = useTrend(30, tz);
-  const reports = useReports();
-
-  const sumMap = summary.data ?? {};
-  const totalMs = Object.values(sumMap).reduce((a, b) => a + b, 0);
-  const aiMs = sumMap["ai"] ?? 0;
-  const aiRatio = totalMs ? Math.round((aiMs / totalMs) * 100) : 0;
-  const eventsList = events.data ?? [];
-  const reportsList = reports.data ?? [];
+export function DashboardRoute() {
+  const { t, i18n } = useTranslation("app");
+  const today = new Date();
+  const localeTag = i18nToBcp47(i18n.language);
 
   return (
     <>
-      <StatsRow
-        aiRatio={aiRatio}
-        totalMinutes={Math.round(totalMs / 60000)}
-        eventsCount={eventsList.length}
-        reportsCount={reportsList.length}
-      />
-
-      <InstallPWA />
-      <InsightsWidget />
-
-      <TrendCard points={trend.data ?? []} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <HeatmapCard cells={heatmap.data ?? []} tz={tz} />
-        <LanguagesCard cells={languages.data ?? []} />
+      <div className="page-head">
+        <div>
+          <h1>{t("dashboard.overview")}</h1>
+          <div className="sub font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
+            {today.toLocaleDateString(localeTag, {
+              month: "short",
+              day: "numeric",
+              weekday: "short",
+            })}{" "}
+            · {today.toLocaleTimeString(localeTag, { hour: "2-digit", minute: "2-digit" })}
+          </div>
+        </div>
+        <div className="page-head-actions flex gap-2">
+          <DashboardExportEventsButton />
+          <DashboardGenerateReportButton />
+        </div>
       </div>
 
-      <ReportsCard reports={reportsList} tz={tz} />
-      <EventsCard tz={tz} />
+      <KpiGrid />
+
+      <div className="eop-grid grid grid-cols-12 gap-[14px]" style={{ marginBottom: 14 }}>
+        <div className="col-span-12">
+          <RecapCard />
+        </div>
+      </div>
+
+      <div className="eop-grid grid grid-cols-12 gap-[14px]">
+        <HeatmapCard />
+        <GaugeCard />
+        <ProvenanceDonut />
+        <LanguageBars />
+        <TrendChart />
+        <AttributionLog />
+      </div>
     </>
   );
 }

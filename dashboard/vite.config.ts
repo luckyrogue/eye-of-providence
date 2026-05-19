@@ -1,9 +1,18 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
+const dashboardRoot = path.dirname(fileURLToPath(import.meta.url));
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      "@": path.resolve(dashboardRoot, "src"),
+    },
+  },
   server: {
     host: "0.0.0.0",
     port: 5173,
@@ -17,9 +26,6 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Стабильное разбиение vendor-chunks: тяжёлые libs кэшируются независимо
-        // от правок приложения. Используем функцию: Radix-пакеты приходят
-        // транзитивно через @eop/ui и могут отсутствовать в dependencies.
         manualChunks(id) {
           if (!id.includes("node_modules")) return undefined;
           if (id.includes("/react-router")) return "react-vendor";

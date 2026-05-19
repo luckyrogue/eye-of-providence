@@ -8,8 +8,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { KeyRound, Plus } from "lucide-react";
-import { useTokens } from "../../../entities/user";
-import { CreateTokenDialog } from "../../../features/api-token-create";
+import { useTokens } from "@/entities/user";
+import { CreateTokenDialog } from "@/features/api-token-create";
 import { TokenRow } from "./token-row";
 
 export function APITokensWidget() {

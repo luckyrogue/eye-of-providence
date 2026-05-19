@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { ArrowRight, CheckCircle2, Loader2, Radio, SkipForward } from "lucide-react";
-import { useOnboardingStatus } from "../../../entities/user";
+import { useOnboardingStatus } from "@/entities/user";
 
 // Polling каждые 5s до первого события от агента; при has_event=true —
 // auto-advance в onFinish (короткая задержка задаётся в эффекте ниже).

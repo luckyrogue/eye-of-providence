@@ -2,9 +2,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
 import { Button, Form, InputField } from "@eop/ui";
-import { forgotPassword } from "../../../entities/user";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-import { forgotPasswordSchema, type ForgotPasswordValues } from "../../../shared/lib/schemas";
+import { forgotPassword } from "@/entities/user";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
+import { forgotPasswordSchema, type ForgotPasswordValues } from "@/shared/lib/schemas";
 
 export function ForgotPasswordForm({ onSent }: { onSent: () => void }) {
   const { t } = useTranslation(["auth", "errors"]);

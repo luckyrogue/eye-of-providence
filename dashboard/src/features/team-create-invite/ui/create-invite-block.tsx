@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, SecretField, toast } from "@eop/ui";
 import { Plus } from "lucide-react";
-import { useCreateInvite } from "../../../entities/team";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useCreateInvite } from "@/entities/team";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 // Видимость по роли решает родитель: owner/admin-гард тут не дублируется.
 export function CreateInviteBlock({ teamID }: { teamID: string }) {

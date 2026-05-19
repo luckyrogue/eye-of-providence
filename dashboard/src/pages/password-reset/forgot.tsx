@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Mail } from "lucide-react";
-import { ForgotPasswordForm } from "../../features/auth-forgot-password";
+import { ForgotPasswordForm } from "@/features/auth-forgot-password";
 
 export function ForgotPasswordRoute() {
   const { t } = useTranslation("auth");

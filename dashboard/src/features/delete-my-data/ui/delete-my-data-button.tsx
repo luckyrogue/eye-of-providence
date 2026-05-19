@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Button, useConfirm } from "@eop/ui";
-import { useDeleteMyData, useProfile } from "../../../entities/user";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useDeleteMyData, useProfile } from "@/entities/user";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 export function DeleteMyDataButton({ onWiped }: { onWiped: () => void }) {
   const { t } = useTranslation("common");

@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { Button, Form, InputField, toast } from "@eop/ui";
-import { useClaimDevice } from "../../../entities/device";
+import { useClaimDevice } from "@/entities/device";
 
 const CODE_LEN = 6;
 

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import type { Insight } from "../../../entities/user";
+import type { Insight } from "@/entities/user";
 import { FALLBACK_INSIGHT_ICON, INSIGHT_ICON_MAP } from "../model/icon-map";
 
 export function InsightRow({ insight }: { insight: Insight }) {

@@ -30,6 +30,19 @@ flowchart TD
 - горизонтальные импорты внутри одного слоя (entity-A не импортит
   entity-B; feature-X не импортит feature-Y).
 
+## Импорты (`@/`)
+
+- Канонический стиль: `import { useTeams } from "@/entities/team"` (alias
+  `@` → `dashboard/src`, настроен в `vite.config.ts` + `tsconfig.json`).
+- Не используйте глубокие relative-пути (`../../../entities/...`) — только `@/`.
+- Снаружи слайса импортируйте только через **barrel** (`@/entities/team`, не
+  `@/entities/team/api/req`). ESLint: `warn` на внутренние сегменты.
+- Горизонтальные импорты между слайсами одного слоя — **error** (ESLint + Steiger).
+- Cross-feature / cross-page композиция — на уровне **pages** или **widgets**, не
+  внутри `features/*`.
+- Не вводите суффиксы `*-v2` / `v2.tsx` в публичных именах: после миграции
+  переименовывайте в каноничное имя (`app-shell`, `dashboard.tsx`).
+
 ## Сегменты внутри слайса (одинаковы для всех слоёв)
 
 | Сегмент   | Что лежит                                                        |

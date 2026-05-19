@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Eyebrow } from "@eop/ui";
-import type { Payment } from "../../../entities/admin";
-import { formatDate } from "../../../shared/lib/tz";
+import type { Payment } from "@/entities/admin";
+import { formatDate } from "@/shared/lib/tz";
 
 export function SubscriptionPaymentsList({ payments, tz }: { payments: Payment[]; tz: string }) {
   const { t } = useTranslation("app");

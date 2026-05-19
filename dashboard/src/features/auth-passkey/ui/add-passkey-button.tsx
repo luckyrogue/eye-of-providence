@@ -12,7 +12,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, PromptDialog } from "@eop/ui";
 import { Fingerprint } from "lucide-react";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 import { useRegisterPasskey } from "../api";
 
 function mapBrowserError(e: unknown, t: (k: string) => string): string {

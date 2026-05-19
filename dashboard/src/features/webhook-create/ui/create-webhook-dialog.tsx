@@ -17,8 +17,8 @@ import {
   useCreateWebhook,
   type WebhookEvent,
   type WebhookFormat,
-} from "../../../entities/webhook";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+} from "@/entities/webhook";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 export function CreateWebhookDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation("developer");

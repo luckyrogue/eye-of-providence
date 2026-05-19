@@ -1,32 +1,23 @@
-// Admin panel — production-grade super_admin view. Под eop-theme:
-// page-head + KPI grid + tab-segmented control в стиле topbar date-pick.
-//
-// Все хуки уже подключены к backend (useAdminStats / useAdminTeams /
-// useAdminUsers + payments + delete + role + subscription mutations).
-// Здесь добавляем loading skeletons + error states + refresh UX.
-
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { toast } from "@eop/ui";
-import { Loader2, RefreshCw, AlertTriangle } from "lucide-react";
-import { adminKeys, useAdminStats, useAdminTeams, useAdminUsers } from "../../entities/admin";
+import { AlertTriangle } from "lucide-react";
+import { useAdminStats, useAdminTeams, useAdminUsers } from "@/entities/admin";
+import { AdminRefreshButton } from "@/features/admin-refresh";
+import { APITokensCrossUser } from "@/widgets/admin-api-tokens-cross-user";
+import { AuditLog } from "@/widgets/admin-audit";
+import { ContentEditorPage } from "@/widgets/admin-content-editor";
+import { EmailTemplatesPage } from "@/widgets/admin-email-templates";
+import { Overview } from "@/widgets/admin-overview";
+import { Revenue } from "@/widgets/admin-revenue";
+import { AdminSkeleton } from "@/widgets/admin-skeleton";
+import { SSOConfigs } from "@/widgets/admin-sso";
+import { TeamsTable } from "@/widgets/admin-teams-table";
+import { UsersTable } from "@/widgets/admin-users-table";
+import { WebhooksCrossTeam } from "@/widgets/admin-webhooks-cross-team";
 import { ADMIN_TABS, type AdminProps, type AdminTabKey } from "./model";
-import { Overview } from "./ui/overview";
-import { TeamsTable } from "./ui/teams-table";
-import { UsersTable } from "./ui/users-table";
-import { Revenue } from "./ui/revenue";
-import { SSOConfigs } from "./ui/sso";
-import { AuditLog } from "./ui/audit";
-import { AdminSkeleton } from "./ui/admin-skeleton";
-import { EmailTemplatesPage } from "./ui/email-templates";
-import { ContentEditorPage } from "./ui/content-editor";
-import { WebhooksCrossTeam } from "./ui/webhooks-cross-team";
-import { APITokensCrossUser } from "./ui/api-tokens-cross-user";
 
 export function Admin({ tz }: AdminProps) {
   const { t } = useTranslation("app");
-  const qc = useQueryClient();
   const [tab, setTab] = useState<AdminTabKey>("overview");
   const stats = useAdminStats();
   const teams = useAdminTeams();
@@ -35,15 +26,6 @@ export function Admin({ tz }: AdminProps) {
   const isLoading = stats.isPending || teams.isPending || users.isPending;
   const errored = stats.isError || teams.isError || users.isError;
   const isFetching = stats.isFetching || teams.isFetching || users.isFetching;
-
-  const refresh = async () => {
-    try {
-      await qc.invalidateQueries({ queryKey: adminKeys.all });
-      toast.success(t("admin.refreshed") || "Refreshed");
-    } catch {
-      toast.error(t("admin.refresh_failed") || "Refresh failed");
-    }
-  };
 
   return (
     <>
@@ -76,21 +58,7 @@ export function Admin({ tz }: AdminProps) {
               </button>
             ))}
           </div>
-          {/* eslint-disable-next-line no-restricted-syntax -- icon-btn refresh */}
-          <button
-            type="button"
-            onClick={() => void refresh()}
-            disabled={isFetching}
-            aria-label={t("admin.refresh") || "Refresh"}
-            className="inline-flex items-center justify-center h-10 w-10 rounded-lg border transition-colors hover:bg-foreground/5 disabled:opacity-60"
-            style={{ borderColor: "hsl(var(--border))" }}
-          >
-            {isFetching ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-          </button>
+          <AdminRefreshButton isFetching={isFetching} />
         </div>
       </div>
 

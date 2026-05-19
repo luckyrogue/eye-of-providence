@@ -8,7 +8,7 @@
 import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, IconButton } from "@eop/ui";
 import { Download, X } from "lucide-react";
-import { useInstallPrompt } from "../../../shared/lib/pwa";
+import { useInstallPrompt } from "@/shared/lib/pwa";
 
 export function InstallPWA() {
   const { t } = useTranslation("pwa");

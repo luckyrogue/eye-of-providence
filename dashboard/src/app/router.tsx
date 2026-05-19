@@ -1,9 +1,9 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import { AppShellV2 } from "../widgets/app-shell-v2";
+import { AppShell } from "@/widgets/app-shell";
+import { NotFound } from "@/pages/not-found";
+import { RouteError } from "@/pages/route-error";
 import { RouteFallback } from "./route-fallback";
-import { NotFound } from "../pages/not-found";
-import { RouteError } from "../pages/route-error";
 
 const Landing = lazy(() => import("../pages/landing").then((m) => ({ default: m.Landing })));
 const AuthRoute = lazy(() => import("../pages/auth").then((m) => ({ default: m.AuthRoute })));
@@ -53,7 +53,7 @@ export const router = createBrowserRouter([
   { path: "/changelog", element: wrap(<ChangelogRoute />), ...eb },
   { path: "/pricing", element: wrap(<PricingRoute />), ...eb },
   {
-    element: <AppShellV2 />,
+    element: <AppShell />,
     ...eb,
     children: [
       { path: "/dashboard", element: wrap(<DashboardRoute />), ...eb },

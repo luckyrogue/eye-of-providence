@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Fingerprint } from "lucide-react";
-import { AddPasskeyButton, PasskeyList } from "../../../features/auth-passkey";
+import { AddPasskeyButton, PasskeyList } from "@/features/auth-passkey";
 
 export function SettingsPasskeyCard() {
   const { t } = useTranslation("common");

@@ -2,9 +2,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
 import { Button, Form, InputField } from "@eop/ui";
-import { useChangeMyPassword } from "../../../entities/user";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
-import { changePasswordSchema, type ChangePasswordValues } from "../../../shared/lib/schemas";
+import { useChangeMyPassword } from "@/entities/user";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
+import { changePasswordSchema, type ChangePasswordValues } from "@/shared/lib/schemas";
 
 export function ChangePasswordForm() {
   const { t } = useTranslation(["common", "auth", "errors"]);

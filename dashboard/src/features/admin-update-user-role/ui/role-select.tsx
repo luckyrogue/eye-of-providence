@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { SimpleSelect } from "@eop/ui";
-import { useAdminUpdateUser } from "../../../entities/admin";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useAdminUpdateUser } from "@/entities/admin";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 export function UserRoleSelect({ userID, value }: { userID: string; value: string }) {
   const { t } = useTranslation("app");

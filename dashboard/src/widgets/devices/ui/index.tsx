@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@eop/ui";
 import { Laptop2 } from "lucide-react";
-import { useDevices } from "../../../entities/device";
-import { ClaimDeviceForm } from "../../../features/device-claim";
+import { useDevices } from "@/entities/device";
+import { ClaimDeviceForm } from "@/features/device-claim";
 import { DevicesTable } from "./devices-table";
 
 export function DevicesWidget() {

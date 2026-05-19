@@ -1,8 +1,8 @@
 // /v1/auth/* и /v1/me/* — fetcher функции + TanStack hooks.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { http } from "../../../shared/api/http";
-import { SESSION_KEYS, clearSession } from "../../../shared/lib/session-storage";
+import { http } from "@/shared/api/http";
+import { SESSION_KEYS, clearSession } from "@/shared/lib/session-storage";
 import type {
   APIToken,
   AuthConfig,

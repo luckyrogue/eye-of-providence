@@ -9,7 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button, Input } from "@eop/ui";
 import { Loader2 } from "lucide-react";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 import { useTeamFlags, useUpdateTeamFlags, type TeamFlagsPayload } from "../api";
 
 type BoolFlagKey =

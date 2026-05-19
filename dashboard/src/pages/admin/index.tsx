@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Admin } from "./admin";
-import { useMe } from "../../entities/user";
-import { getTz } from "../../shared/lib/tz";
+import { useMe } from "@/entities/user";
+import { getTz } from "@/shared/lib/tz";
 
 export function AdminRoute() {
   const me = useMe();

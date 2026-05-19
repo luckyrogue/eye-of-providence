@@ -10,9 +10,12 @@ import {
   EopMark,
 } from "@eop/ui";
 import { Lock } from "lucide-react";
-import { fetchAuthConfig, type AuthConfig, type AuthResponse } from "../../entities/user";
-import { LoginForm } from "../../features/auth-login";
-import { RegisterForm } from "../../features/auth-register";
+import { fetchAuthConfig, type AuthConfig, type AuthResponse } from "@/entities/user";
+import { LoginForm } from "@/features/auth-login";
+import { OAuthButtonRow } from "@/features/auth-oauth";
+import { PasskeyLoginButton } from "@/features/auth-passkey";
+import { RegisterForm } from "@/features/auth-register";
+import { AuthOAuthSeparator } from "./ui/auth-oauth-separator";
 import { useInvitePreview } from "./model/use-invite-preview";
 
 type Mode = "login" | "register";
@@ -98,9 +101,27 @@ export function Auth({ onAuth }: { onAuth: (r: AuthResponse) => void }) {
           )}
 
           {!registrationBlocked && mode === "register" && (
-            <RegisterForm inviteCode={inviteCode} onSuccess={onAuth} />
+            <div className="space-y-4">
+              {(authConfig?.providers?.length ?? 0) > 0 && (
+                <>
+                  <OAuthButtonRow providers={authConfig?.providers ?? ["github"]} />
+                  <AuthOAuthSeparator />
+                </>
+              )}
+              <RegisterForm inviteCode={inviteCode} onSuccess={onAuth} />
+            </div>
           )}
-          {mode === "login" && <LoginForm onSuccess={onAuth} />}
+          {mode === "login" && (
+            <div className="space-y-4">
+              {authConfig?.passkey_enabled && <PasskeyLoginButton />}
+              {(authConfig?.providers?.length ?? 0) > 0 && (
+                <OAuthButtonRow providers={authConfig?.providers ?? ["github"]} />
+              )}
+              {((authConfig?.passkey_enabled ?? false) ||
+                (authConfig?.providers?.length ?? 0) > 0) && <AuthOAuthSeparator />}
+              <LoginForm onSuccess={onAuth} />
+            </div>
+          )}
 
           <Button
             type="button"

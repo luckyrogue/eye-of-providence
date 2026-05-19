@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { Button, useConfirm } from "@eop/ui";
 import { Trash2 } from "lucide-react";
-import { useUnsubscribePush, type Subscription } from "../../../entities/push";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useUnsubscribePush, type Subscription } from "@/entities/push";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 export function DisablePushButton({ sub }: { sub: Subscription }) {
   const { t } = useTranslation("pwa");

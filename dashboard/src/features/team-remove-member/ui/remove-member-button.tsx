@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { IconButton, useConfirm } from "@eop/ui";
 import { UserMinus } from "lucide-react";
-import { useRemoveMember } from "../../../entities/team";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useRemoveMember } from "@/entities/team";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 export function RemoveMemberButton({
   teamID,

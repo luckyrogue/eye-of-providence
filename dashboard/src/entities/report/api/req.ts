@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { http } from "../../../shared/api/http";
+import { http } from "@/shared/api/http";
 import type { GenerateReportRes, ListReportsRes } from "./res";
 import type { ReportPeriod } from "./types";
 

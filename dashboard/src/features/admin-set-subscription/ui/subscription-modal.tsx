@@ -17,8 +17,8 @@ import {
   useAdminSetSubscription,
   type AdminTeam,
   type SetSubscriptionReq,
-} from "../../../entities/admin";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+} from "@/entities/admin";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 import { DEFAULT_SUBSCRIPTION_FORM, subscriptionFormSchema, type SubscriptionForm } from "../model";
 import { SubscriptionPaymentFields } from "./payment-fields";
 import { SubscriptionPaymentsList } from "./payments-list";

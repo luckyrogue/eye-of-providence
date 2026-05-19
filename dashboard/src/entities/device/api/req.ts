@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { http } from "../../../shared/api/http";
+import { http } from "@/shared/api/http";
 import type { Device } from "./types";
 import type { ListDevicesRes } from "./res";
 

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Eyebrow } from "@eop/ui";
-import { useContent, type FaqItemsBlock, type FaqItem } from "../../../shared/content";
+import { useContent, type FaqItemsBlock, type FaqItem } from "@/shared/content";
 
 // Auto-derive a kebab-case anchor from the question if the CMS row omits
 // an explicit `anchor`. Strictly lowercase a-z 0-9 with single hyphens.

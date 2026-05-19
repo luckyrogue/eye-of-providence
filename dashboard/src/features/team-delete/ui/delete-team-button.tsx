@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { Button, useConfirm } from "@eop/ui";
 import { Trash2 } from "lucide-react";
-import { useDeleteTeam, type Team } from "../../../entities/team";
-import { useMutationToast } from "../../../shared/hooks/use-mutation-toast";
+import { useDeleteTeam, type Team } from "@/entities/team";
+import { useMutationToast } from "@/shared/hooks/use-mutation-toast";
 
 export function DeleteTeamButton({ team }: { team: Team }) {
   const { t } = useTranslation(["app", "common"]);

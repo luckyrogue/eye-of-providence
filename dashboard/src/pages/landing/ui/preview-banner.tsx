@@ -7,7 +7,7 @@
 
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
-import { usePreviewContext } from "../../../shared/content";
+import { usePreviewContext } from "@/shared/content";
 
 export function PreviewBanner() {
   const { t } = useTranslation("app");
