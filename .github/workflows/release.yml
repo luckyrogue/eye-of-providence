@@ -120,6 +120,11 @@ jobs:
 
       - name: Build Tauri (signed if secrets set)
         uses: tauri-apps/tauri-action@v0
+        env:
+          # tauri-action создаёт/обновляет GH Release с собранными артефактами.
+          # Без этого token'а получаем «GITHUB_TOKEN is required» после
+          # успешного билда — артефакты есть, но в release не загрузились.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: agent
           args: ${{ matrix.args }}
