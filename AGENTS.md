@@ -89,4 +89,4 @@ Rust (`agent/src-tauri`) — `cargo test --lib` (store/preflight). VS Code — `
 
 Все артефакты прикрепляются к draft GH Release. Maintainer вручную ревьюит и публикует.
 
-Гайд для beta-тестеров: [`docs/beta-install.md`](docs/beta-install.md).
+Гайд для alpha-участников: [`docs/alpha-install.md`](docs/alpha-install.md).

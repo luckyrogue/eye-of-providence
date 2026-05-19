@@ -1,8 +1,20 @@
 # Eye of Providence
 
+> **Status:** v0.1 · публичная альфа · macOS + Windows + Linux ([changelog](CHANGELOG.md))
+> Current release: [`v0.1.0-alpha.2`](https://github.com/luckyrogue/eye-of-providence/releases/tag/v0.1.0-alpha.2)
+
 Система отслеживания использования AI при разработке: измеряет, сколько времени пользователь пишет код сам, а сколько — с помощью AI (ChatGPT, Claude, Copilot, Cursor, CLI-агенты), а также общую активность за компьютером.
 
-Работает на **macOS** и **Windows**, покрывает **desktop apps**, **CLI** и **браузер**, отдаёт аналитику в дашборд.
+Работает на **macOS** и **Windows** (с Linux в режиме installer-only без keystroke parity пока), покрывает **desktop apps**, **CLI** и **браузер**, отдаёт аналитику в дашборд.
+
+## Quick start
+
+- **Try as user:** download installer from [latest release](https://github.com/luckyrogue/eye-of-providence/releases/latest), register at `https://eop.rysdavletov.org`, pair device. See [`docs/alpha-install.md`](docs/alpha-install.md).
+- **Self-host:** [`docs/self-hosting.md`](docs/self-hosting.md) — Docker Compose stack, single command.
+- **Contribute:** [`CONTRIBUTING.md`](CONTRIBUTING.md) — repo layout, conventions, release flow.
+- **Security:** [`.github/SECURITY.md`](.github/SECURITY.md) — disclosure policy + image-verification recipes.
+- **Privacy:** [`docs/privacy.md`](docs/privacy.md) — what we collect, GDPR posture, data flow.
+- **Operational risk register:** [`docs/tech-debt.md`](docs/tech-debt.md).
 
 ---
 

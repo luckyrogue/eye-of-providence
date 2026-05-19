@@ -1,12 +1,12 @@
 # Disaster Recovery Runbook
 
-**Status:** v0.1 · last updated 2026-05-12
+**Status:** v0.1.x alpha · last updated 2026-05-19
 **Audience:** Operators / on-call engineer
 **Scope:** Single-region Dokploy deployment of Eye of Providence
 
 ---
 
-## RTO / RPO targets (beta)
+## RTO / RPO targets (alpha)
 
 | Tier | RTO | RPO |
 | --- | --- | --- |
@@ -15,7 +15,7 @@
 | ClickHouse (events) | 4 h | 24 h (snapshot) |
 | Redis (cache + WebAuthn) | 5 min | n/a (cache rebuildable; required at runtime) |
 
-These are **beta** targets. For GA contractual SLAs we tighten RPO Postgres to 1h via WAL streaming.
+These are **alpha** targets. For GA contractual SLAs we tighten RPO Postgres to 1h via WAL streaming.
 
 ---
 
@@ -107,7 +107,7 @@ curl -fsS http://localhost:8080/healthz
 
 ### Postgres — point-in-time restore (PITR)
 
-PITR requires WAL archiving (not configured by default). For beta, fall back to
+PITR requires WAL archiving (not configured by default). For alpha, fall back to
 "daily dump + accept 24h loss". For GA: configure `archive_command` to S3 +
 restore WAL replay.
 

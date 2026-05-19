@@ -7,7 +7,7 @@ Human-facing docs for Eye of Providence (alpha v0.1.x). AI rules: [`AGENTS.md`](
 
 | Document | Purpose |
 | --- | --- |
-| [`beta-install.md`](beta-install.md) | Install agent, VS Code extension, browser extension |
+| [`alpha-install.md`](alpha-install.md) | Install agent, VS Code extension, browser extension (alpha participants) |
 | [`privacy.md`](privacy.md) | GDPR, data handling |
 | [`attribution.md`](attribution.md) | AI vs human signals (hooks, extensions) |
 | [`data-model.md`](data-model.md) | Postgres + ClickHouse schemas, MVs, Redis cache, event flow |
@@ -27,6 +27,9 @@ Human-facing docs for Eye of Providence (alpha v0.1.x). AI rules: [`AGENTS.md`](
 | Document | Purpose |
 | --- | --- |
 | [`integrations-pr-comment.md`](integrations-pr-comment.md) | PR comment bot API |
+| [`agents-publishing.md`](agents-publishing.md) | Tauri/extension release process |
+| [`ci-hardening.md`](ci-hardening.md) | Branch protection + production env approval (manual UI checklist) |
+| [`tech-debt.md`](tech-debt.md) | Active tech-debt register, 13 clusters |
 
 ## Maintainers
 

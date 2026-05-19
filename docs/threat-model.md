@@ -1,5 +1,11 @@
 # Threat model — STRIDE
 
+> **Status:** ⚠ last reviewed 2026-05-04 — re-review required before alpha → beta
+> promotion. Known coverage gaps (added after last review): passkey/WebAuthn
+> auth, GDPR-export endpoint (`GET /v1/me/export`), admin panel (super-admin
+> view of aggregates + audit log), third-party integrations (Resend email,
+> Dokploy hosting). Tracked in [`tech-debt.md`](tech-debt.md) C8.
+
 Скоуп: backend (`cmd/api`), desktop agent (Tauri), browser extension (MV3), VS Code plugin, Claude Code hooks.
 
 ## STRIDE по компонентам

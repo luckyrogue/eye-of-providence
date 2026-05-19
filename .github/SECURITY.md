@@ -15,12 +15,13 @@ We aim to acknowledge within **48 hours** and provide a remediation timeline wit
 
 ## Supported Versions
 
-Security fixes land on `main`. We do not maintain LTS branches during beta.
+Security fixes land on `main`. We do not maintain LTS branches during alpha/beta.
 
 | Version    | Supported |
 | ---------- | --------- |
 | `main`     | ✅        |
-| pre-beta tags | ❌     |
+| `v0.1.x-alpha.*` | ✅ (latest only) |
+| pre-alpha tags | ❌     |
 
 ## Scope
 
