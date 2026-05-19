@@ -43,8 +43,12 @@ export const usePasskeys = () => useQuery({ queryKey: passkeyKeys.list, queryFn:
 // session_id is required on finish to bind challenge to the right ceremony.
 // Field name is `attestation` (not `credential`) per backend contract,
 // see handler_webauthn.go webauthnFinishRegisterReq.
+//
+// `options` itself is the spec-shaped `{ publicKey: { ... } }` envelope that
+// `go-webauthn` returns; simplewebauthn's `startRegistration` wants the inner
+// `publicKey` directly, so we unwrap here.
 type RegisterBeginRes = {
-  options: PublicKeyCredentialCreationOptionsJSON;
+  options: { publicKey: PublicKeyCredentialCreationOptionsJSON };
   session_id: string;
 };
 
@@ -53,7 +57,7 @@ async function registerPasskey(nickname: string): Promise<Passkey> {
     nickname,
   });
   const attResp: RegistrationResponseJSON = await startRegistration({
-    optionsJSON: beginRes.data.options,
+    optionsJSON: beginRes.data.options.publicKey,
   });
   const finishRes = await http.post<Passkey>("/v1/auth/webauthn/register/finish", {
     session_id: beginRes.data.session_id,
@@ -75,7 +79,7 @@ export function useRegisterPasskey() {
 // handoff cookie. Caller redirects to `/auth/complete?return_to=...` so the
 // SPA's auth-handoff page consumes the cookie and lands the user.
 type LoginBeginRes = {
-  options: PublicKeyCredentialRequestOptionsJSON;
+  options: { publicKey: PublicKeyCredentialRequestOptionsJSON };
   session_id: string;
 };
 type LoginFinishRes = { token: string; user_id: string; redirect_to: string };
@@ -86,7 +90,7 @@ async function loginPasskey(email: string | undefined): Promise<LoginFinishRes> 
     email ? { email } : {},
   );
   const authResp: AuthenticationResponseJSON = await startAuthentication({
-    optionsJSON: beginRes.data.options,
+    optionsJSON: beginRes.data.options.publicKey,
   });
   const finishRes = await http.post<LoginFinishRes>(
     "/v1/auth/webauthn/login/finish",
