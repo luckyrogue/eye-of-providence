@@ -26,4 +26,4 @@ To the maximum extent permitted by law, the service is provided without warranti
 
 ## Contact
 
-Questions: `d.rysdovletov@gmail.com`
+Questions: `main@rysdavletov.org`

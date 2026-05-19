@@ -154,7 +154,7 @@ export function ComparisonTable() {
         <p className="mt-8 text-center text-sm text-muted-foreground">
           Have an unusual requirement?{" "}
           <a
-            href="mailto:sales@eop.rysdavletov.org"
+            href="mailto:main@rysdavletov.org"
             className="text-foreground underline underline-offset-4"
           >
             Talk to us

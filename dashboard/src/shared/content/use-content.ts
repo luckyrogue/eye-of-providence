@@ -1,33 +1,15 @@
-// useContent — Phase 4 CMS-lite read hook.
-//
-// Contract:
-//   useContent<T>(slug, fallback, enabled?) => T
-// Behaviour:
-//   1. Resolves current locale via i18next (default "ru").
-//   2. Fires `GET /v1/content/:slug?locale=<l>` through react-query.
-//      - retry: false  — a missing slug or DB outage should fall back
-//        to bundled i18n immediately, not retry-storm the public API.
-//      - staleTime aligned with backend `s-maxage=600` so re-renders
-//        of the same slug don't refetch within the cache window.
-//   3. If `?preview=<slug>` is in the URL AND this hook's slug matches,
-//      uses `usePreviewContent` to overlay the draft for that one slug.
-//      Other slugs continue to render published content as normal.
-//   4. On error / 404 / empty content, returns the bundled `fallback`.
-//
-// The `fallback` argument MUST be a fully-shaped object — never null.
-// The page can never render blank: synchronous fallback first, async
-// CMS overlay later when react-query settles.
-
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { http } from "../api/http";
 import { usePreviewContext } from "./preview-context";
 import type { ContentLocale, ContentResponse, ContentSlug } from "./types";
 
-const STALE_MS = 5 * 60 * 1000; // 5 min — backend Cache-Control max-age=300.
+const STALE_MS = 5 * 60 * 1000;
+
+const SUPPORTED_LOCALES = ["en", "ru", "kk", "es"];
 
 function isSupportedLocale(l: string): l is ContentLocale {
-  return l === "en" || l === "ru" || l === "kk" || l === "es";
+  return SUPPORTED_LOCALES.includes(l);
 }
 
 export function useContentLocale(): ContentLocale {
@@ -37,7 +19,6 @@ export function useContentLocale(): ContentLocale {
   return isSupportedLocale(base) ? base : "ru";
 }
 
-// usePublishedContent — published-only read (public endpoint).
 function usePublishedContent<T>(slug: ContentSlug, locale: ContentLocale, enabled: boolean) {
   return useQuery({
     queryKey: ["content", slug, locale],
@@ -55,8 +36,6 @@ function usePublishedContent<T>(slug: ContentSlug, locale: ContentLocale, enable
   });
 }
 
-// usePreviewContent — draft-aware admin read for super_admins inside the
-// preview overlay. Failures fall through to the published value silently.
 function usePreviewContent<T>(slug: ContentSlug, locale: ContentLocale, enabled: boolean) {
   return useQuery({
     queryKey: ["content", "preview", slug, locale],
@@ -65,8 +44,6 @@ function usePreviewContent<T>(slug: ContentSlug, locale: ContentLocale, enabled:
     retry: false,
     refetchOnWindowFocus: false,
     queryFn: async () => {
-      // Backend routes (`content.RegisterAdminRoutes`) ждут `:slug/:locale`
-      // path params; query-вариант возвращает 404 "Cannot GET".
       const r = await http.get<{
         slug: string;
         locale: string;
@@ -80,12 +57,6 @@ function usePreviewContent<T>(slug: ContentSlug, locale: ContentLocale, enabled:
   });
 }
 
-// Empty-content guard — backend may return `{}` or `null` for a slug that
-// был reverted mid-flight; treat as "no content" and fall back. Единый guard
-// для null/undefined/{} — call site не должен дублировать nullish-check
-// (см. CodeQL #150 js/unneeded-defensive-code). Type-predicate возвращает
-// `value is null | undefined | EmptyObject`, чтобы TS сужал `T | undefined`
-// до `T` в else-ветке без повторных проверок у вызывающего кода.
 function isEmpty(value: unknown): value is null | undefined | Record<string, never> {
   if (value === undefined || value === null) return true;
   if (typeof value === "object" && !Array.isArray(value)) {

@@ -1,7 +1,7 @@
 # Privacy Notice — Eye of Providence
 
-**Last updated:** 2026-05-18. Поставщик услуги: индивидуальный maintainer
-`d.rysdovletov@gmail.com`. Контакт по приватности — этот же e-mail.
+**Last updated:** 2026-05-19. Поставщик услуги: индивидуальный maintainer
+`main@rysdavletov.org`. Контакт по приватности, GDPR/CCPA и security — этот же e-mail.
 
 Этот документ описывает что мы собираем, на каком правовом основании, как
 храним и как пользователь может реализовать свои права (включая GDPR и CCPA
@@ -100,7 +100,7 @@ tokens (без `hashed_token`), полная история событий (cap 
 
 ### 4.3 Rectification, restriction, objection
 
-E-mail на `d.rysdovletov@gmail.com` с темой `[GDPR DSAR]`. Срок реакции —
+E-mail на `main@rysdavletov.org` с темой `[GDPR DSAR]`. Срок реакции —
 30 дней (Art. 12(3)).
 
 ## 5. Безопасность

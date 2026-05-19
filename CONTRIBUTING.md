@@ -114,7 +114,7 @@ entries into the new version section.
 ## Security disclosures
 
 Do **not** open public GitHub issues for vulnerabilities. Email
-`d.rysdovletov@gmail.com`. See [`.github/SECURITY.md`](.github/SECURITY.md)
+`main@rysdavletov.org`. See [`.github/SECURITY.md`](.github/SECURITY.md)
 for the full policy and image-verification recipes.
 
 ## Where to start

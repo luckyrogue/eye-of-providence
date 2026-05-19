@@ -3,30 +3,44 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button, Card, CardContent, Eyebrow, Skeleton } from "@eop/ui";
 import { Markdown } from "@/shared/lib/markdown";
+import { LOCALE_LABELS } from "@eop/i18n";
+import {
+  fetchLocalizedMarkdown,
+  resolveContentLocale,
+  type Locale,
+} from "@/shared/lib/locale-markdown";
 
 export function MarkdownDocPage({
   title,
-  markdownPath,
+  markdownBase,
+  markdownFile,
   backHref = "/",
   backLabel,
 }: {
   title: string;
-  markdownPath: string;
+  markdownBase: "legal" | "docs";
+  markdownFile: string;
   backHref?: string;
   backLabel?: string;
 }) {
-  const { t } = useTranslation("landing");
+  const { t, i18n } = useTranslation("landing");
   const [source, setSource] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [localeUsed, setLocaleUsed] = useState<Locale | null>(null);
+
+  const locale = resolveContentLocale(i18n.resolvedLanguage ?? i18n.language);
 
   useEffect(() => {
     setSource(null);
     setError(false);
-    fetch(markdownPath)
-      .then((r) => (r.ok ? r.text() : Promise.reject(r.status)))
-      .then(setSource)
+    setLocaleUsed(null);
+    fetchLocalizedMarkdown(markdownBase, markdownFile, locale)
+      .then(({ text, localeUsed: used }) => {
+        setSource(text);
+        setLocaleUsed(used !== locale ? used : null);
+      })
       .catch(() => setError(true));
-  }, [markdownPath]);
+  }, [markdownBase, markdownFile, locale]);
 
   const back = backLabel ?? t("docs.back_home");
 
@@ -44,6 +58,11 @@ export function MarkdownDocPage({
           <h1 className="display-head text-3xl sm:text-4xl mt-3 font-display font-medium tracking-tight">
             {title}
           </h1>
+          {localeUsed && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t("docs.locale_fallback", { lang: LOCALE_LABELS[localeUsed] })}
+            </p>
+          )}
         </div>
 
         {error ? (

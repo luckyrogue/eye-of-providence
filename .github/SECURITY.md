@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability in Eye of Providence, **please do not open a public GitHub issue**.
 
-Instead, email **d.rysdovletov@gmail.com** with:
+Instead, email **main@rysdavletov.org** with:
 
 - Description of the issue + impact
 - Reproduction steps (or PoC)

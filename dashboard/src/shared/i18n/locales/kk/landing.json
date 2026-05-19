@@ -20,6 +20,7 @@
     "back_home": "Басты бетке",
     "back_docs": "Барлық мақалалар",
     "error": "Бет жүктелмеді.",
+    "locale_fallback": "Бет таңдалған тілде әлі жоқ; {{lang}} нұсқасы көрсетілді.",
     "install": "Орнату (alpha)",
     "install_lead": "Агенттерді жүктеу және құрылғыны байлау.",
     "self_hosting": "Self-hosting",

@@ -1,9 +1,8 @@
 // CMS-lite editor for a single slug × locale row.
 //
 // Layout:
-//   - Header: slug + locale tabs + Save Draft / Publish / Revert / Preview.
+//   - Header: slug + locale tabs + Save Draft / Publish / Revert.
 //   - Monaco JSON editor with per-slug JSON Schema for live validation.
-//   - Optional preview iframe (sandbox=""): renders /?preview=<slug>.
 //
 // Concurrency:
 //   - PUT carries If-Match=<last-known etag>. On 412 we surface a localised
@@ -159,147 +158,118 @@ export function ContentBlockEditor({ slug }: { slug: ContentSlug }) {
     });
   }
 
-  function openPreview() {
-    const url = `/?preview=${encodeURIComponent(slug)}&locale=${encodeURIComponent(locale)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  }
-
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_minmax(0,420px)] gap-4">
-      <div className="space-y-3 min-w-0">
-        <header className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="min-w-0">
-            <div className="text-base font-medium truncate">{slug}</div>
-            <div className="text-xs text-muted-foreground font-mono flex items-center gap-2 mt-0.5">
-              <span>{locale}</span>
-              <BadgeForRow
-                hasPublished={!!detail.data?.published_at}
-                hasDraft={!!detail.data?.draft_content}
-                isDefault={!detail.data?.content && !detail.data?.draft_content}
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div
-              className="inline-flex rounded-md border overflow-hidden text-[12px] font-mono"
-              style={{ borderColor: "hsl(var(--border))" }}
-            >
-              {CONTENT_LOCALES.map((l) => (
-                // eslint-disable-next-line no-restricted-syntax -- locale tabs
-                <button
-                  key={l}
-                  type="button"
-                  onClick={() => setLocale(l)}
-                  className={`px-2.5 py-1 transition-colors ${
-                    locale === l ? "bg-foreground/10" : "hover:bg-foreground/5"
-                  }`}
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
-            <Button type="button" variant="ghost" size="sm" onClick={openPreview}>
-              {t("admin.content.preview", { defaultValue: "Preview" })}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => void doRevert()}
-              disabled={revert.isPending || (!detail.data?.content && !detail.data?.draft_content)}
-            >
-              {t("admin.content.revert", { defaultValue: "Revert" })}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={save.isPending || !dirty}
-              onClick={() => void doSave(false)}
-            >
-              {save.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
-              {t("admin.content.save_draft", { defaultValue: "Save draft" })}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              disabled={save.isPending}
-              onClick={() => void doSave(true)}
-            >
-              {save.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
-              {t("admin.content.publish", { defaultValue: "Publish" })}
-            </Button>
-          </div>
-        </header>
-
-        <Suspense
-          fallback={<div className="h-[420px] rounded-md border bg-muted/30 animate-pulse" />}
-        >
-          <div
-            className="rounded-md border overflow-hidden"
-            style={{ borderColor: "hsl(var(--border))" }}
-          >
-            <MonacoEditor
-              key={`${slug}-${locale}`}
-              height="420px"
-              language="json"
-              defaultLanguage="json"
-              path={monacoUri}
-              value={json}
-              theme="vs-dark"
-              beforeMount={onMonacoBeforeMount}
-              onChange={(v) => {
-                setJson(v ?? "");
-                setDirty(true);
-              }}
-              options={{
-                minimap: { enabled: false },
-                wordWrap: "on",
-                fontSize: 13,
-                lineNumbers: "on",
-                scrollBeyondLastLine: false,
-                tabSize: 2,
-                formatOnPaste: true,
-                formatOnType: true,
-              }}
+    <div className="space-y-3 min-w-0">
+      <header className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="min-w-0">
+          <div className="text-base font-medium truncate">{slug}</div>
+          <div className="text-xs text-muted-foreground font-mono flex items-center gap-2 mt-0.5">
+            <span>{locale}</span>
+            <BadgeForRow
+              hasPublished={!!detail.data?.published_at}
+              hasDraft={!!detail.data?.draft_content}
+              isDefault={!detail.data?.content && !detail.data?.draft_content}
             />
           </div>
-        </Suspense>
-
-        {editorError === "syntax" && (
-          <div className="text-xs" style={{ color: "hsl(var(--destructive))" }}>
-            {t("admin.content.schema_error", {
-              defaultValue: "Invalid JSON: see editor highlights",
-            })}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div
+            className="inline-flex rounded-md border overflow-hidden text-[12px] font-mono"
+            style={{ borderColor: "hsl(var(--border))" }}
+          >
+            {CONTENT_LOCALES.map((l) => (
+              // eslint-disable-next-line no-restricted-syntax -- locale tabs
+              <button
+                key={l}
+                type="button"
+                onClick={() => setLocale(l)}
+                className={`px-2.5 py-1 transition-colors ${
+                  locale === l ? "bg-foreground/10" : "hover:bg-foreground/5"
+                }`}
+              >
+                {l}
+              </button>
+            ))}
           </div>
-        )}
-        {editorError === "conflict" && (
-          <div className="text-xs" style={{ color: "hsl(var(--destructive))" }}>
-            {t("admin.content.conflict_error", {
-              defaultValue: "Content was modified by someone else",
-            })}
-          </div>
-        )}
-      </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => void doRevert()}
+            disabled={revert.isPending || (!detail.data?.content && !detail.data?.draft_content)}
+          >
+            {t("admin.content.revert", { defaultValue: "Revert" })}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={save.isPending || !dirty}
+            onClick={() => void doSave(false)}
+          >
+            {save.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+            {t("admin.content.save_draft", { defaultValue: "Save draft" })}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={save.isPending}
+            onClick={() => void doSave(true)}
+          >
+            {save.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+            {t("admin.content.publish", { defaultValue: "Publish" })}
+          </Button>
+        </div>
+      </header>
 
-      <aside
-        className="rounded-md border overflow-hidden flex flex-col"
-        style={{ borderColor: "hsl(var(--border))", minHeight: 420 }}
+      <Suspense
+        fallback={<div className="h-[420px] rounded-md border bg-muted/30 animate-pulse" />}
       >
         <div
-          className="px-3 py-2 text-[11px] uppercase tracking-wide font-mono text-muted-foreground bg-muted/30 border-b"
+          className="rounded-md border overflow-hidden"
           style={{ borderColor: "hsl(var(--border))" }}
         >
-          {t("admin.content.preview_title", { defaultValue: "Live preview" })}
+          <MonacoEditor
+            key={`${slug}-${locale}`}
+            height="420px"
+            language="json"
+            defaultLanguage="json"
+            path={monacoUri}
+            value={json}
+            theme="vs-dark"
+            beforeMount={onMonacoBeforeMount}
+            onChange={(v) => {
+              setJson(v ?? "");
+              setDirty(true);
+            }}
+            options={{
+              minimap: { enabled: false },
+              wordWrap: "on",
+              fontSize: 13,
+              lineNumbers: "on",
+              scrollBeyondLastLine: false,
+              tabSize: 2,
+              formatOnPaste: true,
+              formatOnType: true,
+            }}
+          />
         </div>
-        <iframe
-          // sandbox="" — block scripts/cookies; just visual.
-          title="cms-preview"
-          sandbox=""
-          className="flex-1 bg-white"
-          src={`/?preview=${encodeURIComponent(slug)}&locale=${encodeURIComponent(locale)}`}
-        />
-      </aside>
+      </Suspense>
+
+      {editorError === "syntax" && (
+        <div className="text-xs" style={{ color: "hsl(var(--destructive))" }}>
+          {t("admin.content.schema_error", {
+            defaultValue: "Invalid JSON: see editor highlights",
+          })}
+        </div>
+      )}
+      {editorError === "conflict" && (
+        <div className="text-xs" style={{ color: "hsl(var(--destructive))" }}>
+          {t("admin.content.conflict_error", {
+            defaultValue: "Content was modified by someone else",
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -20,6 +20,7 @@
     "back_home": "Back to home",
     "back_docs": "All docs",
     "error": "Could not load this page.",
+    "locale_fallback": "Esta página aún no está en tu idioma; mostrando {{lang}}.",
     "install": "Install (alpha)",
     "install_lead": "Download agents and pair devices.",
     "self_hosting": "Self-hosting",

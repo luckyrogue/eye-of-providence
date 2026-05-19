@@ -20,6 +20,7 @@
     "back_home": "Back to home",
     "back_docs": "All docs",
     "error": "Could not load this page. Try again later.",
+    "locale_fallback": "This page is not available in your language yet; showing {{lang}}.",
     "install": "Install (alpha)",
     "install_lead": "Download agents, pair devices, first dashboard.",
     "self_hosting": "Self-hosting",

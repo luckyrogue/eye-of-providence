@@ -43,7 +43,8 @@ export function DocSlugRoute() {
     <DocLayout>
       <MarkdownDocPage
         title={t(entry.titleKey)}
-        markdownPath={entry.path}
+        markdownBase="docs"
+        markdownFile={entry.file}
         backHref="/docs"
         backLabel={t("docs.back_docs")}
       />
@@ -57,7 +58,7 @@ export function LegalRoute({ page }: { page: LegalSlug }) {
 
   return (
     <DocLayout>
-      <MarkdownDocPage title={t(meta.titleKey)} markdownPath={meta.path} />
+      <MarkdownDocPage title={t(meta.titleKey)} markdownBase="legal" markdownFile={meta.file} />
     </DocLayout>
   );
 }
