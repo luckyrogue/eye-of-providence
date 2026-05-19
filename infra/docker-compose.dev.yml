@@ -1,9 +1,6 @@
-# После смены зависимостей: `docker compose -f infra/docker-compose.dev.yml build dashboard`.
-# Старый том `*_dashboard_node_modules` можно удалить: `docker volume ls | grep dashboard_node`.
-
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.6-alpine
     container_name: eop-dev-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-eop}
@@ -24,7 +21,7 @@ services:
       retries: 10
 
   clickhouse:
-    image: clickhouse/clickhouse-server:24.10-alpine
+    image: clickhouse/clickhouse-server:24.10.4-alpine
     container_name: eop-dev-clickhouse
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DB:-eop}
@@ -47,7 +44,7 @@ services:
       retries: 10
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     container_name: eop-dev-redis
     ports:
       - "${DEV_REDIS_PORT:-6379}:6379"
@@ -96,8 +93,6 @@ services:
       - "${DEV_DASHBOARD_PORT:-5173}:5173"
     environment:
       VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:8080}
-    # Только исходники; node_modules из образа (pnpm при docker build). Том на node_modules
-    # перекрывал слои пустым volume → динамические импорты Vite падали.
     volumes:
       - ../dashboard:/repo/dashboard
       - ../ui:/repo/ui
