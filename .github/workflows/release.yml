@@ -89,19 +89,37 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Build Tauri (signed if secrets set)
-        uses: tauri-apps/tauri-action@v0
+      # macOS / Windows code-signing keychain setup. tauri-action видит ЛЮБОЙ
+      # set env var (даже empty string из unset secret) и пытается импортировать
+      # — ломается на «failed to import keychain certificate». Поэтому
+      # экспортируем env только когда secret реально не пустой. Если secrets
+      # отсутствуют (как сейчас на alpha) — билд unsigned, пользователь
+      # получит warning на первом запуске, но работает.
+      - name: Export signing secrets (if configured)
         env:
-          # macOS code-signing + notarization
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Windows code-signing
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        shell: bash
+        run: |
+          for var in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD \
+                     APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD \
+                     APPLE_TEAM_ID WINDOWS_CERTIFICATE WINDOWS_CERTIFICATE_PASSWORD; do
+            val="${!var}"
+            if [ -n "$val" ]; then
+              echo "$var=$val" >> "$GITHUB_ENV"
+              echo "::add-mask::$val"
+              echo "signing: $var configured"
+            fi
+          done
+
+      - name: Build Tauri (signed if secrets set)
+        uses: tauri-apps/tauri-action@v0
         with:
           projectPath: agent
           args: ${{ matrix.args }}
