@@ -22,6 +22,8 @@ export const queryClient = new QueryClient({
     onError: (error, query) => {
       const status = httpErrorStatus(error);
       if (status === 401 || status === 403) return;
+      // CMS-lite: missing slug/locale is normal on public pages — i18n fallback, no toast.
+      if (query.queryKey[0] === "content") return;
       if (status != null && status >= 500 && query.queryKey[0] === "me") return;
       if (!navigator.onLine) return;
       if (query.state.data !== undefined) return;

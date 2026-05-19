@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Eyebrow } from "@eop/ui";
-import { useContent, type FaqItemsBlock, type FaqItem } from "@/shared/content";
+import type { FaqItemsBlock, FaqItem } from "@/shared/content";
 
 // Auto-derive a kebab-case anchor from the question if the CMS row omits
 // an explicit `anchor`. Strictly lowercase a-z 0-9 with single hyphens.
@@ -25,8 +25,7 @@ export function FAQ() {
     return { items: Array.isArray(items) ? items.slice(0, 10) : [] };
   }, [t]);
 
-  const data = useContent<FaqItemsBlock>("landing.faq.items", fallback);
-  const items = data.items;
+  const items = fallback.items;
 
   return (
     <section id="faq" className="py-24 border-t bg-muted/20">

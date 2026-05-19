@@ -1,7 +1,7 @@
 // useContent — Phase 4 CMS-lite read hook.
 //
 // Contract:
-//   useContent<T>(slug, fallback) => T
+//   useContent<T>(slug, fallback, enabled?) => T
 // Behaviour:
 //   1. Resolves current locale via i18next (default "ru").
 //   2. Fires `GET /v1/content/:slug?locale=<l>` through react-query.
@@ -94,13 +94,13 @@ function isEmpty(value: unknown): value is null | undefined | Record<string, nev
   return false;
 }
 
-export function useContent<T>(slug: ContentSlug, fallback: T): T {
+export function useContent<T>(slug: ContentSlug, fallback: T, enabled = true): T {
   const locale = useContentLocale();
   const preview = usePreviewContext();
-  const isPreviewingThis = preview.previewSlug === slug;
+  const isPreviewingThis = enabled && preview.previewSlug === slug;
 
-  const published = usePublishedContent<T>(slug, locale, !isPreviewingThis);
-  const draft = usePreviewContent<T>(slug, locale, isPreviewingThis);
+  const published = usePublishedContent<T>(slug, locale, enabled && !isPreviewingThis);
+  const draft = usePreviewContent<T>(slug, locale, enabled && isPreviewingThis);
 
   const value = isPreviewingThis ? draft.data : published.data;
   if (isEmpty(value)) return fallback;

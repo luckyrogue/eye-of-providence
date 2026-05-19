@@ -127,7 +127,7 @@ function PriceCard({
   );
 }
 
-export function MarketingPricingTiers() {
+export function MarketingPricingTiers({ cmsEnabled = true }: { cmsEnabled?: boolean }) {
   const { t } = useTranslation("landing");
   const legacyTiers = useMemo(
     () => t("pricing.tiers", { returnObjects: true }) as LegacyTier[],
@@ -144,11 +144,20 @@ export function MarketingPricingTiers() {
     };
   };
 
-  const freeCms = useContent<PricingTierBlock>("landing.pricing.free.description", fallbackFor(0));
-  const proCms = useContent<PricingTierBlock>("landing.pricing.pro.description", fallbackFor(1));
+  const freeCms = useContent<PricingTierBlock>(
+    "landing.pricing.free.description",
+    fallbackFor(0),
+    cmsEnabled,
+  );
+  const proCms = useContent<PricingTierBlock>(
+    "landing.pricing.pro.description",
+    fallbackFor(1),
+    cmsEnabled,
+  );
   const businessCms = useContent<PricingTierBlock>(
     "landing.pricing.business.description",
     fallbackFor(2),
+    cmsEnabled,
   );
 
   // Merge CMS-managed (free/pro/business) with the legacy name/price/cta.

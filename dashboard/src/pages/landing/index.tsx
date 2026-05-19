@@ -21,7 +21,7 @@ export function Landing() {
         <Attribution />
         <Privacy />
         <Integrations />
-        <MarketingPricingTiers />
+        <MarketingPricingTiers cmsEnabled={false} />
         <CTASection />
       </MarketingLayout>
     </PreviewProvider>

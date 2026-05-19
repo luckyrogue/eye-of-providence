@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, Download, Search } from "lucide-react";
-import { useContent, type CtaBlock, type TextBlock } from "@/shared/content";
 import { EyeScene } from "./eye-scene";
 
 function GithubIcon({ className }: { className?: string }) {
@@ -87,18 +86,18 @@ export function Hero() {
     return `${t1}${ta}${t2}<em>${ti}</em>${t3}`;
   }, [t]);
 
-  const headline = useContent<TextBlock>("landing.hero.headline", { text: headlineFallbackText });
-  const subhead = useContent<TextBlock>("landing.hero.subhead", { text: t("hero.sub") });
-  const ctaPrimary = useContent<CtaBlock>("landing.hero.cta_primary", {
+  const headline = { text: headlineFallbackText };
+  const subhead = { text: t("hero.sub") };
+  const ctaPrimary = {
     label: t("hero.ctaPrimary"),
     href: "/dashboard",
     external: false,
-  });
-  const ctaSecondary = useContent<CtaBlock>("landing.hero.cta_secondary", {
+  };
+  const ctaSecondary = {
     label: t("hero.ctaSecondary"),
     href: "/docs",
     external: false,
-  });
+  };
 
   return (
     <section className="relative grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] items-center gap-10 lg:gap-[60px] pt-[120px] pb-[80px] px-4 sm:px-8 mx-auto max-w-[1400px]">
