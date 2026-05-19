@@ -25,6 +25,21 @@ const ChangelogRoute = lazy(() =>
 const PricingRoute = lazy(() =>
   import("../pages/pricing").then((m) => ({ default: m.PricingRoute })),
 );
+const DocsIndexRoute = lazy(() =>
+  import("../pages/doc-viewer").then((m) => ({ default: m.DocsIndexRoute })),
+);
+const DocSlugRoute = lazy(() =>
+  import("../pages/doc-viewer").then((m) => ({ default: m.DocSlugRoute })),
+);
+const PrivacyRoute = lazy(() =>
+  import("../pages/doc-viewer").then((m) => ({ default: m.PrivacyRoute })),
+);
+const TermsRoute = lazy(() =>
+  import("../pages/doc-viewer").then((m) => ({ default: m.TermsRoute })),
+);
+const SecurityRoute = lazy(() =>
+  import("../pages/doc-viewer").then((m) => ({ default: m.SecurityRoute })),
+);
 const DashboardRoute = lazy(() =>
   import("../pages/dashboard").then((m) => ({ default: m.DashboardRoute })),
 );
@@ -52,6 +67,11 @@ export const router = createBrowserRouter([
   { path: "/onboarding", element: wrap(<OnboardingRoute />), ...eb },
   { path: "/changelog", element: wrap(<ChangelogRoute />), ...eb },
   { path: "/pricing", element: wrap(<PricingRoute />), ...eb },
+  { path: "/docs", element: wrap(<DocsIndexRoute />), ...eb },
+  { path: "/docs/:slug", element: wrap(<DocSlugRoute />), ...eb },
+  { path: "/privacy", element: wrap(<PrivacyRoute />), ...eb },
+  { path: "/terms", element: wrap(<TermsRoute />), ...eb },
+  { path: "/security", element: wrap(<SecurityRoute />), ...eb },
   {
     element: <AppShell />,
     ...eb,

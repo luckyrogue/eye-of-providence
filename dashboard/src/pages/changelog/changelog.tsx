@@ -19,7 +19,7 @@ export function Changelog() {
   }, []);
 
   return (
-    <main className="relative min-h-screen">
+    <main className="relative min-h-screen pt-[68px]">
       <div className="dot-grid pointer-events-none absolute inset-x-0 top-0 h-[420px] -z-10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
       <div className="mx-auto max-w-3xl px-4 sm:px-6 pt-12 pb-20">
         <div className="text-center mb-10 reveal">

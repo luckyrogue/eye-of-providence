@@ -10,7 +10,29 @@
     "sign_in": "Войти",
     "get_started": "Начать",
     "open_dashboard": "Открыть дашборд",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "docs": "Документация"
+  },
+  "docs": {
+    "eyebrow": "Документация",
+    "title": "Документация",
+    "lead": "Установка агента, self-host и модель атрибуции.",
+    "back_home": "На главную",
+    "back_docs": "Все статьи",
+    "error": "Не удалось загрузить страницу. Попробуйте позже.",
+    "install": "Установка (alpha)",
+    "install_lead": "Скачать агенты, привязать устройство, первый дашборд.",
+    "self_hosting": "Self-hosting",
+    "self_hosting_lead": "Docker Compose и production checklist.",
+    "attribution": "Модель атрибуции",
+    "attribution_lead": "Как мы различаем manual и AI-assisted.",
+    "data_model": "Модель данных",
+    "data_model_lead": "События, агрегаты и хранение."
+  },
+  "legal": {
+    "privacy": "Политика конфиденциальности",
+    "terms": "Условия использования",
+    "security": "Безопасность"
   },
   "hero": {
     "eyebrow": "v0.1 · публичная альфа · macOS + Windows",

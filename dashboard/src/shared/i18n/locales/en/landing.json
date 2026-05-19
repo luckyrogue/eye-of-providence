@@ -10,7 +10,29 @@
     "sign_in": "Sign in",
     "get_started": "Get started",
     "open_dashboard": "Open dashboard",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "docs": "Documentation"
+  },
+  "docs": {
+    "eyebrow": "Documentation",
+    "title": "Docs",
+    "lead": "Install the agent, self-host, and understand how attribution works.",
+    "back_home": "Back to home",
+    "back_docs": "All docs",
+    "error": "Could not load this page. Try again later.",
+    "install": "Install (alpha)",
+    "install_lead": "Download agents, pair devices, first dashboard.",
+    "self_hosting": "Self-hosting",
+    "self_hosting_lead": "Docker Compose stack and production checklist.",
+    "attribution": "Attribution model",
+    "attribution_lead": "How we classify manual vs AI-assisted work.",
+    "data_model": "Data model",
+    "data_model_lead": "Events, aggregates, and storage."
+  },
+  "legal": {
+    "privacy": "Privacy Notice",
+    "terms": "Terms of Service",
+    "security": "Security"
   },
   "hero": {
     "eyebrow": "v0.1 · public alpha · macOS + Windows",

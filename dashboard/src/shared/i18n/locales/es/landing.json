@@ -10,7 +10,29 @@
     "sign_in": "Iniciar sesión",
     "get_started": "Empezar",
     "open_dashboard": "Abrir dashboard",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "docs": "Documentation"
+  },
+  "docs": {
+    "eyebrow": "Documentation",
+    "title": "Docs",
+    "lead": "Install the agent, self-host, and understand attribution.",
+    "back_home": "Back to home",
+    "back_docs": "All docs",
+    "error": "Could not load this page.",
+    "install": "Install (alpha)",
+    "install_lead": "Download agents and pair devices.",
+    "self_hosting": "Self-hosting",
+    "self_hosting_lead": "Docker Compose stack.",
+    "attribution": "Attribution model",
+    "attribution_lead": "Manual vs AI-assisted classification.",
+    "data_model": "Data model",
+    "data_model_lead": "Events and aggregates."
+  },
+  "legal": {
+    "privacy": "Privacy Notice",
+    "terms": "Terms of Service",
+    "security": "Security"
   },
   "hero": {
     "eyebrow": "v0.1 · alpha pública · macOS + Windows",

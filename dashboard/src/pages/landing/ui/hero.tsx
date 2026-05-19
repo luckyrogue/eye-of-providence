@@ -96,7 +96,7 @@ export function Hero() {
   });
   const ctaSecondary = useContent<CtaBlock>("landing.hero.cta_secondary", {
     label: t("hero.ctaSecondary"),
-    href: "#how",
+    href: "/docs",
     external: false,
   });
 

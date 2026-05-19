@@ -10,7 +10,29 @@
     "sign_in": "Кіру",
     "get_started": "Бастау",
     "open_dashboard": "Дашбордты ашу",
-    "changelog": "Жаңалықтар"
+    "changelog": "Жаңалықтар",
+    "docs": "Құжаттама"
+  },
+  "docs": {
+    "eyebrow": "Құжаттама",
+    "title": "Құжаттама",
+    "lead": "Агентті орнату, self-host және атрибуция.",
+    "back_home": "Басты бетке",
+    "back_docs": "Барлық мақалалар",
+    "error": "Бет жүктелмеді.",
+    "install": "Орнату (alpha)",
+    "install_lead": "Агенттерді жүктеу және құрылғыны байлау.",
+    "self_hosting": "Self-hosting",
+    "self_hosting_lead": "Docker Compose.",
+    "attribution": "Атрибуция моделі",
+    "attribution_lead": "Manual vs AI-assisted.",
+    "data_model": "Деректер моделі",
+    "data_model_lead": "Оқиғалар мен агрегаттар."
+  },
+  "legal": {
+    "privacy": "Құпиялылық",
+    "terms": "Пайдалану шарттары",
+    "security": "Қауіпсіздік"
   },
   "hero": {
     "eyebrow": "v0.1 · ашық альфа · macOS + Windows",
