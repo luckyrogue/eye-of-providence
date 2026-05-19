@@ -179,7 +179,13 @@ RUN cat > /etc/caddy/Caddyfile <<'CADDY'
 		# Fonts (см. <link rel=stylesheet> в index.html). img-src https: —
 		# changelog markdown и user avatars могут тянуть с любых HTTPS-хостов.
 		# connect-src — задаётся через CSP_CONNECT_SRC env (e.g. backend host).
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src {$CSP_CONNECT_SRC:'self'}; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+		#
+		# script-src jsdelivr: @monaco-editor/react lazy-loads loader.js +
+		# language workers с https://cdn.jsdelivr.net/npm/monaco-editor@... —
+		# нужно для admin content + email-templates редакторов. CDN заменим
+		# на bundled self-hosted в Sprint 2 (см. tech-debt.md C10).
+		# worker-src blob:: Monaco создаёт web workers через blob URLs.
+		Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src {$CSP_CONNECT_SRC:'self'}; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
 		# Удаляем Server header чтобы не палить Caddy version.
 		-Server
 	}
