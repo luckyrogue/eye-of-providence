@@ -36,17 +36,34 @@ unzip eop-browser-extension.zip -d eop-browser-extension/
 
 **Источник:** `.dmg` / `.msi` / `.AppImage` из GH Release (draft).
 
+> **⚠ Note про unsigned binaries.** Alpha-installer не подписан Apple
+> Developer ID / Windows EV cert (см. [FAQ](#почему-installer-не-подписан)
+> ниже). При первом запуске ОС покажет warning — это **ожидаемо**, не
+> признак compromise. Workaround ниже.
+
 ### macOS
 
 ```bash
 # DMG → drag .app в /Applications
-open ~/Downloads/eop-agent_*.dmg
+open ~/Downloads/Eye.of.Providence_*_*.dmg
 ```
 
-Первый запуск:
+**Если при запуске видишь `"Eye of Providence" cannot be opened because Apple cannot check it for malicious software`:**
 
-1. **System Settings → Privacy & Security → Accessibility** → включить EoP
-   (нужно для отслеживания active window).
+- **macOS 14 (Sonoma) и ниже:** правый клик по `Eye of Providence.app`
+  в Finder → **Open** → во втором модале снова **Open**. Один раз.
+- **macOS 15+ (Sequoia):** правый-клик bypass убран. Идём в **System
+  Settings → Privacy & Security**, прокрутить вниз до раздела «Security»
+  → рядом со строкой "Eye of Providence was blocked..." нажать
+  **Open Anyway** → подтвердить Touch ID / password.
+- **Alternative (CLI):** `xattr -dr com.apple.quarantine /Applications/Eye\ of\ Providence.app`
+  — снимает quarantine флаг, OS перестаёт спрашивать.
+
+Первый запуск после bypass:
+
+1. **System Settings → Privacy & Security → Accessibility** → включить
+   "Eye of Providence" (нужно для расширенных сигналов attribution;
+   базовые keystroke counts работают и без него).
 2. Открыть EoP → tab **Settings** → **Start pairing**.
 3. Открой dashboard ссылкой из карточки, введи 6-символьный код.
 4. После `paired` агент начнёт писать события.
@@ -55,19 +72,51 @@ open ~/Downloads/eop-agent_*.dmg
 
 ### Windows
 
-1. Запустить `.msi`, согласиться на SmartScreen warning (unsigned build).
-2. После установки запустится из tray.
-3. Открыть из tray → tab **Settings** → **Start pairing**.
+```cmd
+:: Run installer (или дабл-клик в Explorer)
+msiexec /i Eye.of.Providence_*_x64_en-US.msi
+```
+
+**Если SmartScreen показывает `Windows protected your PC. Microsoft
+Defender SmartScreen prevented an unrecognized app from starting`:**
+
+1. Нажать **More info** (мелкая ссылка под title'ом, легко проскочить).
+2. Появится кнопка **Run anyway** → нажать.
+3. Установщик запустится как обычно.
+
+**Если в корпоративной среде с AppLocker / WDAC:** installer
+заблокирован системно, bypass отсутствует. Попроси админа добавить
+hash в allow-list — выложен в `Eye.of.Providence_*_x64-setup.exe.sig`
+(SHA-256). Или жди signed build (см. [FAQ](#почему-installer-не-подписан)).
+
+После установки:
+
+1. Запустится из system tray (иконка глаза справа внизу).
+2. Открыть из tray → tab **Settings** → **Start pairing**.
+3. Дальше как macOS.
 
 ### Linux
 
 ```bash
-chmod +x eop-agent_*.AppImage
-./eop-agent_*.AppImage
+# AppImage — portable, ничего не ставится в систему
+chmod +x Eye.of.Providence_*_amd64.AppImage
+./Eye.of.Providence_*_amd64.AppImage
+
+# Или через .deb (Ubuntu / Debian / Mint)
+sudo dpkg -i Eye.of.Providence_*_amd64.deb
+
+# Или через .rpm (Fedora / openSUSE)
+sudo rpm -i Eye.of.Providence-*_x86_64.rpm
 ```
 
-`.AppImage` self-contained, не требует установки. Для autostart смотри
-**Settings → Autostart**.
+`.AppImage` self-contained, требует только `libwebkit2gtk-4.1` +
+`libgtk-3` в системе (см. **Trouble-shooting** если падает).
+
+> **⚠ Linux parity gap.** Сейчас Linux-агент собирает только foreground
+> app + idle (нет keystroke counts / clipboard digest как на macOS).
+> Tracking в `docs/tech-debt.md` cluster C6. Полный паритет → v0.2.
+
+Autostart: **Settings → Autostart** (systemd user service).
 
 ## 3. VS Code extension
 
@@ -111,6 +160,64 @@ keystroke counts, AI-pasted lines (диффы из buffer'а).
   Manager / GNOME keyring), не в plaintext.
 - Полная схема событий: [docs/data-model.md](data-model.md).
 - Threat model: [docs/threat-model.md](threat-model.md).
+
+## FAQ
+
+### Почему installer не подписан?
+
+В alpha-фазе нет Apple Developer ID ($99/год) и Windows EV cert
+($300+/год). Это сознательное решение — пока user base = знакомые +
+ранние участники, $400/год cash-burn до первой выручки не оправдан.
+
+**Что мы делаем вместо подписи:**
+
+1. **Прозрачная supply chain.** Docker image (`ghcr.io/luckyrogue/eop`)
+   подписан через Cosign keyless (Sigstore OIDC) с SLSA Build L3
+   attestation. Можно верифицировать `cosign verify` (см.
+   [.github/SECURITY.md](../.github/SECURITY.md)). Agent installer
+   собирается из того же git-commit'а — если backend image checks out,
+   агент тоже.
+2. **Воспроизводимая сборка.** Tag + commit указаны в каждом GH Release.
+   Можно склонировать репо и собрать installer самостоятельно
+   (`pnpm -F @eop/agent tauri build`).
+3. **Public source.** Весь код agent'а в репо. Поведение можно audit'ить
+   без рантайма (или после установки — `Settings → Open logs folder`).
+
+**Когда появится подпись:** при переходе alpha → beta (см. cluster C1
+в [tech-debt.md](tech-debt.md)). Apple cert первым (Sequoia-friction
+выше всего), Windows EV — когда appear первые paying customers или
+enterprise leads.
+
+### Зачем macOS Accessibility permission?
+
+Без него агент видит:
+- Текущее foreground-приложение (`com.apple.dt.Xcode`, `chat.openai.com`)
+- Idle/active state (через `CGEventSourceSecondsSinceLastEventType` —
+  публичный API, **разрешения не требует**)
+- Keystroke counts (через `CGEventSourceCounterForEventType` — тоже
+  публичный API без разрешений)
+- Clipboard fingerprint (через `NSPasteboard.changeCount` + sha256)
+
+С Accessibility unlock'аются расширенные сигналы attribution: focused
+text-field detection, IDE-specific paste origin tracking. На текущей
+alpha они НЕ обязательны — базовая статистика собирается без них.
+
+### Сколько данных утекает наружу?
+
+Только metadata: имена приложений, длительности, hex-хеши clipboard,
+provider/channel метки для AI событий. **Никогда:** содержимое файлов,
+prompts, ответы AI, raw keystrokes, текст clipboard'а, имена файлов,
+URL-параметры. Полная карта потоков — [`docs/privacy.md`](privacy.md).
+
+### Backend self-hosted? Что отличается?
+
+Если ты сам поднимаешь backend (`docker-compose.full.yml`) — данные не
+покидают твою инфраструктуру вообще, кроме:
+- Gemini API при `EOP_GEMINI_API_KEY=<set>` (агрегаты для AI-отчётов)
+- Resend при `EOP_RESEND_API_KEY=<set>` (transactional email)
+- GitHub OAuth при `EOP_GITHUB_CLIENT_ID=<set>`
+
+Все три опциональны. См. [`docs/self-hosting.md`](self-hosting.md).
 
 ## Опубликовать feedback
 

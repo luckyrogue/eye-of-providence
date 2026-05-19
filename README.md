@@ -9,7 +9,7 @@
 
 ## Quick start
 
-- **Try as user:** download installer from [latest release](https://github.com/luckyrogue/eye-of-providence/releases/latest), register at `https://eop.rysdavletov.org`, pair device. See [`docs/alpha-install.md`](docs/alpha-install.md).
+- **Try as user:** download installer from [latest release](https://github.com/luckyrogue/eye-of-providence/releases/latest), register at `https://eop.rysdavletov.org`, pair device. See [`docs/alpha-install.md`](docs/alpha-install.md). _Alpha-installers пока **unsigned** — Gatekeeper / SmartScreen покажет warning при первом запуске, [bypass инструкции тут](docs/alpha-install.md#почему-installer-не-подписан)._
 - **Self-host:** [`docs/self-hosting.md`](docs/self-hosting.md) — Docker Compose stack, single command.
 - **Contribute:** [`CONTRIBUTING.md`](CONTRIBUTING.md) — repo layout, conventions, release flow.
 - **Security:** [`.github/SECURITY.md`](.github/SECURITY.md) — disclosure policy + image-verification recipes.
