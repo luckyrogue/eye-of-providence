@@ -24,7 +24,7 @@
     "@types/react": "^19.2.14",
     "@eop/ui": "workspace:*",
     "eslint": "^10.3.0",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.2"
   }
 }
