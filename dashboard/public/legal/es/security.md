@@ -1,79 +1,123 @@
-# Modelo de amenazas — STRIDE
+# Seguridad — Eye of Providence
 
-> **Estado:** ⚠ última revisión 2026-05-04 — se requiere nueva revisión antes de pasar de alpha a beta.
-> Brechas conocidas (añadidas tras la última revisión): autenticación passkey/WebAuthn,
-> endpoint de exportación GDPR (`GET /v1/me/export`), panel de administración (vista super-admin de agregados + audit log),
-> integraciones de terceros (correo Resend, hosting Dokploy). Registrado en [`tech-debt.md`](tech-debt.md) C8.
+**Última actualización:** 2026-05-19 · **Versión:** v0.1 alpha
 
-Alcance: backend (`cmd/api`), agente de escritorio (Tauri), extensión de navegador (MV3), plugin de VS Code, hooks de Claude Code.
+Esta página describe cómo manejamos la seguridad: qué hay implementado,
+cómo reportar una vulnerabilidad, y qué esperar. Para el modelo de
+amenazas interno de ingeniería, ver
+[`docs/threat-model.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/docs/threat-model.md);
+esta página es el resumen público.
 
-## STRIDE por componente
+## Reportar una vulnerabilidad
 
-### Backend (Go)
+**Por favor, no abras un issue público en GitHub.** Envía un correo a
+**`main@rysdavletov.org`** con:
 
-| Amenaza | Vector | Mitigación |
-|---|---|---|
-| **S**poofing | Eventos falsos con user_id ajeno | JWT reasigna event.user_id desde el token en `ingestapp/service.go` (`e.UserID = userID`); se ignora el user_id enviado por el cliente |
-| **T**ampering | Manipulación de eventos en tránsito | HTTPS en producción (véase la checklist de producción en `docs/self-hosting.md`) |
-| **R**epudiation | «Yo no envié eso» | Métricas `eop_ingest_events_*` + access logs (Fiber middleware/logger) |
-| **I**nformation disclosure | Filtración de datos ajenos vía analytics | Todos los endpoints de analytics filtran por `claims.UserID`; consultas entre usuarios son imposibles |
-| **D**oS | Inundación de eventos | Limiter Fiber 120 req/min en `/v1/*` (`cmd/api/main.go`); `domain.ValidEvent` descarta duraciones >24h; limiter Redis dedicado por ingest — roadmap |
-| **E**levation of privilege | dev-token en producción | `EOP_ENABLE_DEV_TOKEN` prohibido con `EOP_ENV=production`; la ruta devuelve 404 cuando está deshabilitado (`config.go`, `dev_token_test.go`) |
+- Descripción del problema y su impacto
+- Pasos de reproducción o PoC
+- Versión o SHA del commit afectado
+- Tu contacto para seguimiento
 
-### Agente de escritorio (Tauri)
+Objetivo — **acuse de recibo en 48 horas** y proporcionar timeline de
+remediación en **5 días hábiles**.
 
-| Amenaza | Vector | Mitigación |
-|---|---|---|
-| **S**poofing | Proceso ajeno envía eventos por API local | Bearer token en `~/<data>/eop.local-token`, verificado en `core/local_api.rs:handle` |
-| **T**ampering | Modificación del búfer SQLite | Archivo local con permisos solo de usuario; AES-256-GCM en reposo (`agent/src-tauri/src/core/crypto.rs`, `store.rs`) |
-| **R**epudiation | — | Solo local, sin multi-usuario |
-| **I**nformation disclosure | Recogida de contenido de archivos / prompts | **Invariante arquitectónico**: el agente no lee stdin de hooks de Claude Code ni parsea cuerpos de archivos; solo timestamps, conteos de caracteres y hashes. Violación = bug |
-| **D**oS | Llenado de disco vía event_buffer | TTL y flush por lotes; en la fase 8 — límite duro de pending_count |
-| **E**levation of privilege | Permiso de Accesibilidad en macOS | Se solicita explícitamente en el onboarding; sin él no hay conteos de pulsaciones (degradación gradual) |
+En alcance: backend API, dashboard, agente (desktop / browser ext /
+VS Code), imagen Docker e infraestructura CI.
 
-### Extensión de navegador (MV3)
+Fuera de alcance: instancias self-hosted operadas por terceros;
+servicios de terceros (ClickHouse Cloud, Resend, Dokploy); pruebas de
+DoS (tenemos rate-limit, pero no es una superficie de explotación).
 
-| Amenaza | Vector | Mitigación |
-|---|---|---|
-| **S**poofing | Suplantación de content-script en el DOM | el content script solo lee tamaño de selección + host; no se serializa contenido |
-| **T**ampering | XSS en la página → inyección de eventos falsos | Los eventos pasan por `chrome.runtime.sendMessage`; el service worker verifica el remitente (whitelist de hosts) |
-| **I**nformation disclosure | Envío accidental de URL/título/contenido | `host_permissions` en whitelist (solo dominios de IA + localhost); los content scripts envían SOLO `host` + `size` |
-| **E**levation of privilege | Robo de cookies OAuth vía extensión | La extensión no accede a almacenes de cookies ajenos; JWT en `chrome.storage.local` (aislado por extensión) |
+## Versiones soportadas
 
-### Extensión VS Code
+Los fixes de seguridad aterrizan en `main`. Durante alpha no mantenemos
+ramas LTS.
 
-| Amenaza | Vector | Mitigación |
-|---|---|---|
-| **I**nformation disclosure | Contenido de archivo vía diff | `onDidChangeTextDocument` aporta longitudes y timestamps; el texto real no entra en nuestro payload (véase `extension.ts::onChange`) |
-| **T**ampering | Token en settings.json — cualquiera con acceso al archivo | Sustitución prevista: API `secrets.SecretStorage` (V1) |
+| Versión              | Soportada |
+| -------------------- | --------- |
+| `main`               | ✅       |
+| `v0.1.x-alpha.*`     | ✅ (solo latest) |
+| tags rolling pre-alpha | ❌      |
 
-### WebAuthn / passkeys
+## Postura de seguridad actual
 
-| Amenaza | Vector | Mitigación |
-|---|---|---|
-| **S**poofing | Replay de credencial | Challenge en Redis con TTL; la librería `webauthn` verifica la firma |
-| **I**nformation disclosure | Exfiltración de clave privada | Las claves no salen del autenticador; el servidor solo guarda la credencial pública |
+Controles concretos en marcha hoy:
 
-### Panel de administración
+### Backend y datos
 
-| Amenaza | Vector | Mitigación |
-|---|---|---|
-| **E**levation of privilege | No-admin accede a rutas admin | Middleware `RequireSuperAdmin`; audit log en mutaciones sensibles |
+- **Auth:** bcrypt (cost 10), JWT HS256 con revocación vía
+  `token_version`. Soporte WebAuthn / passkey para segundo factor.
+- **Rate limits:** 10 req/min en endpoints de auth, 120 req/min en `/v1/*`.
+- **Aislamiento por usuario:** cada consulta analítica se filtra por
+  JWT subject; acceso cross-user imposible a nivel SQL.
+- **GDPR:** `GET /v1/me/export` devuelve todos tus datos como JSON;
+  `DELETE /v1/me/data` los elimina permanentemente.
 
-### Hooks de Claude Code
+### Imagen y cadena de suministro
 
-| Amenaza | Vector | Mitigación |
-|---|---|---|
-| **I**nformation disclosure | El hook lee stdin (JSON del evento) y reenvía contenido | `eop-hook` (`backend/cmd/eop-hook`) parsea solo conteos (chars/lines/lang), no reenvía contenido de archivos |
-| **D**oS | El hook ralentiza Claude Code | error de red → stderr, exit 0; el hook no bloquea el ciclo de herramientas |
+- **Cosign signed:** cada imagen Docker subida a
+  `ghcr.io/luckyrogue/eop` está firmada con Sigstore keyless OIDC.
+  Verifica con:
+  ```bash
+  cosign verify ghcr.io/luckyrogue/eop:<sha> \
+    --certificate-identity-regexp '^https://github.com/luckyrogue/eye-of-providence/' \
+    --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+  ```
+- **SLSA Build L3 provenance:** prueba verificable de que la imagen fue
+  construida por nuestro CI desde un commit específico.
+- **CycloneDX SBOM:** cada imagen publica un Software Bill of Materials
+  como attestation.
 
-## Temas abiertos
+Recetas completas:
+[`.github/SECURITY.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/.github/SECURITY.md).
 
-- [ ] Rate limiter de ingest dedicado por endpoint (Redis), además del Fiber global 120/min.
-- [ ] Audit log para `DELETE /v1/me/data` (quién eliminó, cuándo) — V1.
-- [ ] CSP en el dashboard y cabeceras `Content-Security-Policy` — V1.
-- [ ] VS Code: migrar token de ingest de `settings.json` a `SecretStorage` — V1.
+### Agente (desktop)
 
-## Revalidación
+- **Búfer local cifrado:** los eventos en SQLite están cifrados con
+  AES-256-GCM. La clave vive en el keyring del SO (macOS Keychain,
+  Windows Credential Manager, GNOME keyring).
+- **Tokens de pairing** permanecen en el keyring, nunca en texto plano.
+- **Invariantes de privacidad:** el agente nunca lee contenido de
+  archivos, prompts, respuestas de IA, pulsaciones de teclado raw, ni
+  texto del portapapeles. Solo conteos, hashes y timestamps salen del
+  dispositivo. Mapa de datos completo en [Política de privacidad](/privacy)
+  §1.
 
-Este documento está vivo. Releerlo antes de cada release y al añadir componentes nuevos (p. ej. una app móvil en V2 requerirá un paso STRIDE aparte).
+### CI / desarrollo
+
+- Análisis estático CodeQL (Go + JS/TS) en cada PR.
+- Escaneos Trivy + OSV en source e imagen; dependency-review en PR.
+- gitleaks escanea cada commit en busca de secretos accidentalmente
+  comprometidos.
+- Step-Security `harden-runner` audita el egress de los runners.
+
+### Limitaciones conocidas (transparencia)
+
+- **Los instaladores alpha no están firmados.** El Apple Developer ID
+  y el cert EV de Windows aún no se han comprado. Ver
+  [Why is this unsigned?](/docs/install#почему-installer-не-подписан)
+  en la guía de instalación para workarounds. La firma de la imagen
+  (Cosign) no se ve afectada — la imagen del backend es totalmente
+  verificable.
+- **Branch protection** se está activando según
+  [`docs/ci-hardening.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/docs/ci-hardening.md)
+  como follow-up del alpha-1. Por ahora todos los merges pasan por CI
+  pero los required reviewers no están enforced.
+- **PITR para Postgres** no configurado; RPO = 24h (dump diario).
+  Objetivo RPO más estricto para GA. Detalles en
+  [`docs/disaster-recovery.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/docs/disaster-recovery.md).
+
+## Divulgación responsable
+
+Actualmente no ofrecemos bug bounty. Damos crédito a investigadores
+(con permiso) en la entrada CHANGELOG correspondiente y en el commit
+message del fix.
+
+Pedimos una ventana razonable — normalmente el timeline acordado en el
+acuse inicial, default 90 días — antes de la divulgación pública.
+
+## Actualizaciones de esta página
+
+Los cambios materiales en la postura de seguridad se registran en
+[`CHANGELOG.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/CHANGELOG.md)
+bajo la sub-sección **Security** de cada release.

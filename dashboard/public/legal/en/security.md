@@ -1,80 +1,123 @@
-# Threat model — STRIDE
+# Security — Eye of Providence
 
-> **Status:** ⚠ last reviewed 2026-05-04 — re-review required before alpha → beta
-> promotion. Known coverage gaps (added after last review): passkey/WebAuthn
-> auth, GDPR-export endpoint (`GET /v1/me/export`), admin panel (super-admin
-> view of aggregates + audit log), third-party integrations (Resend email,
-> Dokploy hosting). Tracked in [`tech-debt.md`](tech-debt.md) C8.
+**Last updated:** 2026-05-19 · **Version:** v0.1 alpha
 
-Scope: backend (`cmd/api`), desktop agent (Tauri), browser extension (MV3), VS Code plugin, Claude Code hooks.
+This page describes how we handle security: what's in place today, how to
+report a vulnerability, and what to expect in response. For the internal
+engineering threat model see
+[`docs/threat-model.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/docs/threat-model.md);
+this page is the user-facing summary.
 
-## STRIDE by component
+## Reporting a vulnerability
 
-### Backend (Go)
+**Please do not open a public GitHub issue.** Email
+**`main@rysdavletov.org`** with:
 
-| Threat | Vector | Mitigation |
-|---|---|---|
-| **S**poofing | Forged events with another user's user_id | JWT rebinds event.user_id from the token in `ingestapp/service.go` (`e.UserID = userID`); client-supplied user_id is ignored |
-| **T**ampering | Event tampering in transit | HTTPS in production (see `docs/self-hosting.md` production checklist) |
-| **R**epudiation | "I did not send that" | `eop_ingest_events_*` metrics + access logs (Fiber middleware/logger) |
-| **I**nformation disclosure | Leak of another user's data via analytics | All analytics endpoints filter by `claims.UserID`; cross-user queries are impossible |
-| **D**oS | Event flooding | Fiber limiter 120 req/min on `/v1/*` (`cmd/api/main.go`); `domain.ValidEvent` drops durations >24h; dedicated per-ingest Redis limiter — roadmap |
-| **E**levation of privilege | dev-token in production | `EOP_ENABLE_DEV_TOKEN` forbidden when `EOP_ENV=production`; route returns 404 when disabled (`config.go`, `dev_token_test.go`) |
+- A description of the issue and its impact
+- Reproduction steps or a proof-of-concept
+- Affected version or commit SHA
+- Your contact for follow-up
 
-### Desktop agent (Tauri)
+We aim to **acknowledge within 48 hours** and provide a remediation
+timeline within **5 business days**.
 
-| Threat | Vector | Mitigation |
-|---|---|---|
-| **S**poofing | Foreign process sends events via local API | Bearer token in `~/<data>/eop.local-token`, verified in `core/local_api.rs:handle` |
-| **T**ampering | SQLite buffer modification | Local file with user-only permissions; AES-256-GCM at rest (`agent/src-tauri/src/core/crypto.rs`, `store.rs`) |
-| **R**epudiation | — | Local-only, no multi-user |
-| **I**nformation disclosure | Collection of file content / prompts | **Architectural invariant**: agent does not read Claude Code hook stdin, does not parse file bodies; only timestamps, char counts, hashes. Violation = bug |
-| **D**oS | Disk fill via event_buffer | TTL and batch flush; in Phase 8 — hard limit on pending_count |
-| **E**levation of privilege | macOS Accessibility permission | Requested explicitly via onboarding flow; without it keystroke counts are unavailable (graceful degradation) |
+In-scope: backend API, dashboard, agent (desktop / browser ext /
+VS Code), Docker image and CI infrastructure.
 
-### Browser extension (MV3)
+Out of scope: self-hosted instances run by third parties, third-party
+services (ClickHouse Cloud, Resend, Dokploy), DoS testing (we have
+rate-limiting but it's not a vulnerability surface to exploit).
 
-| Threat | Vector | Mitigation |
-|---|---|---|
-| **S**poofing | DOM content-script spoofing | content script reads only selection size + host; content is not serialized |
-| **T**ampering | XSS on page → fake event injection | Events go through `chrome.runtime.sendMessage` — sender verified by service worker (host whitelist) |
-| **I**nformation disclosure | Accidental URL/title/content upload | `host_permissions` whitelisted (AI domains + localhost only); content scripts send ONLY `host` + `size` |
-| **E**levation of privilege | OAuth cookie theft via extension | Extension has no access to foreign cookie stores; JWT in `chrome.storage.local` (isolated per extension) |
+## Supported versions
 
-### VS Code extension
+Security fixes land on `main`. During alpha we do not maintain LTS
+branches.
 
-| Threat | Vector | Mitigation |
-|---|---|---|
-| **I**nformation disclosure | File content via diff | `onDidChangeTextDocument` gives lengths and timestamps; actual text does not enter our payload (see `extension.ts::onChange`) |
-| **T**ampering | Token in settings.json — anyone with file access | Planned replacement: `secrets.SecretStorage` API (V1) |
+| Version              | Supported |
+| -------------------- | --------- |
+| `main`               | ✅        |
+| `v0.1.x-alpha.*`     | ✅ (latest only) |
+| pre-alpha rolling tags | ❌      |
 
-### WebAuthn / passkeys
+## Current security posture
 
-| Threat | Vector | Mitigation |
-|---|---|---|
-| **S**poofing | Credential replay | Challenge stored in Redis with TTL; `webauthn` library verifies signature |
-| **I**nformation disclosure | Private key exfiltration | Keys never leave authenticator; server stores public credential only |
+Concrete controls in place today:
 
-### Admin panel
+### Backend & data
 
-| Threat | Vector | Mitigation |
-|---|---|---|
-| **E**levation of privilege | Non-admin hits admin routes | `RequireSuperAdmin` middleware; audit log on sensitive mutations |
+- **Auth:** bcrypt password hashing (cost 10), JWT HS256 with
+  `token_version` revocation. WebAuthn / passkey support for
+  second-factor.
+- **Rate limits:** 10 req/min on auth endpoints, 120 req/min on `/v1/*`.
+- **Per-user isolation:** every analytics query filters by JWT subject;
+  cross-user access is impossible at the SQL layer.
+- **GDPR:** `GET /v1/me/export` returns all your data as JSON;
+  `DELETE /v1/me/data` permanently wipes it.
 
-### Claude Code hooks
+### Image and supply chain
 
-| Threat | Vector | Mitigation |
-|---|---|---|
-| **I**nformation disclosure | Hook reads stdin (event JSON) and forwards content | `eop-hook` (`backend/cmd/eop-hook`) parses only counts (chars/lines/lang), does not forward file content |
-| **D**oS | Hook slows Claude Code | network error → stderr, exit 0; hook does not block the tool loop |
+- **Cosign signed:** every Docker image pushed to `ghcr.io/luckyrogue/eop`
+  is signed with Sigstore keyless OIDC. Verify with:
+  ```bash
+  cosign verify ghcr.io/luckyrogue/eop:<sha> \
+    --certificate-identity-regexp '^https://github.com/luckyrogue/eye-of-providence/' \
+    --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+  ```
+- **SLSA Build L3 provenance:** verifiable proof the image was built by
+  our CI from a specific commit. Verify with `gh attestation verify
+  oci://ghcr.io/luckyrogue/eop:<sha> --owner luckyrogue --predicate-type
+  'https://slsa.dev/provenance/v1'`.
+- **CycloneDX SBOM:** every image ships a Software Bill of Materials as
+  an attestation. Fetch with `gh attestation download`.
 
-## Open issues
+Full verification recipes:
+[`.github/SECURITY.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/.github/SECURITY.md).
 
-- [ ] Dedicated per-endpoint ingest rate limiter (Redis), on top of global Fiber 120/min.
-- [ ] Audit log for `DELETE /v1/me/data` (who deleted, when) — V1.
-- [ ] CSP on dashboard and `Content-Security-Policy` headers — V1.
-- [ ] VS Code: migrate ingest token from `settings.json` to `SecretStorage` — V1.
+### Agent (desktop)
 
-## Re-validation
+- **Encrypted local buffer:** events stored in SQLite are encrypted
+  with AES-256-GCM. The key lives in the OS keyring (macOS Keychain,
+  Windows Credential Manager, GNOME keyring).
+- **Pairing tokens** stay in the keyring, never written in plaintext.
+- **Privacy invariants:** the agent never reads file contents, prompts,
+  AI replies, raw keystrokes, or clipboard text. Only counts, hashes,
+  and timestamps leave the device. See
+  [Privacy Notice](/privacy) §1 for the full data map.
 
-This document is living. Re-read before each release and when adding new components (e.g. a mobile app in V2 will need a separate STRIDE pass).
+### CI / development
+
+- CodeQL static analysis (Go + JS/TS) on every PR.
+- Trivy + OSV scans on source and image; dependency-review on PR.
+- gitleaks scans every commit for accidentally committed secrets.
+- Step-Security `harden-runner` audits runner egress.
+
+### Known limitations (transparent)
+
+- **Alpha installers are unsigned.** Apple Developer ID and Windows EV
+  cert are not yet purchased. See
+  [Why is this unsigned?](/docs/install#почему-installer-не-подписан)
+  in the install guide for workarounds. Image signing (Cosign) is
+  unaffected — the backend image is fully verifiable.
+- **Branch protection** is being enabled per
+  [`docs/ci-hardening.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/docs/ci-hardening.md)
+  during alpha-1 follow-up. Until then, all merges go through CI but
+  not enforced reviewers.
+- **PITR for Postgres** not configured; RPO = 24 h (daily dump). Tighter
+  RPO targeted for GA. Details in
+  [`docs/disaster-recovery.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/docs/disaster-recovery.md).
+
+## Responsible disclosure
+
+We do not currently offer a bug bounty. We do credit researchers (with
+permission) in the relevant CHANGELOG entry and the commit message of
+the fix.
+
+Please give us a reasonable window — typically the timeline we agree on
+in the initial acknowledgement, default 90 days — before public
+disclosure.
+
+## Updates to this page
+
+Material changes to security posture are tracked in
+[`CHANGELOG.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/CHANGELOG.md)
+under the **Security** subsection of each release.

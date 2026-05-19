@@ -1,80 +1,117 @@
-# Қауіп моделі — STRIDE
+# Қауіпсіздік — Eye of Providence
 
-> **Күйі:** ⚠ соңғы тексеру 2026-05-04 — alpha → beta
-> көтеру алдында қайта қарау қажет. Белгілі бос орындар (соңғы тексеруден кейін қосылды): passkey/WebAuthn
-> аутентификация, GDPR-export endpoint (`GET /v1/me/export`), admin panel (super-admin
-> агрегаттар + audit log көрінісі), үшінші тарап интеграциялары (Resend email,
-> Dokploy hosting). [`tech-debt.md`](tech-debt.md) C8 ішінде бақыланады.
+**Соңғы жаңарту:** 2026-05-19 · **Нұсқа:** v0.1 alpha
 
-Қамту: backend (`cmd/api`), desktop agent (Tauri), browser extension (MV3), VS Code plugin, Claude Code hooks.
+Бұл бет қауіпсіздікпен қалай жұмыс істейтінімізді сипаттайды: қазір
+не бар, осалдық туралы қалай хабарлау керек, не күтуге болады. Ішкі
+инженерлік қауіп моделі үшін
+[`docs/threat-model.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/docs/threat-model.md)
+қараңыз; бұл бет — публичная сводка.
 
-## Компоненттер бойынша STRIDE
+## Осалдық туралы хабарлау
 
-### Backend (Go)
+**Көпшілікке арналған GitHub issue ашпаңыз.**
+**`main@rysdavletov.org`** мекенжайына жазыңыз:
 
-| Қауіп | Вектор | Шешу |
-|---|---|---|
-| **S**poofing | Басқа user_id бар жалған events | JWT `ingestapp/service.go` ішінде event.user_id мәнін токеннен қайта байлайды (`e.UserID = userID`); client жіберген user_id елемейді |
-| **T**ampering | Транзитте events өзгерту | Production-да HTTPS (қараңыз `docs/self-hosting.md` production checklist) |
-| **R**epudiation | «Мен жібермедім» | `eop_ingest_events_*` метрикалары + access logs (Fiber middleware/logger) |
-| **I**nformation disclosure | Analytics арқылы басқа пайдаланушы деректерінің ашылуы | Барлық analytics endpoint-тері `claims.UserID` бойынша сүзіледі; cross-user query мүмкін емес |
-| **D**oS | Events толтыру | Fiber limiter `/v1/*` үшін 120 req/min (`cmd/api/main.go`); `domain.ValidEvent` >24h duration-ды тастайды; dedicated per-ingest Redis limiter — roadmap |
-| **E**levation of privilege | production-да dev-token | `EOP_ENV=production` кезінде `EOP_ENABLE_DEV_TOKEN` тыйым салынған; өшірілгенде route 404 (`config.go`, `dev_token_test.go`) |
+- Мәселе сипаттамасы және impact
+- Қайталау қадамдары немесе PoC
+- Әсер еткен нұсқа немесе commit SHA
+- Follow-up үшін байланыс
 
-### Desktop agent (Tauri)
+Мақсат — **48 сағат ішінде растау** және **5 жұмыс күн** ішінде
+жөндеу timeline'ын беру.
 
-| Қауіп | Вектор | Шешу |
-|---|---|---|
-| **S**poofing | Бөтен процесс local API арқылы events жібереді | Bearer token `~/<data>/eop.local-token` ішінде, `core/local_api.rs:handle` тексереді |
-| **T**ampering | SQLite buffer өзгерту | User-only рұқсаттары бар локальді файл; AES-256-GCM at-rest (`agent/src-tauri/src/core/crypto.rs`, `store.rs`) |
-| **R**epudiation | — | Тек local, multi-user жоқ |
-| **I**nformation disclosure | Файл мазмұны / prompt жинау | **Архитектуралық инвариант**: agent Claude Code hook stdin оқымайды, файл body парс етпейді; тек timestamps, char counts, hashes. Бұзу = bug |
-| **D**oS | event_buffer арқылы disk толтыру | TTL және batch flush; Phase 8-де — pending_count hard limit |
-| **E**levation of privilege | macOS Accessibility рұқсаты | Onboarding flow арқылы анық сұралады; онсыз keystroke counts жоқ (graceful degradation) |
+Scope ішінде: backend API, дашборд, агент (desktop / browser ext /
+VS Code), Docker-image және CI-инфрақұрылым.
 
-### Browser extension (MV3)
+Scope сыртында: үшінші тұлғалар жүргізетін self-hosted инстанстар;
+үшінші сервистер (ClickHouse Cloud, Resend, Dokploy); DoS-тестілеу
+(rate-limit бар, бірақ ол exploitation surface емес).
 
-| Қауіп | Вектор | Шешу |
-|---|---|---|
-| **S**poofing | DOM-да content-script алдау | content script тек selection size + host оқиды; мазмұн сериализацияланбайды |
-| **T**ampering | Бетте XSS → жалған events | Events `chrome.runtime.sendMessage` арқылы — sender service worker тексереді (host whitelist) |
-| **I**nformation disclosure | URL/title/content кездейсоқ жіберу | `host_permissions` whitelist (тек AI домендері + localhost); content scripts тек `host` + `size` жібереді |
-| **E**levation of privilege | Extension арқылы OAuth cookie ұрлау | Extension бөтен cookie store-ға қол жеткізе алмайды; JWT `chrome.storage.local` ішінде (extension бойынша оқшауланған) |
+## Қолдау көрсетілетін нұсқалар
 
-### VS Code extension
+Security-фикстер `main`-де шығады. Alpha-да LTS-тармақтарды қолдамаймыз.
 
-| Қауіп | Вектор | Шешу |
-|---|---|---|
-| **I**nformation disclosure | Diff арқылы файл мазмұны | `onDidChangeTextDocument` ұзындық пен timestamp береді; нақты мәтін payload-қа кірмейді (`extension.ts::onChange`) |
-| **T**ampering | settings.json-дағы token — file access бар кез келген адам | Кейінірек ауыстыру: `secrets.SecretStorage` API (V1) |
+| Нұсқа                | Қолдау |
+| -------------------- | ------ |
+| `main`               | ✅    |
+| `v0.1.x-alpha.*`     | ✅ (тек latest) |
+| pre-alpha rolling тэгтер | ❌ |
 
-### WebAuthn / passkeys
+## Қазіргі security-posture
 
-| Қауіп | Вектор | Шешу |
-|---|---|---|
-| **S**poofing | Credential replay | Challenge Redis-те TTL-пен сақталады; `webauthn` library қолтаңбаны тексереді |
-| **I**nformation disclosure | Private key exfil | Кілттер authenticator-дан шықпайды; server тек public credential сақтайды |
+Бүгін жұмыс істеп тұрған нақты бақылау тетіктері:
 
-### Admin panel
+### Backend және деректер
 
-| Қауіп | Вектор | Шешу |
-|---|---|---|
-| **E**levation of privilege | Admin емес admin route-қа кіру | `RequireSuperAdmin` middleware; сезімтал mutation-дарда audit log |
+- **Auth:** bcrypt (cost 10), JWT HS256 `token_version` revocation-мен.
+  Екінші фактор үшін WebAuthn / passkey қолдауы.
+- **Rate limits:** auth-endpoints-та 10 req/min, `/v1/*`-те 120 req/min.
+- **Пайдаланушы изоляциясы:** әр аналитикалық сұраныс JWT subject
+  бойынша сүзіледі; cross-user қол жеткізу SQL деңгейінде мүмкін емес.
+- **GDPR:** `GET /v1/me/export` барлық деректеріңізді JSON ретінде
+  қайтарады; `DELETE /v1/me/data` оларды қайтымсыз өшіреді.
 
-### Claude Code hooks
+### Image және supply chain
 
-| Қауіп | Вектор | Шешу |
-|---|---|---|
-| **I**nformation disclosure | Hook stdin (event JSON) оқып мазмұн жібереді | `eop-hook` (`backend/cmd/eop-hook`) тек counts (chars/lines/lang) парс етеді, файл мазмұнын жібермейді |
-| **D**oS | Hook Claude Code-ты баяулатады | network error → stderr, exit 0; hook tool циклін блоктамайды |
+- **Cosign signed:** `ghcr.io/luckyrogue/eop`-қа push'нутый әр Docker-
+  image Sigstore keyless OIDC арқылы қол қойылған. Тексеру:
+  ```bash
+  cosign verify ghcr.io/luckyrogue/eop:<sha> \
+    --certificate-identity-regexp '^https://github.com/luckyrogue/eye-of-providence/' \
+    --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+  ```
+- **SLSA Build L3 provenance:** image нақты commit-тен біздің CI
+  тарапынан құрылғанының тексерілетін дәлелі.
+- **CycloneDX SBOM:** әр image Software Bill of Materials-ті attestation
+  ретінде жариялайды.
 
-## Ашық мәселелер
+Толық recipes:
+[`.github/SECURITY.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/.github/SECURITY.md).
 
-- [ ] Dedicated per-endpoint ingest rate limiter (Redis), жалпы Fiber 120/min үстіне.
-- [ ] `DELETE /v1/me/data` үшін audit log (кім өшірді, қашан) — V1.
-- [ ] Dashboard CSP және `Content-Security-Policy` headers — V1.
-- [ ] VS Code: ingest token `settings.json` → `SecretStorage` көшіру — V1.
+### Агент (desktop)
 
-## Қайта тексеру
+- **Шифрланған жергілікті буфер:** SQLite ішіндегі оқиғалар AES-256-GCM
+  арқылы шифрланған. Кілт OS keyring-те сақталған (macOS Keychain,
+  Windows Credential Manager, GNOME keyring).
+- **Pairing-токендер** keyring-те, ешқашан plaintext-те емес.
+- **Privacy инварианттары:** агент ешқашан файл мазмұнын, prompt'тарды,
+  AI жауаптарын, raw keystrokes, clipboard мәтінін оқымайды. Тек
+  санағыштар, хештер мен timestamps құрылғыдан шығады. Толық деректер
+  картасы үшін [Privacy Notice](/privacy) §1 қараңыз.
 
-Бұл құжат тірі. Әр релиз алдында және жаңа компонент қосқанда қайта оқыңыз (мысалы, V2 mobile app бөлек STRIDE өткізуді қажет етеді).
+### CI / әзірлеу
+
+- Әр PR-да CodeQL static analysis (Go + JS/TS).
+- Source және image-ке Trivy + OSV scans; PR-да dependency-review.
+- gitleaks әр commit-ті кездейсоқ commit'нутый secret-терге сканерлейді.
+- Step-Security `harden-runner` runner egress аудитін жасайды.
+
+### Белгілі шектеулер (ашық мойындау)
+
+- **Alpha-installer'лар қол қойылмаған.** Apple Developer ID және
+  Windows EV cert әлі сатып алынбаған. Workaround үшін install guide
+  ішіндегі [Why is this unsigned?](/docs/install#почему-installer-не-подписан)
+  қараңыз. Image signing (Cosign) әсер етпеген — backend-image толық
+  тексерілетін.
+- **Branch protection** alpha-1 follow-up аясында
+  [`docs/ci-hardening.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/docs/ci-hardening.md)
+  бойынша қосылуда. Қазірге дейін барлық merge CI-ден өтеді, бірақ
+  required reviewers enforced емес.
+- **PITR Postgres үшін** конфигурацияланбаған; RPO = 24 сағ (daily dump).
+  Қатаңырақ RPO GA-ға қарай мақсат. Толық
+  [`docs/disaster-recovery.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/docs/disaster-recovery.md).
+
+## Responsible disclosure
+
+Bug bounty әзірге ұсынбаймыз. Зерттеушілерді (рұқсатпен) тиісті
+CHANGELOG-та және фикс commit message-да атап өтеміз.
+
+Көпшілікке ашудан бұрын ақылға қонымды терезе сұраймыз — әдетте
+бастапқы acknowledgement-та келісетін timeline, default 90 күн.
+
+## Бет жаңартулары
+
+Security posture-ң маңызды өзгерістері әр релиздегі
+[`CHANGELOG.md`](https://github.com/luckyrogue/eye-of-providence/blob/main/CHANGELOG.md)
+**Security** қосалқы бөлімінде қадағаланады.
