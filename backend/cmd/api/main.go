@@ -146,12 +146,18 @@ func main() {
 		return cfg.Env != "production" && c.Get("X-E2E-Test") == "1"
 	}
 
+	// Auth limiter: per (IP, path) so brute-forcing /login doesn't burn quota
+	// for /register or /github/callback. Bumped 10 → 30/min — была слишком
+	// агрессивная политика, юзеры ловили 429 при обычном clicking «Login»
+	// (особенно OAuth retry flow). 30/min всё ещё блокирует password-credential
+	// brute-force, но даёт легитимной паре «не туда нажал → перепробовал»
+	// нормально работать.
 	authLimiter := limiter.New(limiter.Config{
-		Max:        10,
+		Max:        30,
 		Expiration: 1 * time.Minute,
 		Next:       e2eBypass,
 		KeyGenerator: func(c *fiber.Ctx) string {
-			return c.IP()
+			return c.IP() + ":" + c.Path()
 		},
 		LimitReached: func(c *fiber.Ctx) error {
 			return httperr.TooManyRequests(c, "rate_limited", "too many requests")
@@ -161,9 +167,16 @@ func main() {
 	app.Use("/v1/auth/register", authLimiter)
 	app.Use("/v1/auth/dev-token", authLimiter)
 	app.Use("/v1/auth/github/callback", authLimiter)
+	app.Use("/v1/auth/github/login", authLimiter)
+	app.Use("/v1/auth/forgot-password", authLimiter)
+	app.Use("/v1/auth/reset-password", authLimiter)
 
+	// Global /v1/ limiter — на shared services. Authorized requests
+	// учитываются per-token (один юзер не топит остальных). Anonymous —
+	// per-IP. 120 → 300/min: при normal dashboard usage (polling, lazy-loads)
+	// 120 ловится на типовом visit'е.
 	app.Use("/v1/", limiter.New(limiter.Config{
-		Max:        120,
+		Max:        300,
 		Expiration: 1 * time.Minute,
 		Next:       e2eBypass,
 		KeyGenerator: func(c *fiber.Ctx) string {

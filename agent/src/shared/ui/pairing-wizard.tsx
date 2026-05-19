@@ -7,6 +7,7 @@ type Phase =
   | { kind: "idle" }
   | { kind: "starting" }
   | { kind: "waiting"; pair: PairBeginResponse }
+  | { kind: "claimed" }
   | { kind: "expired" }
   | { kind: "error"; message: string };
 
@@ -60,6 +61,7 @@ export function PairingWizard({ backend, onClaimed }: { backend: string; onClaim
         }
         if (r.status === "claimed") {
           stopPoll();
+          setPhase({ kind: "claimed" });
           onClaimed?.();
         }
       } catch (e) {
@@ -85,6 +87,17 @@ export function PairingWizard({ backend, onClaimed }: { backend: string; onClaim
   }
   if (phase.kind === "starting") {
     return <div className="text-sm text-muted-foreground">{t("settings_pair_busy")}</div>;
+  }
+  if (phase.kind === "claimed") {
+    // Транзитное состояние: poll получил claimed, токен в keyring,
+    // ждём пока settings.tsx refresh пересоберёт UI. Без явного state'а
+    // юзер видел бы «Waiting for confirmation» ещё 3 секунды (poll
+    // interval) — выглядело как баг.
+    return (
+      <div className="text-sm text-success" role="status">
+        {t("settings_pair_claimed", { defaultValue: "✓ Привязано, синхронизация…" })}
+      </div>
+    );
   }
   if (phase.kind === "expired") {
     return (
