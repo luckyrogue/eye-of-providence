@@ -47,22 +47,23 @@ func TestPublicRoutesNotBehindAuth(t *testing.T) {
 	app := fiber.New(fiber.Config{DisableStartupMessage: true})
 	log := zap.NewNop()
 
-	// SANITY-CHECK FOR THIS TEST: comment out one of the public registrations
-	// below, swap with teams' registration FIRST — test should fail with the
-	// exact endpoint name. We verified this manually 2026-05-19.
-
-	// teams MUST come AFTER all public registrations.
-	teams.RegisterRoutes(app, teams.Service{
-		Pool: nil, JWTSecret: "test-secret-32-chars-or-longer-aaaa",
-		Logger: log, InviteOnly: true, BetaTeamLimit: 3,
-	})
-
+	// 1. password reset (public) — must come BEFORE teams.
 	auth.RegisterPasswordResetRoutes(app, auth.PasswordResetService{
 		Pool: nil, Mailer: nil, PublicURL: "http://test.local", Logger: log,
 	})
 
+	// 2. devices: mixed — public /v1/devices/{pair,poll} + auth /v1/me/devices/*.
+	//    With nil Pool, devices.RegisterRoutes installs the public routes as
+	//    503-stubs but still on the OUTER app, NOT under /v1 auth middleware.
 	devices.RegisterRoutes(app, devices.Service{
 		Pool: nil, Logger: log, JWTSecret: "test-secret-32-chars-or-longer-aaaa",
+	})
+
+	// 3. teams: installs /v1 group + auth.Middleware. Any public route
+	//    registered AFTER this line gets caught.
+	teams.RegisterRoutes(app, teams.Service{
+		Pool: nil, JWTSecret: "test-secret-32-chars-or-longer-aaaa",
+		Logger: log, InviteOnly: true, BetaTeamLimit: 3,
 	})
 
 	for _, r := range publicRoutes {
