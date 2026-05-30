@@ -30,7 +30,7 @@
     "package": "vsce package --no-dependencies --skip-license"
   },
   "devDependencies": {
-    "@types/node": "^25.6.2",
+    "@types/node": "^25.9.0",
     "@types/vscode": "^1.90.0",
     "@vscode/vsce": "^3.2.0",
     "typescript": "^5.9.3"
