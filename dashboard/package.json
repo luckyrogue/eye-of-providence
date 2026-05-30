@@ -43,7 +43,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
+    "@vitejs/plugin-react": "^6.0.2",
     "eslint": "^10.3.0",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.14",
