@@ -158,7 +158,7 @@ jobs:
 
       - name: Attest SBOM
         if: ${{ inputs.push }}
-        uses: actions/attest-sbom@v2
+        uses: actions/attest-sbom@v4
         with:
           subject-name: ${{ env.IMAGE }}
           subject-digest: ${{ steps.build.outputs.digest }}
