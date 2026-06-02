@@ -16,24 +16,24 @@
   "dependencies": {
     "@eop/i18n": "workspace:*",
     "@eop/ui": "workspace:*",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "react-i18next": "^17.0.7"
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.8"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0-beta.28",
     "@tailwindcss/vite": "^4.3.0",
     "@types/chrome": "^0.1.42",
-    "@types/react": "^19.2.14",
+    "@types/react": "^19.2.16",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "eslint": "^10.3.0",
+    "eslint": "^10.4.1",
     "jsdom": "^29.1.1",
-    "postcss": "^8.5.14",
+    "postcss": "^8.5.15",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.3.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.59.2",
+    "typescript-eslint": "^8.60.1",
     "vite": "^8.0.12",
     "vitest": "^4.1.6"
   }
