@@ -109,7 +109,7 @@ RUN xcaddy build v2.11.3 \
 # содержит curl 8.19.0-r0 с фиксами CVE-2025-14017/14524/14819, CVE-2026-1965/
 # 3783/3784/3805. Свой caddy всё равно собираем из xcaddy выше, поэтому
 # дополнительные слои base-image от caddy не нужны.
-FROM alpine:3.23
+FROM alpine:3.24
 
 # wget — для HEALTHCHECK; ca-certificates — для outbound TLS из Go API.
 # apk upgrade подтягивает любые post-release patch'и (libssl3, zlib и пр.).
