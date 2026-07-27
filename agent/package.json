@@ -14,23 +14,23 @@
   "dependencies": {
     "@eop/i18n": "workspace:*",
     "@eop/ui": "workspace:*",
-    "@tauri-apps/api": "^2.1.1",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "react-i18next": "^17.0.7"
+    "@tauri-apps/api": "^2.11.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-i18next": "^17.0.11"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.0",
-    "@tauri-apps/cli": "^2.11.1",
-    "@types/react": "^19.2.14",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "eslint": "^10.3.0",
+    "eslint": "^10.8.0",
     "jsdom": "^29.1.1",
-    "postcss": "^8.5.14",
+    "postcss": "^8.5.23",
     "tailwindcss": "^4.3.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.59.2",
+    "typescript-eslint": "^8.65.0",
     "vite": "^8.0.12",
     "vitest": "^4.1.6"
   }
