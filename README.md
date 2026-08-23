@@ -36,12 +36,27 @@
 - По типу взаимодействия: chat, autocomplete, agent (multi-step), edit.
 
 ### 1.4 Code provenance (attribution)
-Для каждого save/commit:
-- **typed** — появилось через keystroke stream.
-- **pasted-AI** — вставлено, clipboard заполнен после AI-источника.
-- **pasted-other** — вставка без AI-источника.
-- **AI-inline** — accept от Copilot/Cursor API.
-- **AI-agent** — изменение от Claude Code / Cursor agent / Aider.
+Категории происхождения кода, на которых живёт донат «Code provenance» в дашборде:
+
+| Категория | Что означает | Статус на v0.1 |
+| --- | --- | --- |
+| **typed** | написано вручную в редакторе | ✅ требует VS Code extension |
+| **AI-inline** | accept от Copilot / Cursor | ✅ требует VS Code extension |
+| **AI-agent** | изменение от Claude Code / Cursor agent / Aider | ✅ требует CLI-хука (`eop-hook`) |
+| **refactor** | rename / extract method от LSP, не AI | ✅ требует VS Code extension |
+| **pasted-other** | вставка без AI-источника | 🚧 Phase B |
+| **pasted-AI** | вставлено, clipboard заполнен после AI-источника | 🚧 Phase B |
+
+> **Что это значит на практике.** Атрибуция считается фоновым worker'ом из
+> событий, которые присылают интеграции. Если установлен **только десктоп-агент**,
+> без VS Code extension и CLI-хука, все события попадают в категорию `unknown` —
+> агент измеряет время и активность, но не различает авторство кода.
+> Точное разделение вставок (`pasted-AI` vs `pasted-other`) требует сопоставления
+> clipboard-хешей между браузером и IDE и появится в Phase B; агент уже отправляет
+> нужные для этого сигналы.
+>
+> Категории без данных за период не показываются на донате — пустой сегмент
+> читался бы как измерение, хотя это его отсутствие.
 
 ---
 

@@ -62,6 +62,9 @@ services:
       timeout: 3s
       retries: 5
 
+  # Один контейнер держит три процесса: Go API, Caddy (статика дашборда +
+  # reverse proxy) и attribution worker. Worker отключается через
+  # EOP_WORKER_ENABLED=false — см. .env.example.
   eop:
     image: ${EOP_IMAGE:-ghcr.io/luckyrogue/eop:latest}
     container_name: eop-app
@@ -87,6 +90,7 @@ services:
       EOP_INVITE_ONLY: ${EOP_INVITE_ONLY:-true}
       EOP_ENABLE_DEV_TOKEN: "false"
       EOP_REPORTS_CRON_SEC: ${EOP_REPORTS_CRON_SEC:-21600}
+      EOP_WORKER_ENABLED: ${EOP_WORKER_ENABLED:-true}
       EOP_GEMINI_API_KEY: ${EOP_GEMINI_API_KEY:-}
       EOP_GITHUB_CLIENT_ID: ${EOP_GITHUB_CLIENT_ID:-}
       EOP_GITHUB_CLIENT_SECRET: ${EOP_GITHUB_CLIENT_SECRET:-}

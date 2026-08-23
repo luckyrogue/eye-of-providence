@@ -34,7 +34,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -o /out/api ./cmd/api && \
     CGO_ENABLED=0 GOOS=linux go build \
     -trimpath -ldflags='-s -w' \
-    -o /out/migrate ./cmd/migrate
+    -o /out/migrate ./cmd/migrate && \
+    CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath -ldflags='-s -w' \
+    -o /out/worker ./cmd/worker
 
 ############################
 # Dashboard builder
@@ -123,9 +126,13 @@ RUN mkdir -p /etc/caddy /data /config
 # Caddy binary — наш custom build с current Go, replaces upstream vulnerable.
 COPY --from=caddy-builder /out/caddy /usr/bin/caddy
 
-# Go-бинарь + migrate CLI (для ручного rollback в проде)
+# Go-бинарь + migrate CLI (для ручного rollback в проде) + attribution worker.
+# Worker живёт в этом же образе, а не отдельным сервисом: прод на Dokploy
+# разворачивает ОДИН контейнер из этого образа, отдельный compose-сервис
+# туда не доедет. Запускается из entrypoint.sh (см. ниже).
 COPY --from=api-builder /out/api /usr/local/bin/api
 COPY --from=api-builder /out/migrate /usr/local/bin/migrate
+COPY --from=api-builder /out/worker /usr/local/bin/worker
 
 # Статика dashboard (Caddy default site root)
 COPY --from=dashboard-builder /repo/dashboard/dist /usr/share/caddy
@@ -217,7 +224,13 @@ RUN cat > /etc/caddy/Caddyfile <<'CADDY'
 }
 CADDY
 
-# Запускаем оба процесса. wait -n валит контейнер, если любой упал.
+# Запускаем api + caddy + attribution worker. wait -n валит контейнер, если
+# любой из них упал — Dokploy/Swarm перезапустит целиком.
+#
+# Worker опционален через EOP_WORKER_ENABLED=false: его позиция обработки
+# хранится в PG глобально (`worker_state`), поэтому ДВЕ реплики контейнера
+# будут дублировать записи в attribution_events. Если когда-нибудь появится
+# вторая реплика — worker остаётся включённым ровно на одной.
 RUN cat > /entrypoint.sh <<'SH' && chmod +x /entrypoint.sh
 #!/bin/sh
 set -e
@@ -231,11 +244,33 @@ API_PID=$!
 caddy run --config /etc/caddy/Caddyfile --adapter caddyfile &
 CADDY_PID=$!
 
-wait -n "$API_PID" "$CADDY_PID"
-EXIT=$?
+PIDS="$API_PID $CADDY_PID"
 
-# Если умер один — добиваем второй и выходим
-kill -TERM "$API_PID" "$CADDY_PID" 2>/dev/null || true
+if [ "${EOP_WORKER_ENABLED:-true}" != "false" ]; then
+	# Worker в retry-цикле и СОЗНАТЕЛЬНО не в `wait -n` ниже. Он завершается
+	# fatal'ом, если ClickHouse недоступен на старте, а CH в проде живёт
+	# отдельным стеком. Будь он среди «критичных для liveness» процессов,
+	# любая моргнувшая CH убивала бы весь контейнер вместе с API и
+	# дашбордом — то есть аналитика роняла бы продукт. Атрибуция может
+	# отставать, интерфейс отставать не может.
+	(
+		while true; do
+			/usr/local/bin/worker || echo "entrypoint: worker exited, retry in 15s" >&2
+			sleep 15
+		done
+	) &
+	PIDS="$PIDS $!"
+fi
+
+# `|| EXIT=$?` обязателен: под `set -e` голый `wait -n` с ненулевым статусом
+# оборвал бы скрипт до cleanup'а и оставил остальные процессы сиротами.
+EXIT=0
+wait -n "$API_PID" "$CADDY_PID" || EXIT=$?
+
+# Умер критичный — гасим всё, включая worker-цикл, и выходим.
+# PIDS намеренно расщепляется по словам.
+# shellcheck disable=SC2086
+kill -TERM $PIDS 2>/dev/null || true
 exit $EXIT
 SH
 

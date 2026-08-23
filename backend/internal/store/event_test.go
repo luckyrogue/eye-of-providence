@@ -80,3 +80,30 @@ func TestEventStoreInsertContract(t *testing.T) {
 		t.Errorf("expected different categories preserved, got both %q", got[0].Category)
 	}
 }
+
+// MemoryStore не считает provenance: её вычисляет attribution worker в
+// ClickHouse. Контракт — пустая карта без ошибки, чтобы дашборд без CH
+// показывал пустой донат, а не 500.
+func TestMemoryStoreAggregateProvenanceIsEmpty(t *testing.T) {
+	ctx := context.Background()
+	mem := NewMemory()
+
+	now := time.Now().UTC()
+	uid := "12345678-1234-1234-1234-123456789012"
+	if err := mem.Insert(ctx, []Event{
+		{TS: now, UserID: uid, AppBundle: "vscode", Category: "manual", Source: "ide", DurationMS: 1000},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	agg, err := mem.AggregateProvenance(ctx, uid, now.Add(-24*time.Hour))
+	if err != nil {
+		t.Fatalf("err=%v", err)
+	}
+	if agg == nil {
+		t.Fatal("expected empty map, got nil — вызывающий код итерирует результат")
+	}
+	if len(agg) != 0 {
+		t.Errorf("expected empty provenance, got %v", agg)
+	}
+}

@@ -1,7 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { http } from "@/shared/api";
 import type { EventRow } from "./types";
-import type { HeatmapRes, IngestRes, LanguagesRes, RecentRes, SummaryRes, TrendRes } from "./res";
+import type {
+  HeatmapRes,
+  IngestRes,
+  LanguagesRes,
+  ProvenanceRes,
+  RecentRes,
+  SummaryRes,
+  TrendRes,
+} from "./res";
 
 export type IngestReq = { events: Partial<EventRow & { file_lang: string }>[] };
 
@@ -11,6 +19,7 @@ export const eventsKeys = {
   all: ["events"] as const,
   recent: (limit: number) => [...eventsKeys.all, "recent", limit] as const,
   summary: (days: number) => [...eventsKeys.all, "summary", days] as const,
+  provenance: (days: number) => [...eventsKeys.all, "provenance", days] as const,
   languages: (days: number) => [...eventsKeys.all, "languages", days] as const,
   heatmap: (days: number, tz: string) => [...eventsKeys.all, "heatmap", days, tz] as const,
   trend: (days: number, tz: string) => [...eventsKeys.all, "trend", days, tz] as const,
@@ -24,6 +33,13 @@ export const fetchSummary = (days = 7) =>
   http
     .get<SummaryRes>(`/v1/summary/categories`, { params: { days } })
     .then((r) => r.data.categories ?? {});
+
+// Code provenance: считает attribution worker в `attribution_events`.
+// Отличается от fetchSummary — та отдаёт сырые категории событий.
+export const fetchProvenance = (days = 7) =>
+  http
+    .get<ProvenanceRes>(`/v1/summary/provenance`, { params: { days } })
+    .then((r) => r.data.provenance ?? {});
 
 export const fetchLanguages = (days = 30) =>
   http
@@ -68,6 +84,9 @@ export const useRecent = (limit = 20) =>
 
 export const useSummary = (days = 7) =>
   useQuery({ queryKey: eventsKeys.summary(days), queryFn: () => fetchSummary(days) });
+
+export const useProvenance = (days = 7) =>
+  useQuery({ queryKey: eventsKeys.provenance(days), queryFn: () => fetchProvenance(days) });
 
 export const useLanguages = (days = 30) =>
   useQuery({ queryKey: eventsKeys.languages(days), queryFn: () => fetchLanguages(days) });

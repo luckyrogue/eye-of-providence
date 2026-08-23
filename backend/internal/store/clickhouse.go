@@ -172,6 +172,36 @@ func (s *ClickHouseStore) AggregateByCategory(ctx context.Context, userID string
 	return out, rows.Err()
 }
 
+// AggregateProvenance читает `attribution_events` напрямую: MV-роутинга
+// hourly/daily, как у AggregateByCategory, здесь нет — таблица одна, её пишет
+// attribution worker раз в минуту.
+func (s *ClickHouseStore) AggregateProvenance(ctx context.Context, userID string, since time.Time) (map[string]uint64, error) {
+	defer metrics.ClickHouseRead.ObserveSince(time.Now())
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	const query = `SELECT category, sum(focus_ms) FROM attribution_events
+	               WHERE user_id = ? AND ts >= ? GROUP BY category`
+	rows, err := s.conn.Query(ctx, query, uid, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := map[string]uint64{}
+	for rows.Next() {
+		var category string
+		var sum uint64
+		if err := rows.Scan(&category, &sum); err != nil {
+			return nil, err
+		}
+		out[category] = sum
+	}
+	return out, rows.Err()
+}
+
 func (s *ClickHouseStore) AggregateByCategoryBulk(ctx context.Context, userIDs []string, since time.Time) (map[string]map[string]uint64, error) {
 	defer metrics.ClickHouseRead.ObserveSince(time.Now())
 	out := map[string]map[string]uint64{}

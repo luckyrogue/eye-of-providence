@@ -69,6 +69,21 @@ test.describe("analytics", () => {
     expect(cells.length).toBeGreaterThan(0);
   });
 
+  // Provenance читает `attribution_events`, которую наполняет attribution
+  // worker — в e2e-стеке он не поднят, поэтому проверяем контракт эндпоинта,
+  // а не содержимое. Этого достаточно, чтобы поймать регрессию регистрации
+  // роута (репозиторий дважды ловил ловушку с порядком middleware) и
+  // расхождение формы ответа с фронтендом.
+  test("provenance returns object under authenticated route", async ({ api }) => {
+    const r = await api.fetch<{
+      days: number;
+      provenance: Record<string, number>;
+    }>("/v1/summary/provenance?days=7");
+    expect(r.days).toBe(7);
+    expect(typeof r.provenance).toBe("object");
+    expect(r.provenance).not.toBeNull();
+  });
+
   test("daily trend returns points array", async ({ api }) => {
     const r = await api.fetch<{ points: unknown[]; days: number }>("/v1/trend?days=7");
     expect(Array.isArray(r.points)).toBe(true);

@@ -40,6 +40,32 @@ production (Caddy / Traefik / nginx).
 | `EOP_GITHUB_CLIENT_ID` | GitHub OAuth app | пусто |
 | `EOP_GITHUB_CLIENT_SECRET` | GitHub OAuth app | пусто |
 | `EOP_REPORTS_CRON_SEC` | как часто прогонять weekly cron, 0 = выкл | 0 (в `docker-compose.full.yml` — 21600 = 6h) |
+| `EOP_WORKER_ENABLED` | держать ли attribution worker в этом контейнере | `true` |
+
+## Attribution worker
+
+Контейнер `eop` держит три процесса: Go API, Caddy и **attribution worker**.
+Worker раз в минуту читает свежие события, классифицирует их по code
+provenance (`typed`, `ai_inline`, `ai_agent`, …) и наполняет ClickHouse-таблицу
+`attribution_events` — на ней живёт донат «Code provenance» в дашборде. Без
+него донат будет пустым.
+
+Позиция обработки хранится в Postgres (`worker_state`) глобально, без
+leader-election. Если масштабируешь `eop` больше чем на одну реплику, оставь
+worker включённым ровно на одной, иначе записи в `attribution_events`
+задвоятся: остальным выстави `EOP_WORKER_ENABLED=false`.
+
+Worker завершается с ошибкой, если ClickHouse недоступен, поэтому entrypoint
+держит его в retry-цикле (15 сек) и **не** считает критичным для жизни
+контейнера. Недоступность ClickHouse затормозит атрибуцию, но не уронит API и
+дашборд. Критичны только `api` и `caddy` — падение любого из них валит
+контейнер, и оркестратор его перезапускает.
+
+Проверить, что он поднялся:
+
+```bash
+docker compose -f infra/docker-compose.full.yml logs eop | grep "attribution worker started"
+```
 
 ## Ключи
 

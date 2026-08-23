@@ -54,6 +54,17 @@ func (s *Service) Categories(ctx context.Context, userID string, w domain.DaysWi
 	return s.events.AggregateByCategory(ctx, userID, w.Since)
 }
 
+// Provenance — суммы focus_ms по code-provenance категориям из
+// `attribution_events` (наполняется attribution worker'ом). Пустая карта
+// означает «worker ещё не обработал события» или «сторе без ClickHouse»,
+// а не ошибку.
+func (s *Service) Provenance(ctx context.Context, userID string, w domain.DaysWindow) (map[string]uint64, error) {
+	if s.events == nil {
+		return map[string]uint64{}, nil
+	}
+	return s.events.AggregateProvenance(ctx, userID, w.Since)
+}
+
 // WindowFromDays builds a UTC lookback window (days clamped by caller).
 func WindowFromDays(days int) domain.DaysWindow {
 	since := time.Now().UTC().Add(-time.Duration(days) * 24 * time.Hour)

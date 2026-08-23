@@ -14,4 +14,5 @@ type EventReadStore interface {
 	DailyTrend(ctx context.Context, userID string, since time.Time, tz string) ([]domain.TrendPoint, error)
 	Heatmap(ctx context.Context, userID string, since time.Time, tz string) ([]domain.HeatmapCell, error)
 	AggregateByCategory(ctx context.Context, userID string, since time.Time) (map[string]uint64, error)
+	AggregateProvenance(ctx context.Context, userID string, since time.Time) (map[string]uint64, error)
 }

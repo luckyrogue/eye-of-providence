@@ -24,8 +24,10 @@ type fakeStore struct {
 	deleteCalls  atomic.Int32
 	closeCalls   atomic.Int32
 	activeCalls  atomic.Int32
+	provCalls    atomic.Int32
 
 	aggResp     map[string]uint64
+	provResp    map[string]uint64
 	bulkResp    map[string]map[string]uint64
 	langResp    []LangCell
 	trendResp   []TrendPoint
@@ -40,6 +42,10 @@ func (f *fakeStore) ListRecent(_ context.Context, _ string, _ int) ([]Event, err
 func (f *fakeStore) AggregateByCategory(_ context.Context, _ string, _ time.Time) (map[string]uint64, error) {
 	f.aggCalls.Add(1)
 	return f.aggResp, nil
+}
+func (f *fakeStore) AggregateProvenance(_ context.Context, _ string, _ time.Time) (map[string]uint64, error) {
+	f.provCalls.Add(1)
+	return f.provResp, nil
 }
 func (f *fakeStore) AggregateByCategoryBulk(_ context.Context, _ []string, _ time.Time) (map[string]map[string]uint64, error) {
 	f.bulkCalls.Add(1)
@@ -124,6 +130,66 @@ func TestCached_AggregateHitMiss(t *testing.T) {
 	}
 	if r2["ai"] != 100 {
 		t.Errorf("cached returned wrong value: %v", r2)
+	}
+}
+
+func TestCached_ProvenanceHitMiss(t *testing.T) {
+	c := setupCache(t)
+	inner := &fakeStore{provResp: map[string]uint64{"typed": 300, "ai_inline": 100}}
+	wrapped := NewCached(inner, c, zap.NewNop())
+
+	ctx := context.Background()
+	since := time.Now().Add(-7 * 24 * time.Hour)
+
+	r1, err := wrapped.AggregateProvenance(ctx, "user-1", since)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inner.provCalls.Load() != 1 {
+		t.Errorf("inner calls=%d, want 1", inner.provCalls.Load())
+	}
+	if r1["typed"] != 300 {
+		t.Errorf("got %v", r1)
+	}
+
+	r2, err := wrapped.AggregateProvenance(ctx, "user-1", since)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inner.provCalls.Load() != 1 {
+		t.Errorf("inner calls=%d (ожидался cache hit), want still 1", inner.provCalls.Load())
+	}
+	if r2["typed"] != 300 {
+		t.Errorf("cached returned wrong value: %v", r2)
+	}
+}
+
+// Provenance и categories не должны делить ключ кеша: обе возвращают
+// map[string]uint64 за одного и того же пользователя и окно, но с разными
+// таксономиями. Совпадение ключей подменяло бы одно другим.
+func TestCached_ProvenanceAndCategoriesDoNotShareKey(t *testing.T) {
+	c := setupCache(t)
+	inner := &fakeStore{
+		aggResp:  map[string]uint64{"manual": 1},
+		provResp: map[string]uint64{"typed": 2},
+	}
+	wrapped := NewCached(inner, c, zap.NewNop())
+
+	ctx := context.Background()
+	since := time.Now().Add(-7 * 24 * time.Hour)
+
+	if _, err := wrapped.AggregateByCategory(ctx, "user-1", since); err != nil {
+		t.Fatal(err)
+	}
+	prov, err := wrapped.AggregateProvenance(ctx, "user-1", since)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prov["typed"] != 2 || prov["manual"] != 0 {
+		t.Errorf("provenance подхватил кеш categories: %v", prov)
+	}
+	if inner.provCalls.Load() != 1 {
+		t.Errorf("inner provenance calls=%d, want 1", inner.provCalls.Load())
 	}
 }
 

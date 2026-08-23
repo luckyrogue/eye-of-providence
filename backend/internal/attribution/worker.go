@@ -30,6 +30,12 @@
 //   Последний обработанный timestamp хранится в Postgres `worker_state`
 //   таблице (см. PG-миграцию ниже). При рестарте worker восстанавливает
 //   позицию — exactly-once семантика в пределах CH idempotency окна.
+//
+//   ОДНА РЕПЛИКА. Позиция в `worker_state` глобальная, без lease и без
+//   leader-election: два одновременно работающих worker'а прочитают одно и то
+//   же окно и задвоят записи в `attribution_events`. Worker поднимается
+//   внутри контейнера api (см. entrypoint в Dockerfile) — при масштабировании
+//   на вторую реплику выставь ей `EOP_WORKER_ENABLED=false`.
 package attribution
 
 import (

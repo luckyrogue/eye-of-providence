@@ -63,6 +63,10 @@ func (a eventReadAdapter) AggregateByCategory(ctx context.Context, userID string
 	return a.st.AggregateByCategory(ctx, userID, since)
 }
 
+func (a eventReadAdapter) AggregateProvenance(ctx context.Context, userID string, since time.Time) (map[string]uint64, error) {
+	return a.st.AggregateProvenance(ctx, userID, since)
+}
+
 func mapEvent(e store.Event) domain.Event {
 	return domain.Event{
 		TS:           e.TS,

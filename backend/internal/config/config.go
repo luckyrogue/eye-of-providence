@@ -43,6 +43,10 @@ type Config struct {
 	EnableDevToken     bool
 	BetaTeamLimit      int
 	PlanLimitsEnforced bool
+	// WorkerEnabled — держит ли этот деплой attribution worker. Читает его
+	// entrypoint образа, а не Go-код; поле существует, чтобы флаг был частью
+	// задокументированного контракта конфигурации, а не скрытой переменной.
+	WorkerEnabled bool
 	ResendAPIKey       string
 	MailFrom           string
 	PublicURL          string
@@ -83,6 +87,7 @@ func FromEnv() Config {
 		EnableDevToken:     boolEnv("EOP_ENABLE_DEV_TOKEN", env != "production"),
 		BetaTeamLimit:      atoiOr(os.Getenv("EOP_BETA_TEAM_LIMIT"), 5),
 		PlanLimitsEnforced: boolEnv("EOP_PLAN_LIMITS_ENFORCED", false),
+		WorkerEnabled:      boolEnv("EOP_WORKER_ENABLED", true),
 		ResendAPIKey:       os.Getenv("EOP_RESEND_API_KEY"),
 		MailFrom:           getenv("EOP_MAIL_FROM", "Eye of Providence <noreply@example.com>"),
 		PublicURL:          getenv("EOP_PUBLIC_URL", "http://localhost:5173"),

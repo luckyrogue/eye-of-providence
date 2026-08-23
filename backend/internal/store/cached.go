@@ -26,7 +26,11 @@ func NewCached(inner EventStore, c *cache.Cache, logger *zap.Logger) EventStore 
 }
 
 const (
-	ttlAgg     = 10 * time.Minute
+	ttlAgg = 10 * time.Minute
+	// ttlProv короче остальных: attribution worker тикает раз в 60 сек, и при
+	// 10-минутном TTL свежая атрибуция появлялась бы на донате с задержкой
+	// до десяти минут после того, как она уже посчитана.
+	ttlProv    = 2 * time.Minute
 	ttlBulk    = 5 * time.Minute
 	ttlLang    = 10 * time.Minute
 	ttlTrend   = 5 * time.Minute
@@ -87,6 +91,22 @@ func (s *CachedEventStore) AggregateByCategory(ctx context.Context, userID strin
 		return nil, err
 	}
 	if err := s.Cache.SetJSON(ctx, key, out, ttlAgg); err != nil {
+		s.Logger.Debug("cache set failed", zap.String("key", key), zap.Error(err))
+	}
+	return out, nil
+}
+
+func (s *CachedEventStore) AggregateProvenance(ctx context.Context, userID string, since time.Time) (map[string]uint64, error) {
+	key := fmt.Sprintf("prov:%s:%d", userID, since.Unix())
+	var out map[string]uint64
+	if hit, _ := s.Cache.GetJSON(ctx, key, &out); hit {
+		return out, nil
+	}
+	out, err := s.Inner.AggregateProvenance(ctx, userID, since)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Cache.SetJSON(ctx, key, out, ttlProv); err != nil {
 		s.Logger.Debug("cache set failed", zap.String("key", key), zap.Error(err))
 	}
 	return out, nil

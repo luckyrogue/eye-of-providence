@@ -30,6 +30,10 @@ func (fakeRead) AggregateByCategory(context.Context, string, time.Time) (map[str
 	return map[string]uint64{"coding": 1}, nil
 }
 
+func (fakeRead) AggregateProvenance(context.Context, string, time.Time) (map[string]uint64, error) {
+	return map[string]uint64{"typed": 4, "ai_inline": 6}, nil
+}
+
 func TestListRecent(t *testing.T) {
 	svc := New(Deps{Events: fakeRead{}})
 	events, err := svc.ListRecent(context.Background(), "u1", 10)
@@ -43,5 +47,29 @@ func TestCategories(t *testing.T) {
 	agg, err := svc.Categories(context.Background(), "u1", WindowFromDays(7))
 	if err != nil || agg["coding"] != 1 {
 		t.Fatalf("agg=%v err=%v", agg, err)
+	}
+}
+
+func TestProvenance(t *testing.T) {
+	svc := New(Deps{Events: fakeRead{}})
+	agg, err := svc.Provenance(context.Background(), "u1", WindowFromDays(7))
+	if err != nil {
+		t.Fatalf("err=%v", err)
+	}
+	if agg["typed"] != 4 || agg["ai_inline"] != 6 {
+		t.Fatalf("provenance=%v, want typed=4 ai_inline=6", agg)
+	}
+}
+
+// Provenance не должен паниковать на сторе без events-порта: дашборд
+// дёргает эндпоинт всегда, даже когда аналитика не сконфигурирована.
+func TestProvenanceNilStore(t *testing.T) {
+	svc := New(Deps{})
+	agg, err := svc.Provenance(context.Background(), "u1", WindowFromDays(7))
+	if err != nil {
+		t.Fatalf("err=%v", err)
+	}
+	if len(agg) != 0 {
+		t.Fatalf("provenance=%v, want empty", agg)
 	}
 }

@@ -22,6 +22,7 @@ func RegisterRoutes(app *fiber.App, st store.EventStore, logger *zap.Logger, jwt
 	g.Get("/trend", trendHandler(svc, logger))
 	g.Get("/heatmap", heatmapHandler(svc, logger))
 	g.Get("/summary/categories", categoriesHandler(svc, logger))
+	g.Get("/summary/provenance", provenanceHandler(svc, logger))
 }
 
 func daysParam(c *fiber.Ctx, fallback int) int {
@@ -103,5 +104,19 @@ func categoriesHandler(svc *analyticsapp.Service, logger *zap.Logger) fiber.Hand
 			return httperr.Internal(c)
 		}
 		return c.JSON(fiber.Map{"days": days, "categories": agg})
+	}
+}
+
+func provenanceHandler(svc *analyticsapp.Service, logger *zap.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		claims := auth.ClaimsFromCtx(c)
+		days := daysParam(c, 7)
+		w := analyticsapp.WindowFromDays(days)
+		agg, err := svc.Provenance(c.Context(), claims.UserID, w)
+		if err != nil {
+			logger.Error("provenance aggregate failed", zap.Error(err))
+			return httperr.Internal(c)
+		}
+		return c.JSON(fiber.Map{"days": days, "provenance": agg})
 	}
 }

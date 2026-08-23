@@ -33,6 +33,14 @@ type EventStore interface {
 	ListRecent(ctx context.Context, userID string, limit int) ([]Event, error)
 	AggregateByCategory(ctx context.Context, userID string, since time.Time) (map[string]uint64, error)
 
+	// AggregateProvenance — суммы focus_ms по code-provenance категориям
+	// (`typed`, `pasted_ai`, `pasted_other`, `ai_inline`, `ai_agent`,
+	// `refactor`, `unknown`) из таблицы `attribution_events`, которую пишет
+	// attribution worker. Это НЕ то же, что AggregateByCategory: там сырые
+	// категории событий (`manual`/`ai`/`idle`/…), здесь — результат
+	// классификации provenance.
+	AggregateProvenance(ctx context.Context, userID string, since time.Time) (map[string]uint64, error)
+
 	AggregateByCategoryBulk(ctx context.Context, userIDs []string, since time.Time) (map[string]map[string]uint64, error)
 	Heatmap(ctx context.Context, userID string, since time.Time, tz string) ([]HeatmapCell, error)
 	LanguageBreakdown(ctx context.Context, userID string, since time.Time) ([]LangCell, error)

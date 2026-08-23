@@ -51,6 +51,15 @@ func (s *MemoryStore) AggregateByCategory(_ context.Context, userID string, sinc
 	return agg, nil
 }
 
+// AggregateProvenance для in-memory fallback всегда пуст: provenance
+// вычисляет attribution worker, а он пишет в ClickHouse-таблицу
+// `attribution_events`, которой в этом сторе не существует. Дублировать здесь
+// classify() из internal/attribution нельзя — две копии правил разъедутся.
+// Практическое следствие: без ClickHouse донат «Code provenance» пуст.
+func (s *MemoryStore) AggregateProvenance(_ context.Context, _ string, _ time.Time) (map[string]uint64, error) {
+	return map[string]uint64{}, nil
+}
+
 func (s *MemoryStore) AggregateByCategoryBulk(_ context.Context, userIDs []string, since time.Time) (map[string]map[string]uint64, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
